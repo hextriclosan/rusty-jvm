@@ -1,0 +1,459 @@
+use std::io;
+use std::io::ErrorKind::{InvalidData, InvalidInput};
+use std::mem::size_of;
+use num_traits::Num;
+use model::class_file::{AttributeInfo, ClassFile, FieldInfo, MethodInfo};
+use model::class_file::ConstantPool::*;
+
+pub struct Parser {}
+
+impl Parser {
+    const MAGIC: u32 = 0xCAFEBABE;
+
+    pub fn new() -> Self {
+        Parser {}
+    }
+
+    pub fn parse(&mut self, data: &[u8]) -> Result<ClassFile, io::Error> {
+        let mut start_from = 0;
+        let magic: u32 = convert(&data, &mut start_from)?;
+
+        if magic != Self::MAGIC {
+            return Err(io::Error::new(InvalidInput, "Not a valid class-file"));
+        }
+
+        let minor_version: u16 = convert(&data, &mut start_from)?;
+        let major_version: u16 = convert(&data, &mut start_from)?;
+        let constant_pool_count: u16 = convert(&data, &mut start_from)?;
+
+        let mut constant_pool_vec = Vec::new();
+        for _ in 0..constant_pool_count {
+            match constant_pool_vec.last() {
+                Some(val) => match val {
+                    Double { .. } | Long { .. } => {
+                        constant_pool_vec.push(Empty);
+                        continue;
+                    }
+                    _ => {}
+                }
+                None => {
+                    constant_pool_vec.push(Empty);
+                    continue;
+                }
+            }
+
+            let tag: u8 = convert(&data, &mut start_from)?;
+
+            let constant_pool_entry = match tag {
+                1 => {
+                    let length: u16 = convert(&data, &mut start_from)?;
+                    let bytes: &[u8] = convert_bytes(&data, &mut start_from, length as usize)?;
+
+                    Uint8 {
+                        value: std::string::String::from_utf8(bytes.to_vec())
+                            .map_err(|e| io::Error::new(InvalidData, e))?
+                    }
+                }
+                3 => {
+                    Integer {
+                        value: convert(&data, &mut start_from)?
+                    }
+                }
+                4 => {
+                    let bytes: u32 = convert(&data, &mut start_from)?;
+
+                    Float {
+                        value: match bytes {
+                            0x7f800000 => f32::INFINITY,
+                            0xff800000 => f32::NEG_INFINITY,
+                            0x7f800001..=0x7fffffff | 0xff800001..=0xffffffff => f32::NAN,
+                            _ => {
+                                let s = if (bytes >> 31) == 0 { 1 } else { -1 };
+                                let e = ((bytes >> 23) & 0xff) as i32;
+                                let m = (if e == 0 { (bytes & 0x7fffff) << 1 } else { (bytes & 0x7fffff) | 0x800000 }) as i32;
+
+                                s as f32 * m as f32 * 2_f32.powi(e - 150)
+                            }
+                        }
+                    }
+                }
+                5 => {
+                    Long {
+                        value: convert(&data, &mut start_from)?
+                    }
+                }
+                6 => {
+                    let bytes: u64 = convert(&data, &mut start_from)?;
+                    Double {
+                        value: match bytes {
+                            0x7ff0000000000000_u64 => f64::INFINITY,
+                            0xfff0000000000000_u64 => f64::NEG_INFINITY,
+                            0x7ff0000000000001_u64..=0x7fffffffffffffff_u64 | 0xfff0000000000001_u64..=0xffffffffffffffff_u64 => f64::NAN,
+                            _ => {
+                                let s = if (bytes >> 63) == 0 { 1 } else { -1 };
+                                let e = ((bytes >> 52) & 0x7ff_u64) as i32;
+                                let m = (if e == 0 { (bytes & 0xfffffffffffff_u64) << 1 } else { (bytes & 0xfffffffffffff_u64) | 0x10000000000000_u64 }) as i64;
+
+                                s as f64 * m as f64 * 2_f64.powi(e - 1075)
+                            }
+                        },
+                    }
+                }
+                7 => Class {
+                    name_index: convert(&data, &mut start_from)?,
+                },
+                8 => String {
+                    string_index: convert(&data, &mut start_from)?,
+                },
+                9 => Fieldref {
+                    class_index: convert(&data, &mut start_from)?,
+                    name_and_type_index: convert(&data, &mut start_from)?,
+                },
+                10 => Methodref {
+                    class_index: convert(&data, &mut start_from)?,
+                    name_and_type_index: convert(&data, &mut start_from)?,
+                },
+                11 => InterfaceMethodref {
+                    class_index: convert(&data, &mut start_from)?,
+                    name_and_type_index: convert(&data, &mut start_from)?,
+                },
+                12 => NameAndType {
+                    name_index: convert(&data, &mut start_from)?,
+                    descriptor_index: convert(&data, &mut start_from)?,
+                },
+                15 => MethodHandle {
+                    reference_kind: convert(&data, &mut start_from)?,
+                    reference_index: convert(&data, &mut start_from)?,
+                },
+                16 => MethodType {
+                    descriptor_index: convert(&data, &mut start_from)?,
+                },
+                17 => Dynamic {
+                    bootstrap_method_attr_index: convert(&data, &mut start_from)?,
+                    name_and_type_index: convert(&data, &mut start_from)?,
+                },
+                18 => InvokeDynamic {
+                    bootstrap_method_attr_index: convert(&data, &mut start_from)?,
+                    name_and_type_index: convert(&data, &mut start_from)?,
+                },
+                19 => Module {
+                    name_index: convert(&data, &mut start_from)?,
+                },
+                20 => Package {
+                    name_index: convert(&data, &mut start_from)?,
+                },
+                _ => {
+                    return Err(io::Error::new(InvalidInput, format!("unmatched tag: {:?}", tag)));
+                }
+            };
+
+            constant_pool_vec.push(constant_pool_entry);
+        }
+
+        let access_flags: u16 = convert(&data, &mut start_from)?;
+        let this_class: u16 = convert(&data, &mut start_from)?;
+        let super_class: u16 = convert(&data, &mut start_from)?;
+        let interfaces_count: u16 = convert(&data, &mut start_from)?;
+
+        let mut interfaces = Vec::new();
+        for _ in 0..interfaces_count {
+            interfaces.push(convert(&data, &mut start_from)?);
+        }
+
+        let fields_count: u16 = convert(&data, &mut start_from)?;
+        let mut fields = Vec::new();
+        for _ in 0..fields_count {
+            let access_flags = convert(&data, &mut start_from)?;
+            let name_index = convert(&data, &mut start_from)?;
+            let descriptor_index = convert(&data, &mut start_from)?;
+            let attributes = Self::parse_attribute_info(&data, &mut start_from)?;
+
+            fields.push(FieldInfo::new(access_flags, name_index, descriptor_index, attributes))
+        }
+
+        let methods_count: u16 = convert(&data, &mut start_from)?;
+        let mut methods = Vec::new();
+        for _ in 0..methods_count {
+            let access_flags = convert(&data, &mut start_from)?;
+            let name_index = convert(&data, &mut start_from)?;
+            let descriptor_index = convert(&data, &mut start_from)?;
+            let attributes = Self::parse_attribute_info(&data, &mut start_from)?;
+
+            methods.push(MethodInfo::new(access_flags, name_index, descriptor_index, attributes))
+        }
+
+        let attributes = Self::parse_attribute_info(&data, &mut start_from)?;
+
+        if data.len() != start_from {
+            return Err(io::Error::new(InvalidInput, format!("Not all was read : data.len() is {}, start_from is {}", data.len(), start_from)));
+        }
+
+        Ok(
+            ClassFile::new(
+                magic,
+                minor_version,
+                major_version,
+                constant_pool_vec,
+                access_flags,
+                this_class,
+                super_class,
+                interfaces,
+                fields,
+                methods,
+                attributes,
+            )
+        )
+    }
+
+    fn parse_attribute_info(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<AttributeInfo>, io::Error> {
+        let attributes_count: u16 = convert(&data, &mut start_from)?;
+        let mut attributes = Vec::new();
+        for _ in 0..attributes_count {
+            let attribute_name_index = convert(&data, &mut start_from)?;
+            let attribute_length: u32 = convert(&data, &mut start_from)?;
+            let info = convert_bytes(&data, &mut start_from, attribute_length as usize)?.to_vec();
+
+            attributes.push(AttributeInfo::new(attribute_name_index, attribute_length, info))
+        }
+
+        Ok(attributes)
+    }
+}
+
+fn convert<T>(slice: &[u8], start_from: &mut usize) -> Result<T, io::Error>
+    where
+        T: Num + From<u8> + std::ops::Shl<Output=T> + std::ops::BitOr<Output=T> + Copy, {
+    if *start_from >= slice.len() {
+        io::Error::new(
+            InvalidInput,
+            format!("overflow : attempt to read from {} whereas len is {}", *start_from, slice.len()));
+    }
+
+    let size = size_of::<T>();
+    let mut value = T::zero();
+    if size == 1 {
+        value = T::from(slice[*start_from]);
+    } else {
+        let sub_slice = &slice[*start_from..*start_from + size];
+        for &byte in sub_slice {
+            value = (value << 8.into()) | T::from(byte);
+        }
+    }
+    *start_from += size;
+
+    Ok(value)
+}
+
+fn convert_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Result<&'a [u8], io::Error> {
+    if *start_from + size > slice.len() {
+        return Err(io::Error::new(
+            InvalidInput,
+            format!("Index out of bounds: {} of {}", *start_from + size, slice.len())));
+    }
+
+    let &sub_slice = &&slice[*start_from..*start_from + size];
+
+    *start_from += size;
+
+    Ok(&sub_slice)
+}
+
+#[cfg(test)]
+mod tests {
+    use model::class_file::{AttributeInfo, ClassFile, FieldInfo, MethodInfo};
+    use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
+    use crate::loader::load;
+
+    #[test]
+    fn should_load_and_parse() {
+        let actual_class_file = load("../test_data/Trivial.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            61,
+            vec![
+                Empty, //                               0
+                Methodref { //                          1
+                    class_index: 2,
+                    name_and_type_index: 3,
+                },
+                Class { //                              2
+                    name_index: 4,
+                },
+                NameAndType { //                        3
+                    name_index: 5,
+                    descriptor_index: 6,
+                },
+                Uint8 { //                              4
+                    value: "java/lang/Object".into()
+                },
+                Uint8 { //                              5
+                    value: "<init>".into()
+                },
+                Uint8 { //                              6
+                    value: "()V".into()
+                },
+                Fieldref { //                           7
+                    class_index: 8,
+                    name_and_type_index: 9,
+                },
+                Class { //                              8
+                    name_index: 10,
+                },
+                NameAndType { //                        9
+                    name_index: 11,
+                    descriptor_index: 12,
+                },
+                Uint8 { //                              10
+                    value: "Trivial".into()
+                },
+                Uint8 { //                              11
+                    value: "someText".into()
+                },
+                Uint8 { //                              12
+                    value: "Ljava/lang/String;".into()
+                },
+                Methodref { //                          13
+                    class_index: 8,
+                    name_and_type_index: 14,
+                },
+                NameAndType { //                        14
+                    name_index: 5,
+                    descriptor_index: 15,
+                },
+                Uint8 { //                              15
+                    value: "(Ljava/lang/String;)V".into()
+                },
+                Class { //                              16
+                    name_index: 17,
+                },
+                Uint8 { //                              17
+                    value: "java/lang/Runnable".into()
+                },
+                Uint8 { //                              18
+                    value: "PI".into()
+                },
+                Uint8 { //                              19
+                    value: "F".into()
+                },
+                Uint8 { //                              20
+                    value: "ConstantValue".into()
+                },
+                Float { //                              21
+                    value: 3.1415927,
+                },
+                Uint8 { //                              22
+                    value: "SPEED_OF_LIGHT".into()
+                },
+                Uint8 { //                              23
+                    value: "I".into()
+                },
+                Integer { //                            24
+                    value: 299792458,
+                },
+                Uint8 { //                              25
+                    value: "MIN_INT".into()
+                },
+                Integer { //                            26
+                    value: -2147483648,
+                },
+                Uint8 { //                              27
+                    value: "MIN_LONG".into()
+                },
+                Uint8 { //                              28
+                    value: "J".into()
+                },
+                Long { //                               29
+                    value: -9223372036854775808,
+                },
+                Empty, //                               30
+                Uint8 { //                              31
+                    value: "MAX_LONG".into()
+                },
+                Long { //                               32
+                    value: 9223372036854775807,
+                },
+                Empty, //                               33
+                Uint8 { //                              34
+                    value: "MAX_DOUBLE".into()
+                },
+                Uint8 { //                              35
+                    value: "D".into()
+                },
+                Double { //                             36
+                    value: 1.7976931348623157E308,
+                },
+                Empty, //                               37
+                Uint8 { //                              38
+                    value: "MIN_DOUBLE".into()
+                },
+                Double { //                             39
+                    value: -1.23456789E-290,
+                },
+                Empty, //                               40
+                Uint8 { //                              41
+                    value: "Code".into()
+                },
+                Uint8 { //                              42
+                    value: "LineNumberTable".into()
+                },
+                Uint8 { //                              43
+                    value: "add".into()
+                },
+                Uint8 { //                              44
+                    value: "(II)I".into()
+                },
+                Uint8 { //                              45
+                    value: "run".into()
+                },
+                Uint8 { //                              46
+                    value: "SourceFile".into()
+                },
+                Uint8 { //                              47
+                    value: "Trivial.java".into()
+                },
+            ],
+            0x0021,
+            8,
+            2,
+            vec![16],
+            vec![
+                FieldInfo::new(0x0019, 18, 19, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 21])]),
+                FieldInfo::new(0x001c, 22, 23, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 24])]),
+                FieldInfo::new(0x001a, 25, 23, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 26])]),
+                FieldInfo::new(0x001a, 27, 28, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 29])]),
+                FieldInfo::new(0x001a, 31, 28, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 32])]),
+                FieldInfo::new(0x001a, 34, 35, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 36])]),
+                FieldInfo::new(0x001a, 38, 35, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 39])]),
+                FieldInfo::new(0x0004, 11, 12, Vec::new()),
+            ],
+            vec![
+                MethodInfo::new(0x0001, 5, 15, vec![AttributeInfo::new(41/*#Code*/, 42, vec![
+                        0, 2, 0, 2, 0, 0, 0, 10, 0x2a, 0xb7, 0x00, 0x01, 0x2a, 0x2b, 0xb5, 0x00, 0x07, 0xb1, 0, 0, 0, 1, 0, 42, 0, 0, 0, 14, 0, 3, 0, 0, 0, 14, 0, 4, 0, 15, 0, 9, 0, 16,
+                    //  ^  ^ max stack (u2)
+                    //        ^  ^ max locals (u2)
+                    //              ^  ^  ^  ^ code length (u4)
+                    //                           ^     ^     ^     ^     ^     ^     ^     ^     ^     ^ code array u1[10]
+                    //                                                                                      ^  ^ exception table length (u2)
+                    //                                                                                             ^  ^ attributes count (u2)
+                    //                                                                                                   ^  ^ attribute_name_index (u2) #LineNumberTable
+                    //                                                                                                          ^  ^  ^  ^ attribute_length (u4)
+                    //                                                                                                                       ^  ^ line_number_table_length (u2)
+                    //                                                                                                                             ^  ^<-^  ^ start_pc (u2) <- line_number(u2)
+                    //                                                                                                                                          ^  ^<-^  ^ start_pc (u2) <- line_number(u2)
+                    //                                                                                                                                                       ^  ^<-^  ^ start_pc (u2) <- line_number(u2)
+                ])]),
+                MethodInfo::new(0x0001, 5, 6, vec![AttributeInfo::new(41/*#Code*/, 34, vec![
+                    0, 2, 0, 1, 0, 0, 0, 6, 0x2a, 0x01, 0xb7, 0x00, 0x0d, 0xb1, 0, 0, 0, 1, 0, 42, 0, 0, 0, 10, 0, 2, 0, 0, 0, 19, 0, 5, 0, 20])]),
+                MethodInfo::new(0x0001, 43, 44, vec![AttributeInfo::new(41/*#Code*/, 34, vec![
+                    0, 2, 0, 4, 0, 0, 0, 6, 0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0xac, 0, 0, 0, 1, 0, 42, 0, 0, 0, 10, 0, 2, 0, 0, 0, 23, 0, 4, 0, 25])]),
+                MethodInfo::new(0x0001, 45, 6, vec![AttributeInfo::new(41/*#Code*/, 25, vec![
+                    0, 0, 0, 1, 0, 0, 0, 1, 0xb1, 0, 0, 0, 1, 0, 42, 0, 0, 0, 6, 0, 1, 0, 0, 0, 31])]),
+            ],
+            vec![AttributeInfo::new(46/*#SourceFile*/, 2, vec![0, 47])],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+}
