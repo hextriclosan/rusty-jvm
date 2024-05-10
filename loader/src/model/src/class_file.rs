@@ -10,7 +10,7 @@ pub struct ClassFile {
     interfaces: Vec<u16>,
     fields: Vec<FieldInfo>,
     methods: Vec<MethodInfo>,
-    attributes: Vec<AttributeInfo>,
+    attributes: Vec<Attribute>,
 }
 
 impl ClassFile {
@@ -25,7 +25,7 @@ impl ClassFile {
         interfaces: Vec<u16>,
         fields: Vec<FieldInfo>,
         methods: Vec<MethodInfo>,
-        attributes: Vec<AttributeInfo>) -> Self {
+        attributes: Vec<Attribute>) -> Self {
         Self {
             magic,
             minor_version,
@@ -47,7 +47,7 @@ pub struct FieldInfo {
     access_flags: u16,
     name_index: u16,
     descriptor_index: u16,
-    attributes: Vec<AttributeInfo>,
+    attributes: Vec<Attribute>,
 }
 
 impl FieldInfo {
@@ -55,21 +55,8 @@ impl FieldInfo {
         access_flags: u16,
         name_index: u16,
         descriptor_index: u16,
-        attributes: Vec<AttributeInfo>) -> Self {
+        attributes: Vec<Attribute>) -> Self {
         Self { access_flags, name_index, descriptor_index, attributes }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct AttributeInfo {
-    attribute_name_index: u16,
-    attribute_length: u32,
-    info: Vec<u8>,
-}
-
-impl AttributeInfo {
-    pub fn new(attribute_name_index: u16, attribute_length: u32, info: Vec<u8>) -> Self {
-        Self { attribute_name_index, attribute_length, info }
     }
 }
 
@@ -78,7 +65,7 @@ pub struct MethodInfo {
     access_flags: u16,
     name_index: u16,
     descriptor_index: u16,
-    attributes: Vec<AttributeInfo>,
+    attributes: Vec<Attribute>,
 }
 
 impl MethodInfo {
@@ -86,7 +73,7 @@ impl MethodInfo {
         access_flags: u16,
         name_index: u16,
         descriptor_index: u16,
-        attributes: Vec<AttributeInfo>) -> Self {
+        attributes: Vec<Attribute>) -> Self {
         Self { access_flags, name_index, descriptor_index, attributes }
     }
 }
@@ -153,4 +140,78 @@ pub enum ConstantPool {
     Package {
         name_index: u16
     } = 20,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Attribute {
+    ConstantValue {
+        constantvalue_index: u16,
+    },
+    Code {
+        max_stack: u16,
+        max_locals: u16,
+        code: Vec<u8>,
+        exception_table: Vec<ExceptionRecord>,
+        attributes: Vec<Attribute>,
+    },
+    Exceptions {
+        exception_index_table: Vec<u16>,
+    },
+    SourceFile {
+        sourcefile_index: u16,
+    },
+    LineNumberTable {
+        line_number_table: Vec<LineNumberRecord>,
+    },
+    LocalVariableTable,
+    InnerClasses,
+    Synthetic,
+    Deprecated,
+    EnclosingMethod,
+    Signature,
+    SourceDebugExtension,
+    LocalVariableTypeTable,
+    RuntimeVisibleAnnotations,
+    RuntimeInvisibleAnnotations,
+    RuntimeVisibleParameterAnnotations,
+    RuntimeInvisibleParameterAnnotations,
+    AnnotationDefault,
+    StackMapTable,
+    BootstrapMethods,
+    RuntimeVisibleTypeAnnotations,
+    RuntimeInvisibleTypeAnnotations,
+    MethodParameters,
+    Module,
+    ModulePackages,
+    ModuleMainClass,
+    NestHost,
+    NestMembers,
+    Record,
+    PermittedSubclasses,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ExceptionRecord {
+    start_pc: u16,
+    end_pc: u16,
+    handler_pc: u16,
+    catch_type: u16,
+}
+
+impl ExceptionRecord {
+    pub fn new(start_pc: u16, end_pc: u16, handler_pc: u16, catch_type: u16) -> Self {
+        Self { start_pc, end_pc, handler_pc, catch_type }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LineNumberRecord {
+    start_pc: u16,
+    line_number: u16,
+}
+
+impl LineNumberRecord {
+    pub fn new(start_pc: u16, line_number: u16) -> Self {
+        Self { start_pc, line_number }
+    }
 }

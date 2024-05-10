@@ -2,8 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{AttributeInfo, ClassFile, FieldInfo, MethodInfo};
+use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, MethodInfo};
 use model::class_file::ConstantPool::*;
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, SourceFile, Synthetic};
 
 pub struct Parser {}
 
@@ -166,7 +167,7 @@ impl Parser {
             let access_flags = convert(&data, &mut start_from)?;
             let name_index = convert(&data, &mut start_from)?;
             let descriptor_index = convert(&data, &mut start_from)?;
-            let attributes = Self::parse_attribute_info(&data, &mut start_from)?;
+            let attributes = Self::parse_attributes(&data, &mut start_from, &constant_pool_vec)?;
 
             fields.push(FieldInfo::new(access_flags, name_index, descriptor_index, attributes))
         }
@@ -177,12 +178,12 @@ impl Parser {
             let access_flags = convert(&data, &mut start_from)?;
             let name_index = convert(&data, &mut start_from)?;
             let descriptor_index = convert(&data, &mut start_from)?;
-            let attributes = Self::parse_attribute_info(&data, &mut start_from)?;
+            let attributes = Self::parse_attributes(&data, &mut start_from, &constant_pool_vec)?;
 
             methods.push(MethodInfo::new(access_flags, name_index, descriptor_index, attributes))
         }
 
-        let attributes = Self::parse_attribute_info(&data, &mut start_from)?;
+        let attributes = Self::parse_attributes(&data, &mut start_from, &constant_pool_vec)?;
 
         if data.len() != start_from {
             return Err(io::Error::new(InvalidInput, format!("Not all was read : data.len() is {}, start_from is {}", data.len(), start_from)));
@@ -205,18 +206,92 @@ impl Parser {
         )
     }
 
-    fn parse_attribute_info(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<AttributeInfo>, io::Error> {
+    fn parse_attributes(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Vec<Attribute>, io::Error> {
         let attributes_count: u16 = convert(&data, &mut start_from)?;
         let mut attributes = Vec::new();
         for _ in 0..attributes_count {
-            let attribute_name_index = convert(&data, &mut start_from)?;
-            let attribute_length: u32 = convert(&data, &mut start_from)?;
-            let info = convert_bytes(&data, &mut start_from, attribute_length as usize)?.to_vec();
-
-            attributes.push(AttributeInfo::new(attribute_name_index, attribute_length, info))
+            attributes.push(Self::parse_attribute(&data, &mut start_from, constant_pool_vec)?);
         }
 
         Ok(attributes)
+    }
+
+    fn parse_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Attribute, io::Error> {
+        let attribute_name_index: u16 = convert(&data, &mut start_from)?;
+
+
+        let attribute_name = match constant_pool_vec.get(attribute_name_index as usize) {
+            Some(item) => match item {
+                Uint8 { value } => value,
+                _ => return Err(io::Error::new(InvalidData, format!("element type is not Uint8 but {:?}", item)))
+            },
+            None => return Err(io::Error::new(InvalidData, format!("element not found at index {}", attribute_name_index)))
+        };
+
+        let _attribute_length: u32 = convert(&data, &mut start_from)?;
+
+        let attribute = match attribute_name.as_str() {
+            "ConstantValue" => ConstantValue {
+                constantvalue_index: convert(&data, &mut start_from)?,
+            },
+            "Code" => {
+                let max_stack = convert(&data, &mut start_from)?;
+                let max_locals = convert(&data, &mut start_from)?;
+                let code_length: u32 = convert(&data, &mut start_from)?;
+                let code = convert_bytes(&data, &mut start_from, code_length as usize)?.to_vec();
+                let exception_table_length: u16 = convert(&data, &mut start_from)?;
+
+                let mut exception_table = Vec::new();
+                for _ in 0..exception_table_length {
+                    exception_table.push(ExceptionRecord::new(
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                    ));
+                }
+
+                let attributes = Self::parse_attributes(&data, &mut start_from, constant_pool_vec)?;
+
+                Code {
+                    max_stack,
+                    max_locals,
+                    code,
+                    exception_table,
+                    attributes,
+                }
+            }
+            "Exceptions" => {
+                let number_of_exceptions: u16 = convert(&data, &mut start_from)?;
+                let mut exception_index_table = Vec::new();
+                for _ in 0..number_of_exceptions {
+                    exception_index_table.push(convert(&data, &mut start_from)?);
+                }
+                Exceptions {
+                    exception_index_table
+                }
+            }
+            "Synthetic" => Synthetic,
+            "Deprecated" => Deprecated,
+            "SourceFile" => SourceFile {
+                sourcefile_index: convert(&data, &mut start_from)?,
+            },
+            "LineNumberTable" => {
+                let line_number_table_length: u16 = convert(&data, &mut start_from)?;
+                let mut line_number_table = Vec::new();
+                for _ in 0..line_number_table_length {
+                    line_number_table.push(LineNumberRecord::new(convert(&data, &mut start_from)?, convert(&data, &mut start_from)?));
+                }
+                LineNumberTable {
+                    line_number_table,
+                }
+            }
+            _ => {
+                return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {:?}", attribute_name)));
+            }
+        };
+
+        Ok(attribute)
     }
 }
 
@@ -251,16 +326,17 @@ fn convert_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Re
             format!("Index out of bounds: {} of {}", *start_from + size, slice.len())));
     }
 
-    let &sub_slice = &&slice[*start_from..*start_from + size];
+    let sub_slice = &slice[*start_from..*start_from + size];
 
     *start_from += size;
 
-    Ok(&sub_slice)
+    Ok(sub_slice)
 }
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{AttributeInfo, ClassFile, FieldInfo, MethodInfo};
+    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, MethodInfo};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, SourceFile};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
     use crate::loader::load;
 
@@ -405,12 +481,21 @@ mod tests {
                     value: "(II)I".into()
                 },
                 Uint8 { //                              45
-                    value: "run".into()
+                    value: "Exceptions".into()
                 },
-                Uint8 { //                              46
-                    value: "SourceFile".into()
+                Class { //                              46
+                    name_index: 47
                 },
                 Uint8 { //                              47
+                    value: "java/lang/ClassNotFoundException".into()
+                },
+                Uint8 { //                              48
+                    value: "run".into()
+                },
+                Uint8 { //                              49
+                    value: "SourceFile".into()
+                },
+                Uint8 { //                              50
                     value: "Trivial.java".into()
                 },
             ],
@@ -419,39 +504,22 @@ mod tests {
             2,
             vec![16],
             vec![
-                FieldInfo::new(0x0019, 18, 19, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 21])]),
-                FieldInfo::new(0x001c, 22, 23, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 24])]),
-                FieldInfo::new(0x001a, 25, 23, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 26])]),
-                FieldInfo::new(0x001a, 27, 28, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 29])]),
-                FieldInfo::new(0x001a, 31, 28, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 32])]),
-                FieldInfo::new(0x001a, 34, 35, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 36])]),
-                FieldInfo::new(0x001a, 38, 35, vec![AttributeInfo::new(20/*#ConstantValue*/, 2, vec![0, 39])]),
+                FieldInfo::new(0x0019, 18, 19, vec![ConstantValue { constantvalue_index: 21 }]),
+                FieldInfo::new(0x001c, 22, 23, vec![ConstantValue { constantvalue_index: 24 }]),
+                FieldInfo::new(0x001a, 25, 23, vec![ConstantValue { constantvalue_index: 26 }]),
+                FieldInfo::new(0x001a, 27, 28, vec![ConstantValue { constantvalue_index: 29 }]),
+                FieldInfo::new(0x001a, 31, 28, vec![ConstantValue { constantvalue_index: 32 }]),
+                FieldInfo::new(0x001a, 34, 35, vec![ConstantValue { constantvalue_index: 36 }]),
+                FieldInfo::new(0x001a, 38, 35, vec![ConstantValue { constantvalue_index: 39 }]),
                 FieldInfo::new(0x0004, 11, 12, Vec::new()),
             ],
             vec![
-                MethodInfo::new(0x0001, 5, 15, vec![AttributeInfo::new(41/*#Code*/, 42, vec![
-                        0, 2, 0, 2, 0, 0, 0, 10, 0x2a, 0xb7, 0x00, 0x01, 0x2a, 0x2b, 0xb5, 0x00, 0x07, 0xb1, 0, 0, 0, 1, 0, 42, 0, 0, 0, 14, 0, 3, 0, 0, 0, 14, 0, 4, 0, 15, 0, 9, 0, 16,
-                    //  ^  ^ max stack (u2)
-                    //        ^  ^ max locals (u2)
-                    //              ^  ^  ^  ^ code length (u4)
-                    //                           ^     ^     ^     ^     ^     ^     ^     ^     ^     ^ code array u1[10]
-                    //                                                                                      ^  ^ exception table length (u2)
-                    //                                                                                             ^  ^ attributes count (u2)
-                    //                                                                                                   ^  ^ attribute_name_index (u2) #LineNumberTable
-                    //                                                                                                          ^  ^  ^  ^ attribute_length (u4)
-                    //                                                                                                                       ^  ^ line_number_table_length (u2)
-                    //                                                                                                                             ^  ^<-^  ^ start_pc (u2) <- line_number(u2)
-                    //                                                                                                                                          ^  ^<-^  ^ start_pc (u2) <- line_number(u2)
-                    //                                                                                                                                                       ^  ^<-^  ^ start_pc (u2) <- line_number(u2)
-                ])]),
-                MethodInfo::new(0x0001, 5, 6, vec![AttributeInfo::new(41/*#Code*/, 34, vec![
-                    0, 2, 0, 1, 0, 0, 0, 6, 0x2a, 0x01, 0xb7, 0x00, 0x0d, 0xb1, 0, 0, 0, 1, 0, 42, 0, 0, 0, 10, 0, 2, 0, 0, 0, 19, 0, 5, 0, 20])]),
-                MethodInfo::new(0x0001, 43, 44, vec![AttributeInfo::new(41/*#Code*/, 34, vec![
-                    0, 2, 0, 4, 0, 0, 0, 6, 0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0xac, 0, 0, 0, 1, 0, 42, 0, 0, 0, 10, 0, 2, 0, 0, 0, 23, 0, 4, 0, 25])]),
-                MethodInfo::new(0x0001, 45, 6, vec![AttributeInfo::new(41/*#Code*/, 25, vec![
-                    0, 0, 0, 1, 0, 0, 0, 1, 0xb1, 0, 0, 0, 1, 0, 42, 0, 0, 0, 6, 0, 1, 0, 0, 0, 31])]),
+                MethodInfo::new(0x0001, 5, 15, vec![Code { max_stack: 2, max_locals: 2, code: vec![0x2a, 0xb7, 0x00, 0x01, 0x2a, 0x2b, 0xb5, 0x00, 0x07, 0xb1], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 14), LineNumberRecord::new(4, 15), LineNumberRecord::new(9, 16)] }] }]),
+                MethodInfo::new(0x0001, 5, 6, vec![Code { max_stack: 2, max_locals: 1, code: vec![0x2a, 0x01, 0xb7, 0x00, 0x0d, 0xb1], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 19), LineNumberRecord::new(5, 20)] }] }]),
+                MethodInfo::new(0x0001, 43, 44, vec![Code { max_stack: 2, max_locals: 4, code: vec![0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0xac], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 23), LineNumberRecord::new(4, 25)] }] }, Exceptions { exception_index_table: vec![46] }]),
+                MethodInfo::new(0x0001, 48, 6, vec![Code { max_stack: 0, max_locals: 1, code: vec![0xb1], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 31)] }] }]),
             ],
-            vec![AttributeInfo::new(46/*#SourceFile*/, 2, vec![0, 47])],
+            vec![SourceFile { sourcefile_index: 50 }],
         );
 
         assert_eq!(actual_class_file, expected_class_file)

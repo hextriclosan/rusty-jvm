@@ -19,7 +19,7 @@ public class Trivial implements Runnable {
         this(null);
     }
 
-    public int add(int first, int second) {
+    public int add(int first, int second) throws ClassNotFoundException {
         int result = first + second;
 
         return result;
