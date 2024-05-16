@@ -163,7 +163,10 @@ pub enum Attribute {
     LineNumberTable {
         line_number_table: Vec<LineNumberRecord>,
     },
-    LocalVariableTable,
+    LocalVariableTable {
+        local_variable_table: Vec<LocalVariableTableRecord>,
+    },
+
     InnerClasses,
     Synthetic,
     Deprecated,
@@ -213,5 +216,20 @@ pub struct LineNumberRecord {
 impl LineNumberRecord {
     pub fn new(start_pc: u16, line_number: u16) -> Self {
         Self { start_pc, line_number }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LocalVariableTableRecord {
+    start_pc: u16,
+    length: u16,
+    name_index: u16,
+    descriptor_index: u16,
+    index: u16,
+}
+
+impl LocalVariableTableRecord {
+    pub fn new(start_pc: u16, length: u16, name_index: u16, descriptor_index: u16, index: u16) -> Self {
+        Self { start_pc, length, name_index, descriptor_index, index }
     }
 }

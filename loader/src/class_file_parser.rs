@@ -2,9 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, MethodInfo};
+use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, MethodInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, SourceFile, Synthetic};
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, SourceFile, Synthetic};
 
 pub struct Parser {}
 
@@ -286,6 +286,23 @@ impl Parser {
                     line_number_table,
                 }
             }
+            "LocalVariableTable" => {
+                let local_variable_table_length: u16 = convert(&data, &mut start_from)?;
+                let mut local_variable_table = Vec::new();
+                for _ in 0..local_variable_table_length {
+                    local_variable_table.push(LocalVariableTableRecord::new(
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                    ))
+                }
+
+                LocalVariableTable {
+                    local_variable_table
+                }
+            }
             _ => {
                 return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {:?}", attribute_name)));
             }
@@ -335,8 +352,8 @@ fn convert_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Re
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, MethodInfo};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, SourceFile};
+    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, MethodInfo};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, SourceFile};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
     use crate::loader::load;
 
@@ -475,27 +492,45 @@ mod tests {
                     value: "LineNumberTable".into()
                 },
                 Uint8 { //                              43
-                    value: "add".into()
+                    value: "LocalVariableTable".into()
                 },
                 Uint8 { //                              44
-                    value: "(II)I".into()
+                    value: "this".into()
                 },
                 Uint8 { //                              45
-                    value: "Exceptions".into()
+                    value: "LTrivial;".into()
                 },
-                Class { //                              46
-                    name_index: 47
+                Uint8 { //                              46
+                    value: "add".into()
                 },
                 Uint8 { //                              47
-                    value: "java/lang/ClassNotFoundException".into()
+                    value: "(II)I".into()
                 },
                 Uint8 { //                              48
-                    value: "run".into()
+                    value: "first".into()
                 },
                 Uint8 { //                              49
-                    value: "SourceFile".into()
+                    value: "second".into()
                 },
                 Uint8 { //                              50
+                    value: "result".into()
+                },
+                Uint8 { //                              51
+                    value: "Exceptions".into()
+                },
+                Class { //                              52
+                    name_index: 53
+                },
+                Uint8 { //                              53
+                    value: "java/lang/ClassNotFoundException".into()
+                },
+                Uint8 { //                              54
+                    value: "run".into()
+                },
+                Uint8 { //                              55
+                    value: "SourceFile".into()
+                },
+                Uint8 { //                              56
                     value: "Trivial.java".into()
                 },
             ],
@@ -514,12 +549,97 @@ mod tests {
                 FieldInfo::new(0x0004, 11, 12, Vec::new()),
             ],
             vec![
-                MethodInfo::new(0x0001, 5, 15, vec![Code { max_stack: 2, max_locals: 2, code: vec![0x2a, 0xb7, 0x00, 0x01, 0x2a, 0x2b, 0xb5, 0x00, 0x07, 0xb1], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 14), LineNumberRecord::new(4, 15), LineNumberRecord::new(9, 16)] }] }]),
-                MethodInfo::new(0x0001, 5, 6, vec![Code { max_stack: 2, max_locals: 1, code: vec![0x2a, 0x01, 0xb7, 0x00, 0x0d, 0xb1], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 19), LineNumberRecord::new(5, 20)] }] }]),
-                MethodInfo::new(0x0001, 43, 44, vec![Code { max_stack: 2, max_locals: 4, code: vec![0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0xac], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 23), LineNumberRecord::new(4, 25)] }] }, Exceptions { exception_index_table: vec![46] }]),
-                MethodInfo::new(0x0001, 48, 6, vec![Code { max_stack: 0, max_locals: 1, code: vec![0xb1], exception_table: Vec::new(), attributes: vec![LineNumberTable { line_number_table: vec![LineNumberRecord::new(0, 31)] }] }]),
+                MethodInfo::new(0x0001, 5, 15, vec![
+                    Code {
+                        max_stack: 2,
+                        max_locals: 2,
+                        code: vec![0x2a, 0xb7, 0x00, 0x01, 0x2a, 0x2b, 0xb5, 0x00, 0x07, 0xb1],
+                        exception_table: Vec::new(),
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![
+                                    LineNumberRecord::new(0, 14),
+                                    LineNumberRecord::new(4, 15),
+                                    LineNumberRecord::new(9, 16),
+                                ]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 10, 44, 45, 0),
+                                    LocalVariableTableRecord::new(0, 10, 11, 12, 1),
+                                ]
+                            },
+                        ],
+                    }
+                ],
+                ),
+                MethodInfo::new(0x0001, 5, 6, vec![
+                    Code {
+                        max_stack: 2,
+                        max_locals: 1,
+                        code: vec![0x2a, 0x01, 0xb7, 0x00, 0x0d, 0xb1],
+                        exception_table: Vec::new(),
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![
+                                    LineNumberRecord::new(0, 19),
+                                    LineNumberRecord::new(5, 20),
+                                ]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 6, 44, 45, 0)
+                                ]
+                            },
+                        ],
+                    }
+                ],
+                ),
+                MethodInfo::new(0x0001, 46, 47, vec![
+                    Code {
+                        max_stack: 2,
+                        max_locals: 4,
+                        code: vec![0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0xac],
+                        exception_table: Vec::new(),
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![
+                                    LineNumberRecord::new(0, 23),
+                                    LineNumberRecord::new(4, 25),
+                                ]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 6, 44, 45, 0),
+                                    LocalVariableTableRecord::new(0, 6, 48, 23, 1),
+                                    LocalVariableTableRecord::new(0, 6, 49, 23, 2),
+                                    LocalVariableTableRecord::new(4, 2, 50, 23, 3),
+                                ]
+                            },
+                        ],
+                    },
+                    Exceptions { exception_index_table: vec![52] }]),
+                MethodInfo::new(0x0001, 54, 6, vec![
+                    Code {
+                        max_stack: 0,
+                        max_locals: 1,
+                        code: vec![0xb1],
+                        exception_table: Vec::new(),
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![
+                                    LineNumberRecord::new(0, 31)]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 1, 44, 45, 0)]
+                            },
+                        ],
+                    }
+                ],
+                ),
             ],
-            vec![SourceFile { sourcefile_index: 50 }],
+            vec![SourceFile { sourcefile_index: 56 }],
         );
 
         assert_eq!(actual_class_file, expected_class_file)
