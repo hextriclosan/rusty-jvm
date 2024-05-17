@@ -1,10 +1,33 @@
+use std::env;
 use loader::loader::load;
 
 fn main() {
-    let class_file = load("test_data/Trivial.class");
+    let print_usage = || -> Result<(), String> {
+        let current_exe = env::current_exe().map_err(|err| format!("Error: {}", err))?;
+        let file_name = current_exe
+            .as_path()
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("Error: unable to determine exe name")?;
+        println!("Usage: {} <class file>", file_name);
 
-    match class_file {
-        Ok(file) => println!("{:#?}", file),
-        Err(err) => eprintln!("Error loading file: {}", err)
+        Ok(())
+    };
+
+    let args: Vec<String> = env::args().collect();
+    match args.get(1) {
+        Some(filename) => {
+            let class_file = load(filename);
+
+            match class_file {
+                Ok(file) => println!("{:#?}", file),
+                Err(err) => eprintln!("Error loading file: {}", err)
+            }
+        }
+        None => {
+            if let Err(err) = print_usage() {
+                eprintln!("{}", err);
+            }
+        }
     }
 }
