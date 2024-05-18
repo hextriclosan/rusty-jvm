@@ -2,9 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo};
+use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, Signature, SourceFile, Synthetic};
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile, Synthetic};
 
 pub struct Parser {}
 
@@ -323,6 +323,19 @@ impl Parser {
                     local_variable_type_table
                 }
             }
+            "MethodParameters" => {
+                let parameters_count: u8 = convert(&data, &mut start_from)?;
+                let mut parameters = Vec::new();
+                for _ in 0..parameters_count {
+                    parameters.push(MethodParameterRecord::new(
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                    ))
+                }
+                MethodParameters {
+                    parameters
+                }
+            }
             _ => {
                 return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {:?}", attribute_name)));
             }
@@ -372,8 +385,8 @@ fn convert_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Re
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, Signature, SourceFile};
+    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
     use crate::loader::load;
 
@@ -527,42 +540,45 @@ mod tests {
                     value: "LTrivial<TT;>;".into()
                 },
                 Uint8 { //                              48
-                    value: "add".into()
+                    value: "MethodParameters".into()
                 },
                 Uint8 { //                              49
-                    value: "(II)I".into()
+                    value: "add".into()
                 },
                 Uint8 { //                              50
-                    value: "first".into()
+                    value: "(II)I".into()
                 },
                 Uint8 { //                              51
-                    value: "second".into()
+                    value: "first".into()
                 },
                 Uint8 { //                              52
-                    value: "result".into()
+                    value: "second".into()
                 },
                 Uint8 { //                              53
+                    value: "result".into()
+                },
+                Uint8 { //                              54
                     value: "Exceptions".into()
                 },
-                Class { //                              54
-                    name_index: 55
-                },
-                Uint8 { //                              55
-                    value: "java/lang/ClassNotFoundException".into()
+                Class { //                              55
+                    name_index: 56
                 },
                 Uint8 { //                              56
-                    value: "run".into()
+                    value: "java/lang/ClassNotFoundException".into()
                 },
                 Uint8 { //                              57
-                    value: "Signature".into()
+                    value: "run".into()
                 },
                 Uint8 { //                              58
-                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
+                    value: "Signature".into()
                 },
                 Uint8 { //                              59
-                    value: "SourceFile".into()
+                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
                 },
                 Uint8 { //                              60
+                    value: "SourceFile".into()
+                },
+                Uint8 { //                              61
                     value: "Trivial.java".into()
                 },
             ],
@@ -590,9 +606,9 @@ mod tests {
                         attributes: vec![
                             LineNumberTable {
                                 line_number_table: vec![
-                                    LineNumberRecord::new(0, 14),
-                                    LineNumberRecord::new(4, 15),
-                                    LineNumberRecord::new(9, 16),
+                                    LineNumberRecord::new(0, 15),
+                                    LineNumberRecord::new(4, 16),
+                                    LineNumberRecord::new(9, 17),
                                 ]
                             },
                             LocalVariableTable {
@@ -607,7 +623,12 @@ mod tests {
                                 ]
                             },
                         ],
-                    }
+                    },
+                    MethodParameters {
+                        parameters: vec![
+                            MethodParameterRecord::new(11, 0),
+                        ]
+                    },
                 ],
                 ),
                 MethodInfo::new(0x0001, 5, 6, vec![
@@ -619,8 +640,8 @@ mod tests {
                         attributes: vec![
                             LineNumberTable {
                                 line_number_table: vec![
-                                    LineNumberRecord::new(0, 19),
-                                    LineNumberRecord::new(5, 20),
+                                    LineNumberRecord::new(0, 20),
+                                    LineNumberRecord::new(5, 21),
                                 ]
                             },
                             LocalVariableTable {
@@ -637,7 +658,7 @@ mod tests {
                     }
                 ],
                 ),
-                MethodInfo::new(0x0001, 48, 49, vec![
+                MethodInfo::new(0x0001, 49, 50, vec![
                     Code {
                         max_stack: 2,
                         max_locals: 4,
@@ -646,16 +667,16 @@ mod tests {
                         attributes: vec![
                             LineNumberTable {
                                 line_number_table: vec![
-                                    LineNumberRecord::new(0, 23),
-                                    LineNumberRecord::new(4, 25),
+                                    LineNumberRecord::new(0, 24),
+                                    LineNumberRecord::new(4, 26),
                                 ]
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
                                     LocalVariableTableRecord::new(0, 6, 44, 45, 0),
-                                    LocalVariableTableRecord::new(0, 6, 50, 23, 1),
-                                    LocalVariableTableRecord::new(0, 6, 51, 23, 2),
-                                    LocalVariableTableRecord::new(4, 2, 52, 23, 3),
+                                    LocalVariableTableRecord::new(0, 6, 51, 23, 1),
+                                    LocalVariableTableRecord::new(0, 6, 52, 23, 2),
+                                    LocalVariableTableRecord::new(4, 2, 53, 23, 3),
                                 ]
                             },
                             LocalVariableTypeTable {
@@ -665,8 +686,15 @@ mod tests {
                             },
                         ],
                     },
-                    Exceptions { exception_index_table: vec![54] }]),
-                MethodInfo::new(0x0001, 56, 6, vec![
+                    Exceptions { exception_index_table: vec![55] },
+                    MethodParameters {
+                        parameters: vec![
+                            MethodParameterRecord::new(51, 0),
+                            MethodParameterRecord::new(52, 0x0010),
+                        ]
+                    },
+                ]),
+                MethodInfo::new(0x0001, 57, 6, vec![
                     Code {
                         max_stack: 0,
                         max_locals: 1,
@@ -675,7 +703,7 @@ mod tests {
                         attributes: vec![
                             LineNumberTable {
                                 line_number_table: vec![
-                                    LineNumberRecord::new(0, 31)]
+                                    LineNumberRecord::new(0, 32)]
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
@@ -692,8 +720,8 @@ mod tests {
                 ),
             ],
             vec![
-                Signature { signature_index: 58 },
-                SourceFile { sourcefile_index: 60 },
+                Signature { signature_index: 59 },
+                SourceFile { sourcefile_index: 61 },
             ],
         );
 

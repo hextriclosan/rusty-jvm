@@ -187,7 +187,9 @@ pub enum Attribute {
     BootstrapMethods,
     RuntimeVisibleTypeAnnotations,
     RuntimeInvisibleTypeAnnotations,
-    MethodParameters,
+    MethodParameters {
+        parameters: Vec<MethodParameterRecord>,
+    },
     Module,
     ModulePackages,
     ModuleMainClass,
@@ -250,5 +252,17 @@ pub struct LocalVariableTypeTableRecord {
 impl LocalVariableTypeTableRecord {
     pub fn new(start_pc: u16, length: u16, name_index: u16, signature_index: u16, index: u16) -> Self {
         Self { start_pc, length, name_index, signature_index, index }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct MethodParameterRecord {
+    name_index: u16,
+    access_flags: u16,
+}
+
+impl MethodParameterRecord {
+    pub fn new(name_index: u16, access_flags: u16) -> Self {
+        Self { name_index, access_flags }
     }
 }

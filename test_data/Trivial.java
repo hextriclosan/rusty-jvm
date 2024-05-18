@@ -1,4 +1,5 @@
-
+// build command:
+// javac -g -parameters Trivial.java
 
 public class Trivial<T> implements Runnable {
     public static final float PI = 3.14159265f;
@@ -19,7 +20,7 @@ public class Trivial<T> implements Runnable {
         this(null);
     }
 
-    public int add(int first, int second) throws ClassNotFoundException {
+    public int add(int first, final int second) throws ClassNotFoundException {
         int result = first + second;
 
         return result;
