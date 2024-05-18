@@ -1,6 +1,6 @@
 
 
-public class Trivial implements Runnable {
+public class Trivial<T> implements Runnable {
     public static final float PI = 3.14159265f;
     protected static final int SPEED_OF_LIGHT = 299792458;
     private static final int MIN_INT = -2147483648;

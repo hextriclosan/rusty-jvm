@@ -2,9 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, MethodInfo};
+use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, SourceFile, Synthetic};
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, Signature, SourceFile, Synthetic};
 
 pub struct Parser {}
 
@@ -303,6 +303,26 @@ impl Parser {
                     local_variable_table
                 }
             }
+            "Signature" => Signature {
+                signature_index: convert(&data, &mut start_from)?,
+            },
+            "LocalVariableTypeTable" => {
+                let local_variable_type_table_length: u16 = convert(&data, &mut start_from)?;
+                let mut local_variable_type_table = Vec::new();
+                for _ in 0..local_variable_type_table_length {
+                    local_variable_type_table.push(LocalVariableTypeTableRecord::new(
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                    ))
+                }
+
+                LocalVariableTypeTable {
+                    local_variable_type_table
+                }
+            }
             _ => {
                 return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {:?}", attribute_name)));
             }
@@ -352,8 +372,8 @@ fn convert_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Re
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, MethodInfo};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, SourceFile};
+    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, Signature, SourceFile};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
     use crate::loader::load;
 
@@ -501,36 +521,48 @@ mod tests {
                     value: "LTrivial;".into()
                 },
                 Uint8 { //                              46
-                    value: "add".into()
+                    value: "LocalVariableTypeTable".into()
                 },
                 Uint8 { //                              47
-                    value: "(II)I".into()
+                    value: "LTrivial<TT;>;".into()
                 },
                 Uint8 { //                              48
-                    value: "first".into()
+                    value: "add".into()
                 },
                 Uint8 { //                              49
-                    value: "second".into()
+                    value: "(II)I".into()
                 },
                 Uint8 { //                              50
-                    value: "result".into()
+                    value: "first".into()
                 },
                 Uint8 { //                              51
-                    value: "Exceptions".into()
+                    value: "second".into()
                 },
-                Class { //                              52
-                    name_index: 53
+                Uint8 { //                              52
+                    value: "result".into()
                 },
                 Uint8 { //                              53
-                    value: "java/lang/ClassNotFoundException".into()
+                    value: "Exceptions".into()
                 },
-                Uint8 { //                              54
-                    value: "run".into()
+                Class { //                              54
+                    name_index: 55
                 },
                 Uint8 { //                              55
-                    value: "SourceFile".into()
+                    value: "java/lang/ClassNotFoundException".into()
                 },
                 Uint8 { //                              56
+                    value: "run".into()
+                },
+                Uint8 { //                              57
+                    value: "Signature".into()
+                },
+                Uint8 { //                              58
+                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
+                },
+                Uint8 { //                              59
+                    value: "SourceFile".into()
+                },
+                Uint8 { //                              60
                     value: "Trivial.java".into()
                 },
             ],
@@ -569,6 +601,11 @@ mod tests {
                                     LocalVariableTableRecord::new(0, 10, 11, 12, 1),
                                 ]
                             },
+                            LocalVariableTypeTable {
+                                local_variable_type_table: vec![
+                                    LocalVariableTypeTableRecord::new(0, 10, 44, 47, 0),
+                                ]
+                            },
                         ],
                     }
                 ],
@@ -591,11 +628,16 @@ mod tests {
                                     LocalVariableTableRecord::new(0, 6, 44, 45, 0)
                                 ]
                             },
+                            LocalVariableTypeTable {
+                                local_variable_type_table: vec![
+                                    LocalVariableTypeTableRecord::new(0, 6, 44, 47, 0),
+                                ]
+                            },
                         ],
                     }
                 ],
                 ),
-                MethodInfo::new(0x0001, 46, 47, vec![
+                MethodInfo::new(0x0001, 48, 49, vec![
                     Code {
                         max_stack: 2,
                         max_locals: 4,
@@ -611,15 +653,20 @@ mod tests {
                             LocalVariableTable {
                                 local_variable_table: vec![
                                     LocalVariableTableRecord::new(0, 6, 44, 45, 0),
-                                    LocalVariableTableRecord::new(0, 6, 48, 23, 1),
-                                    LocalVariableTableRecord::new(0, 6, 49, 23, 2),
-                                    LocalVariableTableRecord::new(4, 2, 50, 23, 3),
+                                    LocalVariableTableRecord::new(0, 6, 50, 23, 1),
+                                    LocalVariableTableRecord::new(0, 6, 51, 23, 2),
+                                    LocalVariableTableRecord::new(4, 2, 52, 23, 3),
+                                ]
+                            },
+                            LocalVariableTypeTable {
+                                local_variable_type_table: vec![
+                                    LocalVariableTypeTableRecord::new(0, 6, 44, 47, 0),
                                 ]
                             },
                         ],
                     },
-                    Exceptions { exception_index_table: vec![52] }]),
-                MethodInfo::new(0x0001, 54, 6, vec![
+                    Exceptions { exception_index_table: vec![54] }]),
+                MethodInfo::new(0x0001, 56, 6, vec![
                     Code {
                         max_stack: 0,
                         max_locals: 1,
@@ -634,12 +681,20 @@ mod tests {
                                 local_variable_table: vec![
                                     LocalVariableTableRecord::new(0, 1, 44, 45, 0)]
                             },
+                            LocalVariableTypeTable {
+                                local_variable_type_table: vec![
+                                    LocalVariableTypeTableRecord::new(0, 1, 44, 47, 0),
+                                ]
+                            },
                         ],
                     }
                 ],
                 ),
             ],
-            vec![SourceFile { sourcefile_index: 56 }],
+            vec![
+                Signature { signature_index: 58 },
+                SourceFile { sourcefile_index: 60 },
+            ],
         );
 
         assert_eq!(actual_class_file, expected_class_file)

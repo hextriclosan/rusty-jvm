@@ -171,9 +171,13 @@ pub enum Attribute {
     Synthetic,
     Deprecated,
     EnclosingMethod,
-    Signature,
+    Signature {
+        signature_index: u16,
+    },
     SourceDebugExtension,
-    LocalVariableTypeTable,
+    LocalVariableTypeTable {
+        local_variable_type_table: Vec<LocalVariableTypeTableRecord>,
+    },
     RuntimeVisibleAnnotations,
     RuntimeInvisibleAnnotations,
     RuntimeVisibleParameterAnnotations,
@@ -231,5 +235,20 @@ pub struct LocalVariableTableRecord {
 impl LocalVariableTableRecord {
     pub fn new(start_pc: u16, length: u16, name_index: u16, descriptor_index: u16, index: u16) -> Self {
         Self { start_pc, length, name_index, descriptor_index, index }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LocalVariableTypeTableRecord {
+    start_pc: u16,
+    length: u16,
+    name_index: u16,
+    signature_index: u16,
+    index: u16,
+}
+
+impl LocalVariableTypeTableRecord {
+    pub fn new(start_pc: u16, length: u16, name_index: u16, signature_index: u16, index: u16) -> Self {
+        Self { start_pc, length, name_index, signature_index, index }
     }
 }
