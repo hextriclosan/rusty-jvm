@@ -23,7 +23,7 @@ public class Trivial<T> implements Runnable {
     public int add(int first, final int second) throws ClassNotFoundException {
         int result = first + second;
 
-        return result;
+        return result > 0 ? result : 0;
     }
 
     @Override

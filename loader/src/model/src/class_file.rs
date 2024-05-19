@@ -183,7 +183,9 @@ pub enum Attribute {
     RuntimeVisibleParameterAnnotations,
     RuntimeInvisibleParameterAnnotations,
     AnnotationDefault,
-    StackMapTable,
+    StackMapTable {
+        entries: Vec<StackMapFrame>,
+    },
     BootstrapMethods,
     RuntimeVisibleTypeAnnotations,
     RuntimeInvisibleTypeAnnotations,
@@ -266,3 +268,58 @@ impl MethodParameterRecord {
         Self { name_index, access_flags }
     }
 }
+
+#[derive(Debug, PartialEq)]
+pub enum StackMapFrame {
+    SameFrame {
+        frame_type: u8,
+        offset_delta: u16,
+    },
+    SameLocals1StackItemFrame {
+        frame_type: u8,
+        offset_delta: u16,
+        stack: VerificationTypeInfo,
+    },
+    SameLocals1StackItemFrameExtended {
+        frame_type: u8,
+        offset_delta: u16,
+        stack: VerificationTypeInfo,
+    },
+    ChopFrame {
+        frame_type: u8,
+        offset_delta: u16,
+    },
+    SameFrameExtended {
+        frame_type: u8,
+        offset_delta: u16,
+    },
+    AppendFrame {
+        frame_type: u8,
+        offset_delta: u16,
+        locals: Vec<VerificationTypeInfo>,
+    },
+    FullFrame {
+        frame_type: u8,
+        offset_delta: u16,
+        locals: Vec<VerificationTypeInfo>,
+        stack: Vec<VerificationTypeInfo>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum VerificationTypeInfo {
+    TopVariableInfo,
+    IntegerVariableInfo,
+    FloatVariableInfo,
+    LongVariableInfo,
+    DoubleVariableInfo,
+    NullVariableInfo,
+    UninitializedThisVariableInfo,
+    ObjectVariableInfo {
+        cpool_index: u16,
+    },
+    UninitializedVariableInfo {
+        offset: u16,
+    },
+}
+

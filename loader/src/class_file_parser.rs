@@ -2,9 +2,10 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
+use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile, Synthetic};
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
 pub struct Parser {}
 
@@ -323,6 +324,93 @@ impl Parser {
                     local_variable_type_table
                 }
             }
+            "StackMapTable" => {
+                let number_of_entries: u16 = convert(&data, &mut start_from)?;
+                let mut entries = Vec::new();
+                for _ in 0..number_of_entries {
+                    let frame_type: u8 = convert(&data, &mut start_from)?;
+                    let stack_map_frame = match frame_type {
+                        0..=63 => SameFrame {
+                            frame_type,
+                            offset_delta: frame_type as u16,
+                        },
+                        64..=127 => {
+                            let tag: u8 = convert(&data, &mut start_from)?;
+
+                            SameLocals1StackItemFrame {
+                                frame_type,
+                                offset_delta: frame_type as u16 - 64,
+                                stack: get_verification_type_info(tag, &data, &mut start_from)?,
+                            }
+                        }
+                        247 => {
+                            let offset_delta: u16 = convert(&data, &mut start_from)?;
+                            let tag: u8 = convert(&data, &mut start_from)?;
+
+                            SameLocals1StackItemFrameExtended {
+                                frame_type,
+                                offset_delta,
+                                stack: get_verification_type_info(tag, &data, &mut start_from)?,
+                            }
+                        }
+                        248..=250 => ChopFrame {
+                            frame_type,
+                            offset_delta: convert(&data, &mut start_from)?,
+                        },
+                        251 => SameFrameExtended {
+                            frame_type,
+                            offset_delta: convert(&data, &mut start_from)?,
+                        },
+                        252..=254 => {
+                            let offset_delta: u16 = convert(&data, &mut start_from)?;
+                            let mut locals = Vec::new();
+                            let size = frame_type - 251;
+                            for _ in 0..size {
+                                let tag: u8 = convert(&data, &mut start_from)?;
+                                locals.push(get_verification_type_info(tag, &data, &mut start_from)?);
+                            }
+                            AppendFrame {
+                                frame_type,
+                                offset_delta,
+                                locals,
+                            }
+                        }
+                        255 => {
+                            let offset_delta: u16 = convert(&data, &mut start_from)?;
+
+                            let number_of_locals: u16 = convert(&data, &mut start_from)?;
+                            let mut locals = Vec::new();
+                            for _ in 0..number_of_locals {
+                                let tag: u8 = convert(&data, &mut start_from)?;
+                                locals.push(get_verification_type_info(tag, &data, &mut start_from)?);
+                            }
+
+                            let number_of_stack_items: u16 = convert(&data, &mut start_from)?;
+                            let mut stack = Vec::new();
+                            for _ in 0..number_of_stack_items {
+                                let tag: u8 = convert(&data, &mut start_from)?;
+                                stack.push(get_verification_type_info(tag, &data, &mut start_from)?);
+                            }
+
+                            FullFrame {
+                                frame_type,
+                                offset_delta,
+                                locals,
+                                stack,
+                            }
+                        }
+                        _ => {
+                            return Err(io::Error::new(InvalidInput, format!("Unsupported frame_type: {}", frame_type)));
+                        }
+                    };
+
+                    entries.push(stack_map_frame);
+                }
+
+                StackMapTable {
+                    entries
+                }
+            }
             "MethodParameters" => {
                 let parameters_count: u8 = convert(&data, &mut start_from)?;
                 let mut parameters = Vec::new();
@@ -383,11 +471,32 @@ fn convert_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Re
     Ok(sub_slice)
 }
 
+fn get_verification_type_info(tag: u8, data: &[u8], start_from: &mut usize) -> Result<VerificationTypeInfo, io::Error> {
+    match tag {
+        0 => Ok(VerificationTypeInfo::TopVariableInfo),
+        1 => Ok(VerificationTypeInfo::IntegerVariableInfo),
+        2 => Ok(VerificationTypeInfo::FloatVariableInfo),
+        3 => Ok(VerificationTypeInfo::LongVariableInfo),
+        4 => Ok(VerificationTypeInfo::DoubleVariableInfo),
+        5 => Ok(VerificationTypeInfo::NullVariableInfo),
+        6 => Ok(VerificationTypeInfo::UninitializedThisVariableInfo),
+        7 => Ok(VerificationTypeInfo::ObjectVariableInfo {
+            cpool_index: convert(&data, start_from)?,
+        }),
+        8 => Ok(VerificationTypeInfo::UninitializedVariableInfo {
+            offset: convert(&data, start_from)?,
+        }),
+        _ => Err(io::Error::new(InvalidInput, format!("tag {} is not valid", tag)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
+    use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
+    use model::class_file::VerificationTypeInfo::IntegerVariableInfo;
     use crate::loader::load;
 
     #[test]
@@ -558,27 +667,30 @@ mod tests {
                     value: "result".into()
                 },
                 Uint8 { //                              54
+                    value: "StackMapTable".into()
+                },
+                Uint8 { //                              55
                     value: "Exceptions".into()
                 },
-                Class { //                              55
-                    name_index: 56
-                },
-                Uint8 { //                              56
-                    value: "java/lang/ClassNotFoundException".into()
+                Class { //                              56
+                    name_index: 57
                 },
                 Uint8 { //                              57
-                    value: "run".into()
+                    value: "java/lang/ClassNotFoundException".into()
                 },
                 Uint8 { //                              58
-                    value: "Signature".into()
+                    value: "run".into()
                 },
                 Uint8 { //                              59
-                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
+                    value: "Signature".into()
                 },
                 Uint8 { //                              60
-                    value: "SourceFile".into()
+                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
                 },
                 Uint8 { //                              61
+                    value: "SourceFile".into()
+                },
+                Uint8 { //                              62
                     value: "Trivial.java".into()
                 },
             ],
@@ -662,7 +774,7 @@ mod tests {
                     Code {
                         max_stack: 2,
                         max_locals: 4,
-                        code: vec![0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0xac],
+                        code: vec![0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0x9e, 0x00, 0x07, 0x1d, 0xa7, 0x00, 0x04, 0x03, 0xac],
                         exception_table: Vec::new(),
                         attributes: vec![
                             LineNumberTable {
@@ -673,20 +785,34 @@ mod tests {
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
-                                    LocalVariableTableRecord::new(0, 6, 44, 45, 0),
-                                    LocalVariableTableRecord::new(0, 6, 51, 23, 1),
-                                    LocalVariableTableRecord::new(0, 6, 52, 23, 2),
-                                    LocalVariableTableRecord::new(4, 2, 53, 23, 3),
+                                    LocalVariableTableRecord::new(0, 14, 44, 45, 0),
+                                    LocalVariableTableRecord::new(0, 14, 51, 23, 1),
+                                    LocalVariableTableRecord::new(0, 14, 52, 23, 2),
+                                    LocalVariableTableRecord::new(4, 10, 53, 23, 3),
                                 ]
                             },
                             LocalVariableTypeTable {
                                 local_variable_type_table: vec![
-                                    LocalVariableTypeTableRecord::new(0, 6, 44, 47, 0),
+                                    LocalVariableTypeTableRecord::new(0, 14, 44, 47, 0),
+                                ]
+                            },
+                            StackMapTable {
+                                entries: vec![
+                                    AppendFrame {
+                                        frame_type: 252,
+                                        offset_delta: 12,
+                                        locals: vec![IntegerVariableInfo],
+                                    },
+                                    SameLocals1StackItemFrame {
+                                        frame_type: 64,
+                                        offset_delta: 0,
+                                        stack: IntegerVariableInfo,
+                                    },
                                 ]
                             },
                         ],
                     },
-                    Exceptions { exception_index_table: vec![55] },
+                    Exceptions { exception_index_table: vec![56] },
                     MethodParameters {
                         parameters: vec![
                             MethodParameterRecord::new(51, 0),
@@ -694,7 +820,7 @@ mod tests {
                         ]
                     },
                 ]),
-                MethodInfo::new(0x0001, 57, 6, vec![
+                MethodInfo::new(0x0001, 58, 6, vec![
                     Code {
                         max_stack: 0,
                         max_locals: 1,
@@ -720,8 +846,8 @@ mod tests {
                 ),
             ],
             vec![
-                Signature { signature_index: 59 },
-                SourceFile { sourcefile_index: 61 },
+                Signature { signature_index: 60 },
+                SourceFile { sourcefile_index: 62 },
             ],
         );
 
