@@ -207,7 +207,9 @@ pub enum Attribute {
         classes: Vec<u16>,
     },
     Record,
-    PermittedSubclasses,
+    PermittedSubclasses {
+        classes: Vec<u16>,
+    },
 }
 
 #[derive(Debug, PartialEq)]

@@ -4,7 +4,7 @@ use std::mem::size_of;
 use num_traits::Num;
 use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
 use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
@@ -489,6 +489,17 @@ impl Parser {
                     classes
                 }
             }
+            "PermittedSubclasses" => {
+                let number_of_classes: u16 = convert(&data, &mut start_from)?;
+                let mut classes = Vec::new();
+                for _ in 0..number_of_classes {
+                    classes.push(convert(&data, &mut start_from)?);
+                }
+
+                PermittedSubclasses {
+                    classes
+                }
+            }
             _ => {
                 return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {:?}", attribute_name)));
             }
@@ -607,7 +618,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 #[cfg(test)]
 mod tests {
     use model::class_file::{Annotation, BootstrapMethodRecord, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
+    use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, InvokeDynamic, Long, MethodHandle, Methodref, MethodType, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, ConstValueIndex, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
@@ -1246,6 +1257,63 @@ mod tests {
                             })
                         ]),
                     ]
+                },
+            ],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+
+    #[test]
+    fn should_load_and_parse_permitted_subclasses_annotation() {
+        let actual_class_file = load("../test_data/Shape.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            61,
+            vec![
+                Empty, //                                               0
+                Class { //                                              1
+                    name_index: 2,
+                },
+                Utf8 { //                                               2
+                    value: "Shape".into(),
+                },
+                Class { //                                              3
+                    name_index: 4,
+                },
+                Utf8 { //                                               4
+                    value: "java/lang/Object".into(),
+                },
+                Utf8 { //                                               5
+                    value: "SourceFile".into(),
+                },
+                Utf8 { //                                               6
+                    value: "Shape.java".into(),
+                },
+                Utf8 { //                                               7
+                    value: "PermittedSubclasses".into(),
+                },
+                Class { //                                              8
+                    name_index: 9,
+                },
+                Utf8 { //                                               9
+                    value: "Circle".into(),
+                },
+            ],
+            0x0601, // ACC_PUBLIC, ACC_INTERFACE, ACC_ABSTRACT
+            1,
+            3,
+            vec![],
+            vec![],
+            vec![],
+            vec![
+                SourceFile {
+                    sourcefile_index: 6,
+                },
+                PermittedSubclasses {
+                    classes: vec![8],
                 },
             ],
         );
