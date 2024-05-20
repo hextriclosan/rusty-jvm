@@ -2,9 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Annotation, Attribute, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
+use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
 use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
@@ -450,6 +450,21 @@ impl Parser {
                     entries
                 }
             }
+            "BootstrapMethods" => {
+                let num_bootstrap_methods: u16 = convert(&data, &mut start_from)?;
+                let mut bootstrap_methods = Vec::new();
+                for _ in 0..num_bootstrap_methods {
+                    let bootstrap_method_ref = convert(&data, &mut start_from)?;
+                    let num_bootstrap_arguments: u16 = convert(&data, &mut start_from)?;
+                    let mut bootstrap_arguments = Vec::new();
+                    for _ in 0..num_bootstrap_arguments {
+                        bootstrap_arguments.push(convert(&data, &mut start_from)?);
+                    }
+                    bootstrap_methods.push(BootstrapMethodRecord::new(bootstrap_method_ref, bootstrap_arguments))
+                }
+
+                BootstrapMethods { bootstrap_methods }
+            }
             "MethodParameters" => {
                 let parameters_count: u8 = convert(&data, &mut start_from)?;
                 let mut parameters = Vec::new();
@@ -591,9 +606,9 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{Annotation, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
-    use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Utf8};
+    use model::class_file::{Annotation, BootstrapMethodRecord, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
+    use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
+    use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, InvokeDynamic, Long, MethodHandle, Methodref, MethodType, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, ConstValueIndex, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
     use model::class_file::VerificationTypeInfo::IntegerVariableInfo;
@@ -660,167 +675,244 @@ mod tests {
                 Utf8 { //                               15
                     value: "(Ljava/lang/String;)V".into()
                 },
-                Class { //                              16
-                    name_index: 17,
+                InvokeDynamic { //                      16
+                    bootstrap_method_attr_index: 0,
+                    name_and_type_index: 17,
                 },
-                Utf8 { //                               17
-                    value: "java/lang/Runnable".into()
+                NameAndType { //                        17
+                    name_index: 18,
+                    descriptor_index: 19,
                 },
                 Utf8 { //                               18
-                    value: "PI".into()
+                    value: "run".into()
                 },
                 Utf8 { //                               19
-                    value: "F".into()
+                    value: "()Ljava/lang/Runnable;".into()
                 },
-                Utf8 { //                               20
-                    value: "ConstantValue".into()
+                Class { //                              20
+                    name_index: 21,
                 },
-                Float { //                              21
-                    value: 3.1415927,
+                Utf8 { //                               21
+                    value: "java/lang/Runnable".into()
                 },
                 Utf8 { //                               22
-                    value: "SPEED_OF_LIGHT".into()
+                    value: "PI".into()
                 },
                 Utf8 { //                               23
-                    value: "I".into()
+                    value: "F".into()
                 },
-                Integer { //                            24
-                    value: 299792458,
+                Utf8 { //                               24
+                    value: "ConstantValue".into()
                 },
-                Utf8 { //                               25
-                    value: "MIN_INT".into()
+                Float { //                              25
+                    value: 3.1415927,
                 },
-                Integer { //                            26
-                    value: -2147483648,
+                Utf8 { //                               26
+                    value: "SPEED_OF_LIGHT".into()
                 },
                 Utf8 { //                               27
+                    value: "I".into()
+                },
+                Integer { //                            28
+                    value: 299792458,
+                },
+                Utf8 { //                               29
+                    value: "MIN_INT".into()
+                },
+                Integer { //                            30
+                    value: -2147483648,
+                },
+                Utf8 { //                               31
                     value: "MIN_LONG".into()
                 },
-                Utf8 { //                               28
+                Utf8 { //                               32
                     value: "J".into()
                 },
-                Long { //                               29
+                Long { //                               33
                     value: -9223372036854775808,
                 },
-                Empty, //                               30
-                Utf8 { //                               31
+                Empty, //                               34
+                Utf8 { //                               35
                     value: "MAX_LONG".into()
                 },
-                Long { //                               32
+                Long { //                               36
                     value: 9223372036854775807,
-                },
-                Empty, //                               33
-                Utf8 { //                               34
-                    value: "MAX_DOUBLE".into()
-                },
-                Utf8 { //                               35
-                    value: "D".into()
-                },
-                Double { //                             36
-                    value: 1.7976931348623157E308,
                 },
                 Empty, //                               37
                 Utf8 { //                               38
+                    value: "MAX_DOUBLE".into()
+                },
+                Utf8 { //                               39
+                    value: "D".into()
+                },
+                Double { //                             40
+                    value: 1.7976931348623157E308,
+                },
+                Empty, //                               41
+                Utf8 { //                               42
                     value: "MIN_DOUBLE".into()
                 },
-                Double { //                             39
+                Double { //                             43
                     value: -1.23456789E-290,
                 },
-                Empty, //                               40
-                Utf8 { //                               41
+                Empty, //                               44
+                Utf8 { //                               45
                     value: "Code".into()
                 },
-                Utf8 { //                               42
+                Utf8 { //                               46
                     value: "LineNumberTable".into()
                 },
-                Utf8 { //                               43
+                Utf8 { //                               47
                     value: "LocalVariableTable".into()
                 },
-                Utf8 { //                               44
+                Utf8 { //                               48
                     value: "this".into()
                 },
-                Utf8 { //                               45
+                Utf8 { //                               49
                     value: "LTrivial;".into()
                 },
-                Utf8 { //                               46
+                Utf8 { //                               50
                     value: "LocalVariableTypeTable".into()
                 },
-                Utf8 { //                               47
+                Utf8 { //                               51
                     value: "LTrivial<TT;>;".into()
                 },
-                Utf8 { //                               48
+                Utf8 { //                               52
                     value: "MethodParameters".into()
                 },
-                Utf8 { //                               49
+                Utf8 { //                               53
                     value: "add".into()
                 },
-                Utf8 { //                               50
+                Utf8 { //                               54
                     value: "(II)I".into()
                 },
-                Utf8 { //                               51
+                Utf8 { //                               55
                     value: "first".into()
                 },
-                Utf8 { //                               52
+                Utf8 { //                               56
                     value: "second".into()
                 },
-                Utf8 { //                               53
+                Utf8 { //                               57
                     value: "result".into()
                 },
-                Utf8 { //                               54
+                Utf8 { //                               58
                     value: "StackMapTable".into()
                 },
-                Utf8 { //                               55
+                Utf8 { //                               59
                     value: "Exceptions".into()
                 },
-                Class { //                              56
-                    name_index: 57
-                },
-                Utf8 { //                               57
-                    value: "java/lang/ClassNotFoundException".into()
-                },
-                Utf8 { //                               58
-                    value: "run".into()
-                },
-                Utf8 { //                               59
-                    value: "Signature".into()
-                },
-                Utf8 { //                               60
-                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
+                Class { //                              60
+                    name_index: 61
                 },
                 Utf8 { //                               61
-                    value: "SourceFile".into()
+                    value: "java/lang/ClassNotFoundException".into()
                 },
                 Utf8 { //                               62
-                    value: "Trivial.java".into()
+                    value: "runnable".into()
                 },
                 Utf8 { //                               63
-                    value: "NestMembers".into()
+                    value: "Ljava/lang/Runnable;".into()
                 },
-                Class { //                              64
-                    name_index: 65,
+                Utf8 { //                               64
+                    value: "lambda$run$0".into()
                 },
                 Utf8 { //                               65
-                    value: "Trivial$InnerCls".into()
+                    value: "Signature".into()
                 },
                 Utf8 { //                               66
-                    value: "InnerClasses".into()
+                    value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
                 },
                 Utf8 { //                               67
+                    value: "SourceFile".into()
+                },
+                Utf8 { //                               68
+                    value: "Trivial.java".into()
+                },
+                Utf8 { //                               69
+                    value: "NestMembers".into()
+                },
+                Class { //                              70
+                    name_index: 71,
+                },
+                Utf8 { //                               71
+                    value: "Trivial$InnerCls".into()
+                },
+                Utf8 { //                               72
+                    value: "BootstrapMethods".into()
+                },
+                MethodHandle { //                       73
+                    reference_kind: 6,
+                    reference_index: 74,
+                },
+                Methodref { //                          74
+                    class_index: 75,
+                    name_and_type_index: 76,
+                },
+                Class { //                              75
+                    name_index: 77,
+                },
+                NameAndType { //                        76
+                    name_index: 78,
+                    descriptor_index: 79,
+                },
+                Utf8 { //                               77
+                    value: "java/lang/invoke/LambdaMetafactory".into()
+                },
+                Utf8 { //                               78
+                    value: "metafactory".into()
+                },
+                Utf8 { //                               79
+                    value: "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;".into()
+                },
+                MethodType { //                         80
+                    descriptor_index: 6,
+                },
+                MethodHandle { //                       81
+                    reference_kind: 6,
+                    reference_index: 82,
+                },
+                Methodref { //                          82
+                    class_index: 8,
+                    name_and_type_index: 83,
+                },
+                NameAndType { //                        83
+                    name_index: 64,
+                    descriptor_index: 6,
+                },
+                Utf8 { //                               84
+                    value: "InnerClasses".into()
+                },
+                Utf8 { //                               85
                     value: "InnerCls".into()
+                },
+                Class { //                              86
+                    name_index: 87,
+                },
+                Utf8 { //                               87
+                    value: "java/lang/invoke/MethodHandles$Lookup".into()
+                },
+                Class { //                              88
+                    name_index: 89,
+                },
+                Utf8 { //                               89
+                    value: "java/lang/invoke/MethodHandles".into()
+                },
+                Utf8 { //                               90
+                    value: "Lookup".into()
                 },
             ],
             0x0021,
             8,
             2,
-            vec![16],
+            vec![20],
             vec![
-                FieldInfo::new(0x0019, 18, 19, vec![ConstantValue { constantvalue_index: 21 }]),
-                FieldInfo::new(0x001c, 22, 23, vec![ConstantValue { constantvalue_index: 24 }]),
-                FieldInfo::new(0x001a, 25, 23, vec![ConstantValue { constantvalue_index: 26 }]),
-                FieldInfo::new(0x001a, 27, 28, vec![ConstantValue { constantvalue_index: 29 }]),
-                FieldInfo::new(0x001a, 31, 28, vec![ConstantValue { constantvalue_index: 32 }]),
-                FieldInfo::new(0x001a, 34, 35, vec![ConstantValue { constantvalue_index: 36 }]),
-                FieldInfo::new(0x001a, 38, 35, vec![ConstantValue { constantvalue_index: 39 }]),
+                FieldInfo::new(0x0019, 22, 23, vec![ConstantValue { constantvalue_index: 25 }]),
+                FieldInfo::new(0x001c, 26, 27, vec![ConstantValue { constantvalue_index: 28 }]),
+                FieldInfo::new(0x001a, 29, 27, vec![ConstantValue { constantvalue_index: 30 }]),
+                FieldInfo::new(0x001a, 31, 32, vec![ConstantValue { constantvalue_index: 33 }]),
+                FieldInfo::new(0x001a, 35, 32, vec![ConstantValue { constantvalue_index: 36 }]),
+                FieldInfo::new(0x001a, 38, 39, vec![ConstantValue { constantvalue_index: 40 }]),
+                FieldInfo::new(0x001a, 42, 39, vec![ConstantValue { constantvalue_index: 43 }]),
                 FieldInfo::new(0x0004, 11, 12, Vec::new()),
             ],
             vec![
@@ -840,13 +932,13 @@ mod tests {
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
-                                    LocalVariableTableRecord::new(0, 10, 44, 45, 0),
+                                    LocalVariableTableRecord::new(0, 10, 48, 49, 0),
                                     LocalVariableTableRecord::new(0, 10, 11, 12, 1),
                                 ]
                             },
                             LocalVariableTypeTable {
                                 local_variable_type_table: vec![
-                                    LocalVariableTypeTableRecord::new(0, 10, 44, 47, 0),
+                                    LocalVariableTypeTableRecord::new(0, 10, 48, 51, 0),
                                 ]
                             },
                         ],
@@ -873,19 +965,19 @@ mod tests {
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
-                                    LocalVariableTableRecord::new(0, 6, 44, 45, 0)
+                                    LocalVariableTableRecord::new(0, 6, 48, 49, 0)
                                 ]
                             },
                             LocalVariableTypeTable {
                                 local_variable_type_table: vec![
-                                    LocalVariableTypeTableRecord::new(0, 6, 44, 47, 0),
+                                    LocalVariableTypeTableRecord::new(0, 6, 48, 51, 0),
                                 ]
                             },
                         ],
                     }
                 ],
                 ),
-                MethodInfo::new(0x0001, 49, 50, vec![
+                MethodInfo::new(0x0001, 53, 54, vec![
                     Code {
                         max_stack: 2,
                         max_locals: 4,
@@ -900,15 +992,15 @@ mod tests {
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
-                                    LocalVariableTableRecord::new(0, 14, 44, 45, 0),
-                                    LocalVariableTableRecord::new(0, 14, 51, 23, 1),
-                                    LocalVariableTableRecord::new(0, 14, 52, 23, 2),
-                                    LocalVariableTableRecord::new(4, 10, 53, 23, 3),
+                                    LocalVariableTableRecord::new(0, 14, 48, 49, 0),
+                                    LocalVariableTableRecord::new(0, 14, 55, 27, 1),
+                                    LocalVariableTableRecord::new(0, 14, 56, 27, 2),
+                                    LocalVariableTableRecord::new(4, 10, 57, 27, 3),
                                 ]
                             },
                             LocalVariableTypeTable {
                                 local_variable_type_table: vec![
-                                    LocalVariableTypeTableRecord::new(0, 14, 44, 47, 0),
+                                    LocalVariableTypeTableRecord::new(0, 14, 48, 51, 0),
                                 ]
                             },
                             StackMapTable {
@@ -927,44 +1019,67 @@ mod tests {
                             },
                         ],
                     },
-                    Exceptions { exception_index_table: vec![56] },
+                    Exceptions { exception_index_table: vec![60] },
                     MethodParameters {
                         parameters: vec![
-                            MethodParameterRecord::new(51, 0),
-                            MethodParameterRecord::new(52, 0x0010),
+                            MethodParameterRecord::new(55, 0),
+                            MethodParameterRecord::new(56, 0x0010),
                         ]
                     },
                 ]),
-                MethodInfo::new(0x0001, 58, 6, vec![
+                MethodInfo::new(0x0001, 18, 6, vec![
                     Code {
-                        max_stack: 0,
-                        max_locals: 1,
-                        code: vec![0xb1],
+                        max_stack: 1,
+                        max_locals: 2,
+                        code: vec![0xba, 0x00, 0x10, 0x00, 0x00, 0x4c, 0xb1],
                         exception_table: Vec::new(),
                         attributes: vec![
                             LineNumberTable {
                                 line_number_table: vec![
-                                    LineNumberRecord::new(0, 32)]
+                                    LineNumberRecord::new(0, 31),
+                                    LineNumberRecord::new(6, 32),
+                                ]
                             },
                             LocalVariableTable {
                                 local_variable_table: vec![
-                                    LocalVariableTableRecord::new(0, 1, 44, 45, 0)]
+                                    LocalVariableTableRecord::new(0, 7, 48, 49, 0),
+                                    LocalVariableTableRecord::new(6, 1, 62, 63, 1),
+                                ]
                             },
                             LocalVariableTypeTable {
                                 local_variable_type_table: vec![
-                                    LocalVariableTypeTableRecord::new(0, 1, 44, 47, 0),
+                                    LocalVariableTypeTableRecord::new(0, 7, 48, 51, 0),
                                 ]
                             },
                         ],
                     }
                 ],
                 ),
+                MethodInfo::new(0x100A, 64, 6, vec![
+                    Code {
+                        max_stack: 0,
+                        max_locals: 0,
+                        code: vec![0xb1],
+                        exception_table: vec![],
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![LineNumberRecord::new(0, 31)],
+                            }
+                        ],
+                    }
+                ]),
             ],
             vec![
-                Signature { signature_index: 60 },
-                SourceFile { sourcefile_index: 62 },
-                NestMembers { classes: vec![64] },
-                InnerClasses { classes: vec![InnerClassRecord::new(64, 8, 67, 0)] },
+                Signature { signature_index: 66 },
+                SourceFile { sourcefile_index: 68 },
+                NestMembers { classes: vec![70] },
+                BootstrapMethods { bootstrap_methods: vec![BootstrapMethodRecord::new(73, vec![80, 81, 80])] },
+                InnerClasses {
+                    classes: vec![
+                        InnerClassRecord::new(70, 8, 85, 0),
+                        InnerClassRecord::new(86, 88, 90, 0x19),
+                    ]
+                },
             ],
         );
 

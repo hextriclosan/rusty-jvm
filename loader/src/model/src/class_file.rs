@@ -191,7 +191,9 @@ pub enum Attribute {
     StackMapTable {
         entries: Vec<StackMapFrame>,
     },
-    BootstrapMethods,
+    BootstrapMethods {
+        bootstrap_methods: Vec<BootstrapMethodRecord>
+    },
     RuntimeVisibleTypeAnnotations,
     RuntimeInvisibleTypeAnnotations,
     MethodParameters {
@@ -390,5 +392,17 @@ pub struct InnerClassRecord {
 impl InnerClassRecord {
     pub fn new(inner_class_info_index: u16, outer_class_info_index: u16, inner_name_index: u16, inner_class_access_flags: u16) -> Self {
         Self { inner_class_info_index, outer_class_info_index, inner_name_index, inner_class_access_flags }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct BootstrapMethodRecord {
+    bootstrap_method_ref: u16,
+    bootstrap_arguments: Vec<u16>,
+}
+
+impl BootstrapMethodRecord {
+    pub fn new(bootstrap_method_ref: u16, bootstrap_arguments: Vec<u16>) -> Self {
+        Self { bootstrap_method_ref, bootstrap_arguments }
     }
 }
