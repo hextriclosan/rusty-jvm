@@ -52,7 +52,7 @@ impl Parser {
                     let length: u16 = convert(&data, &mut start_from)?;
                     let bytes: &[u8] = convert_bytes(&data, &mut start_from, length as usize)?;
 
-                    Uint8 {
+                    Utf8 {
                         value: std::string::String::from_utf8(bytes.to_vec())
                             .map_err(|e| io::Error::new(InvalidData, e))?
                     }
@@ -224,7 +224,7 @@ impl Parser {
 
         let attribute_name = match constant_pool_vec.get(attribute_name_index as usize) {
             Some(item) => match item {
-                Uint8 { value } => value,
+                Utf8 { value } => value,
                 _ => return Err(io::Error::new(InvalidData, format!("element type is not Uint8 but {:?}", item)))
             },
             None => return Err(io::Error::new(InvalidData, format!("element not found at index {}", attribute_name_index)))
@@ -555,7 +555,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 mod tests {
     use model::class_file::{Annotation, ClassFile, ElementValuePair, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
     use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
-    use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
+    use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
     use model::class_file::VerificationTypeInfo::IntegerVariableInfo;
@@ -582,13 +582,13 @@ mod tests {
                     name_index: 5,
                     descriptor_index: 6,
                 },
-                Uint8 { //                              4
+                Utf8 { //                               4
                     value: "java/lang/Object".into()
                 },
-                Uint8 { //                              5
+                Utf8 { //                               5
                     value: "<init>".into()
                 },
-                Uint8 { //                              6
+                Utf8 { //                               6
                     value: "()V".into()
                 },
                 Fieldref { //                           7
@@ -602,13 +602,13 @@ mod tests {
                     name_index: 11,
                     descriptor_index: 12,
                 },
-                Uint8 { //                              10
+                Utf8 { //                               10
                     value: "Trivial".into()
                 },
-                Uint8 { //                              11
+                Utf8 { //                               11
                     value: "someText".into()
                 },
-                Uint8 { //                              12
+                Utf8 { //                               12
                     value: "Ljava/lang/String;".into()
                 },
                 Methodref { //                          13
@@ -619,140 +619,140 @@ mod tests {
                     name_index: 5,
                     descriptor_index: 15,
                 },
-                Uint8 { //                              15
+                Utf8 { //                               15
                     value: "(Ljava/lang/String;)V".into()
                 },
                 Class { //                              16
                     name_index: 17,
                 },
-                Uint8 { //                              17
+                Utf8 { //                               17
                     value: "java/lang/Runnable".into()
                 },
-                Uint8 { //                              18
+                Utf8 { //                               18
                     value: "PI".into()
                 },
-                Uint8 { //                              19
+                Utf8 { //                               19
                     value: "F".into()
                 },
-                Uint8 { //                              20
+                Utf8 { //                               20
                     value: "ConstantValue".into()
                 },
                 Float { //                              21
                     value: 3.1415927,
                 },
-                Uint8 { //                              22
+                Utf8 { //                               22
                     value: "SPEED_OF_LIGHT".into()
                 },
-                Uint8 { //                              23
+                Utf8 { //                               23
                     value: "I".into()
                 },
                 Integer { //                            24
                     value: 299792458,
                 },
-                Uint8 { //                              25
+                Utf8 { //                               25
                     value: "MIN_INT".into()
                 },
                 Integer { //                            26
                     value: -2147483648,
                 },
-                Uint8 { //                              27
+                Utf8 { //                               27
                     value: "MIN_LONG".into()
                 },
-                Uint8 { //                              28
+                Utf8 { //                               28
                     value: "J".into()
                 },
                 Long { //                               29
                     value: -9223372036854775808,
                 },
                 Empty, //                               30
-                Uint8 { //                              31
+                Utf8 { //                               31
                     value: "MAX_LONG".into()
                 },
                 Long { //                               32
                     value: 9223372036854775807,
                 },
                 Empty, //                               33
-                Uint8 { //                              34
+                Utf8 { //                               34
                     value: "MAX_DOUBLE".into()
                 },
-                Uint8 { //                              35
+                Utf8 { //                               35
                     value: "D".into()
                 },
                 Double { //                             36
                     value: 1.7976931348623157E308,
                 },
                 Empty, //                               37
-                Uint8 { //                              38
+                Utf8 { //                               38
                     value: "MIN_DOUBLE".into()
                 },
                 Double { //                             39
                     value: -1.23456789E-290,
                 },
                 Empty, //                               40
-                Uint8 { //                              41
+                Utf8 { //                               41
                     value: "Code".into()
                 },
-                Uint8 { //                              42
+                Utf8 { //                               42
                     value: "LineNumberTable".into()
                 },
-                Uint8 { //                              43
+                Utf8 { //                               43
                     value: "LocalVariableTable".into()
                 },
-                Uint8 { //                              44
+                Utf8 { //                               44
                     value: "this".into()
                 },
-                Uint8 { //                              45
+                Utf8 { //                               45
                     value: "LTrivial;".into()
                 },
-                Uint8 { //                              46
+                Utf8 { //                               46
                     value: "LocalVariableTypeTable".into()
                 },
-                Uint8 { //                              47
+                Utf8 { //                               47
                     value: "LTrivial<TT;>;".into()
                 },
-                Uint8 { //                              48
+                Utf8 { //                               48
                     value: "MethodParameters".into()
                 },
-                Uint8 { //                              49
+                Utf8 { //                               49
                     value: "add".into()
                 },
-                Uint8 { //                              50
+                Utf8 { //                               50
                     value: "(II)I".into()
                 },
-                Uint8 { //                              51
+                Utf8 { //                               51
                     value: "first".into()
                 },
-                Uint8 { //                              52
+                Utf8 { //                               52
                     value: "second".into()
                 },
-                Uint8 { //                              53
+                Utf8 { //                               53
                     value: "result".into()
                 },
-                Uint8 { //                              54
+                Utf8 { //                               54
                     value: "StackMapTable".into()
                 },
-                Uint8 { //                              55
+                Utf8 { //                               55
                     value: "Exceptions".into()
                 },
                 Class { //                              56
                     name_index: 57
                 },
-                Uint8 { //                              57
+                Utf8 { //                               57
                     value: "java/lang/ClassNotFoundException".into()
                 },
-                Uint8 { //                              58
+                Utf8 { //                               58
                     value: "run".into()
                 },
-                Uint8 { //                              59
+                Utf8 { //                               59
                     value: "Signature".into()
                 },
-                Uint8 { //                              60
+                Utf8 { //                               60
                     value: "<T:Ljava/lang/Object;>Ljava/lang/Object;Ljava/lang/Runnable;".into()
                 },
-                Uint8 { //                              61
+                Utf8 { //                               61
                     value: "SourceFile".into()
                 },
-                Uint8 { //                              62
+                Utf8 { //                               62
                     value: "Trivial.java".into()
                 },
             ],
@@ -929,52 +929,52 @@ mod tests {
                 Class { //                                              1
                     name_index: 2,
                 },
-                Uint8 { //                                              2
+                Utf8 { //                                               2
                     value: "fake/java/lang/FunctionalInterface".into(),
                 },
                 Class { //                                              3
                     name_index: 4,
                 },
-                Uint8 { //                                              4
+                Utf8 { //                                               4
                     value: "java/lang/Object".into(),
                 },
                 Class { //                                              5
                     name_index: 6,
                 },
-                Uint8 { //                                              6
+                Utf8 { //                                               6
                     value: "java/lang/annotation/Annotation".into(),
                 },
-                Uint8 { //                                              7
+                Utf8 { //                                               7
                     value: "SourceFile".into(),
                 },
-                Uint8 { //                                              8
+                Utf8 { //                                               8
                     value: "FunctionalInterface.java".into(),
                 },
-                Uint8 { //                                              9
+                Utf8 { //                                               9
                     value: "RuntimeVisibleAnnotations".into(),
                 },
-                Uint8 { //                                              10
+                Utf8 { //                                               10
                     value: "Ljava/lang/annotation/Documented;".into(),
                 },
-                Uint8 { //                                              11
+                Utf8 { //                                               11
                     value: "Ljava/lang/annotation/Retention;".into(),
                 },
-                Uint8 { //                                              12
+                Utf8 { //                                               12
                     value: "value".into(),
                 },
-                Uint8 { //                                              13
+                Utf8 { //                                               13
                     value: "Ljava/lang/annotation/RetentionPolicy;".into(),
                 },
-                Uint8 { //                                              14
+                Utf8 { //                                               14
                     value: "RUNTIME".into(),
                 },
-                Uint8 { //                                              15
+                Utf8 { //                                               15
                     value: "Ljava/lang/annotation/Target;".into(),
                 },
-                Uint8 { //                                              16
+                Utf8 { //                                               16
                     value: "Ljava/lang/annotation/ElementType;".into(),
                 },
-                Uint8 { //                                              17
+                Utf8 { //                                               17
                     value: "TYPE".into(),
                 },
             ],

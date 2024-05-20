@@ -82,7 +82,7 @@ impl MethodInfo {
 #[derive(Debug, PartialEq)]
 pub enum ConstantPool {
     Empty = 0,
-    Uint8 {
+    Utf8 {
         value: String,
     } = 1,
     Integer {
