@@ -31,4 +31,6 @@ public class Trivial<T> implements Runnable {
 
     }
 
+    class InnerCls {
+    }
 }

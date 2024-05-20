@@ -166,8 +166,9 @@ pub enum Attribute {
     LocalVariableTable {
         local_variable_table: Vec<LocalVariableTableRecord>,
     },
-
-    InnerClasses,
+    InnerClasses {
+        classes: Vec<InnerClassRecord>,
+    },
     Synthetic,
     Deprecated,
     EnclosingMethod,
@@ -200,7 +201,9 @@ pub enum Attribute {
     ModulePackages,
     ModuleMainClass,
     NestHost,
-    NestMembers,
+    NestMembers {
+        classes: Vec<u16>,
+    },
     Record,
     PermittedSubclasses,
 }
@@ -374,4 +377,18 @@ pub enum ElementValue {
         tag: u8,
         values: Vec<ElementValue>,
     },
+}
+
+#[derive(Debug, PartialEq)]
+pub struct InnerClassRecord {
+    inner_class_info_index: u16,
+    outer_class_info_index: u16,
+    inner_name_index: u16,
+    inner_class_access_flags: u16,
+}
+
+impl InnerClassRecord {
+    pub fn new(inner_class_info_index: u16, outer_class_info_index: u16, inner_name_index: u16, inner_class_access_flags: u16) -> Self {
+        Self { inner_class_info_index, outer_class_info_index, inner_name_index, inner_class_access_flags }
+    }
 }

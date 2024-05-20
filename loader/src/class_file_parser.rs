@@ -2,9 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Annotation, Attribute, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
+use model::class_file::{Annotation, Attribute, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
 use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
@@ -305,6 +305,22 @@ impl Parser {
                     local_variable_table
                 }
             }
+            "InnerClasses" => {
+                let number_of_classes: u16 = convert(&data, &mut start_from)?;
+                let mut classes = Vec::new();
+                for _ in 0..number_of_classes {
+                    classes.push(InnerClassRecord::new(
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                    ));
+                }
+
+                InnerClasses {
+                    classes
+                }
+            }
             "Signature" => Signature {
                 signature_index: convert(&data, &mut start_from)?,
             },
@@ -447,6 +463,17 @@ impl Parser {
                     parameters
                 }
             }
+            "NestMembers" => {
+                let number_of_classes: u16 = convert(&data, &mut start_from)?;
+                let mut classes = Vec::new();
+                for _ in 0..number_of_classes {
+                    classes.push(convert(&data, &mut start_from)?);
+                }
+
+                NestMembers {
+                    classes
+                }
+            }
             _ => {
                 return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {:?}", attribute_name)));
             }
@@ -564,8 +591,8 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{Annotation, ClassFile, ElementValuePair, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
+    use model::class_file::{Annotation, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, ConstValueIndex, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
@@ -766,6 +793,21 @@ mod tests {
                 Utf8 { //                               62
                     value: "Trivial.java".into()
                 },
+                Utf8 { //                               63
+                    value: "NestMembers".into()
+                },
+                Class { //                              64
+                    name_index: 65,
+                },
+                Utf8 { //                               65
+                    value: "Trivial$InnerCls".into()
+                },
+                Utf8 { //                               66
+                    value: "InnerClasses".into()
+                },
+                Utf8 { //                               67
+                    value: "InnerCls".into()
+                },
             ],
             0x0021,
             8,
@@ -921,6 +963,8 @@ mod tests {
             vec![
                 Signature { signature_index: 60 },
                 SourceFile { sourcefile_index: 62 },
+                NestMembers { classes: vec![64] },
+                InnerClasses { classes: vec![InnerClassRecord::new(64, 8, 67, 0)] },
             ],
         );
 
