@@ -187,7 +187,9 @@ pub enum Attribute {
     },
     RuntimeVisibleParameterAnnotations,
     RuntimeInvisibleParameterAnnotations,
-    AnnotationDefault,
+    AnnotationDefault {
+        default_value: ElementValue,
+    },
     StackMapTable {
         entries: Vec<StackMapFrame>,
     },

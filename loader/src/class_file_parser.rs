@@ -4,7 +4,7 @@ use std::mem::size_of;
 use num_traits::Num;
 use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
 use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
@@ -363,6 +363,9 @@ impl Parser {
                     annotations
                 }
             }
+            "AnnotationDefault" => AnnotationDefault {
+                default_value: get_element_value(&data, &mut start_from)?
+            },
             "StackMapTable" => {
                 let number_of_entries: u16 = convert(&data, &mut start_from)?;
                 let mut entries = Vec::new();
@@ -618,7 +621,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 #[cfg(test)]
 mod tests {
     use model::class_file::{Annotation, BootstrapMethodRecord, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{BootstrapMethods, Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
+    use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, InvokeDynamic, Long, MethodHandle, Methodref, MethodType, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, ConstValueIndex, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
@@ -1314,6 +1317,101 @@ mod tests {
                 },
                 PermittedSubclasses {
                     classes: vec![8],
+                },
+            ],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+
+    #[test]
+    fn should_load_and_parse_annotation_default_annotation() {
+        let actual_class_file = load("../test_data/RuntimeInvisibleAnnotation.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            61,
+            vec![
+                Empty, //                                               0
+                Class { //                                              1
+                    name_index: 2,
+                },
+                Utf8 { //                                               2
+                    value: "RuntimeInvisibleAnnotation".into(),
+                },
+                Class { //                                              3
+                    name_index: 4,
+                },
+                Utf8 { //                                               4
+                    value: "java/lang/Object".into(),
+                },
+                Class { //                                              5
+                    name_index: 6,
+                },
+                Utf8 { //                                               6
+                    value: "java/lang/annotation/Annotation".into(),
+                },
+                Utf8 { //                                               7
+                    value: "value".into(),
+                },
+                Utf8 { //                                               8
+                    value: "()Ljava/lang/String;".into(),
+                },
+                Utf8 { //                                               9
+                    value: "AnnotationDefault".into(),
+                },
+                Utf8 { //                                               10
+                    value: "I'm a default value".into(),
+                },
+                Utf8 { //                                               11
+                    value: "SourceFile".into(),
+                },
+                Utf8 { //                                               12
+                    value: "RuntimeInvisibleAnnotationUsage.java".into(),
+                },
+                Utf8 { //                                               13
+                    value: "RuntimeVisibleAnnotations".into(),
+                },
+                Utf8 { //                                               14
+                    value: "Ljava/lang/annotation/Retention;".into(),
+                },
+                Utf8 { //                                               15
+                    value: "Ljava/lang/annotation/RetentionPolicy;".into(),
+                },
+                Utf8 { //                                               16
+                    value: "CLASS".into(),
+                },
+            ],
+            0x2600, // ACC_INTERFACE, ACC_ABSTRACT, ACC_ANNOTATION
+            1,
+            3,
+            vec![5],
+            vec![],
+            vec![
+                MethodInfo::new(0x0401, 7, 8, vec![
+                    AnnotationDefault {
+                        default_value: ConstValueIndex {
+                            tag: 's' as u8,
+                            const_value_index: 10,
+                        }
+                    }
+                ])
+            ],
+            vec![
+                SourceFile {
+                    sourcefile_index: 12,
+                },
+                RuntimeVisibleAnnotations {
+                    annotations: vec![
+                        Annotation::new(14, vec![
+                            ElementValuePair::new(7, EnumConstValue {
+                                tag: 'e' as u8,
+                                type_name_index: 15,
+                                const_name_index: 16,
+                            })
+                        ]),
+                    ]
                 },
             ],
         );

@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.CLASS)
 @interface RuntimeInvisibleAnnotation {
-    String value();
+    String value() default "I'm a default value";
 }
 
 @RuntimeInvisibleAnnotation(value = "This is a runtime invisible annotation")
