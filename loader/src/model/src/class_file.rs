@@ -181,7 +181,9 @@ pub enum Attribute {
     RuntimeVisibleAnnotations {
         annotations: Vec<Annotation>,
     },
-    RuntimeInvisibleAnnotations,
+    RuntimeInvisibleAnnotations {
+        annotations: Vec<Annotation>,
+    },
     RuntimeVisibleParameterAnnotations,
     RuntimeInvisibleParameterAnnotations,
     AnnotationDefault,
