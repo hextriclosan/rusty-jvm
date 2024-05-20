@@ -2,9 +2,10 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Attribute, ClassFile, ConstantPool, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
+use model::class_file::{Annotation, Attribute, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{Code, ConstantValue, Deprecated, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
 pub struct Parser {}
@@ -324,6 +325,17 @@ impl Parser {
                     local_variable_type_table
                 }
             }
+            "RuntimeVisibleAnnotations" => {
+                let num_annotations: u16 = convert(&data, &mut start_from)?;
+                let mut annotations = Vec::new();
+                for _ in 0..num_annotations {
+                    annotations.push(get_annotation(&data, &mut start_from)?);
+                };
+
+                RuntimeVisibleAnnotations {
+                    annotations
+                }
+            }
             "StackMapTable" => {
                 let number_of_entries: u16 = convert(&data, &mut start_from)?;
                 let mut entries = Vec::new();
@@ -490,11 +502,61 @@ fn get_verification_type_info(tag: u8, data: &[u8], start_from: &mut usize) -> R
     }
 }
 
+fn get_annotation(data: &[u8], start_from: &mut usize) -> Result<Annotation, io::Error> {
+    let type_index: u16 = convert(&data, start_from)?;
+    let num_element_value_pairs: u16 = convert(&data, start_from)?;
+    let mut element_value_pairs = Vec::new();
+    for _ in 0..num_element_value_pairs {
+        let element_name_index: u16 = convert(&data, start_from)?;
+        let value = get_element_value(&data, start_from)?;
+        element_value_pairs.push(ElementValuePair::new(element_name_index, value));
+    }
+
+    Ok(Annotation::new(type_index, element_value_pairs))
+}
+
+fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue, io::Error> {
+    let tag: u8 = convert(&data, start_from)?;
+    match tag {
+        b'B' | b'C' | b'D' | b'F' | b'I' | b'J' | b'S' | b'Z' | b's' => Ok(ConstValueIndex {
+            tag,
+            const_value_index: convert(&data, start_from)?,
+        }),
+        b'e' => Ok(EnumConstValue {
+            tag,
+            type_name_index: convert(&data, start_from)?,
+            const_name_index: convert(&data, start_from)?,
+        }),
+        b'c' => Ok(ClassInfoIndex {
+            tag,
+            class_info_index: convert(&data, start_from)?,
+        }),
+        b'@' => Ok(AnnotationValue {
+            tag,
+            annotation_value: get_annotation(&data, start_from)?,
+        }),
+        b'[' => {
+            let num_values: u16 = convert(&data, start_from)?;
+            let mut values = Vec::new();
+            for _ in 0..num_values {
+                values.push(get_element_value(&data, start_from)?);
+            }
+
+            Ok(ArrayValue {
+                tag,
+                values,
+            })
+        }
+        _ => Err(io::Error::new(InvalidInput, format!("Unsupported tag: {}", tag)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use model::class_file::{ClassFile, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, Signature, SourceFile, StackMapTable};
+    use model::class_file::{Annotation, ClassFile, ElementValuePair, FieldInfo, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
+    use model::class_file::Attribute::{Code, ConstantValue, Exceptions, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, Long, Methodref, NameAndType, Uint8};
+    use model::class_file::ElementValue::{ArrayValue, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
     use model::class_file::VerificationTypeInfo::IntegerVariableInfo;
     use crate::loader::load;
@@ -848,6 +910,106 @@ mod tests {
             vec![
                 Signature { signature_index: 60 },
                 SourceFile { sourcefile_index: 62 },
+            ],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+
+    #[test]
+    fn should_load_and_parse_complex_runtime_visible_annotations() {
+        let actual_class_file = load("../test_data/FunctionalInterface.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            61,
+            vec![
+                Empty, //                                               0
+                Class { //                                              1
+                    name_index: 2,
+                },
+                Uint8 { //                                              2
+                    value: "fake/java/lang/FunctionalInterface".into(),
+                },
+                Class { //                                              3
+                    name_index: 4,
+                },
+                Uint8 { //                                              4
+                    value: "java/lang/Object".into(),
+                },
+                Class { //                                              5
+                    name_index: 6,
+                },
+                Uint8 { //                                              6
+                    value: "java/lang/annotation/Annotation".into(),
+                },
+                Uint8 { //                                              7
+                    value: "SourceFile".into(),
+                },
+                Uint8 { //                                              8
+                    value: "FunctionalInterface.java".into(),
+                },
+                Uint8 { //                                              9
+                    value: "RuntimeVisibleAnnotations".into(),
+                },
+                Uint8 { //                                              10
+                    value: "Ljava/lang/annotation/Documented;".into(),
+                },
+                Uint8 { //                                              11
+                    value: "Ljava/lang/annotation/Retention;".into(),
+                },
+                Uint8 { //                                              12
+                    value: "value".into(),
+                },
+                Uint8 { //                                              13
+                    value: "Ljava/lang/annotation/RetentionPolicy;".into(),
+                },
+                Uint8 { //                                              14
+                    value: "RUNTIME".into(),
+                },
+                Uint8 { //                                              15
+                    value: "Ljava/lang/annotation/Target;".into(),
+                },
+                Uint8 { //                                              16
+                    value: "Ljava/lang/annotation/ElementType;".into(),
+                },
+                Uint8 { //                                              17
+                    value: "TYPE".into(),
+                },
+            ],
+            0x2601, // ACC_PUBLIC, ACC_INTERFACE, ACC_ABSTRACT, ACC_ANNOTATION
+            1,
+            3,
+            vec![5],
+            vec![],
+            vec![],
+            vec![
+                SourceFile {
+                    sourcefile_index: 8,
+                },
+                RuntimeVisibleAnnotations {
+                    annotations: vec![
+                        Annotation::new(10, vec![]),
+                        Annotation::new(11, vec![
+                            ElementValuePair::new(12, EnumConstValue {
+                                tag: 'e' as u8,
+                                type_name_index: 13,
+                                const_name_index: 14,
+                            })
+                        ]),
+                        Annotation::new(15, vec![
+                            ElementValuePair::new(12, ArrayValue {
+                                tag: '[' as u8,
+                                values: vec![EnumConstValue {
+                                    tag: 'e' as u8,
+                                    type_name_index: 16,
+                                    const_name_index: 17,
+                                }],
+                            })
+                        ]),
+                    ]
+                },
             ],
         );
 

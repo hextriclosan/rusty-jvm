@@ -178,7 +178,9 @@ pub enum Attribute {
     LocalVariableTypeTable {
         local_variable_type_table: Vec<LocalVariableTypeTableRecord>,
     },
-    RuntimeVisibleAnnotations,
+    RuntimeVisibleAnnotations {
+        annotations: Vec<Annotation>,
+    },
     RuntimeInvisibleAnnotations,
     RuntimeVisibleParameterAnnotations,
     RuntimeInvisibleParameterAnnotations,
@@ -323,3 +325,51 @@ pub enum VerificationTypeInfo {
     },
 }
 
+#[derive(Debug, PartialEq)]
+pub struct Annotation {
+    type_index: u16,
+    element_value_pairs: Vec<ElementValuePair>,
+}
+
+impl Annotation {
+    pub fn new(type_index: u16, element_value_pairs: Vec<ElementValuePair>) -> Self {
+        Self { type_index, element_value_pairs }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ElementValuePair {
+    element_name_index: u16,
+    value: ElementValue,
+}
+
+impl ElementValuePair {
+    pub fn new(element_name_index: u16, value: ElementValue) -> Self {
+        Self { element_name_index, value }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ElementValue {
+    ConstValueIndex {
+        tag: u8,
+        const_value_index: u16,
+    },
+    EnumConstValue {
+        tag: u8,
+        type_name_index: u16,
+        const_name_index: u16,
+    },
+    ClassInfoIndex {
+        tag: u8,
+        class_info_index: u16,
+    },
+    AnnotationValue {
+        tag: u8,
+        annotation_value: Annotation,
+    },
+    ArrayValue {
+        tag: u8,
+        values: Vec<ElementValue>,
+    },
+}
