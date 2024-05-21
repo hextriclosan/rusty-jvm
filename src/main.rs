@@ -21,12 +21,16 @@ fn main() {
 
             match class_file {
                 Ok(file) => println!("{:#?}", file),
-                Err(err) => eprintln!("Error loading file: {}", err)
+                Err(err) => {
+                    eprintln!("Error loading file: {}", err);
+                    std::process::exit(1);
+                }
             }
         }
         None => {
             if let Err(err) = print_usage() {
                 eprintln!("{}", err);
+                std::process::exit(1);
             }
         }
     }
