@@ -213,7 +213,9 @@ pub enum Attribute {
     NestMembers {
         classes: Vec<u16>,
     },
-    Record,
+    Record {
+        components: Vec<RecordComponentInfo>,
+    },
     PermittedSubclasses {
         classes: Vec<u16>,
     },
@@ -413,5 +415,18 @@ pub struct BootstrapMethodRecord {
 impl BootstrapMethodRecord {
     pub fn new(bootstrap_method_ref: u16, bootstrap_arguments: Vec<u16>) -> Self {
         Self { bootstrap_method_ref, bootstrap_arguments }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RecordComponentInfo {
+    name_index: u16,
+    descriptor_index: u16,
+    attributes: Vec<Attribute>,
+}
+
+impl RecordComponentInfo {
+    pub fn new(name_index: u16, descriptor_index: u16, attributes: Vec<Attribute>) -> Self {
+        Self { name_index, descriptor_index, attributes }
     }
 }

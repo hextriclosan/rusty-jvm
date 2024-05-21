@@ -2,9 +2,9 @@ use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use num_traits::Num;
-use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
+use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, RecordComponentInfo, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Deprecated, EnclosingMethod, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestHost, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Deprecated, EnclosingMethod, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestHost, NestMembers, PermittedSubclasses, Record, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
 use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
@@ -499,6 +499,21 @@ impl Parser {
                     classes
                 }
             }
+            "Record" => {
+                let components_count: u16 = convert(&data, &mut start_from)?;
+                let mut components = Vec::new();
+                for _ in 0..components_count {
+                    components.push(RecordComponentInfo::new(
+                        convert(&data, &mut start_from)?,
+                        convert(&data, &mut start_from)?,
+                        Self::parse_attributes(&data, &mut start_from, &constant_pool_vec)?),
+                    )
+                }
+
+                Record {
+                    components
+                }
+            }
             "PermittedSubclasses" => {
                 let number_of_classes: u16 = convert(&data, &mut start_from)?;
                 let mut classes = Vec::new();
@@ -627,8 +642,8 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 
 #[cfg(test)]
 mod tests {
-    use model::class_file::{Annotation, BootstrapMethodRecord, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, EnclosingMethod, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestHost, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
+    use model::class_file::{Annotation, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, RecordComponentInfo};
+    use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, EnclosingMethod, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestHost, NestMembers, PermittedSubclasses, Record, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, InvokeDynamic, Long, MethodHandle, Methodref, MethodType, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, ConstValueIndex, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
@@ -1512,6 +1527,324 @@ mod tests {
                 InnerClasses {
                     classes: vec![
                         InnerClassRecord::new(1, 0, 15, 0x0608),
+                    ]
+                },
+            ],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+
+    #[test]
+    fn should_load_and_parse_record() {
+        let actual_class_file = load("../test_data/Rcrd.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            66,
+            vec![
+                Empty, //                                               0
+                Methodref { //                                          1
+                    class_index: 2,
+                    name_and_type_index: 3,
+                },
+                Class { //                                              2
+                    name_index: 4,
+                },
+                NameAndType { //                                        3
+                    name_index: 5,
+                    descriptor_index: 6,
+                },
+                Utf8 { //                                               4
+                    value: "java/lang/Record".into(),
+                },
+                Utf8 { //                                               5
+                    value: "<init>".into(),
+                },
+                Utf8 { //                                               6
+                    value: "()V".into(),
+                },
+                Fieldref { //                                           7
+                    class_index: 8,
+                    name_and_type_index: 9,
+                },
+                Class { //                                              8
+                    name_index: 10,
+                },
+                NameAndType { //                                        9
+                    name_index: 11,
+                    descriptor_index: 12,
+                },
+                Utf8 { //                                               10
+                    value: "Rcrd".into(),
+                },
+                Utf8 { //                                               11
+                    value: "recordArg".into(),
+                },
+                Utf8 { //                                               12
+                    value: "I".into(),
+                },
+                InvokeDynamic { //                                      13
+                    bootstrap_method_attr_index: 0,
+                    name_and_type_index: 14,
+                },
+                NameAndType { //                                        14
+                    name_index: 15,
+                    descriptor_index: 16,
+                },
+                Utf8 { //                                               15
+                    value: "toString".into(),
+                },
+                Utf8 { //                                               16
+                    value: "(LRcrd;)Ljava/lang/String;".into(),
+                },
+                InvokeDynamic { //                                      17
+                    bootstrap_method_attr_index: 0,
+                    name_and_type_index: 18,
+                },
+                NameAndType { //                                        18
+                    name_index: 19,
+                    descriptor_index: 20,
+                },
+                Utf8 { //                                               19
+                    value: "hashCode".into(),
+                },
+                Utf8 { //                                               20
+                    value: "(LRcrd;)I".into(),
+                },
+                InvokeDynamic { //                                      21
+                    bootstrap_method_attr_index: 0,
+                    name_and_type_index: 22,
+                },
+                NameAndType { //                                        22
+                    name_index: 23,
+                    descriptor_index: 24,
+                },
+                Utf8 { //                                               23
+                    value: "equals".into(),
+                },
+                Utf8 { //                                               24
+                    value: "(LRcrd;Ljava/lang/Object;)Z".into(),
+                },
+                Utf8 { //                                               25
+                    value: "(I)V".into(),
+                },
+                Utf8 { //                                               26
+                    value: "Code".into(),
+                },
+                Utf8 { //                                               27
+                    value: "LineNumberTable".into(),
+                },
+                Utf8 { //                                               28
+                    value: "LocalVariableTable".into(),
+                },
+                Utf8 { //                                               29
+                    value: "this".into(),
+                },
+                Utf8 { //                                               30
+                    value: "LRcrd;".into(),
+                },
+                Utf8 { //                                               31
+                    value: "MethodParameters".into(),
+                },
+                Utf8 { //                                               32
+                    value: "()Ljava/lang/String;".into(),
+                },
+                Utf8 { //                                               33
+                    value: "()I".into(),
+                },
+                Utf8 { //                                               34
+                    value: "(Ljava/lang/Object;)Z".into(),
+                },
+                Utf8 { //                                               35
+                    value: "o".into(),
+                },
+                Utf8 { //                                               36
+                    value: "Ljava/lang/Object;".into(),
+                },
+                Utf8 { //                                               37
+                    value: "SourceFile".into(),
+                },
+                Utf8 { //                                               38
+                    value: "Rcrd.java".into(),
+                },
+                Utf8 { //                                               39
+                    value: "Record".into(),
+                },
+                Utf8 { //                                               40
+                    value: "BootstrapMethods".into(),
+                },
+                ConstantPool::String { //                               41
+                    string_index: 11,
+                },
+                MethodHandle { //                                       42
+                    reference_kind: 1,
+                    reference_index: 7,
+                },
+                MethodHandle { //                                       43
+                    reference_kind: 6,
+                    reference_index: 44,
+                },
+                Methodref { //                                          44
+                    class_index: 45,
+                    name_and_type_index: 46,
+                },
+                Class { //                                              45
+                    name_index: 47,
+                },
+                NameAndType { //                                        46
+                    name_index: 48,
+                    descriptor_index: 49,
+                },
+                Utf8 { //                                               47
+                    value: "java/lang/runtime/ObjectMethods".into(),
+                },
+                Utf8 { //                                               48
+                    value: "bootstrap".into(),
+                },
+                Utf8 { //                                               49
+                    value: "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/TypeDescriptor;Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/invoke/MethodHandle;)Ljava/lang/Object;".into(),
+                },
+                Utf8 { //                                               50
+                    value: "InnerClasses".into(),
+                },
+                Class { //                                              51
+                    name_index: 52,
+                },
+                Utf8 { //                                               52
+                    value: "java/lang/invoke/MethodHandles$Lookup".into(),
+                },
+                Class { //                                              53
+                    name_index: 54,
+                },
+                Utf8 { //                                               54
+                    value: "java/lang/invoke/MethodHandles".into(),
+                },
+                Utf8 { //                                               55
+                    value: "Lookup".into(),
+                },
+            ],
+            0x0031, // ACC_PUBLIC, ACC_FINAL, ACC_SUPER
+            8,
+            2,
+            vec![],
+            vec![
+                FieldInfo::new(0x0012, 11, 12, vec![])
+            ],
+            vec![
+                MethodInfo::new(0x0001, 5, 25, vec![
+                    Code {
+                        max_stack: 2,
+                        max_locals: 2,
+                        code: vec![0x2a, 0xb7, 0x0, 0x1, 0x2a, 0x1b, 0xb5, 0x0, 0x7, 0xb1],
+                        exception_table: vec![],
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![LineNumberRecord::new(0, 4)],
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 10, 29, 30, 0),
+                                    LocalVariableTableRecord::new(0, 10, 11, 12, 1),
+                                ]
+                            },
+                        ],
+                    },
+                    MethodParameters {
+                        parameters: vec![MethodParameterRecord::new(11, 0)],
+                    },
+                ]),
+                MethodInfo::new(0x0011, 15, 32, vec![
+                    Code {
+                        max_stack: 1,
+                        max_locals: 1,
+                        code: vec![0x2a, 0xba, 0x0, 0xd, 0x0, 0x0, 0xb0],
+                        exception_table: vec![],
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![LineNumberRecord::new(0, 4)]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 7, 29, 30, 0)
+                                ]
+                            },
+                        ],
+                    }
+                ]),
+                MethodInfo::new(0x0011, 19, 33, vec![
+                    Code {
+                        max_stack: 1,
+                        max_locals: 1,
+                        code: vec![0x2a, 0xba, 0x0, 0x11, 0x0, 0x0, 0xac],
+                        exception_table: vec![],
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![LineNumberRecord::new(0, 4)]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 7, 29, 30, 0)
+                                ]
+                            },
+                        ],
+                    }
+                ]),
+                MethodInfo::new(0x0011, 23, 34, vec![
+                    Code {
+                        max_stack: 2,
+                        max_locals: 2,
+                        code: vec![0x2a, 0x2b, 0xba, 0x0, 0x15, 0x0, 0x0, 0xac],
+                        exception_table: vec![],
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![LineNumberRecord::new(0, 4)]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 8, 29, 30, 0),
+                                    LocalVariableTableRecord::new(0, 8, 35, 36, 1),
+                                ]
+                            },
+                        ],
+                    },
+                    MethodParameters {
+                        parameters: vec![MethodParameterRecord::new(35, 0)],
+                    },
+                ]),
+                MethodInfo::new(0x0001, 11, 33, vec![
+                    Code {
+                        max_stack: 1,
+                        max_locals: 1,
+                        code: vec![0x2a, 0xb4, 0x0, 0x7, 0xac],
+                        exception_table: vec![],
+                        attributes: vec![
+                            LineNumberTable {
+                                line_number_table: vec![LineNumberRecord::new(0, 4)]
+                            },
+                            LocalVariableTable {
+                                local_variable_table: vec![
+                                    LocalVariableTableRecord::new(0, 5, 29, 30, 0),
+                                ]
+                            },
+                        ],
+                    }
+                ]),
+            ],
+            vec![
+                SourceFile {
+                    sourcefile_index: 38,
+                },
+                Record {
+                    components: vec![RecordComponentInfo::new(11, 12, vec![])],
+                },
+                BootstrapMethods {
+                    bootstrap_methods: vec![BootstrapMethodRecord::new(43, vec![8, 41, 42])],
+                },
+                InnerClasses {
+                    classes: vec![
+                        InnerClassRecord::new(51, 53, 55, 0x0019),
                     ]
                 },
             ],
