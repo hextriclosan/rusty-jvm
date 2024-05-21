@@ -4,7 +4,7 @@ use std::mem::size_of;
 use num_traits::Num;
 use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
-use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Deprecated, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
+use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Deprecated, EnclosingMethod, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestHost, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable, Synthetic};
 use model::class_file::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
 use model::class_file::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
 
@@ -321,6 +321,10 @@ impl Parser {
                     classes
                 }
             }
+            "EnclosingMethod" => EnclosingMethod {
+                class_index: convert(&data, &mut start_from)?,
+                method_index: convert(&data, &mut start_from)?,
+            },
             "Signature" => Signature {
                 signature_index: convert(&data, &mut start_from)?,
             },
@@ -481,6 +485,9 @@ impl Parser {
                     parameters
                 }
             }
+            "NestHost" => NestHost {
+                host_class_index: convert(&data, &mut start_from)?,
+            },
             "NestMembers" => {
                 let number_of_classes: u16 = convert(&data, &mut start_from)?;
                 let mut classes = Vec::new();
@@ -621,7 +628,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 #[cfg(test)]
 mod tests {
     use model::class_file::{Annotation, BootstrapMethodRecord, ClassFile, ElementValuePair, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord};
-    use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
+    use model::class_file::Attribute::{AnnotationDefault, BootstrapMethods, Code, ConstantValue, EnclosingMethod, Exceptions, InnerClasses, LineNumberTable, LocalVariableTable, LocalVariableTypeTable, MethodParameters, NestHost, NestMembers, PermittedSubclasses, RuntimeInvisibleAnnotations, RuntimeVisibleAnnotations, Signature, SourceFile, StackMapTable};
     use model::class_file::ConstantPool::{Class, Double, Empty, Fieldref, Float, Integer, InvokeDynamic, Long, MethodHandle, Methodref, MethodType, NameAndType, Utf8};
     use model::class_file::ElementValue::{ArrayValue, ConstValueIndex, EnumConstValue};
     use model::class_file::StackMapFrame::{AppendFrame, SameLocals1StackItemFrame};
@@ -851,67 +858,75 @@ mod tests {
                 Utf8 { //                               71
                     value: "Trivial$InnerCls".into()
                 },
-                Utf8 { //                               72
+                Class { //                              72
+                    name_index: 73
+                }, Utf8 { //                            73
+                    value: "Trivial$1LocalCls".into()
+                },
+                Utf8 { //                               74
                     value: "BootstrapMethods".into()
                 },
-                MethodHandle { //                       73
+                MethodHandle { //                       75
                     reference_kind: 6,
-                    reference_index: 74,
+                    reference_index: 76,
                 },
-                Methodref { //                          74
-                    class_index: 75,
-                    name_and_type_index: 76,
+                Methodref { //                          76
+                    class_index: 77,
+                    name_and_type_index: 78,
                 },
-                Class { //                              75
-                    name_index: 77,
+                Class { //                              77
+                    name_index: 79,
                 },
-                NameAndType { //                        76
-                    name_index: 78,
-                    descriptor_index: 79,
-                },
-                Utf8 { //                               77
-                    value: "java/lang/invoke/LambdaMetafactory".into()
-                },
-                Utf8 { //                               78
-                    value: "metafactory".into()
+                NameAndType { //                        78
+                    name_index: 80,
+                    descriptor_index: 81,
                 },
                 Utf8 { //                               79
+                    value: "java/lang/invoke/LambdaMetafactory".into()
+                },
+                Utf8 { //                               80
+                    value: "metafactory".into()
+                },
+                Utf8 { //                               81
                     value: "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;".into()
                 },
-                MethodType { //                         80
+                MethodType { //                         82
                     descriptor_index: 6,
                 },
-                MethodHandle { //                       81
+                MethodHandle { //                       83
                     reference_kind: 6,
-                    reference_index: 82,
+                    reference_index: 84,
                 },
-                Methodref { //                          82
+                Methodref { //                          84
                     class_index: 8,
-                    name_and_type_index: 83,
+                    name_and_type_index: 85,
                 },
-                NameAndType { //                        83
+                NameAndType { //                        85
                     name_index: 64,
                     descriptor_index: 6,
                 },
-                Utf8 { //                               84
+                Utf8 { //                               86
                     value: "InnerClasses".into()
                 },
-                Utf8 { //                               85
+                Utf8 { //                               87
                     value: "InnerCls".into()
                 },
-                Class { //                              86
-                    name_index: 87,
+                Utf8 { //                               88
+                    value: "LocalCls".into()
                 },
-                Utf8 { //                               87
-                    value: "java/lang/invoke/MethodHandles$Lookup".into()
-                },
-                Class { //                              88
-                    name_index: 89,
-                },
-                Utf8 { //                               89
-                    value: "java/lang/invoke/MethodHandles".into()
+                Class { //                              89
+                    name_index: 90,
                 },
                 Utf8 { //                               90
+                    value: "java/lang/invoke/MethodHandles$Lookup".into()
+                },
+                Class { //                              91
+                    name_index: 92,
+                },
+                Utf8 { //                               92
+                    value: "java/lang/invoke/MethodHandles".into()
+                },
+                Utf8 { //                               93
                     value: "Lookup".into()
                 },
             ],
@@ -1051,7 +1066,7 @@ mod tests {
                             LineNumberTable {
                                 line_number_table: vec![
                                     LineNumberRecord::new(0, 31),
-                                    LineNumberRecord::new(6, 32),
+                                    LineNumberRecord::new(6, 34),
                                 ]
                             },
                             LocalVariableTable {
@@ -1086,12 +1101,13 @@ mod tests {
             vec![
                 Signature { signature_index: 66 },
                 SourceFile { sourcefile_index: 68 },
-                NestMembers { classes: vec![70] },
-                BootstrapMethods { bootstrap_methods: vec![BootstrapMethodRecord::new(73, vec![80, 81, 80])] },
+                NestMembers { classes: vec![70, 72] },
+                BootstrapMethods { bootstrap_methods: vec![BootstrapMethodRecord::new(75, vec![82, 83, 82])] },
                 InnerClasses {
                     classes: vec![
-                        InnerClassRecord::new(70, 8, 85, 0),
-                        InnerClassRecord::new(86, 88, 90, 0x19),
+                        InnerClassRecord::new(70, 8, 87, 0),
+                        InnerClassRecord::new(72, 0, 88, 0x0608),
+                        InnerClassRecord::new(89, 91, 93, 0x19),
                     ]
                 },
             ],
@@ -1411,6 +1427,91 @@ mod tests {
                                 const_name_index: 16,
                             })
                         ]),
+                    ]
+                },
+            ],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+
+    #[test]
+    fn should_load_and_parse_local_class() {
+        let actual_class_file = load("../test_data/Trivial$1LocalCls.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            61,
+            vec![
+                Empty, //                                               0
+                Class { //                                              1
+                    name_index: 2,
+                },
+                Utf8 { //                                               2
+                    value: "Trivial$1LocalCls".into(),
+                },
+                Class { //                                              3
+                    name_index: 4,
+                },
+                Utf8 { //                                               4
+                    value: "java/lang/Object".into(),
+                },
+                Utf8 { //                                               5
+                    value: "SourceFile".into(),
+                },
+                Utf8 { //                                               6
+                    value: "Trivial.java".into(),
+                },
+                Utf8 { //                                               7
+                    value: "EnclosingMethod".into(),
+                },
+                Class { //                                              8
+                    name_index: 9,
+                },
+                Utf8 { //                                               9
+                    value: "Trivial".into(),
+                },
+                NameAndType { //                                        10
+                    name_index: 11,
+                    descriptor_index: 12,
+                },
+                Utf8 { //                                               11
+                    value: "run".into(),
+                },
+                Utf8 { //                                               12
+                    value: "()V".into(),
+                },
+                Utf8 { //                                               13
+                    value: "NestHost".into(),
+                },
+                Utf8 { //                                               14
+                    value: "InnerClasses".into(),
+                },
+                Utf8 { //                                               15
+                    value: "LocalCls".into(),
+                },
+            ],
+            0x0600, // ACC_INTERFACE, ACC_ABSTRACT
+            1,
+            3,
+            vec![],
+            vec![],
+            vec![],
+            vec![
+                SourceFile {
+                    sourcefile_index: 6,
+                },
+                EnclosingMethod {
+                    class_index: 8,
+                    method_index: 10,
+                },
+                NestHost {
+                    host_class_index: 8,
+                },
+                InnerClasses {
+                    classes: vec![
+                        InnerClassRecord::new(1, 0, 15, 0x0608),
                     ]
                 },
             ],

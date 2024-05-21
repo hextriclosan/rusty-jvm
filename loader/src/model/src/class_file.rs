@@ -171,7 +171,10 @@ pub enum Attribute {
     },
     Synthetic,
     Deprecated,
-    EnclosingMethod,
+    EnclosingMethod {
+        class_index: u16,
+        method_index: u16,
+    },
     Signature {
         signature_index: u16,
     },
@@ -204,7 +207,9 @@ pub enum Attribute {
     Module,
     ModulePackages,
     ModuleMainClass,
-    NestHost,
+    NestHost {
+        host_class_index: u16,
+    },
     NestMembers {
         classes: Vec<u16>,
     },

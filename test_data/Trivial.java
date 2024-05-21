@@ -29,6 +29,8 @@ public class Trivial<T> implements Runnable {
     @Override
     public void run() {
         Runnable runnable = () -> {};
+        interface LocalCls {
+        }
     }
 
     class InnerCls {
