@@ -13,12 +13,19 @@ name = "loader"
 version = "0.1.0"
 dependencies = [
  "model",
+ "mutf8",
  "num-traits",
 ]
 
 [[package]]
 name = "model"
 version = "0.1.0"
+
+[[package]]
+name = "mutf8"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45441cbf2f79a8974091e9e78cf9d0fd19fb15641e7969dfcc42d18eb855f5f3"
 
 [[package]]
 name = "num-traits"

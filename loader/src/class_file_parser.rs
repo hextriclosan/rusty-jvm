@@ -1,6 +1,7 @@
 use std::io;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
+use mutf8::mutf8_to_utf8;
 use num_traits::Num;
 use model::class_file::{Annotation, Attribute, BootstrapMethodRecord, ClassFile, ConstantPool, ElementValue, ElementValuePair, ExceptionRecord, FieldInfo, InnerClassRecord, LineNumberRecord, LocalVariableTableRecord, LocalVariableTypeTableRecord, MethodInfo, MethodParameterRecord, RecordComponentInfo, VerificationTypeInfo};
 use model::class_file::ConstantPool::*;
@@ -50,10 +51,13 @@ impl Parser {
             let constant_pool_entry = match tag {
                 1 => {
                     let length: u16 = convert(&data, &mut start_from)?;
-                    let bytes: &[u8] = convert_bytes(&data, &mut start_from, length as usize)?;
+                    let mutf8_bytes: &[u8] = convert_bytes(&data, &mut start_from, length as usize)?;
+                    let utf8_bytes = mutf8_to_utf8(mutf8_bytes)
+                        .map_err(|e| io::Error::new(InvalidData, e))?
+                        .to_vec();
 
                     Utf8 {
-                        value: std::string::String::from_utf8(bytes.to_vec())
+                        value: std::string::String::from_utf8(utf8_bytes)
                             .map_err(|e| io::Error::new(InvalidData, e))?
                     }
                 }
@@ -1848,6 +1852,114 @@ mod tests {
                     ]
                 },
             ],
+        );
+
+        assert_eq!(actual_class_file, expected_class_file)
+    }
+
+    #[test]
+    fn should_load_and_parse_mutf8_strings() {
+        let actual_class_file = load("../test_data/Mutf8.class").unwrap();
+
+        let expected_class_file = ClassFile::new(
+            0xCAFEBABE,
+            0,
+            66,
+            vec![
+                Empty, //                                               0
+                Class { //                                              1
+                    name_index: 2,
+                },
+                Utf8 { //                                               2
+                    value: "Mutf8".into(),
+                },
+                Class { //                                              3
+                    name_index: 4,
+                },
+                Utf8 { //                                               4
+                    value: "java/lang/Object".into(),
+                },
+                Utf8 { //                                               5
+                    value: "withZero".into(),
+                },
+                Utf8 { //                                               6
+                    value: "Ljava/lang/String;".into(),
+                },
+                Utf8 { //                                               7
+                    value: "ConstantValue".into(),
+                },
+                ConstantPool::String { //                               8
+                    string_index: 9,
+                },
+                Utf8 { //                                               9
+                    value: "\0abc".into(),
+                },
+                Utf8 { //                                               10
+                    value: "singleByteLatin".into(),
+                },
+                ConstantPool::String { //                               11
+                    string_index: 12,
+                },
+                Utf8 { //                                               12
+                    value: "A".into(),
+                },
+                Utf8 { //                                               13
+                    value: "twoByteUkrainian".into(),
+                },
+                ConstantPool::String { //                               14
+                    string_index: 15,
+                },
+                Utf8 { //                                               15
+                    value: "ї".into(),
+                },
+                Utf8 { //                                               16
+                    value: "threeByteSnowman".into(),
+                },
+                ConstantPool::String { //                               17
+                    string_index: 18,
+                },
+                Utf8 { //                                               18
+                    value: "☃".into(),
+                },
+                Utf8 { //                                               19
+                    value: "fourByteGothicLetterHwair".into(),
+                },
+                ConstantPool::String { //                               20
+                    string_index: 21,
+                },
+                Utf8 { //                                               21
+                    value: "𐍈".into(),
+                },
+                Utf8 { //                                               22
+                    value: "fourByteEmoji".into(),
+                },
+                ConstantPool::String { //                               23
+                    string_index: 24,
+                },
+                Utf8 { //                                               24
+                    value: "😂".into(),
+                },
+                Utf8 { //                                               25
+                    value: "SourceFile".into(),
+                },
+                Utf8 { //                                               26
+                    value: "Mutf8.java".into(),
+                },
+            ],
+            0x0600, // ACC_INTERFACE, ACC_ABSTRACT
+            1,
+            3,
+            vec![],
+            vec![
+                FieldInfo::new(0x0019, 5, 6, vec![ConstantValue { constantvalue_index: 8 }]),
+                FieldInfo::new(0x0019, 10, 6, vec![ConstantValue { constantvalue_index: 11 }]),
+                FieldInfo::new(0x0019, 13, 6, vec![ConstantValue { constantvalue_index: 14 }]),
+                FieldInfo::new(0x0019, 16, 6, vec![ConstantValue { constantvalue_index: 17 }]),
+                FieldInfo::new(0x0019, 19, 6, vec![ConstantValue { constantvalue_index: 20 }]),
+                FieldInfo::new(0x0019, 22, 6, vec![ConstantValue { constantvalue_index: 23 }]),
+            ],
+            vec![],
+            vec![SourceFile { sourcefile_index: 26 }],
         );
 
         assert_eq!(actual_class_file, expected_class_file)
