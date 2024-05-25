@@ -1,5 +1,6 @@
-use std::env;
-use loader::loader::load;
+use std::{env, fs, io};
+use jclass::class_file::ClassFile;
+use jclass::class_file_parser::parse;
 
 fn main() {
     let print_usage = || -> Result<(), String> {
@@ -34,4 +35,12 @@ fn main() {
             }
         }
     }
+}
+
+fn load(file_name: &str) -> Result<ClassFile, io::Error> {
+    let data = fs::read(file_name)?;
+
+    let class_file = parse(data.as_slice());
+
+    class_file
 }

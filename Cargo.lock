@@ -9,17 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
-name = "loader"
+name = "jclass"
 version = "0.1.0"
 dependencies = [
- "model",
  "mutf8",
  "num-traits",
 ]
-
-[[package]]
-name = "model"
-version = "0.1.0"
 
 [[package]]
 name = "mutf8"
@@ -34,11 +29,4 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "rusty-jvm"
-version = "0.1.0"
-dependencies = [
- "loader",
 ]
