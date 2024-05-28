@@ -58,7 +58,7 @@ pub fn parse(data: &[u8]) -> Result<ClassFile, io::Error> {
 
 fn get_methods(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Vec<MethodInfo>, io::Error> {
     let methods_count: u16 = read_int(&data, &mut start_from)?;
-    let mut methods = Vec::new();
+    let mut methods = Vec::with_capacity(methods_count as usize);
     for _ in 0..methods_count {
         methods.push(MethodInfo::new(
             read_int(&data, &mut start_from)?,
@@ -74,7 +74,7 @@ fn get_methods(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec
 fn get_fields(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Vec<FieldInfo>, io::Error> {
     let fields_count: u16 = read_int(&data, &mut start_from)?;
 
-    let mut fields = Vec::new();
+    let mut fields = Vec::with_capacity(fields_count as usize);
     for _ in 0..fields_count {
         fields.push(FieldInfo::new(
             read_int(&data, &mut start_from)?,
@@ -90,7 +90,7 @@ fn get_fields(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<
 fn get_interfaces(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<u16>, io::Error> {
     let interfaces_count: u16 = read_int(&data, &mut start_from)?;
 
-    let mut interfaces = Vec::new();
+    let mut interfaces = Vec::with_capacity(interfaces_count as usize);
     for _ in 0..interfaces_count {
         interfaces.push(read_int(&data, &mut start_from)?);
     }
@@ -100,7 +100,7 @@ fn get_interfaces(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<u16>, 
 
 fn get_constant_pool(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<ConstantPool>, io::Error> {
     let constant_pool_count: u16 = read_int(&data, &mut start_from)?;
-    let mut constant_pool_vec = Vec::new();
+    let mut constant_pool_vec = Vec::with_capacity(constant_pool_count as usize);
     for _ in 0..constant_pool_count {
         match constant_pool_vec.last() {
             Some(val) => match val {
@@ -235,7 +235,7 @@ fn get_string(data: &&[u8], mut start_from: &mut usize) -> Result<std::string::S
 
 fn get_attributes(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Vec<Attribute>, io::Error> {
     let attributes_count: u16 = read_int(&data, &mut start_from)?;
-    let mut attributes = Vec::new();
+    let mut attributes = Vec::with_capacity(attributes_count as usize);
     for _ in 0..attributes_count {
         attributes.push(get_attribute(&data, &mut start_from, constant_pool_vec)?);
     }
@@ -266,7 +266,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
             let code = read_bytes(&data, &mut start_from, code_length as usize)?.to_vec();
             let exception_table_length: u16 = read_int(&data, &mut start_from)?;
 
-            let mut exception_table = Vec::new();
+            let mut exception_table = Vec::with_capacity(exception_table_length as usize);
             for _ in 0..exception_table_length {
                 exception_table.push(ExceptionRecord::new(
                     read_int(&data, &mut start_from)?,
@@ -288,7 +288,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "Exceptions" => {
             let number_of_exceptions: u16 = read_int(&data, &mut start_from)?;
-            let mut exception_index_table = Vec::new();
+            let mut exception_index_table = Vec::with_capacity(number_of_exceptions as usize);
             for _ in 0..number_of_exceptions {
                 exception_index_table.push(read_int(&data, &mut start_from)?);
             }
@@ -303,7 +303,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         },
         "LineNumberTable" => {
             let line_number_table_length: u16 = read_int(&data, &mut start_from)?;
-            let mut line_number_table = Vec::new();
+            let mut line_number_table = Vec::with_capacity(line_number_table_length as usize);
             for _ in 0..line_number_table_length {
                 line_number_table.push(LineNumberRecord::new(
                     read_int(&data, &mut start_from)?,
@@ -316,7 +316,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "LocalVariableTable" => {
             let local_variable_table_length: u16 = read_int(&data, &mut start_from)?;
-            let mut local_variable_table = Vec::new();
+            let mut local_variable_table = Vec::with_capacity(local_variable_table_length as usize);
             for _ in 0..local_variable_table_length {
                 local_variable_table.push(LocalVariableTableRecord::new(
                     read_int(&data, &mut start_from)?,
@@ -333,7 +333,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "InnerClasses" => {
             let number_of_classes: u16 = read_int(&data, &mut start_from)?;
-            let mut classes = Vec::new();
+            let mut classes = Vec::with_capacity(number_of_classes as usize);
             for _ in 0..number_of_classes {
                 classes.push(InnerClassRecord::new(
                     read_int(&data, &mut start_from)?,
@@ -356,7 +356,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         },
         "LocalVariableTypeTable" => {
             let local_variable_type_table_length: u16 = read_int(&data, &mut start_from)?;
-            let mut local_variable_type_table = Vec::new();
+            let mut local_variable_type_table = Vec::with_capacity(local_variable_type_table_length as usize);
             for _ in 0..local_variable_type_table_length {
                 local_variable_type_table.push(LocalVariableTypeTableRecord::new(
                     read_int(&data, &mut start_from)?,
@@ -373,7 +373,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "RuntimeVisibleAnnotations" => {
             let num_annotations: u16 = read_int(&data, &mut start_from)?;
-            let mut annotations = Vec::new();
+            let mut annotations = Vec::with_capacity(num_annotations as usize);
             for _ in 0..num_annotations {
                 annotations.push(get_annotation(&data, &mut start_from)?);
             };
@@ -384,7 +384,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "RuntimeInvisibleAnnotations" => {
             let num_annotations: u16 = read_int(&data, &mut start_from)?;
-            let mut annotations = Vec::new();
+            let mut annotations = Vec::with_capacity(num_annotations as usize);
             for _ in 0..num_annotations {
                 annotations.push(get_annotation(&data, &mut start_from)?);
             };
@@ -398,7 +398,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         },
         "StackMapTable" => {
             let number_of_entries: u16 = read_int(&data, &mut start_from)?;
-            let mut entries = Vec::new();
+            let mut entries = Vec::with_capacity(number_of_entries as usize);
             for _ in 0..number_of_entries {
                 let frame_type = read_int(&data, &mut start_from)?;
                 let stack_map_frame = match frame_type {
@@ -435,8 +435,8 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                     },
                     252..=254 => {
                         let offset_delta = read_int(&data, &mut start_from)?;
-                        let mut locals = Vec::new();
                         let size = frame_type - 251;
+                        let mut locals = Vec::with_capacity(size as usize);
                         for _ in 0..size {
                             let tag: u8 = read_int(&data, &mut start_from)?;
                             locals.push(get_verification_type_info(tag, &data, &mut start_from)?);
@@ -451,14 +451,14 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                         let offset_delta = read_int(&data, &mut start_from)?;
 
                         let number_of_locals: u16 = read_int(&data, &mut start_from)?;
-                        let mut locals = Vec::new();
+                        let mut locals = Vec::with_capacity(number_of_locals as usize);
                         for _ in 0..number_of_locals {
                             let tag: u8 = read_int(&data, &mut start_from)?;
                             locals.push(get_verification_type_info(tag, &data, &mut start_from)?);
                         }
 
                         let number_of_stack_items: u16 = read_int(&data, &mut start_from)?;
-                        let mut stack = Vec::new();
+                        let mut stack = Vec::with_capacity(number_of_stack_items as usize);
                         for _ in 0..number_of_stack_items {
                             let tag: u8 = read_int(&data, &mut start_from)?;
                             stack.push(get_verification_type_info(tag, &data, &mut start_from)?);
@@ -485,11 +485,11 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "BootstrapMethods" => {
             let num_bootstrap_methods: u16 = read_int(&data, &mut start_from)?;
-            let mut bootstrap_methods = Vec::new();
+            let mut bootstrap_methods = Vec::with_capacity(num_bootstrap_methods as usize);
             for _ in 0..num_bootstrap_methods {
                 let bootstrap_method_ref = read_int(&data, &mut start_from)?;
                 let num_bootstrap_arguments: u16 = read_int(&data, &mut start_from)?;
-                let mut bootstrap_arguments = Vec::new();
+                let mut bootstrap_arguments = Vec::with_capacity(num_bootstrap_arguments as usize);
                 for _ in 0..num_bootstrap_arguments {
                     bootstrap_arguments.push(read_int(&data, &mut start_from)?);
                 }
@@ -500,7 +500,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "MethodParameters" => {
             let parameters_count: u8 = read_int(&data, &mut start_from)?;
-            let mut parameters = Vec::new();
+            let mut parameters = Vec::with_capacity(parameters_count as usize);
             for _ in 0..parameters_count {
                 parameters.push(MethodParameterRecord::new(
                     read_int(&data, &mut start_from)?,
@@ -516,7 +516,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         },
         "NestMembers" => {
             let number_of_classes: u16 = read_int(&data, &mut start_from)?;
-            let mut classes = Vec::new();
+            let mut classes = Vec::with_capacity(number_of_classes as usize);
             for _ in 0..number_of_classes {
                 classes.push(read_int(&data, &mut start_from)?);
             }
@@ -527,7 +527,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "Record" => {
             let components_count: u16 = read_int(&data, &mut start_from)?;
-            let mut components = Vec::new();
+            let mut components = Vec::with_capacity(components_count as usize);
             for _ in 0..components_count {
                 components.push(RecordComponentInfo::new(
                     read_int(&data, &mut start_from)?,
@@ -542,7 +542,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         }
         "PermittedSubclasses" => {
             let number_of_classes: u16 = read_int(&data, &mut start_from)?;
-            let mut classes = Vec::new();
+            let mut classes = Vec::with_capacity(number_of_classes as usize);
             for _ in 0..number_of_classes {
                 classes.push(read_int(&data, &mut start_from)?);
             }
@@ -582,7 +582,7 @@ fn get_verification_type_info(tag: u8, data: &[u8], start_from: &mut usize) -> R
 fn get_annotation(data: &[u8], start_from: &mut usize) -> Result<Annotation, io::Error> {
     let type_index = read_int(&data, start_from)?;
     let num_element_value_pairs: u16 = read_int(&data, start_from)?;
-    let mut element_value_pairs = Vec::new();
+    let mut element_value_pairs = Vec::with_capacity(num_element_value_pairs as usize);
     for _ in 0..num_element_value_pairs {
         let element_name_index: u16 = read_int(&data, start_from)?;
         let value = get_element_value(&data, start_from)?;
@@ -614,7 +614,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
         }),
         b'[' => {
             let num_values: u16 = read_int(&data, start_from)?;
-            let mut values = Vec::new();
+            let mut values = Vec::with_capacity(num_values as usize);
             for _ in 0..num_values {
                 values.push(get_element_value(&data, start_from)?);
             }

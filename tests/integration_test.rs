@@ -314,7 +314,7 @@ fn should_load_and_parse() {
             FieldInfo::new(0x001a, 35, 32, vec![ConstantValue { constantvalue_index: 36 }]),
             FieldInfo::new(0x001a, 38, 39, vec![ConstantValue { constantvalue_index: 40 }]),
             FieldInfo::new(0x001a, 42, 39, vec![ConstantValue { constantvalue_index: 43 }]),
-            FieldInfo::new(0x0004, 11, 12, Vec::new()),
+            FieldInfo::new(0x0004, 11, 12, vec![]),
         ],
         vec![
             MethodInfo::new(0x0001, 5, 15, vec![
@@ -322,7 +322,7 @@ fn should_load_and_parse() {
                     max_stack: 2,
                     max_locals: 2,
                     code: vec![0x2a, 0xb7, 0x00, 0x01, 0x2a, 0x2b, 0xb5, 0x00, 0x07, 0xb1],
-                    exception_table: Vec::new(),
+                    exception_table: vec![],
                     attributes: vec![
                         LineNumberTable {
                             line_number_table: vec![
@@ -356,7 +356,7 @@ fn should_load_and_parse() {
                     max_stack: 2,
                     max_locals: 1,
                     code: vec![0x2a, 0x01, 0xb7, 0x00, 0x0d, 0xb1],
-                    exception_table: Vec::new(),
+                    exception_table: vec![],
                     attributes: vec![
                         LineNumberTable {
                             line_number_table: vec![
@@ -383,7 +383,7 @@ fn should_load_and_parse() {
                     max_stack: 2,
                     max_locals: 4,
                     code: vec![0x1b, 0x1c, 0x60, 0x3e, 0x1d, 0x9e, 0x00, 0x07, 0x1d, 0xa7, 0x00, 0x04, 0x03, 0xac],
-                    exception_table: Vec::new(),
+                    exception_table: vec![],
                     attributes: vec![
                         LineNumberTable {
                             line_number_table: vec![
@@ -433,7 +433,7 @@ fn should_load_and_parse() {
                     max_stack: 1,
                     max_locals: 2,
                     code: vec![0xba, 0x00, 0x10, 0x00, 0x00, 0x4c, 0xb1],
-                    exception_table: Vec::new(),
+                    exception_table: vec![],
                     attributes: vec![
                         LineNumberTable {
                             line_number_table: vec![
