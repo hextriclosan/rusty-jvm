@@ -302,22 +302,22 @@ fn should_load_and_parse() {
                 value: "Lookup".into()
             },
         ],
-        0x0021,
+        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_SUPER,
         8,
         2,
         vec![20],
         vec![
-            FieldInfo::new(0x0019, 22, 23, vec![ConstantValue { constantvalue_index: 25 }]),
-            FieldInfo::new(0x001c, 26, 27, vec![ConstantValue { constantvalue_index: 28 }]),
-            FieldInfo::new(0x001a, 29, 27, vec![ConstantValue { constantvalue_index: 30 }]),
-            FieldInfo::new(0x001a, 31, 32, vec![ConstantValue { constantvalue_index: 33 }]),
-            FieldInfo::new(0x001a, 35, 32, vec![ConstantValue { constantvalue_index: 36 }]),
-            FieldInfo::new(0x001a, 38, 39, vec![ConstantValue { constantvalue_index: 40 }]),
-            FieldInfo::new(0x001a, 42, 39, vec![ConstantValue { constantvalue_index: 43 }]),
-            FieldInfo::new(0x0004, 11, 12, vec![]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 22, 23, vec![ConstantValue { constantvalue_index: 25 }]),
+            FieldInfo::new(FieldFlags::ACC_PROTECTED | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 26, 27, vec![ConstantValue { constantvalue_index: 28 }]),
+            FieldInfo::new(FieldFlags::ACC_PRIVATE | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 29, 27, vec![ConstantValue { constantvalue_index: 30 }]),
+            FieldInfo::new(FieldFlags::ACC_PRIVATE | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 31, 32, vec![ConstantValue { constantvalue_index: 33 }]),
+            FieldInfo::new(FieldFlags::ACC_PRIVATE | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 35, 32, vec![ConstantValue { constantvalue_index: 36 }]),
+            FieldInfo::new(FieldFlags::ACC_PRIVATE | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 38, 39, vec![ConstantValue { constantvalue_index: 40 }]),
+            FieldInfo::new(FieldFlags::ACC_PRIVATE | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 42, 39, vec![ConstantValue { constantvalue_index: 43 }]),
+            FieldInfo::new(FieldFlags::ACC_PROTECTED, 11, 12, vec![]),
         ],
         vec![
-            MethodInfo::new(0x0001, 5, 15, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC, 5, 15, vec![
                 Code {
                     max_stack: 2,
                     max_locals: 2,
@@ -346,12 +346,12 @@ fn should_load_and_parse() {
                 },
                 MethodParameters {
                     parameters: vec![
-                        MethodParameterRecord::new(11, 0),
+                        MethodParameterRecord::new(11, MethodParameterFlags::empty()),
                     ]
                 },
             ],
             ),
-            MethodInfo::new(0x0001, 5, 6, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC, 5, 6, vec![
                 Code {
                     max_stack: 2,
                     max_locals: 1,
@@ -378,7 +378,7 @@ fn should_load_and_parse() {
                 }
             ],
             ),
-            MethodInfo::new(0x0001, 53, 54, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC, 53, 54, vec![
                 Code {
                     max_stack: 2,
                     max_locals: 4,
@@ -423,12 +423,12 @@ fn should_load_and_parse() {
                 Exceptions { exception_index_table: vec![60] },
                 MethodParameters {
                     parameters: vec![
-                        MethodParameterRecord::new(55, 0),
-                        MethodParameterRecord::new(56, 0x0010),
+                        MethodParameterRecord::new(55, MethodParameterFlags::empty()),
+                        MethodParameterRecord::new(56, MethodParameterFlags::ACC_FINAL),
                     ]
                 },
             ]),
-            MethodInfo::new(0x0001, 18, 6, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC, 18, 6, vec![
                 Code {
                     max_stack: 1,
                     max_locals: 2,
@@ -456,7 +456,7 @@ fn should_load_and_parse() {
                 }
             ],
             ),
-            MethodInfo::new(0x100A, 64, 6, vec![
+            MethodInfo::new(MethodFlags::ACC_PRIVATE | MethodFlags::ACC_STATIC | MethodFlags::ACC_SYNTHETIC, 64, 6, vec![
                 Code {
                     max_stack: 0,
                     max_locals: 0,
@@ -477,9 +477,9 @@ fn should_load_and_parse() {
             BootstrapMethods { bootstrap_methods: vec![BootstrapMethodRecord::new(75, vec![82, 83, 82])] },
             InnerClasses {
                 classes: vec![
-                    InnerClassRecord::new(70, 8, 87, 0),
-                    InnerClassRecord::new(72, 0, 88, 0x0608),
-                    InnerClassRecord::new(89, 91, 93, 0x19),
+                    InnerClassRecord::new(70, 8, 87, NestedClassFlags::empty()),
+                    InnerClassRecord::new(72, 0, 88, NestedClassFlags::ACC_STATIC | NestedClassFlags::ACC_INTERFACE | NestedClassFlags::ACC_ABSTRACT),
+                    InnerClassRecord::new(89, 91, 93, NestedClassFlags::ACC_PUBLIC | NestedClassFlags::ACC_STATIC | NestedClassFlags::ACC_FINAL),
                 ]
             },
         ],
@@ -551,7 +551,7 @@ fn should_load_and_parse_complex_runtime_visible_annotations() {
                 value: "TYPE".into(),
             },
         ],
-        0x2601, // ACC_PUBLIC, ACC_INTERFACE, ACC_ABSTRACT, ACC_ANNOTATION
+        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT | ClassFlags::ACC_ANNOTATION,
         1,
         3,
         vec![5],
@@ -631,7 +631,7 @@ fn should_load_and_parse_complex_runtime_invisible_annotations() {
                 value: "This is a runtime invisible annotation".into(),
             },
         ],
-        0x0601, // ACC_PUBLIC, ACC_INTERFACE, ACC_ABSTRACT
+        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT,
         1,
         3,
         vec![],
@@ -696,7 +696,7 @@ fn should_load_and_parse_permitted_subclasses_annotation() {
                 value: "Circle".into(),
             },
         ],
-        0x0601, // ACC_PUBLIC, ACC_INTERFACE, ACC_ABSTRACT
+        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT,
         1,
         3,
         vec![],
@@ -775,13 +775,13 @@ fn should_load_and_parse_annotation_default_annotation() {
                 value: "CLASS".into(),
             },
         ],
-        0x2600, // ACC_INTERFACE, ACC_ABSTRACT, ACC_ANNOTATION
+        ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT | ClassFlags::ACC_ANNOTATION,
         1,
         3,
         vec![5],
         vec![],
         vec![
-            MethodInfo::new(0x0401, 7, 8, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC | MethodFlags::ACC_ABSTRACT, 7, 8, vec![
                 AnnotationDefault {
                     default_value: ConstValueIndex {
                         tag: 's' as u8,
@@ -869,7 +869,7 @@ fn should_load_and_parse_local_class() {
                 value: "LocalCls".into(),
             },
         ],
-        0x0600, // ACC_INTERFACE, ACC_ABSTRACT
+        ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT,
         1,
         3,
         vec![],
@@ -888,7 +888,7 @@ fn should_load_and_parse_local_class() {
             },
             InnerClasses {
                 classes: vec![
-                    InnerClassRecord::new(1, 0, 15, 0x0608),
+                    InnerClassRecord::new(1, 0, 15, NestedClassFlags::ACC_STATIC | NestedClassFlags::ACC_INTERFACE | NestedClassFlags::ACC_ABSTRACT),
                 ]
             },
         ],
@@ -1088,15 +1088,15 @@ fn should_load_and_parse_record() {
                 value: "Lookup".into(),
             },
         ],
-        0x0031, // ACC_PUBLIC, ACC_FINAL, ACC_SUPER
+        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_FINAL | ClassFlags::ACC_SUPER,
         8,
         2,
         vec![],
         vec![
-            FieldInfo::new(0x0012, 11, 12, vec![])
+            FieldInfo::new(FieldFlags::ACC_PRIVATE | FieldFlags::ACC_FINAL, 11, 12, vec![])
         ],
         vec![
-            MethodInfo::new(0x0001, 5, 25, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC, 5, 25, vec![
                 Code {
                     max_stack: 2,
                     max_locals: 2,
@@ -1115,10 +1115,10 @@ fn should_load_and_parse_record() {
                     ],
                 },
                 MethodParameters {
-                    parameters: vec![MethodParameterRecord::new(11, 0)],
+                    parameters: vec![MethodParameterRecord::new(11, MethodParameterFlags::empty())],
                 },
             ]),
-            MethodInfo::new(0x0011, 15, 32, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC | MethodFlags::ACC_FINAL, 15, 32, vec![
                 Code {
                     max_stack: 1,
                     max_locals: 1,
@@ -1136,7 +1136,7 @@ fn should_load_and_parse_record() {
                     ],
                 }
             ]),
-            MethodInfo::new(0x0011, 19, 33, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC | MethodFlags::ACC_FINAL, 19, 33, vec![
                 Code {
                     max_stack: 1,
                     max_locals: 1,
@@ -1154,7 +1154,7 @@ fn should_load_and_parse_record() {
                     ],
                 }
             ]),
-            MethodInfo::new(0x0011, 23, 34, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC | MethodFlags::ACC_FINAL, 23, 34, vec![
                 Code {
                     max_stack: 2,
                     max_locals: 2,
@@ -1173,10 +1173,10 @@ fn should_load_and_parse_record() {
                     ],
                 },
                 MethodParameters {
-                    parameters: vec![MethodParameterRecord::new(35, 0)],
+                    parameters: vec![MethodParameterRecord::new(35, MethodParameterFlags::empty())],
                 },
             ]),
-            MethodInfo::new(0x0001, 11, 33, vec![
+            MethodInfo::new(MethodFlags::ACC_PUBLIC, 11, 33, vec![
                 Code {
                     max_stack: 1,
                     max_locals: 1,
@@ -1207,7 +1207,7 @@ fn should_load_and_parse_record() {
             },
             InnerClasses {
                 classes: vec![
-                    InnerClassRecord::new(51, 53, 55, 0x0019),
+                    InnerClassRecord::new(51, 53, 55, NestedClassFlags::ACC_PUBLIC | NestedClassFlags::ACC_STATIC | NestedClassFlags::ACC_FINAL),
                 ]
             },
         ],
@@ -1306,17 +1306,17 @@ fn should_load_and_parse_mutf8_strings() {
                 value: "Mutf8.java".into(),
             },
         ],
-        0x0600, // ACC_INTERFACE, ACC_ABSTRACT
+        ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT,
         1,
         3,
         vec![],
         vec![
-            FieldInfo::new(0x0019, 5, 6, vec![ConstantValue { constantvalue_index: 8 }]),
-            FieldInfo::new(0x0019, 10, 6, vec![ConstantValue { constantvalue_index: 11 }]),
-            FieldInfo::new(0x0019, 13, 6, vec![ConstantValue { constantvalue_index: 14 }]),
-            FieldInfo::new(0x0019, 16, 6, vec![ConstantValue { constantvalue_index: 17 }]),
-            FieldInfo::new(0x0019, 19, 6, vec![ConstantValue { constantvalue_index: 20 }]),
-            FieldInfo::new(0x0019, 22, 6, vec![ConstantValue { constantvalue_index: 23 }]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 5, 6, vec![ConstantValue { constantvalue_index: 8 }]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 10, 6, vec![ConstantValue { constantvalue_index: 11 }]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 13, 6, vec![ConstantValue { constantvalue_index: 14 }]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 16, 6, vec![ConstantValue { constantvalue_index: 17 }]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 19, 6, vec![ConstantValue { constantvalue_index: 20 }]),
+            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 22, 6, vec![ConstantValue { constantvalue_index: 23 }]),
         ],
         vec![],
         vec![SourceFile { sourcefile_index: 26 }],

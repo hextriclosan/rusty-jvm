@@ -6,7 +6,7 @@ use crate::class_file::ConstantPool::*;
 use crate::class_file::Attribute::*;
 use crate::class_file::ElementValue::*;
 use crate::class_file::StackMapFrame::*;
-use crate::extractors::{read_int, read_bytes};
+use crate::extractors::{read_int, read_bytes, read_bitfield};
 
 
 const MAGIC: u32 = 0xCAFEBABE;
@@ -23,7 +23,7 @@ pub fn parse(data: &[u8]) -> Result<ClassFile, io::Error> {
     let minor_version = read_int(&data, &mut start_from)?;
     let major_version = read_int(&data, &mut start_from)?;
     let constant_pool_vec = get_constant_pool(&data, &mut start_from)?;
-    let access_flags = read_int(&data, &mut start_from)?;
+    let access_flags = read_bitfield(&data, &mut start_from)?;
     let this_class = read_int(&data, &mut start_from)?;
     let super_class = read_int(&data, &mut start_from)?;
     let interfaces = get_interfaces(&data, &mut start_from)?;
@@ -61,7 +61,7 @@ fn get_methods(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec
     let mut methods = Vec::with_capacity(methods_count as usize);
     for _ in 0..methods_count {
         methods.push(MethodInfo::new(
-            read_int(&data, &mut start_from)?,
+            read_bitfield(&data, &mut start_from)?,
             read_int(&data, &mut start_from)?,
             read_int(&data, &mut start_from)?,
             get_attributes(&data, &mut start_from, &constant_pool_vec)?,
@@ -77,7 +77,7 @@ fn get_fields(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<
     let mut fields = Vec::with_capacity(fields_count as usize);
     for _ in 0..fields_count {
         fields.push(FieldInfo::new(
-            read_int(&data, &mut start_from)?,
+            read_bitfield(&data, &mut start_from)?,
             read_int(&data, &mut start_from)?,
             read_int(&data, &mut start_from)?,
             get_attributes(&data, &mut start_from, &constant_pool_vec)?,
@@ -339,7 +339,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                     read_int(&data, &mut start_from)?,
                     read_int(&data, &mut start_from)?,
                     read_int(&data, &mut start_from)?,
-                    read_int(&data, &mut start_from)?,
+                    read_bitfield(&data, &mut start_from)?,
                 ));
             }
 
@@ -504,7 +504,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
             for _ in 0..parameters_count {
                 parameters.push(MethodParameterRecord::new(
                     read_int(&data, &mut start_from)?,
-                    read_int(&data, &mut start_from)?,
+                    read_bitfield(&data, &mut start_from)?,
                 ))
             }
             MethodParameters {

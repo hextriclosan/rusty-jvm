@@ -33,3 +33,55 @@ pub fn read_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> R
             sub_slice
         })
 }
+
+pub fn read_bitfield<T>(slice: &[u8], start_from: &mut usize) -> Result<T, io::Error>
+    where
+        T: bitflags::Flags<Bits=u16> {
+    let bits = read_int(slice, start_from)?;
+
+    Ok(T::from_bits_truncate(bits))
+}
+
+#[cfg(test)]
+mod tests {
+    use bitflags::bitflags;
+    use super::*;
+
+    bitflags! {
+    #[derive(Debug, PartialEq)]
+        pub struct Flags: u16 {
+            const FLAG1 = 0x01;
+            const FLAG2 = 0x02;
+        }
+    }
+
+    #[test]
+    fn test_ignore_unmatched_bit() {
+        let mut start_from: usize = 0;
+        let binding = vec![0b0000_0000, 0b0000_0111];
+        let data = binding.as_slice();
+        let result = read_bitfield::<Flags>(&data, &mut start_from);
+
+        match result {
+            Ok(flags) => {
+                assert_eq!(flags, Flags::FLAG1 | Flags::FLAG2);
+            }
+            _ => panic!("Expected Ok, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_all_matched_bits() {
+        let mut start_from: usize = 0;
+        let binding = vec![0b0000_0000, 0b0000_0011];
+        let data = binding.as_slice();
+        let result = read_bitfield::<Flags>(&data, &mut start_from);
+
+        match result {
+            Ok(flags) => {
+                assert_eq!(flags, Flags::FLAG1 | Flags::FLAG2);
+            }
+            _ => panic!("Expected Ok, got {:?}", result),
+        }
+    }
+}
