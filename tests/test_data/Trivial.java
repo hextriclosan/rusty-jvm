@@ -8,7 +8,7 @@ public class Trivial<T> implements Runnable {
     private static final long MIN_LONG = -9223372036854775808L;
     private static final long MAX_LONG = 9223372036854775807L;
     private static final double MAX_DOUBLE = 1.7976931348623157e+308;
-    private static final double MIN_DOUBLE = -1.23456789e-290;
+    private static final double MIN_DOUBLE = 4.9E-324;
 
     protected String someText;
 

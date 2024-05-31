@@ -1,4 +1,5 @@
-use std::io;
+use std::{io, mem};
+use std::array::TryFromSliceError;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use mutf8::mutf8_to_utf8;
 use crate::class_file::*;
@@ -132,7 +133,7 @@ fn get_constant_pool(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<Con
                 value: read_int(&data, &mut start_from)?
             },
             6 => Double {
-                value: get_double(&data, &mut start_from)?
+                value: get_float(&data, &mut start_from)?
             },
             7 => Class {
                 name_index: read_int(&data, &mut start_from)?,
@@ -188,38 +189,29 @@ fn get_constant_pool(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<Con
     Ok(constant_pool_vec)
 }
 
-fn get_double(data: &&[u8], mut start_from: &mut usize) -> Result<f64, io::Error> {
-    let bytes: u64 = read_int(&data, &mut start_from)?;
-
-    Ok(match bytes {
-        0x7ff0000000000000_u64 => f64::INFINITY,
-        0xfff0000000000000_u64 => f64::NEG_INFINITY,
-        0x7ff0000000000001_u64..=0x7fffffffffffffff_u64 | 0xfff0000000000001_u64..=0xffffffffffffffff_u64 => f64::NAN,
-        _ => {
-            let s = if (bytes >> 63) == 0 { 1 } else { -1 };
-            let e = ((bytes >> 52) & 0x7ff_u64) as i32;
-            let m = (if e == 0 { (bytes & 0xfffffffffffff_u64) << 1 } else { (bytes & 0xfffffffffffff_u64) | 0x10000000000000_u64 }) as i64;
-
-            s as f64 * m as f64 * 2_f64.powi(e - 1075)
-        }
-    })
+trait FromBeBytes: Sized {
+    fn from_be_bytes(bytes: &[u8]) -> Result<Self, TryFromSliceError>;
 }
 
-fn get_float(data: &&[u8], mut start_from: &mut usize) -> Result<f32, io::Error> {
-    let bytes: u32 = read_int(&data, &mut start_from)?;
+impl FromBeBytes for f32 {
+    fn from_be_bytes(bytes: &[u8]) -> Result<Self, TryFromSliceError> {
+        Ok(f32::from_be_bytes(bytes.try_into()?))
+    }
+}
 
-    Ok(match bytes {
-        0x7f800000 => f32::INFINITY,
-        0xff800000 => f32::NEG_INFINITY,
-        0x7f800001..=0x7fffffff | 0xff800001..=0xffffffff => f32::NAN,
-        _ => {
-            let s = if (bytes >> 31) == 0 { 1 } else { -1 };
-            let e = ((bytes >> 23) & 0xff) as i32;
-            let m = (if e == 0 { (bytes & 0x7fffff) << 1 } else { (bytes & 0x7fffff) | 0x800000 }) as i32;
+impl FromBeBytes for f64 {
+    fn from_be_bytes(bytes: &[u8]) -> Result<Self, TryFromSliceError> {
+        Ok(f64::from_be_bytes(bytes.try_into()?))
+    }
+}
 
-            s as f32 * m as f32 * 2_f32.powi(e - 150)
-        }
-    })
+fn get_float<T>(data: &[u8], mut start_from: &mut usize) -> Result<T, io::Error>
+    where
+        T: FromBeBytes + Sized, {
+    let size = mem::size_of::<T>();
+    let bytes = read_bytes(&data, &mut start_from, size)?;
+
+    T::from_be_bytes(bytes).map_err(|e| io::Error::new(InvalidData, e))
 }
 
 fn get_string(data: &&[u8], mut start_from: &mut usize) -> Result<std::string::String, io::Error> {

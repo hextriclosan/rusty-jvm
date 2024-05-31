@@ -146,7 +146,7 @@ fn should_load_and_parse() {
                 value: "MIN_DOUBLE".into()
             },
             Double { //                             43
-                value: -1.23456789E-290,
+                value: 4.9E-324,
             },
             Empty, //                               44
             Utf8 { //                               45
