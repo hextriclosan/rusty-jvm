@@ -1,8 +1,8 @@
-use std::io;
-use bitflags::bitflags;
-use crate::attributes::{Attribute, get_attributes};
+use crate::attributes::{get_attributes, Attribute};
 use crate::constant_pool::ConstantPool;
 use crate::extractors::{get_bitfield, get_int};
+use bitflags::bitflags;
+use std::io;
 bitflags! {
     #[derive(Debug, PartialEq)]
     pub struct MethodFlags: u16 {
@@ -34,12 +34,22 @@ impl MethodInfo {
         access_flags: MethodFlags,
         name_index: u16,
         descriptor_index: u16,
-        attributes: Vec<Attribute>) -> Self {
-        Self { access_flags, name_index, descriptor_index, attributes }
+        attributes: Vec<Attribute>,
+    ) -> Self {
+        Self {
+            access_flags,
+            name_index,
+            descriptor_index,
+            attributes,
+        }
     }
 }
 
-pub(crate) fn get_methods(data: &&[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Vec<MethodInfo>, io::Error> {
+pub(crate) fn get_methods(
+    data: &&[u8],
+    mut start_from: &mut usize,
+    constant_pool_vec: &Vec<ConstantPool>,
+) -> Result<Vec<MethodInfo>, io::Error> {
     let methods_count: u16 = get_int(&data, &mut start_from)?;
     let mut methods = Vec::with_capacity(methods_count as usize);
     for _ in 0..methods_count {

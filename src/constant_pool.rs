@@ -1,7 +1,7 @@
-use std::io;
-use std::io::ErrorKind::InvalidInput;
 use crate::constant_pool::ConstantPool::*;
 use crate::extractors::{get_float, get_int, get_string};
+use std::io;
+use std::io::ErrorKind::InvalidInput;
 
 #[repr(u8)]
 #[derive(Debug, PartialEq)]
@@ -60,14 +60,17 @@ pub enum ConstantPool {
         name_and_type_index: u16,
     } = 18,
     Module {
-        name_index: u16
+        name_index: u16,
     } = 19,
     Package {
-        name_index: u16
+        name_index: u16,
     } = 20,
 }
 
-pub(crate) fn get_constant_pool(data: &[u8], mut start_from: &mut usize) -> Result<Vec<ConstantPool>, io::Error> {
+pub(crate) fn get_constant_pool(
+    data: &[u8],
+    mut start_from: &mut usize,
+) -> Result<Vec<ConstantPool>, io::Error> {
     let constant_pool_count: u16 = get_int(&data, &mut start_from)?;
     let mut constant_pool_vec = Vec::with_capacity(constant_pool_count as usize);
     for _ in 0..constant_pool_count {
@@ -78,7 +81,7 @@ pub(crate) fn get_constant_pool(data: &[u8], mut start_from: &mut usize) -> Resu
                     continue;
                 }
                 _ => {}
-            }
+            },
             None => {
                 constant_pool_vec.push(Empty);
                 continue;
@@ -89,19 +92,19 @@ pub(crate) fn get_constant_pool(data: &[u8], mut start_from: &mut usize) -> Resu
 
         let constant_pool_entry = match tag {
             1 => Utf8 {
-                value: get_string(&data, &mut start_from)?
+                value: get_string(&data, &mut start_from)?,
             },
             3 => Integer {
-                value: get_int(&data, &mut start_from)?
+                value: get_int(&data, &mut start_from)?,
             },
             4 => Float {
-                value: get_float(&data, &mut start_from)?
+                value: get_float(&data, &mut start_from)?,
             },
             5 => Long {
-                value: get_int(&data, &mut start_from)?
+                value: get_int(&data, &mut start_from)?,
             },
             6 => Double {
-                value: get_float(&data, &mut start_from)?
+                value: get_float(&data, &mut start_from)?,
             },
             7 => Class {
                 name_index: get_int(&data, &mut start_from)?,
@@ -147,7 +150,10 @@ pub(crate) fn get_constant_pool(data: &[u8], mut start_from: &mut usize) -> Resu
                 name_index: get_int(&data, &mut start_from)?,
             },
             _ => {
-                return Err(io::Error::new(InvalidInput, format!("unmatched tag: {}", tag)));
+                return Err(io::Error::new(
+                    InvalidInput,
+                    format!("unmatched tag: {}", tag),
+                ));
             }
         };
 

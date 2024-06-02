@@ -1,12 +1,17 @@
-use std::io;
-use std::io::ErrorKind::{InvalidData, InvalidInput};
-use bitflags::bitflags;
 use crate::attributes::Attribute::*;
-use crate::attributes::ElementValue::{AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue};
-use crate::attributes::StackMapFrame::{AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended};
+use crate::attributes::ElementValue::{
+    AnnotationValue, ArrayValue, ClassInfoIndex, ConstValueIndex, EnumConstValue,
+};
+use crate::attributes::StackMapFrame::{
+    AppendFrame, ChopFrame, FullFrame, SameFrame, SameFrameExtended, SameLocals1StackItemFrame,
+    SameLocals1StackItemFrameExtended,
+};
 use crate::constant_pool::ConstantPool;
 use crate::constant_pool::ConstantPool::*;
 use crate::extractors::{get_bitfield, get_bytes, get_int};
+use bitflags::bitflags;
+use std::io;
+use std::io::ErrorKind::{InvalidData, InvalidInput};
 
 #[derive(Debug, PartialEq)]
 pub enum Attribute {
@@ -63,7 +68,7 @@ pub enum Attribute {
         entries: Vec<StackMapFrame>,
     },
     BootstrapMethods {
-        bootstrap_methods: Vec<BootstrapMethodRecord>
+        bootstrap_methods: Vec<BootstrapMethodRecord>,
     },
     RuntimeVisibleTypeAnnotations,
     RuntimeInvisibleTypeAnnotations,
@@ -97,7 +102,12 @@ pub struct ExceptionRecord {
 
 impl ExceptionRecord {
     pub fn new(start_pc: u16, end_pc: u16, handler_pc: u16, catch_type: u16) -> Self {
-        Self { start_pc, end_pc, handler_pc, catch_type }
+        Self {
+            start_pc,
+            end_pc,
+            handler_pc,
+            catch_type,
+        }
     }
 }
 
@@ -109,7 +119,10 @@ pub struct LineNumberRecord {
 
 impl LineNumberRecord {
     pub fn new(start_pc: u16, line_number: u16) -> Self {
-        Self { start_pc, line_number }
+        Self {
+            start_pc,
+            line_number,
+        }
     }
 }
 
@@ -123,8 +136,20 @@ pub struct LocalVariableTableRecord {
 }
 
 impl LocalVariableTableRecord {
-    pub fn new(start_pc: u16, length: u16, name_index: u16, descriptor_index: u16, index: u16) -> Self {
-        Self { start_pc, length, name_index, descriptor_index, index }
+    pub fn new(
+        start_pc: u16,
+        length: u16,
+        name_index: u16,
+        descriptor_index: u16,
+        index: u16,
+    ) -> Self {
+        Self {
+            start_pc,
+            length,
+            name_index,
+            descriptor_index,
+            index,
+        }
     }
 }
 
@@ -138,8 +163,20 @@ pub struct LocalVariableTypeTableRecord {
 }
 
 impl LocalVariableTypeTableRecord {
-    pub fn new(start_pc: u16, length: u16, name_index: u16, signature_index: u16, index: u16) -> Self {
-        Self { start_pc, length, name_index, signature_index, index }
+    pub fn new(
+        start_pc: u16,
+        length: u16,
+        name_index: u16,
+        signature_index: u16,
+        index: u16,
+    ) -> Self {
+        Self {
+            start_pc,
+            length,
+            name_index,
+            signature_index,
+            index,
+        }
     }
 }
 
@@ -160,7 +197,10 @@ pub struct MethodParameterRecord {
 
 impl MethodParameterRecord {
     pub fn new(name_index: u16, access_flags: MethodParameterFlags) -> Self {
-        Self { name_index, access_flags }
+        Self {
+            name_index,
+            access_flags,
+        }
     }
 }
 
@@ -210,12 +250,8 @@ pub enum VerificationTypeInfo {
     DoubleVariableInfo,
     NullVariableInfo,
     UninitializedThisVariableInfo,
-    ObjectVariableInfo {
-        cpool_index: u16,
-    },
-    UninitializedVariableInfo {
-        offset: u16,
-    },
+    ObjectVariableInfo { cpool_index: u16 },
+    UninitializedVariableInfo { offset: u16 },
 }
 
 #[derive(Debug, PartialEq)]
@@ -226,7 +262,10 @@ pub struct Annotation {
 
 impl Annotation {
     pub fn new(type_index: u16, element_value_pairs: Vec<ElementValuePair>) -> Self {
-        Self { type_index, element_value_pairs }
+        Self {
+            type_index,
+            element_value_pairs,
+        }
     }
 }
 
@@ -238,7 +277,10 @@ pub struct ElementValuePair {
 
 impl ElementValuePair {
     pub fn new(element_name_index: u16, value: ElementValue) -> Self {
-        Self { element_name_index, value }
+        Self {
+            element_name_index,
+            value,
+        }
     }
 }
 
@@ -292,8 +334,18 @@ pub struct InnerClassRecord {
 }
 
 impl InnerClassRecord {
-    pub fn new(inner_class_info_index: u16, outer_class_info_index: u16, inner_name_index: u16, inner_class_access_flags: NestedClassFlags) -> Self {
-        Self { inner_class_info_index, outer_class_info_index, inner_name_index, inner_class_access_flags }
+    pub fn new(
+        inner_class_info_index: u16,
+        outer_class_info_index: u16,
+        inner_name_index: u16,
+        inner_class_access_flags: NestedClassFlags,
+    ) -> Self {
+        Self {
+            inner_class_info_index,
+            outer_class_info_index,
+            inner_name_index,
+            inner_class_access_flags,
+        }
     }
 }
 
@@ -305,7 +357,10 @@ pub struct BootstrapMethodRecord {
 
 impl BootstrapMethodRecord {
     pub fn new(bootstrap_method_ref: u16, bootstrap_arguments: Vec<u16>) -> Self {
-        Self { bootstrap_method_ref, bootstrap_arguments }
+        Self {
+            bootstrap_method_ref,
+            bootstrap_arguments,
+        }
     }
 }
 
@@ -318,11 +373,19 @@ pub struct RecordComponentInfo {
 
 impl RecordComponentInfo {
     pub fn new(name_index: u16, descriptor_index: u16, attributes: Vec<Attribute>) -> Self {
-        Self { name_index, descriptor_index, attributes }
+        Self {
+            name_index,
+            descriptor_index,
+            attributes,
+        }
     }
 }
 
-pub(crate) fn get_attributes(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Vec<Attribute>, io::Error> {
+pub(crate) fn get_attributes(
+    data: &[u8],
+    mut start_from: &mut usize,
+    constant_pool_vec: &Vec<ConstantPool>,
+) -> Result<Vec<Attribute>, io::Error> {
     let attributes_count: u16 = get_int(&data, &mut start_from)?;
     let mut attributes = Vec::with_capacity(attributes_count as usize);
     for _ in 0..attributes_count {
@@ -332,14 +395,28 @@ pub(crate) fn get_attributes(data: &[u8], mut start_from: &mut usize, constant_p
     Ok(attributes)
 }
 
-fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Vec<ConstantPool>) -> Result<Attribute, io::Error> {
+fn get_attribute(
+    data: &[u8],
+    mut start_from: &mut usize,
+    constant_pool_vec: &Vec<ConstantPool>,
+) -> Result<Attribute, io::Error> {
     let attribute_name_index: u16 = get_int(&data, &mut start_from)?;
     let attribute_name = match constant_pool_vec.get(attribute_name_index as usize) {
         Some(item) => match item {
             Utf8 { value } => value,
-            _ => return Err(io::Error::new(InvalidData, format!("element type is not Uint8 but {:?}", item)))
+            _ => {
+                return Err(io::Error::new(
+                    InvalidData,
+                    format!("element type is not Uint8 but {:?}", item),
+                ))
+            }
         },
-        None => return Err(io::Error::new(InvalidData, format!("element not found at index {}", attribute_name_index)))
+        None => {
+            return Err(io::Error::new(
+                InvalidData,
+                format!("element not found at index {}", attribute_name_index),
+            ))
+        }
     };
 
     let _attribute_length: u32 = get_int(&data, &mut start_from)?;
@@ -382,7 +459,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                 exception_index_table.push(get_int(&data, &mut start_from)?);
             }
             Exceptions {
-                exception_index_table
+                exception_index_table,
             }
         }
         "Synthetic" => Synthetic,
@@ -399,9 +476,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                     get_int(&data, &mut start_from)?,
                 ));
             }
-            LineNumberTable {
-                line_number_table,
-            }
+            LineNumberTable { line_number_table }
         }
         "LocalVariableTable" => {
             let local_variable_table_length: u16 = get_int(&data, &mut start_from)?;
@@ -417,7 +492,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
             }
 
             LocalVariableTable {
-                local_variable_table
+                local_variable_table,
             }
         }
         "InnerClasses" => {
@@ -432,9 +507,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                 ));
             }
 
-            InnerClasses {
-                classes
-            }
+            InnerClasses { classes }
         }
         "EnclosingMethod" => EnclosingMethod {
             class_index: get_int(&data, &mut start_from)?,
@@ -445,7 +518,8 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
         },
         "LocalVariableTypeTable" => {
             let local_variable_type_table_length: u16 = get_int(&data, &mut start_from)?;
-            let mut local_variable_type_table = Vec::with_capacity(local_variable_type_table_length as usize);
+            let mut local_variable_type_table =
+                Vec::with_capacity(local_variable_type_table_length as usize);
             for _ in 0..local_variable_type_table_length {
                 local_variable_type_table.push(LocalVariableTypeTableRecord::new(
                     get_int(&data, &mut start_from)?,
@@ -457,7 +531,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
             }
 
             LocalVariableTypeTable {
-                local_variable_type_table
+                local_variable_type_table,
             }
         }
         "RuntimeVisibleAnnotations" => {
@@ -465,25 +539,21 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
             let mut annotations = Vec::with_capacity(num_annotations as usize);
             for _ in 0..num_annotations {
                 annotations.push(get_annotation(&data, &mut start_from)?);
-            };
-
-            RuntimeVisibleAnnotations {
-                annotations
             }
+
+            RuntimeVisibleAnnotations { annotations }
         }
         "RuntimeInvisibleAnnotations" => {
             let num_annotations: u16 = get_int(&data, &mut start_from)?;
             let mut annotations = Vec::with_capacity(num_annotations as usize);
             for _ in 0..num_annotations {
                 annotations.push(get_annotation(&data, &mut start_from)?);
-            };
-
-            RuntimeInvisibleAnnotations {
-                annotations
             }
+
+            RuntimeInvisibleAnnotations { annotations }
         }
         "AnnotationDefault" => AnnotationDefault {
-            default_value: get_element_value(&data, &mut start_from)?
+            default_value: get_element_value(&data, &mut start_from)?,
         },
         "StackMapTable" => {
             let number_of_entries: u16 = get_int(&data, &mut start_from)?;
@@ -561,16 +631,17 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                         }
                     }
                     _ => {
-                        return Err(io::Error::new(InvalidInput, format!("Unsupported frame_type: {}", frame_type)));
+                        return Err(io::Error::new(
+                            InvalidInput,
+                            format!("Unsupported frame_type: {}", frame_type),
+                        ));
                     }
                 };
 
                 entries.push(stack_map_frame);
             }
 
-            StackMapTable {
-                entries
-            }
+            StackMapTable { entries }
         }
         "BootstrapMethods" => {
             let num_bootstrap_methods: u16 = get_int(&data, &mut start_from)?;
@@ -582,7 +653,10 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                 for _ in 0..num_bootstrap_arguments {
                     bootstrap_arguments.push(get_int(&data, &mut start_from)?);
                 }
-                bootstrap_methods.push(BootstrapMethodRecord::new(bootstrap_method_ref, bootstrap_arguments))
+                bootstrap_methods.push(BootstrapMethodRecord::new(
+                    bootstrap_method_ref,
+                    bootstrap_arguments,
+                ))
             }
 
             BootstrapMethods { bootstrap_methods }
@@ -596,9 +670,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                     get_bitfield(&data, &mut start_from)?,
                 ))
             }
-            MethodParameters {
-                parameters
-            }
+            MethodParameters { parameters }
         }
         "NestHost" => NestHost {
             host_class_index: get_int(&data, &mut start_from)?,
@@ -610,9 +682,7 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                 classes.push(get_int(&data, &mut start_from)?);
             }
 
-            NestMembers {
-                classes
-            }
+            NestMembers { classes }
         }
         "Record" => {
             let components_count: u16 = get_int(&data, &mut start_from)?;
@@ -621,13 +691,11 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                 components.push(RecordComponentInfo::new(
                     get_int(&data, &mut start_from)?,
                     get_int(&data, &mut start_from)?,
-                    get_attributes(&data, &mut start_from, &constant_pool_vec)?),
-                )
+                    get_attributes(&data, &mut start_from, &constant_pool_vec)?,
+                ))
             }
 
-            Record {
-                components
-            }
+            Record { components }
         }
         "PermittedSubclasses" => {
             let number_of_classes: u16 = get_int(&data, &mut start_from)?;
@@ -636,20 +704,24 @@ fn get_attribute(data: &[u8], mut start_from: &mut usize, constant_pool_vec: &Ve
                 classes.push(get_int(&data, &mut start_from)?);
             }
 
-            PermittedSubclasses {
-                classes
-            }
+            PermittedSubclasses { classes }
         }
         _ => {
-            return Err(io::Error::new(InvalidInput, format!("unmatched attribute: {}", attribute_name)));
+            return Err(io::Error::new(
+                InvalidInput,
+                format!("unmatched attribute: {}", attribute_name),
+            ));
         }
     };
 
     Ok(attribute)
 }
 
-
-fn get_verification_type_info(tag: u8, data: &[u8], start_from: &mut usize) -> Result<VerificationTypeInfo, io::Error> {
+fn get_verification_type_info(
+    tag: u8,
+    data: &[u8],
+    start_from: &mut usize,
+) -> Result<VerificationTypeInfo, io::Error> {
     match tag {
         0 => Ok(VerificationTypeInfo::TopVariableInfo),
         1 => Ok(VerificationTypeInfo::IntegerVariableInfo),
@@ -664,7 +736,10 @@ fn get_verification_type_info(tag: u8, data: &[u8], start_from: &mut usize) -> R
         8 => Ok(VerificationTypeInfo::UninitializedVariableInfo {
             offset: get_int(&data, start_from)?,
         }),
-        _ => Err(io::Error::new(InvalidInput, format!("tag {} is not valid", tag)))
+        _ => Err(io::Error::new(
+            InvalidInput,
+            format!("tag {} is not valid", tag),
+        )),
     }
 }
 
@@ -708,11 +783,11 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
                 values.push(get_element_value(&data, start_from)?);
             }
 
-            Ok(ArrayValue {
-                tag,
-                values,
-            })
+            Ok(ArrayValue { tag, values })
         }
-        _ => Err(io::Error::new(InvalidInput, format!("Unsupported element tag: {}", tag)))
+        _ => Err(io::Error::new(
+            InvalidInput,
+            format!("Unsupported element tag: {}", tag),
+        )),
     }
 }

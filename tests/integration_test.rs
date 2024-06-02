@@ -1,9 +1,9 @@
-use jclass::attributes::*;
 use jclass::attributes::Attribute::*;
 use jclass::attributes::ElementValue::*;
 use jclass::attributes::StackMapFrame::*;
 use jclass::attributes::VerificationTypeInfo::*;
-use jclass::class_file::{ClassFile, ClassFlags, parse};
+use jclass::attributes::*;
+use jclass::class_file::{parse, ClassFile, ClassFlags};
 use jclass::constant_pool::ConstantPool::*;
 use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
@@ -501,59 +501,79 @@ fn should_load_and_parse_complex_runtime_visible_annotations() {
         61,
         vec![
             Empty, //                                               0
-            Class { //                                              1
+            Class {
+                //                                                  1
                 name_index: 2,
             },
-            Utf8 { //                                               2
+            Utf8 {
+                //                                                  2
                 value: "fake/java/lang/FunctionalInterface".into(),
             },
-            Class { //                                              3
+            Class {
+                //                                                  3
                 name_index: 4,
             },
-            Utf8 { //                                               4
+            Utf8 {
+                //                                                  4
                 value: "java/lang/Object".into(),
             },
-            Class { //                                              5
+            Class {
+                //                                                  5
                 name_index: 6,
             },
-            Utf8 { //                                               6
+            Utf8 {
+                //                                                  6
                 value: "java/lang/annotation/Annotation".into(),
             },
-            Utf8 { //                                               7
+            Utf8 {
+                //                                                  7
                 value: "SourceFile".into(),
             },
-            Utf8 { //                                               8
+            Utf8 {
+                //                                                  8
                 value: "FunctionalInterface.java".into(),
             },
-            Utf8 { //                                               9
+            Utf8 {
+                //                                                  9
                 value: "RuntimeVisibleAnnotations".into(),
             },
-            Utf8 { //                                               10
+            Utf8 {
+                //                                                  10
                 value: "Ljava/lang/annotation/Documented;".into(),
             },
-            Utf8 { //                                               11
+            Utf8 {
+                //                                                  11
                 value: "Ljava/lang/annotation/Retention;".into(),
             },
-            Utf8 { //                                               12
+            Utf8 {
+                //                                                  12
                 value: "value".into(),
             },
-            Utf8 { //                                               13
+            Utf8 {
+                //                                                  13
                 value: "Ljava/lang/annotation/RetentionPolicy;".into(),
             },
-            Utf8 { //                                               14
+            Utf8 {
+                //                                                  14
                 value: "RUNTIME".into(),
             },
-            Utf8 { //                                               15
+            Utf8 {
+                //                                                  15
                 value: "Ljava/lang/annotation/Target;".into(),
             },
-            Utf8 { //                                               16
+            Utf8 {
+                //                                                  16
                 value: "Ljava/lang/annotation/ElementType;".into(),
             },
-            Utf8 { //                                               17
+            Utf8 {
+                //                                                  17
                 value: "TYPE".into(),
             },
         ],
-        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_INTERFACE | ClassFlags::ACC_ABSTRACT | ClassFlags::ACC_ANNOTATION,
+        ClassFlags::ACC_PUBLIC
+            | ClassFlags::ACC_INTERFACE
+            | ClassFlags::ACC_ABSTRACT
+            | ClassFlags::ACC_ANNOTATION,
         1,
         3,
         vec![5],
@@ -566,24 +586,32 @@ fn should_load_and_parse_complex_runtime_visible_annotations() {
             RuntimeVisibleAnnotations {
                 annotations: vec![
                     Annotation::new(10, vec![]),
-                    Annotation::new(11, vec![
-                        ElementValuePair::new(12, EnumConstValue {
-                            tag: 'e' as u8,
-                            type_name_index: 13,
-                            const_name_index: 14,
-                        })
-                    ]),
-                    Annotation::new(15, vec![
-                        ElementValuePair::new(12, ArrayValue {
-                            tag: '[' as u8,
-                            values: vec![EnumConstValue {
+                    Annotation::new(
+                        11,
+                        vec![ElementValuePair::new(
+                            12,
+                            EnumConstValue {
                                 tag: 'e' as u8,
-                                type_name_index: 16,
-                                const_name_index: 17,
-                            }],
-                        })
-                    ]),
-                ]
+                                type_name_index: 13,
+                                const_name_index: 14,
+                            },
+                        )],
+                    ),
+                    Annotation::new(
+                        15,
+                        vec![ElementValuePair::new(
+                            12,
+                            ArrayValue {
+                                tag: '[' as u8,
+                                values: vec![EnumConstValue {
+                                    tag: 'e' as u8,
+                                    type_name_index: 16,
+                                    const_name_index: 17,
+                                }],
+                            },
+                        )],
+                    ),
+                ],
             },
         ],
     );
@@ -602,34 +630,44 @@ fn should_load_and_parse_complex_runtime_invisible_annotations() {
         61,
         vec![
             Empty, //                                               0
-            Class { //                                              1
+            Class {
+                //                                                  1
                 name_index: 2,
             },
-            Utf8 { //                                               2
+            Utf8 {
+                //                                                  2
                 value: "RuntimeInvisibleAnnotationUsage".into(),
             },
-            Class { //                                              3
+            Class {
+                //                                                  3
                 name_index: 4,
             },
-            Utf8 { //                                               4
+            Utf8 {
+                //                                                  4
                 value: "java/lang/Object".into(),
             },
-            Utf8 { //                                               5
+            Utf8 {
+                //                                                  5
                 value: "SourceFile".into(),
             },
-            Utf8 { //                                               6
+            Utf8 {
+                //                                                  6
                 value: "RuntimeInvisibleAnnotationUsage.java".into(),
             },
-            Utf8 { //                                               7
+            Utf8 {
+                //                                                  7
                 value: "RuntimeInvisibleAnnotations".into(),
             },
-            Utf8 { //                                               8
+            Utf8 {
+                //                                                  8
                 value: "LRuntimeInvisibleAnnotation;".into(),
             },
-            Utf8 { //                                               9
+            Utf8 {
+                //                                                  9
                 value: "value".into(),
             },
-            Utf8 { //                                               10
+            Utf8 {
+                //                                                  10
                 value: "This is a runtime invisible annotation".into(),
             },
         ],
@@ -644,14 +682,16 @@ fn should_load_and_parse_complex_runtime_invisible_annotations() {
                 sourcefile_index: 6,
             },
             RuntimeInvisibleAnnotations {
-                annotations: vec![
-                    Annotation::new(8, vec![
-                        ElementValuePair::new(9, ConstValueIndex {
+                annotations: vec![Annotation::new(
+                    8,
+                    vec![ElementValuePair::new(
+                        9,
+                        ConstValueIndex {
                             tag: 's' as u8,
                             const_value_index: 10,
-                        })
-                    ]),
-                ]
+                        },
+                    )],
+                )],
             },
         ],
     );
@@ -670,31 +710,40 @@ fn should_load_and_parse_permitted_subclasses_annotation() {
         61,
         vec![
             Empty, //                                               0
-            Class { //                                              1
+            Class {
+                //                                                  1
                 name_index: 2,
             },
-            Utf8 { //                                               2
+            Utf8 {
+                //                                                  2
                 value: "Shape".into(),
             },
-            Class { //                                              3
+            Class {
+                //                                                  3
                 name_index: 4,
             },
-            Utf8 { //                                               4
+            Utf8 {
+                //                                                  4
                 value: "java/lang/Object".into(),
             },
-            Utf8 { //                                               5
+            Utf8 {
+                //                                                  5
                 value: "SourceFile".into(),
             },
-            Utf8 { //                                               6
+            Utf8 {
+                //                                                  6
                 value: "Shape.java".into(),
             },
-            Utf8 { //                                               7
+            Utf8 {
+                //                                                  7
                 value: "PermittedSubclasses".into(),
             },
-            Class { //                                              8
+            Class {
+                //                                                  8
                 name_index: 9,
             },
-            Utf8 { //                                               9
+            Utf8 {
+                //                                                  9
                 value: "Circle".into(),
             },
         ],
@@ -708,9 +757,7 @@ fn should_load_and_parse_permitted_subclasses_annotation() {
             SourceFile {
                 sourcefile_index: 6,
             },
-            PermittedSubclasses {
-                classes: vec![8],
-            },
+            PermittedSubclasses { classes: vec![8] },
         ],
     );
 
@@ -728,52 +775,68 @@ fn should_load_and_parse_annotation_default_annotation() {
         61,
         vec![
             Empty, //                                               0
-            Class { //                                              1
+            Class {
+                //                                                  1
                 name_index: 2,
             },
-            Utf8 { //                                               2
+            Utf8 {
+                //                                                  2
                 value: "RuntimeInvisibleAnnotation".into(),
             },
-            Class { //                                              3
+            Class {
+                //                                                  3
                 name_index: 4,
             },
-            Utf8 { //                                               4
+            Utf8 {
+                //                                                  4
                 value: "java/lang/Object".into(),
             },
-            Class { //                                              5
+            Class {
+                //                                                  5
                 name_index: 6,
             },
-            Utf8 { //                                               6
+            Utf8 {
+                //                                                  6
                 value: "java/lang/annotation/Annotation".into(),
             },
-            Utf8 { //                                               7
+            Utf8 {
+                //                                                  7
                 value: "value".into(),
             },
-            Utf8 { //                                               8
+            Utf8 {
+                //                                                  8
                 value: "()Ljava/lang/String;".into(),
             },
-            Utf8 { //                                               9
+            Utf8 {
+                //                                                  9
                 value: "AnnotationDefault".into(),
             },
-            Utf8 { //                                               10
+            Utf8 {
+                //                                                  10
                 value: "I'm a default value".into(),
             },
-            Utf8 { //                                               11
+            Utf8 {
+                //                                                  11
                 value: "SourceFile".into(),
             },
-            Utf8 { //                                               12
+            Utf8 {
+                //                                                  12
                 value: "RuntimeInvisibleAnnotationUsage.java".into(),
             },
-            Utf8 { //                                               13
+            Utf8 {
+                //                                                  13
                 value: "RuntimeVisibleAnnotations".into(),
             },
-            Utf8 { //                                               14
+            Utf8 {
+                //                                                  14
                 value: "Ljava/lang/annotation/Retention;".into(),
             },
-            Utf8 { //                                               15
+            Utf8 {
+                //                                                  15
                 value: "Ljava/lang/annotation/RetentionPolicy;".into(),
             },
-            Utf8 { //                                               16
+            Utf8 {
+                //                                                  16
                 value: "CLASS".into(),
             },
         ],
@@ -782,30 +845,33 @@ fn should_load_and_parse_annotation_default_annotation() {
         3,
         vec![5],
         vec![],
-        vec![
-            MethodInfo::new(MethodFlags::ACC_PUBLIC | MethodFlags::ACC_ABSTRACT, 7, 8, vec![
-                AnnotationDefault {
-                    default_value: ConstValueIndex {
-                        tag: 's' as u8,
-                        const_value_index: 10,
-                    }
-                }
-            ])
-        ],
+        vec![MethodInfo::new(
+            MethodFlags::ACC_PUBLIC | MethodFlags::ACC_ABSTRACT,
+            7,
+            8,
+            vec![AnnotationDefault {
+                default_value: ConstValueIndex {
+                    tag: 's' as u8,
+                    const_value_index: 10,
+                },
+            }],
+        )],
         vec![
             SourceFile {
                 sourcefile_index: 12,
             },
             RuntimeVisibleAnnotations {
-                annotations: vec![
-                    Annotation::new(14, vec![
-                        ElementValuePair::new(7, EnumConstValue {
+                annotations: vec![Annotation::new(
+                    14,
+                    vec![ElementValuePair::new(
+                        7,
+                        EnumConstValue {
                             tag: 'e' as u8,
                             type_name_index: 15,
                             const_name_index: 16,
-                        })
-                    ]),
-                ]
+                        },
+                    )],
+                )],
             },
         ],
     );
@@ -824,50 +890,65 @@ fn should_load_and_parse_local_class() {
         61,
         vec![
             Empty, //                                               0
-            Class { //                                              1
+            Class {
+                //                                                  1
                 name_index: 2,
             },
-            Utf8 { //                                               2
+            Utf8 {
+                //                                                  2
                 value: "Trivial$1LocalCls".into(),
             },
-            Class { //                                              3
+            Class {
+                //                                                  3
                 name_index: 4,
             },
-            Utf8 { //                                               4
+            Utf8 {
+                //                                                  4
                 value: "java/lang/Object".into(),
             },
-            Utf8 { //                                               5
+            Utf8 {
+                //                                                  5
                 value: "SourceFile".into(),
             },
-            Utf8 { //                                               6
+            Utf8 {
+                //                                                  6
                 value: "Trivial.java".into(),
             },
-            Utf8 { //                                               7
+            Utf8 {
+                //                                                  7
                 value: "EnclosingMethod".into(),
             },
-            Class { //                                              8
+            Class {
+                //                                                  8
                 name_index: 9,
             },
-            Utf8 { //                                               9
+            Utf8 {
+                //                                                  9
                 value: "Trivial".into(),
             },
-            NameAndType { //                                        10
+            NameAndType {
+                //                                                  10
                 name_index: 11,
                 descriptor_index: 12,
             },
-            Utf8 { //                                               11
+            Utf8 {
+                //                                                  11
                 value: "run".into(),
             },
-            Utf8 { //                                               12
+            Utf8 {
+                //                                                  12
                 value: "()V".into(),
             },
-            Utf8 { //                                               13
+            Utf8 {
+                //                                                  13
                 value: "NestHost".into(),
             },
-            Utf8 { //                                               14
+            Utf8 {
+                //                                                  14
                 value: "InnerClasses".into(),
             },
-            Utf8 { //                                               15
+            Utf8 {
+                //                                                  15
                 value: "LocalCls".into(),
             },
         ],
@@ -889,9 +970,14 @@ fn should_load_and_parse_local_class() {
                 host_class_index: 8,
             },
             InnerClasses {
-                classes: vec![
-                    InnerClassRecord::new(1, 0, 15, NestedClassFlags::ACC_STATIC | NestedClassFlags::ACC_INTERFACE | NestedClassFlags::ACC_ABSTRACT),
-                ]
+                classes: vec![InnerClassRecord::new(
+                    1,
+                    0,
+                    15,
+                    NestedClassFlags::ACC_STATIC
+                        | NestedClassFlags::ACC_INTERFACE
+                        | NestedClassFlags::ACC_ABSTRACT,
+                )],
             },
         ],
     );
@@ -1229,82 +1315,108 @@ fn should_load_and_parse_mutf8_strings() {
         66,
         vec![
             Empty, //                                               0
-            Class { //                                              1
+            Class {
+                //                                                  1
                 name_index: 2,
             },
-            Utf8 { //                                               2
+            Utf8 {
+                //                                                  2
                 value: "Mutf8".into(),
             },
-            Class { //                                              3
+            Class {
+                //                                                  3
                 name_index: 4,
             },
-            Utf8 { //                                               4
+            Utf8 {
+                //                                                  4
                 value: "java/lang/Object".into(),
             },
-            Utf8 { //                                               5
+            Utf8 {
+                //                                                  5
                 value: "withZero".into(),
             },
-            Utf8 { //                                               6
+            Utf8 {
+                //                                                  6
                 value: "Ljava/lang/String;".into(),
             },
-            Utf8 { //                                               7
+            Utf8 {
+                //                                                  7
                 value: "ConstantValue".into(),
             },
-            String { //                                             8
+            String {
+                //                                                  8
                 string_index: 9,
             },
-            Utf8 { //                                               9
+            Utf8 {
+                //                                                  9
                 value: "\0abc".into(),
             },
-            Utf8 { //                                               10
+            Utf8 {
+                //                                                  10
                 value: "singleByteLatin".into(),
             },
-            String { //                                             11
+            String {
+                //                                                  11
                 string_index: 12,
             },
-            Utf8 { //                                               12
+            Utf8 {
+                //                                                  12
                 value: "A".into(),
             },
-            Utf8 { //                                               13
+            Utf8 {
+                //                                                  13
                 value: "twoByteUkrainian".into(),
             },
-            String { //                                             14
+            String {
+                //                                                  14
                 string_index: 15,
             },
-            Utf8 { //                                               15
+            Utf8 {
+                //                                                  15
                 value: "ї".into(),
             },
-            Utf8 { //                                               16
+            Utf8 {
+                //                                                  16
                 value: "threeByteSnowman".into(),
             },
-            String { //                                             17
+            String {
+                //                                                  17
                 string_index: 18,
             },
-            Utf8 { //                                               18
+            Utf8 {
+                //                                                  18
                 value: "☃".into(),
             },
-            Utf8 { //                                               19
+            Utf8 {
+                //                                                  19
                 value: "fourByteGothicLetterHwair".into(),
             },
-            String { //                                             20
+            String {
+                //                                                  20
                 string_index: 21,
             },
-            Utf8 { //                                               21
+            Utf8 {
+                //                                                  21
                 value: "𐍈".into(),
             },
-            Utf8 { //                                               22
+            Utf8 {
+                //                                                  22
                 value: "fourByteEmoji".into(),
             },
-            String { //                                             23
+            String {
+                //                                                  23
                 string_index: 24,
             },
-            Utf8 { //                                               24
+            Utf8 {
+                //                                                  24
                 value: "😂".into(),
             },
-            Utf8 { //                                               25
+            Utf8 {
+                //                                                  25
                 value: "SourceFile".into(),
             },
-            Utf8 { //                                               26
+            Utf8 {
+                //                                                  26
                 value: "Mutf8.java".into(),
             },
         ],
@@ -1313,15 +1425,59 @@ fn should_load_and_parse_mutf8_strings() {
         3,
         vec![],
         vec![
-            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 5, 6, vec![ConstantValue { constantvalue_index: 8 }]),
-            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 10, 6, vec![ConstantValue { constantvalue_index: 11 }]),
-            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 13, 6, vec![ConstantValue { constantvalue_index: 14 }]),
-            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 16, 6, vec![ConstantValue { constantvalue_index: 17 }]),
-            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 19, 6, vec![ConstantValue { constantvalue_index: 20 }]),
-            FieldInfo::new(FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL, 22, 6, vec![ConstantValue { constantvalue_index: 23 }]),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                5,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 8,
+                }],
+            ),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                10,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 11,
+                }],
+            ),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                13,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 14,
+                }],
+            ),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                16,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 17,
+                }],
+            ),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                19,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 20,
+                }],
+            ),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                22,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 23,
+                }],
+            ),
         ],
         vec![],
-        vec![SourceFile { sourcefile_index: 26 }],
+        vec![SourceFile {
+            sourcefile_index: 26,
+        }],
     );
 
     assert_eq!(actual_class_file, expected_class_file)

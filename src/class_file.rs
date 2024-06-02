@@ -1,17 +1,15 @@
-use std::io;
-use std::io::ErrorKind::{InvalidInput};
 use crate::attributes::*;
-use crate::constant_pool::{ConstantPool, get_constant_pool};
-use crate::extractors::{get_int, get_bitfield};
+use crate::constant_pool::{get_constant_pool, ConstantPool};
+use crate::extractors::{get_bitfield, get_int};
 use crate::fields::get_fields;
 use crate::methods::{get_methods, MethodInfo};
-
+use std::io;
+use std::io::ErrorKind::InvalidInput;
 
 const MAGIC: u32 = 0xCAFEBABE;
 
-
-use bitflags::bitflags;
 use crate::attributes::Attribute;
+use bitflags::bitflags;
 
 use crate::fields::FieldInfo;
 
@@ -57,7 +55,8 @@ impl ClassFile {
         interfaces: Vec<u16>,
         fields: Vec<FieldInfo>,
         methods: Vec<MethodInfo>,
-        attributes: Vec<Attribute>) -> Self {
+        attributes: Vec<Attribute>,
+    ) -> Self {
         Self {
             magic,
             minor_version,
@@ -94,28 +93,29 @@ pub fn parse(data: &[u8]) -> Result<ClassFile, io::Error> {
     let attributes = get_attributes(&data, &mut start_from, &constant_pool_vec)?;
 
     if data.len() != start_from {
-        return Err(
-            io::Error::new(
-                InvalidInput,
-                format!("Not all was read : data.len() is {}, start_from is {}", data.len(), start_from)),
-        );
+        return Err(io::Error::new(
+            InvalidInput,
+            format!(
+                "Not all was read : data.len() is {}, start_from is {}",
+                data.len(),
+                start_from
+            ),
+        ));
     }
 
-    Ok(
-        ClassFile::new(
-            magic,
-            minor_version,
-            major_version,
-            constant_pool_vec,
-            access_flags,
-            this_class,
-            super_class,
-            interfaces,
-            fields,
-            methods,
-            attributes,
-        )
-    )
+    Ok(ClassFile::new(
+        magic,
+        minor_version,
+        major_version,
+        constant_pool_vec,
+        access_flags,
+        this_class,
+        super_class,
+        interfaces,
+        fields,
+        methods,
+        attributes,
+    ))
 }
 
 fn get_interfaces(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<u16>, io::Error> {
