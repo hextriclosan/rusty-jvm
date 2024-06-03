@@ -1,9 +1,10 @@
-use mutf8::mutf8_to_utf8;
+
 use num_traits::Num;
 use std::array::TryFromSliceError;
 use std::io::ErrorKind::{InvalidData, InvalidInput};
 use std::mem::size_of;
 use std::{io, mem};
+use cesu8::from_java_cesu8;
 
 pub fn get_int<T>(slice: &[u8], start_from: &mut usize) -> Result<T, io::Error>
 where
@@ -92,14 +93,13 @@ where
 pub fn get_string(
     data: &&[u8],
     mut start_from: &mut usize,
-) -> Result<std::string::String, io::Error> {
+) -> Result<String, io::Error> {
     let length: u16 = get_int(&data, &mut start_from)?;
     let mutf8_bytes: &[u8] = get_bytes(&data, &mut start_from, length as usize)?;
-    let utf8_bytes = mutf8_to_utf8(mutf8_bytes)
-        .map_err(|e| io::Error::new(InvalidData, e))?
-        .to_vec();
 
-    String::from_utf8(utf8_bytes).map_err(|e| io::Error::new(InvalidData, e))
+    Ok(from_java_cesu8(mutf8_bytes)
+        .map_err(|e| io::Error::new(InvalidData, e))?
+        .into_owned())
 }
 
 #[cfg(test)]

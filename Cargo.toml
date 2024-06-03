@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 num-traits = "0.2.19"
-mutf8 = "0.5.0"
+cesu8 = "1.1.0"
 bitflags = "2.5.0"
