@@ -1,7 +1,7 @@
 use crate::constant_pool::ConstantPool::*;
+use crate::error::{Error, Result};
 use crate::extractors::{get_float, get_int, get_string};
 use std::io::ErrorKind::InvalidInput;
-use crate::error::{Error, Result};
 
 #[repr(u8)]
 #[derive(Debug, PartialEq)]
@@ -152,7 +152,8 @@ pub(crate) fn get_constant_pool(
             _ => {
                 return Err(Error::new_io(
                     InvalidInput,
-                    format!("unmatched tag: {}", tag).as_str()));
+                    format!("unmatched tag: {}", tag).as_str(),
+                ));
             }
         };
 

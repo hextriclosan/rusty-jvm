@@ -1,5 +1,5 @@
-use std::{error::Error as StdError, io, result};
 use std::fmt::{Debug, Display, Formatter};
+use std::{error::Error as StdError, io, result};
 
 pub type Result<T> = result::Result<T, Error>;
 

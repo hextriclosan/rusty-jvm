@@ -1,16 +1,16 @@
-use std::io;
 use crate::attributes::*;
 use crate::constant_pool::{get_constant_pool, ConstantPool};
+use crate::error::{Error, Result};
 use crate::extractors::{get_bitfield, get_int};
 use crate::fields::get_fields;
 use crate::methods::{get_methods, MethodInfo};
-use crate::error::{Error, Result};
+use std::io;
 
 const MAGIC: u32 = 0xCAFEBABE;
 
 use crate::attributes::Attribute;
-use bitflags::bitflags;
 use crate::error::ErrorKind::InvalidInput;
+use bitflags::bitflags;
 
 use crate::fields::FieldInfo;
 
@@ -79,7 +79,9 @@ pub fn parse(data: &[u8]) -> Result<ClassFile> {
     let magic = get_int(&data, &mut start_from)?;
 
     if magic != MAGIC {
-        return Err(Error::new(InvalidInput(String::from("Not a valid class-file"))));
+        return Err(Error::new(InvalidInput(String::from(
+            "Not a valid class-file",
+        ))));
     }
 
     let minor_version = get_int(&data, &mut start_from)?;
@@ -100,7 +102,9 @@ pub fn parse(data: &[u8]) -> Result<ClassFile> {
                 "Not all was read : data.len() is {}, start_from is {}",
                 data.len(),
                 start_from
-            ).as_str()));
+            )
+            .as_str(),
+        ));
     }
 
     Ok(ClassFile::new(

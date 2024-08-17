@@ -1,7 +1,6 @@
 use jclass::class_file::{parse, ClassFile};
-use std::{env, fs};
 use std::error::Error;
-
+use std::{env, fs};
 
 fn main() {
     let print_usage = || -> Result<(), String> {

@@ -407,13 +407,15 @@ fn get_attribute(
             _ => {
                 return Err(Error::new_io(
                     InvalidData,
-                    format!("element type is not Uint8 but {:?}", item).as_str()));
+                    format!("element type is not Uint8 but {:?}", item).as_str(),
+                ));
             }
         },
         None => {
             return Err(Error::new_io(
                 InvalidData,
-                format!("element not found at index {}", attribute_name_index).as_str()));
+                format!("element not found at index {}", attribute_name_index).as_str(),
+            ));
         }
     };
 
@@ -631,7 +633,8 @@ fn get_attribute(
                     _ => {
                         return Err(Error::new_io(
                             InvalidData,
-                            format!("Unsupported frame_type: {}", frame_type).as_str()));
+                            format!("Unsupported frame_type: {}", frame_type).as_str(),
+                        ));
                     }
                 };
 
@@ -706,7 +709,8 @@ fn get_attribute(
         _ => {
             return Err(Error::new_io(
                 InvalidData,
-                format!("unmatched attribute: {}", attribute_name).as_str()));
+                format!("unmatched attribute: {}", attribute_name).as_str(),
+            ));
         }
     };
 
@@ -734,7 +738,8 @@ fn get_verification_type_info(
         }),
         _ => Err(Error::new_io(
             InvalidData,
-            format!("tag {} is not valid", tag).as_str())),
+            format!("tag {} is not valid", tag).as_str(),
+        )),
     }
 }
 
@@ -782,6 +787,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
         }
         _ => Err(Error::new_io(
             InvalidData,
-            format!("Unsupported element tag: {}", tag).as_str())),
+            format!("Unsupported element tag: {}", tag).as_str(),
+        )),
     }
 }

@@ -1,17 +1,17 @@
-use num_traits::Num;
-use std::array::TryFromSliceError;
-use std::io::ErrorKind::{InvalidData, InvalidInput};
-use std::mem::size_of;
-use std::io;
-use cesu8::from_java_cesu8;
-use crate::error::{Error};
+use crate::error::Error;
 use crate::error::ErrorKind::Io;
 use crate::error::Result;
+use cesu8::from_java_cesu8;
+use num_traits::Num;
+use std::array::TryFromSliceError;
+use std::io;
+use std::io::ErrorKind::{InvalidData, InvalidInput};
+use std::mem::size_of;
 use std::result::Result as StdResult;
 
 pub fn get_int<T>(slice: &[u8], start_from: &mut usize) -> Result<T>
-    where
-        T: Num + From<u8> + std::ops::Shl<Output=T> + std::ops::BitOr<Output=T> + Copy,
+where
+    T: Num + From<u8> + std::ops::Shl<Output = T> + std::ops::BitOr<Output = T> + Copy,
 {
     let size = size_of::<T>();
     let sub_slice = slice.get(*start_from..*start_from + size).ok_or_else(|| {
@@ -21,7 +21,9 @@ pub fn get_int<T>(slice: &[u8], start_from: &mut usize) -> Result<T>
                 "overflow : attempt to read from {} whereas len is {}",
                 *start_from,
                 slice.len()
-            ).as_str())
+            )
+            .as_str(),
+        )
     })?;
 
     let mut value: T = T::from(sub_slice[0]);
@@ -33,11 +35,7 @@ pub fn get_int<T>(slice: &[u8], start_from: &mut usize) -> Result<T>
     Ok(value)
 }
 
-pub fn get_bytes<'a>(
-    slice: &'a [u8],
-    start_from: &mut usize,
-    size: usize,
-) -> Result<&'a [u8]> {
+pub fn get_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Result<&'a [u8]> {
     slice
         .get(*start_from..*start_from + size)
         .ok_or_else(|| {
@@ -47,7 +45,9 @@ pub fn get_bytes<'a>(
                     "Index out of bounds: {} of {}",
                     *start_from + size,
                     slice.len()
-                ).as_str())
+                )
+                .as_str(),
+            )
         })
         .map(|sub_slice| {
             *start_from += size;
@@ -57,8 +57,8 @@ pub fn get_bytes<'a>(
 }
 
 pub fn get_bitfield<T>(slice: &[u8], start_from: &mut usize) -> Result<T>
-    where
-        T: bitflags::Flags<Bits=u16>,
+where
+    T: bitflags::Flags<Bits = u16>,
 {
     let bits = get_int(slice, start_from)?;
 
@@ -82,8 +82,8 @@ impl FromBeBytes for f64 {
 }
 
 pub fn get_float<T>(data: &[u8], mut start_from: &mut usize) -> Result<T>
-    where
-        T: FromBeBytes + Sized,
+where
+    T: FromBeBytes + Sized,
 {
     let size = size_of::<T>();
     let bytes = get_bytes(&data, &mut start_from, size)?;
@@ -91,10 +91,7 @@ pub fn get_float<T>(data: &[u8], mut start_from: &mut usize) -> Result<T>
     T::from_be_bytes(bytes).map_err(|e| Error::new(Io(io::Error::new(InvalidData, e))))
 }
 
-pub fn get_string(
-    data: &&[u8],
-    mut start_from: &mut usize,
-) -> Result<String> {
+pub fn get_string(data: &&[u8], mut start_from: &mut usize) -> Result<String> {
     let length: u16 = get_int(&data, &mut start_from)?;
     let mutf8_bytes: &[u8] = get_bytes(&data, &mut start_from, length as usize)?;
 
