@@ -1,8 +1,9 @@
 use crate::attributes::{get_attributes, Attribute};
 use crate::constant_pool::ConstantPool;
+use crate::error::Result;
 use crate::extractors::{get_bitfield, get_int};
 use bitflags::bitflags;
-use std::io;
+
 bitflags! {
     #[derive(Debug, PartialEq)]
     pub struct MethodFlags: u16 {
@@ -49,7 +50,7 @@ pub(crate) fn get_methods(
     data: &&[u8],
     mut start_from: &mut usize,
     constant_pool_vec: &Vec<ConstantPool>,
-) -> Result<Vec<MethodInfo>, io::Error> {
+) -> Result<Vec<MethodInfo>> {
     let methods_count: u16 = get_int(&data, &mut start_from)?;
     let mut methods = Vec::with_capacity(methods_count as usize);
     for _ in 0..methods_count {

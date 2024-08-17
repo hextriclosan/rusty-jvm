@@ -1,15 +1,16 @@
+use std::io;
 use crate::attributes::*;
 use crate::constant_pool::{get_constant_pool, ConstantPool};
 use crate::extractors::{get_bitfield, get_int};
 use crate::fields::get_fields;
 use crate::methods::{get_methods, MethodInfo};
-use std::io;
-use std::io::ErrorKind::InvalidInput;
+use crate::error::{Error, Result};
 
 const MAGIC: u32 = 0xCAFEBABE;
 
 use crate::attributes::Attribute;
 use bitflags::bitflags;
+use crate::error::ErrorKind::InvalidInput;
 
 use crate::fields::FieldInfo;
 
@@ -73,12 +74,12 @@ impl ClassFile {
     }
 }
 
-pub fn parse(data: &[u8]) -> Result<ClassFile, io::Error> {
+pub fn parse(data: &[u8]) -> Result<ClassFile> {
     let mut start_from = 0;
     let magic = get_int(&data, &mut start_from)?;
 
     if magic != MAGIC {
-        return Err(io::Error::new(InvalidInput, "Not a valid class-file"));
+        return Err(Error::new(InvalidInput(String::from("Not a valid class-file"))));
     }
 
     let minor_version = get_int(&data, &mut start_from)?;
@@ -93,14 +94,13 @@ pub fn parse(data: &[u8]) -> Result<ClassFile, io::Error> {
     let attributes = get_attributes(&data, &mut start_from, &constant_pool_vec)?;
 
     if data.len() != start_from {
-        return Err(io::Error::new(
-            InvalidInput,
+        return Err(Error::new_io(
+            io::ErrorKind::InvalidInput,
             format!(
                 "Not all was read : data.len() is {}, start_from is {}",
                 data.len(),
                 start_from
-            ),
-        ));
+            ).as_str()));
     }
 
     Ok(ClassFile::new(
@@ -118,7 +118,7 @@ pub fn parse(data: &[u8]) -> Result<ClassFile, io::Error> {
     ))
 }
 
-fn get_interfaces(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<u16>, io::Error> {
+fn get_interfaces(data: &&[u8], mut start_from: &mut usize) -> Result<Vec<u16>> {
     let interfaces_count: u16 = get_int(&data, &mut start_from)?;
 
     let mut interfaces = Vec::with_capacity(interfaces_count as usize);

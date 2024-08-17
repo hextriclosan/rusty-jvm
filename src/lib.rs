@@ -4,3 +4,4 @@ pub mod constant_pool;
 mod extractors;
 pub mod fields;
 pub mod methods;
+mod error;

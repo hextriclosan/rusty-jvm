@@ -8,10 +8,10 @@ use crate::attributes::StackMapFrame::{
 };
 use crate::constant_pool::ConstantPool;
 use crate::constant_pool::ConstantPool::*;
+use crate::error::{Error, Result};
 use crate::extractors::{get_bitfield, get_bytes, get_int};
 use bitflags::bitflags;
-use std::io;
-use std::io::ErrorKind::{InvalidData, InvalidInput};
+use std::io::ErrorKind::InvalidData;
 
 #[derive(Debug, PartialEq)]
 pub enum Attribute {
@@ -385,7 +385,7 @@ pub(crate) fn get_attributes(
     data: &[u8],
     mut start_from: &mut usize,
     constant_pool_vec: &Vec<ConstantPool>,
-) -> Result<Vec<Attribute>, io::Error> {
+) -> Result<Vec<Attribute>> {
     let attributes_count: u16 = get_int(&data, &mut start_from)?;
     let mut attributes = Vec::with_capacity(attributes_count as usize);
     for _ in 0..attributes_count {
@@ -399,23 +399,21 @@ fn get_attribute(
     data: &[u8],
     mut start_from: &mut usize,
     constant_pool_vec: &Vec<ConstantPool>,
-) -> Result<Attribute, io::Error> {
+) -> Result<Attribute> {
     let attribute_name_index: u16 = get_int(&data, &mut start_from)?;
     let attribute_name = match constant_pool_vec.get(attribute_name_index as usize) {
         Some(item) => match item {
             Utf8 { value } => value,
             _ => {
-                return Err(io::Error::new(
+                return Err(Error::new_io(
                     InvalidData,
-                    format!("element type is not Uint8 but {:?}", item),
-                ))
+                    format!("element type is not Uint8 but {:?}", item).as_str()));
             }
         },
         None => {
-            return Err(io::Error::new(
+            return Err(Error::new_io(
                 InvalidData,
-                format!("element not found at index {}", attribute_name_index),
-            ))
+                format!("element not found at index {}", attribute_name_index).as_str()));
         }
     };
 
@@ -631,10 +629,9 @@ fn get_attribute(
                         }
                     }
                     _ => {
-                        return Err(io::Error::new(
-                            InvalidInput,
-                            format!("Unsupported frame_type: {}", frame_type),
-                        ));
+                        return Err(Error::new_io(
+                            InvalidData,
+                            format!("Unsupported frame_type: {}", frame_type).as_str()));
                     }
                 };
 
@@ -707,10 +704,9 @@ fn get_attribute(
             PermittedSubclasses { classes }
         }
         _ => {
-            return Err(io::Error::new(
-                InvalidInput,
-                format!("unmatched attribute: {}", attribute_name),
-            ));
+            return Err(Error::new_io(
+                InvalidData,
+                format!("unmatched attribute: {}", attribute_name).as_str()));
         }
     };
 
@@ -721,7 +717,7 @@ fn get_verification_type_info(
     tag: u8,
     data: &[u8],
     start_from: &mut usize,
-) -> Result<VerificationTypeInfo, io::Error> {
+) -> Result<VerificationTypeInfo> {
     match tag {
         0 => Ok(VerificationTypeInfo::TopVariableInfo),
         1 => Ok(VerificationTypeInfo::IntegerVariableInfo),
@@ -736,14 +732,13 @@ fn get_verification_type_info(
         8 => Ok(VerificationTypeInfo::UninitializedVariableInfo {
             offset: get_int(&data, start_from)?,
         }),
-        _ => Err(io::Error::new(
-            InvalidInput,
-            format!("tag {} is not valid", tag),
-        )),
+        _ => Err(Error::new_io(
+            InvalidData,
+            format!("tag {} is not valid", tag).as_str())),
     }
 }
 
-fn get_annotation(data: &[u8], start_from: &mut usize) -> Result<Annotation, io::Error> {
+fn get_annotation(data: &[u8], start_from: &mut usize) -> Result<Annotation> {
     let type_index = get_int(&data, start_from)?;
     let num_element_value_pairs: u16 = get_int(&data, start_from)?;
     let mut element_value_pairs = Vec::with_capacity(num_element_value_pairs as usize);
@@ -756,7 +751,7 @@ fn get_annotation(data: &[u8], start_from: &mut usize) -> Result<Annotation, io:
     Ok(Annotation::new(type_index, element_value_pairs))
 }
 
-fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue, io::Error> {
+fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue> {
     let tag: u8 = get_int(&data, start_from)?;
     match tag {
         b'B' | b'C' | b'D' | b'F' | b'I' | b'J' | b'S' | b'Z' | b's' => Ok(ConstValueIndex {
@@ -785,9 +780,8 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 
             Ok(ArrayValue { tag, values })
         }
-        _ => Err(io::Error::new(
-            InvalidInput,
-            format!("Unsupported element tag: {}", tag),
-        )),
+        _ => Err(Error::new_io(
+            InvalidData,
+            format!("Unsupported element tag: {}", tag).as_str())),
     }
 }

@@ -1,7 +1,7 @@
 use crate::constant_pool::ConstantPool::*;
 use crate::extractors::{get_float, get_int, get_string};
-use std::io;
 use std::io::ErrorKind::InvalidInput;
+use crate::error::{Error, Result};
 
 #[repr(u8)]
 #[derive(Debug, PartialEq)]
@@ -70,7 +70,7 @@ pub enum ConstantPool {
 pub(crate) fn get_constant_pool(
     data: &[u8],
     mut start_from: &mut usize,
-) -> Result<Vec<ConstantPool>, io::Error> {
+) -> Result<Vec<ConstantPool>> {
     let constant_pool_count: u16 = get_int(&data, &mut start_from)?;
     let mut constant_pool_vec = Vec::with_capacity(constant_pool_count as usize);
     for _ in 0..constant_pool_count {
@@ -150,10 +150,9 @@ pub(crate) fn get_constant_pool(
                 name_index: get_int(&data, &mut start_from)?,
             },
             _ => {
-                return Err(io::Error::new(
+                return Err(Error::new_io(
                     InvalidInput,
-                    format!("unmatched tag: {}", tag),
-                ));
+                    format!("unmatched tag: {}", tag).as_str()));
             }
         };
 

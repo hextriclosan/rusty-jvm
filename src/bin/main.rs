@@ -1,5 +1,7 @@
 use jclass::class_file::{parse, ClassFile};
-use std::{env, fs, io};
+use std::{env, fs};
+use std::error::Error;
+
 
 fn main() {
     let print_usage = || -> Result<(), String> {
@@ -36,10 +38,10 @@ fn main() {
     }
 }
 
-fn load(file_name: &str) -> Result<ClassFile, io::Error> {
+fn load(file_name: &str) -> Result<ClassFile, Box<dyn Error>> {
     let data = fs::read(file_name)?;
 
-    let class_file = parse(data.as_slice());
+    let class_file = parse(data.as_slice())?;
 
-    class_file
+    Ok(class_file)
 }
