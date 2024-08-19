@@ -44,10 +44,22 @@ impl MethodInfo {
             attributes,
         }
     }
+    pub fn access_flags(&self) -> &MethodFlags {
+        &self.access_flags
+    }
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+    pub fn descriptor_index(&self) -> u16 {
+        self.descriptor_index
+    }
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
 }
 
 pub(crate) fn get_methods(
-    data: &&[u8],
+    data: &[u8],
     mut start_from: &mut usize,
     constant_pool_vec: &Vec<ConstantPool>,
 ) -> Result<Vec<MethodInfo>> {

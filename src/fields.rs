@@ -41,6 +41,18 @@ impl FieldInfo {
             attributes,
         }
     }
+    pub fn access_flags(&self) -> &FieldFlags {
+        &self.access_flags
+    }
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+    pub fn descriptor_index(&self) -> u16 {
+        self.descriptor_index
+    }
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
 }
 
 pub(crate) fn get_fields(

@@ -109,6 +109,18 @@ impl ExceptionRecord {
             catch_type,
         }
     }
+    pub fn start_pc(&self) -> u16 {
+        self.start_pc
+    }
+    pub fn end_pc(&self) -> u16 {
+        self.end_pc
+    }
+    pub fn handler_pc(&self) -> u16 {
+        self.handler_pc
+    }
+    pub fn catch_type(&self) -> u16 {
+        self.catch_type
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -123,6 +135,12 @@ impl LineNumberRecord {
             start_pc,
             line_number,
         }
+    }
+    pub fn start_pc(&self) -> u16 {
+        self.start_pc
+    }
+    pub fn line_number(&self) -> u16 {
+        self.line_number
     }
 }
 
@@ -151,6 +169,21 @@ impl LocalVariableTableRecord {
             index,
         }
     }
+    pub fn start_pc(&self) -> u16 {
+        self.start_pc
+    }
+    pub fn length(&self) -> u16 {
+        self.length
+    }
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+    pub fn descriptor_index(&self) -> u16 {
+        self.descriptor_index
+    }
+    pub fn index(&self) -> u16 {
+        self.index
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -178,6 +211,21 @@ impl LocalVariableTypeTableRecord {
             index,
         }
     }
+    pub fn start_pc(&self) -> u16 {
+        self.start_pc
+    }
+    pub fn length(&self) -> u16 {
+        self.length
+    }
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+    pub fn signature_index(&self) -> u16 {
+        self.signature_index
+    }
+    pub fn index(&self) -> u16 {
+        self.index
+    }
 }
 
 bitflags! {
@@ -201,6 +249,12 @@ impl MethodParameterRecord {
             name_index,
             access_flags,
         }
+    }
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+    pub fn access_flags(&self) -> &MethodParameterFlags {
+        &self.access_flags
     }
 }
 
@@ -267,6 +321,12 @@ impl Annotation {
             element_value_pairs,
         }
     }
+    pub fn type_index(&self) -> u16 {
+        self.type_index
+    }
+    pub fn element_value_pairs(&self) -> &Vec<ElementValuePair> {
+        &self.element_value_pairs
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -281,6 +341,12 @@ impl ElementValuePair {
             element_name_index,
             value,
         }
+    }
+    pub fn element_name_index(&self) -> u16 {
+        self.element_name_index
+    }
+    pub fn value(&self) -> &ElementValue {
+        &self.value
     }
 }
 
@@ -347,6 +413,18 @@ impl InnerClassRecord {
             inner_class_access_flags,
         }
     }
+    pub fn inner_class_info_index(&self) -> u16 {
+        self.inner_class_info_index
+    }
+    pub fn outer_class_info_index(&self) -> u16 {
+        self.outer_class_info_index
+    }
+    pub fn inner_name_index(&self) -> u16 {
+        self.inner_name_index
+    }
+    pub fn inner_class_access_flags(&self) -> &NestedClassFlags {
+        &self.inner_class_access_flags
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -361,6 +439,12 @@ impl BootstrapMethodRecord {
             bootstrap_method_ref,
             bootstrap_arguments,
         }
+    }
+    pub fn bootstrap_method_ref(&self) -> u16 {
+        self.bootstrap_method_ref
+    }
+    pub fn bootstrap_arguments(&self) -> &Vec<u16> {
+        &self.bootstrap_arguments
     }
 }
 
@@ -378,6 +462,15 @@ impl RecordComponentInfo {
             descriptor_index,
             attributes,
         }
+    }
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+    pub fn descriptor_index(&self) -> u16 {
+        self.descriptor_index
+    }
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
     }
 }
 

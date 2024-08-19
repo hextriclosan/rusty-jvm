@@ -72,6 +72,39 @@ impl ClassFile {
             attributes,
         }
     }
+    pub fn magic(&self) -> u32 {
+        self.magic
+    }
+    pub fn minor_version(&self) -> u16 {
+        self.minor_version
+    }
+    pub fn major_version(&self) -> u16 {
+        self.major_version
+    }
+    pub fn constant_pool(&self) -> &Vec<ConstantPool> {
+        &self.constant_pool
+    }
+    pub fn access_flags(&self) -> &ClassFlags {
+        &self.access_flags
+    }
+    pub fn this_class(&self) -> u16 {
+        self.this_class
+    }
+    pub fn super_class(&self) -> u16 {
+        self.super_class
+    }
+    pub fn interfaces(&self) -> &Vec<u16> {
+        &self.interfaces
+    }
+    pub fn fields(&self) -> &Vec<FieldInfo> {
+        &self.fields
+    }
+    pub fn methods(&self) -> &Vec<MethodInfo> {
+        &self.methods
+    }
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
 }
 
 pub fn parse(data: &[u8]) -> Result<ClassFile> {
