@@ -1,0 +1,9 @@
+[package]
+name = "jclass"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num-traits = "0.2.19"
+cesu8 = "1.1.0"
+bitflags = "2.5.0"
