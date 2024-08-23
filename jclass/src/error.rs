@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::{error::Error as StdError, io, result};
+use crate::error::ErrorKind::{InvalidInput, Io};
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -26,7 +27,12 @@ impl Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+        match &*self.0 {
+            Io(err) => write!(f, "I/O Error: {err}"),
+            InvalidInput(descr) => write!(f, "InvalidInput Error: {descr}"),
+
+            ErrorKind::__Nonexhaustive => unreachable!(),
+        }
     }
 }
 
