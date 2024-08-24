@@ -41,3 +41,13 @@ dependencies = [
 [[package]]
 name = "rusty-jvm"
 version = "0.1.0"
+dependencies = [
+ "vm",
+]
+
+[[package]]
+name = "vm"
+version = "0.1.0"
+dependencies = [
+ "jclass",
+]
