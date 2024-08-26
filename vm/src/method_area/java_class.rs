@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use crate::method_area::java_method::JavaMethod;
-
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
@@ -13,7 +12,6 @@ pub(crate) struct Methods {
     pub(crate) method_by_signature: HashMap<String, JavaMethod>,
 }
 
-
 impl JavaClass {
     pub fn new(methods: Methods) -> Self {
         Self { methods }
@@ -21,7 +19,13 @@ impl JavaClass {
 }
 
 impl Methods {
-    pub fn new(methodsignature_by_cpoolindex: HashMap<u16, String>, method_by_signature: HashMap<String, JavaMethod>) -> Self {
-        Self { methodsignature_by_cpoolindex, method_by_signature }
+    pub fn new(
+        methodsignature_by_cpoolindex: HashMap<u16, String>,
+        method_by_signature: HashMap<String, JavaMethod>,
+    ) -> Self {
+        Self {
+            methodsignature_by_cpoolindex,
+            method_by_signature,
+        }
     }
 }

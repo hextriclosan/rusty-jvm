@@ -1,7 +1,5 @@
-
 use crate::method_area::signature::Signature;
 use crate::stack::stack_frame::StackFrame;
-
 
 #[derive(Debug)]
 pub(crate) struct JavaMethod {
@@ -13,7 +11,12 @@ pub(crate) struct JavaMethod {
 
 impl JavaMethod {
     pub fn new(signature: Signature, max_stack: u16, max_locals: u16, bytecode: Vec<u8>) -> Self {
-        Self { signature, max_stack, max_locals, bytecode }
+        Self {
+            signature,
+            max_stack,
+            max_locals,
+            bytecode,
+        }
     }
 
     pub fn new_stack_frame(&self) -> StackFrame {

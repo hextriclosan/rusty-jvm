@@ -12,7 +12,8 @@ impl<'a> Engine<'a> {
         let mut last_value: Option<i32> = None;
 
         while !stack_frames.is_empty() {
-            let stack_frame = stack_frames.last_mut()
+            let stack_frame = stack_frames
+                .last_mut()
                 .ok_or(Error::new_execution("Error getting stack frame"))?;
 
             match stack_frame.get_bytecode_byte() {
@@ -75,7 +76,6 @@ impl<'a> Engine<'a> {
                     println!("ILOAD");
                     stack_frame.incr_pc();
                     let pos = stack_frame.get_bytecode_byte() as usize;
-
 
                     let val = stack_frame.get_local(pos);
                     stack_frame.push(val);
@@ -167,7 +167,6 @@ impl<'a> Engine<'a> {
                     println!("ISUB -> {a} - {b} = {result}");
                 }
                 104 => {
-
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
                     let result = a * b;
@@ -259,8 +258,6 @@ impl<'a> Engine<'a> {
                     } else {
                         stack_frame.advance_pc(3);
                     }
-
-
                 }
                 162 => {
                     println!("IF_ICMPGE");
@@ -304,23 +301,36 @@ impl<'a> Engine<'a> {
                     stack_frame.advance_pc(offset);
                 }
                 172 => {
-                    println!("IRETURN -> locals={:?}, operand_stack={:?}", stack_frame.locals, stack_frame.operand_stack);
+                    println!(
+                        "IRETURN -> locals={:?}, operand_stack={:?}",
+                        stack_frame.locals, stack_frame.operand_stack
+                    );
                     let ret = stack_frame.pop();
                     stack_frames.pop();
-                    stack_frames.last_mut()
+                    stack_frames
+                        .last_mut()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(ret);
                 }
                 177 => {
-                    println!("RETURN -> locals={:?}, operand_stack={:?}", stack_frame.locals, stack_frame.operand_stack);
-                    last_value = stack_frames.last()
+                    println!(
+                        "RETURN -> locals={:?}, operand_stack={:?}",
+                        stack_frame.locals, stack_frame.operand_stack
+                    );
+                    last_value = stack_frames
+                        .last()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
-                        .locals.last().copied();
+                        .locals
+                        .last()
+                        .copied();
                     stack_frames.pop(); // Return from method, pop the current frame
-                    // add more logic here
+                                        // add more logic here
                 }
                 184 => {
-                    println!("INVOKESTATIC -> locals={:?}, operand_stack={:?}", stack_frame.locals, stack_frame.operand_stack);
+                    println!(
+                        "INVOKESTATIC -> locals={:?}, operand_stack={:?}",
+                        stack_frame.locals, stack_frame.operand_stack
+                    );
 
                     stack_frame.incr_pc();
                     let high = stack_frame.get_bytecode_byte() as u16;
@@ -328,7 +338,9 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     let low = stack_frame.get_bytecode_byte() as u16;
                     let methodref_constpool_index = (high << 8) | low;
-                    let static_method = self.method_area.get_method_by_cpool_index(methodref_constpool_index)?;
+                    let static_method = self
+                        .method_area
+                        .get_method_by_cpool_index(methodref_constpool_index)?;
 
                     let mut next_frame = static_method.new_stack_frame();
                     let arg_num = static_method.get_signature().get_arg_num();

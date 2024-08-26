@@ -3,8 +3,8 @@ use std::process;
 use vm::vm::VM;
 
 fn print_usage() -> Result<(), String> {
-    let current_exe = env::current_exe().map_err(
-        |err| format!("Failed to get the current executable path: {}", err))?;
+    let current_exe = env::current_exe()
+        .map_err(|err| format!("Failed to get the current executable path: {}", err))?;
     let file_name = current_exe
         .file_name()
         .and_then(|name| name.to_str())
