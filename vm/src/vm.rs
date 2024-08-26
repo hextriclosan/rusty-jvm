@@ -1,7 +1,6 @@
 use crate::class_loader::ClassLoader;
 use crate::execution_engine::engine::Engine;
 
-
 #[derive(Debug)]
 pub struct VM {
     class_loader: ClassLoader,
@@ -14,7 +13,9 @@ impl VM {
     }
 
     pub fn run(&self) -> crate::error::Result<Option<i32>> {
-        let main_method = self.class_loader.method_area()
+        let main_method = self
+            .class_loader
+            .method_area()
             .get_method_by_name_signature("main:([Ljava/lang/String;)V")?;
 
         let engine = Engine::new(&self.class_loader.method_area());

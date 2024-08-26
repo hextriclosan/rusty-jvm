@@ -1,6 +1,5 @@
 use crate::error::Error;
 
-
 #[derive(Debug)]
 pub(crate) struct Signature {
     #[allow(dead_code)]
@@ -29,7 +28,13 @@ pub(crate) enum SignatureType {
 impl Signature {
     pub fn from_str(signature: &str) -> crate::error::Result<Self> {
         Self::count_symbols_between_parentheses(signature)
-            .and_then(|arg_num| Some(Self { parameter_types: vec![], return_type: SignatureType::Void, arg_num }))
+            .and_then(|arg_num| {
+                Some(Self {
+                    parameter_types: vec![],
+                    return_type: SignatureType::Void,
+                    arg_num,
+                })
+            })
             .ok_or(Error::new_constant_pool("Error parsing signature"))
     }
 
@@ -37,7 +42,8 @@ impl Signature {
         self.arg_num
     }
 
-    fn count_symbols_between_parentheses(s: &str) -> Option<usize> { //todo: remove this workaround
+    fn count_symbols_between_parentheses(s: &str) -> Option<usize> {
+        //todo: remove this workaround
         let open_index = s.find('(')?;
         let close_index = s.find(')')?;
 

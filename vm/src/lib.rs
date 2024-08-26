@@ -1,8 +1,7 @@
-
-pub mod vm;
 mod error;
 mod stack;
+pub mod vm;
 
 mod class_loader;
-mod method_area;
 mod execution_engine;
+mod method_area;

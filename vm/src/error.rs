@@ -1,6 +1,6 @@
-use std::{io, result};
-use std::fmt::{Debug, Display, Formatter};
 use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io};
+use std::fmt::{Debug, Display, Formatter};
+use std::{io, result};
 
 pub type Result<T> = result::Result<T, Error>;
 
