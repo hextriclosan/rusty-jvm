@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::opcode::*;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
 
@@ -17,50 +18,50 @@ impl<'a> Engine<'a> {
                 .ok_or(Error::new_execution("Error getting stack frame"))?;
 
             match stack_frame.get_bytecode_byte() {
-                3 => {
+                ICONST_0 => {
                     println!("ICONST_0");
                     stack_frame.push(0);
 
                     stack_frame.incr_pc();
                 }
-                4 => {
+                ICONST_1 => {
                     println!("ICONST_1");
                     stack_frame.push(1);
 
                     stack_frame.incr_pc();
                 }
-                5 => {
+                ICONST_2 => {
                     println!("ICONST_2");
                     stack_frame.push(2);
 
                     stack_frame.incr_pc();
                 }
-                6 => {
+                ICONST_3 => {
                     println!("ICONST_3");
                     stack_frame.push(3);
 
                     stack_frame.incr_pc();
                 }
-                7 => {
+                ICONST_4 => {
                     println!("ICONST_4");
                     stack_frame.push(4);
 
                     stack_frame.incr_pc();
                 }
-                8 => {
+                ICONST_5 => {
                     println!("ICONST_5");
                     stack_frame.push(5);
 
                     stack_frame.incr_pc();
                 }
-                16 => {
+                BIPUSH => {
                     println!("BIPUSH");
                     stack_frame.incr_pc();
                     stack_frame.push(stack_frame.get_bytecode_byte() as i32);
 
                     stack_frame.incr_pc();
                 }
-                17 => {
+                SIPUSH => {
                     println!("SIPUSH");
                     stack_frame.incr_pc();
                     let high = stack_frame.get_bytecode_byte() as u16;
@@ -72,7 +73,7 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
-                21 => {
+                ILOAD => {
                     println!("ILOAD");
                     stack_frame.incr_pc();
                     let pos = stack_frame.get_bytecode_byte() as usize;
@@ -82,35 +83,35 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
-                26 => {
+                ILOAD_0 => {
                     println!("ILOAD_0");
                     let val = stack_frame.get_local(0);
                     stack_frame.push(val);
 
                     stack_frame.incr_pc();
                 }
-                27 => {
+                ILOAD_1 => {
                     println!("ILOAD_1");
                     let val = stack_frame.get_local(1);
                     stack_frame.push(val);
 
                     stack_frame.incr_pc();
                 }
-                28 => {
+                ILOAD_2 => {
                     println!("ILOAD_2");
                     let val = stack_frame.get_local(2);
                     stack_frame.push(val);
 
                     stack_frame.incr_pc();
                 }
-                29 => {
+                ILOAD_3 => {
                     println!("ILOAD_3");
                     let val = stack_frame.get_local(3);
                     stack_frame.push(val);
 
                     stack_frame.incr_pc();
                 }
-                54 => {
+                ISTORE => {
                     println!("ISTORE");
                     stack_frame.incr_pc();
                     let pos = stack_frame.get_bytecode_byte() as usize;
@@ -121,35 +122,35 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
-                59 => {
+                ISTORE_0 => {
                     println!("ISTORE_0");
                     let val = stack_frame.pop();
                     stack_frame.set_local(0, val);
 
                     stack_frame.incr_pc();
                 }
-                60 => {
+                ISTORE_1 => {
                     println!("ISTORE_1");
                     let val = stack_frame.pop();
                     stack_frame.set_local(1, val);
 
                     stack_frame.incr_pc();
                 }
-                61 => {
+                ISTORE_2 => {
                     println!("ISTORE_2");
                     let val = stack_frame.pop();
                     stack_frame.set_local(2, val);
 
                     stack_frame.incr_pc();
                 }
-                62 => {
+                ISTORE_3 => {
                     println!("ISTORE_3");
                     let val = stack_frame.pop();
                     stack_frame.set_local(3, val);
 
                     stack_frame.incr_pc();
                 }
-                96 => {
+                IADD => {
                     println!("IADD");
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -157,7 +158,7 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
-                100 => {
+                ISUB => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
                     let result = a - b;
@@ -166,7 +167,7 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("ISUB -> {a} - {b} = {result}");
                 }
-                104 => {
+                IMUL => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
                     let result = a * b;
@@ -175,7 +176,7 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("IMUL -> {a} * {b} = {result}");
                 }
-                112 => {
+                IREM => {
                     println!("IREM");
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -183,7 +184,7 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
-                132 => {
+                IINC => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
 
@@ -197,7 +198,7 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("IINC -> {current_val} + {const_val} = {new_val}");
                 }
-                153 => {
+                IFEQ => {
                     println!("IFEQ");
 
                     let value1 = stack_frame.pop();
@@ -212,7 +213,7 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
-                154 => {
+                IFNE => {
                     println!("IFNE");
 
                     let value1 = stack_frame.pop();
@@ -227,7 +228,7 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
-                160 => {
+                IF_ICMPNE => {
                     println!("IF_ICMPNE");
 
                     let value2 = stack_frame.pop();
@@ -243,7 +244,7 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
-                161 => {
+                IF_ICMPLT => {
                     println!("IF_ICMPLT");
 
                     let value2 = stack_frame.pop();
@@ -259,7 +260,7 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
-                162 => {
+                IF_ICMPGE => {
                     println!("IF_ICMPGE");
 
                     let value2 = stack_frame.pop();
@@ -275,7 +276,7 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
-                163 => {
+                IF_ICMPGT => {
                     println!("IF_ICMPGT");
 
                     let value2 = stack_frame.pop();
@@ -291,7 +292,7 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
-                167 => {
+                GOTO => {
                     println!("GOTO");
 
                     let branchbyte1 = stack_frame.get_bytecode_byte_1() as u16;
@@ -300,7 +301,7 @@ impl<'a> Engine<'a> {
 
                     stack_frame.advance_pc(offset);
                 }
-                172 => {
+                IRETURN => {
                     println!(
                         "IRETURN -> locals={:?}, operand_stack={:?}",
                         stack_frame.locals, stack_frame.operand_stack
@@ -312,7 +313,7 @@ impl<'a> Engine<'a> {
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(ret);
                 }
-                177 => {
+                RETURN => {
                     println!(
                         "RETURN -> locals={:?}, operand_stack={:?}",
                         stack_frame.locals, stack_frame.operand_stack
@@ -326,7 +327,7 @@ impl<'a> Engine<'a> {
                     stack_frames.pop(); // Return from method, pop the current frame
                                         // add more logic here
                 }
-                184 => {
+                INVOKESTATIC => {
                     println!(
                         "INVOKESTATIC -> locals={:?}, operand_stack={:?}",
                         stack_frame.locals, stack_frame.operand_stack
