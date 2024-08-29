@@ -1,30 +1,30 @@
 use crate::method_area::java_method::JavaMethod;
+use jclass::class_file::ClassFile;
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
     pub(crate) methods: Methods,
+    pub(crate) class_file: ClassFile,
 }
 
 #[derive(Debug)]
 pub(crate) struct Methods {
-    pub(crate) methodsignature_by_cpoolindex: HashMap<u16, String>, //for Methodref methods (except main and <clinit>)
     pub(crate) method_by_signature: HashMap<String, JavaMethod>,
 }
 
 impl JavaClass {
-    pub fn new(methods: Methods) -> Self {
-        Self { methods }
+    pub fn new(methods: Methods, class_file: ClassFile) -> Self {
+        Self {
+            methods,
+            class_file,
+        }
     }
 }
 
 impl Methods {
-    pub fn new(
-        methodsignature_by_cpoolindex: HashMap<u16, String>,
-        method_by_signature: HashMap<String, JavaMethod>,
-    ) -> Self {
+    pub fn new(method_by_signature: HashMap<String, JavaMethod>) -> Self {
         Self {
-            methodsignature_by_cpoolindex,
             method_by_signature,
         }
     }

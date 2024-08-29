@@ -20,6 +20,10 @@ impl Error {
         Self::new(Execution(String::from(descr)))
     }
 
+    pub(crate) fn new_io(err: io::Error) -> Self {
+        Self::new(Io(err))
+    }
+
     pub fn kind(&self) -> &ErrorKind {
         &self.0
     }

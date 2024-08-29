@@ -1,14 +1,22 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
+use crate::heap::heap::Heap;
+use crate::heap::java_instance::JavaInstance;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
+use crate::util::get_class_name_by_cpool_class_index;
 
 pub(crate) struct Engine<'a> {
     method_area: &'a MethodArea,
+    heap: Heap<'a>,
 }
 
 impl<'a> Engine<'a> {
-    pub(crate) fn execute(&self, method: &JavaMethod) -> crate::error::Result<Option<i32>> {
+    pub(crate) fn execute(
+        &mut self,
+        main_class_name: &str,
+        method: &JavaMethod,
+    ) -> crate::error::Result<Option<i32>> {
         let mut stack_frames = vec![method.new_stack_frame()];
         let mut last_value: Option<i32> = None;
 
@@ -111,6 +119,20 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
+                ALOAD_0 => {
+                    let reference = stack_frame.get_local(0);
+                    stack_frame.push(reference);
+
+                    stack_frame.incr_pc();
+                    println!("ALOAD_0 -> reference={reference}");
+                }
+                ALOAD_3 => {
+                    let reference = stack_frame.get_local(3);
+                    stack_frame.push(reference);
+
+                    stack_frame.incr_pc();
+                    println!("ALOAD_3 -> reference={reference}");
+                }
                 ISTORE => {
                     println!("ISTORE");
                     stack_frame.incr_pc();
@@ -121,6 +143,17 @@ impl<'a> Engine<'a> {
                     stack_frame.set_local(pos, val);
 
                     stack_frame.incr_pc();
+                }
+                ASTORE => {
+                    stack_frame.incr_pc();
+                    let index = stack_frame.get_bytecode_byte() as usize;
+
+                    let objectref = stack_frame.pop();
+
+                    stack_frame.set_local(index, objectref);
+
+                    stack_frame.incr_pc();
+                    println!("ASTORE -> index={index}, objectref={objectref}");
                 }
                 ISTORE_0 => {
                     println!("ISTORE_0");
@@ -149,6 +182,27 @@ impl<'a> Engine<'a> {
                     stack_frame.set_local(3, val);
 
                     stack_frame.incr_pc();
+                }
+                ASTORE_3 => {
+                    println!("ASTORE_3");
+                    let objectref = stack_frame.pop();
+                    stack_frame.set_local(3, objectref);
+
+                    stack_frame.incr_pc();
+                }
+                POP => {
+                    stack_frame.pop();
+
+                    stack_frame.incr_pc();
+                    println!("POP");
+                }
+                DUP => {
+                    let val = stack_frame.pop();
+                    stack_frame.push(val);
+                    stack_frame.push(val);
+
+                    stack_frame.incr_pc();
+                    println!("DUP -> {val}");
                 }
                 IADD => {
                     println!("IADD");
@@ -327,6 +381,82 @@ impl<'a> Engine<'a> {
                     stack_frames.pop(); // Return from method, pop the current frame
                                         // add more logic here
                 }
+                INVOKEVIRTUAL => {
+                    println!(
+                        "INVOKEVIRTUAL -> locals={:?}, operand_stack={:?}",
+                        stack_frame.locals, stack_frame.operand_stack
+                    );
+
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let methodref_constpool_index = (high << 8) | low;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let virtual_method = self.method_area.get_method_by_methodref_cpool_index(
+                        java_class,
+                        methodref_constpool_index,
+                    )?;
+
+                    let mut next_frame = virtual_method.new_stack_frame();
+                    let arg_num = virtual_method.get_signature().get_arg_num();
+
+                    for i in (0..arg_num).rev() {
+                        let val = stack_frame.pop();
+                        next_frame.set_local(i + 1, val);
+                    }
+                    let reference = stack_frame.pop();
+                    next_frame.set_local(0, reference);
+
+                    stack_frame.incr_pc(); //incr here because of borrowing problem
+
+                    stack_frames.push(next_frame);
+                }
+                INVOKESPECIAL => {
+                    println!(
+                        "INVOKESPECIAL -> locals={:?}, operand_stack={:?}",
+                        stack_frame.locals, stack_frame.operand_stack
+                    );
+
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let methodref_constpool_index = (high << 8) | low;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let special_method = self.method_area.get_method_by_methodref_cpool_index(
+                        java_class,
+                        methodref_constpool_index,
+                    )?;
+
+                    let mut next_frame = special_method.new_stack_frame();
+                    let arg_num = special_method.get_signature().get_arg_num();
+
+                    for i in (0..arg_num).rev() {
+                        let val = stack_frame.pop();
+                        next_frame.set_local(i + 1, val);
+                    }
+                    let reference = stack_frame.pop();
+                    next_frame.set_local(0, reference);
+
+                    stack_frame.incr_pc(); //incr here because of borrowing problem
+
+                    stack_frames.push(next_frame);
+                }
                 INVOKESTATIC => {
                     println!(
                         "INVOKESTATIC -> locals={:?}, operand_stack={:?}",
@@ -339,9 +469,16 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     let low = stack_frame.get_bytecode_byte() as u16;
                     let methodref_constpool_index = (high << 8) | low;
-                    let static_method = self
+                    let java_class = self
                         .method_area
-                        .get_method_by_cpool_index(methodref_constpool_index)?;
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let static_method = self.method_area.get_method_by_methodref_cpool_index(
+                        java_class,
+                        methodref_constpool_index,
+                    )?;
 
                     let mut next_frame = static_method.new_stack_frame();
                     let arg_num = static_method.get_signature().get_arg_num();
@@ -355,6 +492,36 @@ impl<'a> Engine<'a> {
 
                     stack_frames.push(next_frame);
                 }
+                NEW => {
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let class_constpool_index = ((high << 8) | low) as usize;
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+                    let class_to_invoke_new_for = get_class_name_by_cpool_class_index(
+                        class_constpool_index,
+                        &java_class.class_file,
+                    )
+                    .unwrap();
+                    let default_field_values_instance = JavaInstance::new(
+                        self.method_area
+                            .loaded_classes
+                            .get(class_to_invoke_new_for.as_str())
+                            .unwrap(),
+                    );
+                    let reference = self.heap.create_instance(default_field_values_instance);
+
+                    stack_frame.push(reference);
+
+                    println!("NEW -> class={class_constpool_index}, reference={reference}");
+                    stack_frame.incr_pc();
+                }
                 _ => unreachable!("{}", format! {"xxx = {}", stack_frame.get_bytecode_byte()}),
             }
         }
@@ -363,6 +530,9 @@ impl<'a> Engine<'a> {
     }
 
     pub fn new(method_area: &'a MethodArea) -> Self {
-        Self { method_area }
+        Self {
+            method_area,
+            heap: Heap::new(),
+        }
     }
 }
