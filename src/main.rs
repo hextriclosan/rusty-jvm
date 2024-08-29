@@ -26,7 +26,7 @@ fn main() {
 
     let filename = &args[1];
 
-    let vm = match VM::new(filename) {
+    let vm = match VM::new(filename, "std") {
         Ok(vm) => vm,
         Err(err) => {
             eprintln!("Failed to create VM: {}", err);
