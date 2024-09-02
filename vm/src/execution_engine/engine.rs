@@ -205,12 +205,13 @@ impl<'a> Engine<'a> {
                     println!("DUP -> {val}");
                 }
                 IADD => {
-                    println!("IADD");
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
-                    stack_frame.push(a + b);
+                    let result = a + b;
+                    stack_frame.push(result);
 
                     stack_frame.incr_pc();
+                    println!("IADD -> {a} + {b} = {result}");
                 }
                 ISUB => {
                     let b = stack_frame.pop();
@@ -381,6 +382,62 @@ impl<'a> Engine<'a> {
                     stack_frames.pop(); // Return from method, pop the current frame
                                         // add more logic here
                 }
+                GETFIELD => {
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let fieldref_constpool_index = (high << 8) | low;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let objectref = stack_frame.pop();
+                    let field_name = self.method_area.get_fieldname_by_fieldref_cpool_index(
+                        java_class,
+                        fieldref_constpool_index,
+                    )?;
+
+                    let value = self
+                        .heap
+                        .get_object_field_value(objectref, field_name.as_str())?;
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("GETFIELD -> fieldref_constpool_index={fieldref_constpool_index}, objectref={objectref}, value={value}");
+                }
+                PUTFIELD => {
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let fieldref_constpool_index = (high << 8) | low;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let field_name = self.method_area.get_fieldname_by_fieldref_cpool_index(
+                        java_class,
+                        fieldref_constpool_index,
+                    )?;
+                    let value = stack_frame.pop();
+                    let objectref = stack_frame.pop();
+
+                    self.heap
+                        .set_object_field_value(objectref, field_name.as_str(), value)?;
+
+                    stack_frame.incr_pc();
+                    println!("PUTFIELD -> fieldref_constpool_index={fieldref_constpool_index}, objectref={objectref}, value={value}");
+                }
                 INVOKEVIRTUAL => {
                     println!(
                         "INVOKEVIRTUAL -> locals={:?}, operand_stack={:?}",
@@ -514,12 +571,12 @@ impl<'a> Engine<'a> {
                             .loaded_classes
                             .get(class_to_invoke_new_for.as_str())
                             .unwrap(),
-                    );
-                    let reference = self.heap.create_instance(default_field_values_instance);
+                    )?;
 
-                    stack_frame.push(reference);
+                    let instanceref = self.heap.create_instance(default_field_values_instance);
+                    stack_frame.push(instanceref);
 
-                    println!("NEW -> class={class_constpool_index}, reference={reference}");
+                    println!("NEW -> class={class_constpool_index}, reference={instanceref}");
                     stack_frame.incr_pc();
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", stack_frame.get_bytecode_byte()}),
