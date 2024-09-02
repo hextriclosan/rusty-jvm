@@ -15,10 +15,14 @@ fn should_do_subtraction() {
 }
 
 #[test]
-fn should_do_subtraction_with_instance() {
-    let vm = VM::new("tests/test_data/SubNew.class", "tests/test_data/std").unwrap();
+fn should_write_read_instance_fields() {
+    let vm = VM::new(
+        "tests/test_data/InstanceFields.class",
+        "tests/test_data/std",
+    )
+    .unwrap();
     let last_frame_value = vm.run().unwrap();
-    assert_eq!(-989, last_frame_value.unwrap())
+    assert_eq!(11022, last_frame_value.unwrap())
 }
 
 #[test]
