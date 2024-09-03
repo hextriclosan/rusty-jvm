@@ -26,6 +26,13 @@ fn should_write_read_instance_fields() {
 }
 
 #[test]
+fn should_write_read_static_fields() {
+    let vm = VM::new("tests/test_data/StaticFields.class", "tests/test_data/std").unwrap();
+    let last_frame_value = vm.run().unwrap();
+    assert_eq!(11022, last_frame_value.unwrap())
+}
+
+#[test]
 fn should_do_extreme_stack_operations() {
     let vm = VM::new(
         "tests/test_data/ExtremeStackTest.class",

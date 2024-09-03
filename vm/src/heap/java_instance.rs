@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::method_area::field::Field;
 use crate::method_area::java_class::JavaClass;
 use crate::util::get_fields;
 use std::collections::HashMap;
@@ -28,22 +29,7 @@ impl<'a> JavaInstance<'a> {
     pub fn get_field_value(&self, fieldname: &str) -> crate::error::Result<i32> {
         self.fields
             .get(fieldname)
-            .and_then(|v| Some(v.value))
+            .and_then(|v| Some(v.value()))
             .ok_or(Error::new_execution("error getting instance field value"))
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct Field {
-    value: i32, // todo: support other types
-}
-
-impl Field {
-    pub fn new() -> Self {
-        Self { value: 0 }
-    }
-
-    pub fn set_value(&mut self, value: i32) {
-        self.value = value;
     }
 }

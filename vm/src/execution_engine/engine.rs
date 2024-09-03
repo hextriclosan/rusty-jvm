@@ -382,6 +382,74 @@ impl<'a> Engine<'a> {
                     stack_frames.pop(); // Return from method, pop the current frame
                                         // add more logic here
                 }
+                GETSTATIC => {
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let fieldref_constpool_index = (high << 8) | low;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let (class_name, field_name) =
+                        self.method_area.get_fieldname_by_fieldref_cpool_index(
+                            java_class,
+                            fieldref_constpool_index,
+                        )?;
+
+                    let value = self
+                        .method_area
+                        .loaded_classes
+                        .get(&class_name)
+                        .unwrap()
+                        .fields
+                        .field_by_name
+                        .get(&field_name)
+                        .unwrap()
+                        .borrow()
+                        .value();
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!(
+                        "GETSTATIC -> class_name={class_name}, field={field_name}, value={value}"
+                    );
+                }
+                PUTSTATIC => {
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let fieldref_constpool_index = (high << 8) | low;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(main_class_name)
+                        .unwrap();
+
+                    let (class_name, field_name) =
+                        self.method_area.get_fieldname_by_fieldref_cpool_index(
+                            java_class,
+                            fieldref_constpool_index,
+                        )?;
+
+                    let value = stack_frame.pop();
+
+                    self.method_area
+                        .set_static_field_value(&class_name, &field_name, value)?;
+
+                    stack_frame.incr_pc();
+                    println!(
+                        "PUTSTATIC -> class_name={class_name}, field={field_name}, value={value}"
+                    );
+                }
                 GETFIELD => {
                     stack_frame.incr_pc();
                     let high = stack_frame.get_bytecode_byte() as u16;
@@ -397,10 +465,11 @@ impl<'a> Engine<'a> {
                         .unwrap();
 
                     let objectref = stack_frame.pop();
-                    let field_name = self.method_area.get_fieldname_by_fieldref_cpool_index(
-                        java_class,
-                        fieldref_constpool_index,
-                    )?;
+                    let (class_name, field_name) =
+                        self.method_area.get_fieldname_by_fieldref_cpool_index(
+                            java_class,
+                            fieldref_constpool_index,
+                        )?;
 
                     let value = self
                         .heap
@@ -409,7 +478,7 @@ impl<'a> Engine<'a> {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("GETFIELD -> fieldref_constpool_index={fieldref_constpool_index}, objectref={objectref}, value={value}");
+                    println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value}");
                 }
                 PUTFIELD => {
                     stack_frame.incr_pc();
@@ -425,10 +494,11 @@ impl<'a> Engine<'a> {
                         .get(main_class_name)
                         .unwrap();
 
-                    let field_name = self.method_area.get_fieldname_by_fieldref_cpool_index(
-                        java_class,
-                        fieldref_constpool_index,
-                    )?;
+                    let (class_name, field_name) =
+                        self.method_area.get_fieldname_by_fieldref_cpool_index(
+                            java_class,
+                            fieldref_constpool_index,
+                        )?;
                     let value = stack_frame.pop();
                     let objectref = stack_frame.pop();
 
@@ -436,7 +506,7 @@ impl<'a> Engine<'a> {
                         .set_object_field_value(objectref, field_name.as_str(), value)?;
 
                     stack_frame.incr_pc();
-                    println!("PUTFIELD -> fieldref_constpool_index={fieldref_constpool_index}, objectref={objectref}, value={value}");
+                    println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value}");
                 }
                 INVOKEVIRTUAL => {
                     println!(

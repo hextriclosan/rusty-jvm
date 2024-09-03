@@ -19,6 +19,23 @@ impl MethodArea {
         }
     }
 
+    pub fn set_static_field_value(
+        &self,
+        class_name: &str,
+        fieldname: &str,
+        value: i32,
+    ) -> crate::error::Result<()> {
+        self.loaded_classes
+            .get(class_name)
+            .and_then(|java_class| java_class.fields.field_by_name.get(fieldname))
+            .and_then(|field| {
+                field.borrow_mut().set_value(value);
+
+                Some(())
+            })
+            .ok_or(Error::new_execution("Error modifying static field"))
+    }
+
     pub(crate) fn get_method_by_name_signature(
         &self,
         class_name: &str,
@@ -105,7 +122,7 @@ impl MethodArea {
         &self,
         java_class: &JavaClass,
         fieldref_cpool_index: u16,
-    ) -> crate::error::Result<String> {
+    ) -> crate::error::Result<(String, String)> {
         let cpool = java_class.class_file.constant_pool();
 
         // Retrieve Fieldref from the constant pool
@@ -127,6 +144,9 @@ impl MethodArea {
                     .as_str(),
                 )
             })?;
+
+        // Retrieve class name from the constant pool
+        let class_name = get_class_name_by_cpool_class_index(fieldref.0, &java_class.class_file);
 
         // Retrieve field name from the constant pool
         let field_name = if let NameAndType {
@@ -152,6 +172,6 @@ impl MethodArea {
             ));
         };
 
-        Ok(field_name.unwrap())
+        Ok((class_name.unwrap(), field_name.unwrap()))
     }
 }
