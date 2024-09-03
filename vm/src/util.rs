@@ -1,7 +1,8 @@
 use crate::error::Error;
-use crate::heap::java_instance::Field;
+use crate::method_area::field::Field;
 use jclass::class_file::ClassFile;
 use jclass::constant_pool::ConstantPool::{Class, Utf8};
+use jclass::fields::FieldFlags;
 use std::collections::HashMap;
 
 pub(crate) fn get_class_name_by_cpool_class_index(
@@ -28,17 +29,25 @@ pub(crate) fn get_cpool_string(class_file: &ClassFile, index: usize) -> Option<S
 }
 
 pub(crate) fn get_fields(class_file: &ClassFile) -> crate::error::Result<HashMap<String, Field>> {
-    let fields = class_file.fields();
-    let mut field_by_name: HashMap<String, Field> = HashMap::new();
+    let result = class_file
+        .fields()
+        .iter()
+        .filter_map(|field| {
+            if field.access_flags().contains(FieldFlags::ACC_STATIC) {
+                None
+            } else {
+                let field_name = get_cpool_string(class_file, field.name_index() as usize)
+                    .ok_or_else(|| Error::new_constant_pool("Error getting field name"))
+                    .ok()?;
+                let _field_signature =
+                    get_cpool_string(class_file, field.descriptor_index() as usize)
+                        .ok_or_else(|| Error::new_constant_pool("Error getting field signature"))
+                        .ok()?;
 
-    for field in fields.iter() {
-        let field_name = get_cpool_string(class_file, field.name_index() as usize)
-            .ok_or(Error::new_constant_pool("Error getting field name"))?;
-        let _field_signature = get_cpool_string(class_file, field.descriptor_index() as usize)
-            .ok_or(Error::new_constant_pool("Error getting field signature"))?;
+                Some((field_name, Field::new()))
+            }
+        })
+        .collect();
 
-        field_by_name.insert(field_name, Field::new());
-    }
-
-    Ok(field_by_name)
+    Ok(result)
 }

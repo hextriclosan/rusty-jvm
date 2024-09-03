@@ -4,8 +4,6 @@ public class InstanceFields {
     private int resultSub;
     private int resultAdd;
     private int resultMul;
-    public InstanceFields() {
-    }
 
     public static void main(String[] args) {
         int first = 11;

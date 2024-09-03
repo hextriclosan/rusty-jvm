@@ -1,5 +1,6 @@
 use crate::error::{Error, ErrorKind, Result};
-use crate::method_area::java_class::{JavaClass, Methods};
+use crate::method_area::field::Field;
+use crate::method_area::java_class::{Fields, JavaClass, Methods};
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
 use crate::method_area::signature::Signature;
@@ -7,6 +8,8 @@ use crate::util::{get_class_name_by_cpool_class_index, get_cpool_string};
 use jclass::attributes::Attribute;
 use jclass::attributes::Attribute::Code;
 use jclass::class_file::{parse, ClassFile};
+use jclass::fields::FieldFlags;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::ErrorKind::Other;
@@ -60,9 +63,13 @@ impl ClassLoader {
 
     fn to_java_class(class_file: ClassFile) -> Result<(String, JavaClass)> {
         let methods = Self::get_methods(&class_file)?;
+        let static_fields = Self::get_static_fields(&class_file)?;
         let class_name = Self::get_class_name(&class_file)?;
 
-        Ok((class_name.clone(), JavaClass::new(methods, class_file)))
+        Ok((
+            class_name.clone(),
+            JavaClass::new(methods, static_fields, class_file),
+        ))
     }
 
     fn get_methods(class_file: &ClassFile) -> Result<Methods> {
@@ -92,6 +99,33 @@ impl ClassLoader {
         }
 
         Ok(Methods::new(method_by_signature))
+    }
+
+    fn get_static_fields(class_file: &ClassFile) -> Result<Fields> {
+        let field_by_name = class_file
+            .fields()
+            .iter()
+            .filter_map(|field| {
+                if field.access_flags().contains(FieldFlags::ACC_STATIC) {
+                    let field_name = get_cpool_string(class_file, field.name_index() as usize)
+                        .ok_or_else(|| Error::new_constant_pool("Error getting field name"))
+                        .ok()?;
+
+                    let _field_signature =
+                        get_cpool_string(class_file, field.descriptor_index() as usize)
+                            .ok_or_else(|| {
+                                Error::new_constant_pool("Error getting field signature")
+                            })
+                            .ok()?;
+
+                    Some((field_name, RefCell::new(Field::new())))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(Fields::new(field_by_name))
     }
 
     fn get_cpool_code_attribute(attributes: &Vec<Attribute>) -> Option<(u16, u16, Vec<u8>)> {
