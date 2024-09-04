@@ -7,5 +7,6 @@ edition = "2021"
 members = ["jclass", "vm"]
 
 [dependencies]
+clap = "4.5.16"
 vm = {path = "vm"}
 

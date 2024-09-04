@@ -23,7 +23,7 @@ pub struct ClassLoader {
 }
 
 impl ClassLoader {
-    pub(crate) fn new(class_file_name: &str, std_dir: &str) -> Result<Self> {
+    pub(crate) fn new(class_file_names: Vec<&str>, std_dir: &str) -> Result<Self> {
         let mut loaded_classes = HashMap::new();
 
         let std_class_names = Self::get_class_files_in_dir(std_dir)?;
@@ -37,11 +37,15 @@ impl ClassLoader {
             loaded_classes.insert(class.0, class.1);
         }
 
-        let class = Self::load_class(class_file_name)?;
-        loaded_classes.insert(class.0.clone(), class.1);
+        let mut classes: Vec<String> = vec![];
+        for class_file_name in class_file_names {
+            let class = Self::load_class(class_file_name)?;
+            loaded_classes.insert(class.0.clone(), class.1);
+            classes.push(class.0);
+        }
 
         Ok(Self {
-            method_area: MethodArea::new(loaded_classes, class.0),
+            method_area: MethodArea::new(loaded_classes),
         })
     }
 
@@ -62,9 +66,9 @@ impl ClassLoader {
     }
 
     fn to_java_class(class_file: ClassFile) -> Result<(String, JavaClass)> {
-        let methods = Self::get_methods(&class_file)?;
-        let static_fields = Self::get_static_fields(&class_file)?;
         let class_name = Self::get_class_name(&class_file)?;
+        let methods = Self::get_methods(&class_file, class_name.as_str())?;
+        let static_fields = Self::get_static_fields(&class_file)?;
 
         Ok((
             class_name.clone(),
@@ -72,7 +76,7 @@ impl ClassLoader {
         ))
     }
 
-    fn get_methods(class_file: &ClassFile) -> Result<Methods> {
+    fn get_methods(class_file: &ClassFile, class_name: &str) -> Result<Methods> {
         let methods = class_file.methods();
         let mut method_by_signature: HashMap<String, JavaMethod> = HashMap::new();
 
@@ -94,6 +98,7 @@ impl ClassLoader {
                     code.0,
                     code.1,
                     code.2,
+                    class_name,
                 ),
             );
         }
