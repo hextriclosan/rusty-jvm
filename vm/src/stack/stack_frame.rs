@@ -3,15 +3,22 @@ pub(crate) struct StackFrame<'a> {
     pub locals: Vec<i32>,
     pub(crate) operand_stack: Vec<i32>,
     bytecode_ref: &'a [u8],
+    current_class_name: String,
 }
 
 impl<'a> StackFrame<'a> {
-    pub fn new(locals_size: usize, stack_size: usize, bytecode_ref: &'a [u8]) -> Self {
+    pub fn new(
+        locals_size: usize,
+        stack_size: usize,
+        bytecode_ref: &'a [u8],
+        current_class_name: String,
+    ) -> Self {
         StackFrame {
             pc: 0,
             locals: vec![0i32; locals_size],
             operand_stack: Vec::with_capacity(stack_size),
             bytecode_ref,
+            current_class_name,
         }
     }
 
@@ -53,5 +60,9 @@ impl<'a> StackFrame<'a> {
 
     pub fn get_local(&mut self, index: usize) -> i32 {
         *self.locals.get(index).unwrap()
+    }
+
+    pub fn current_class_name(&self) -> &str {
+        &self.current_class_name
     }
 }

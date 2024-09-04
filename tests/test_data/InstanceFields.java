@@ -5,16 +5,6 @@ public class InstanceFields {
     private int resultAdd;
     private int resultMul;
 
-    public static void main(String[] args) {
-        int first = 11;
-        int second = 1000;
-        InstanceFields instance = new InstanceFields();
-        instance.sub(first, second);
-        instance.add(first, second);
-        instance.mul(first, second);
-        int result = instance.resultSub + instance.resultAdd + instance.resultMul;
-    }
-
     public void sub(int first, int second) {
         resultSub = first - second;
     }

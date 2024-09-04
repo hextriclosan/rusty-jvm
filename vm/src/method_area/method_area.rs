@@ -8,15 +8,11 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub(crate) struct MethodArea {
     pub(crate) loaded_classes: HashMap<String, JavaClass>,
-    pub(crate) main_class_name: String,
 }
 
 impl MethodArea {
-    pub fn new(loaded_classes: HashMap<String, JavaClass>, main_class_name: String) -> Self {
-        Self {
-            loaded_classes,
-            main_class_name,
-        }
+    pub fn new(loaded_classes: HashMap<String, JavaClass>) -> Self {
+        Self { loaded_classes }
     }
 
     pub fn set_static_field_value(

@@ -12,18 +12,17 @@ pub(crate) struct Engine<'a> {
 }
 
 impl<'a> Engine<'a> {
-    pub(crate) fn execute(
-        &mut self,
-        main_class_name: &str,
-        method: &JavaMethod,
-    ) -> crate::error::Result<Option<i32>> {
+    pub(crate) fn execute(&mut self, method: &JavaMethod) -> crate::error::Result<Option<i32>> {
         let mut stack_frames = vec![method.new_stack_frame()];
         let mut last_value: Option<i32> = None;
+        let mut current_class_name: String;
 
         while !stack_frames.is_empty() {
             let stack_frame = stack_frames
                 .last_mut()
                 .ok_or(Error::new_execution("Error getting stack frame"))?;
+
+            current_class_name = stack_frame.current_class_name().to_string();
 
             match stack_frame.get_bytecode_byte() {
                 ICONST_0 => {
@@ -393,7 +392,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let (class_name, field_name) =
@@ -431,7 +430,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let (class_name, field_name) =
@@ -461,7 +460,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let objectref = stack_frame.pop();
@@ -491,7 +490,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let (class_name, field_name) =
@@ -524,7 +523,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let virtual_method = self.method_area.get_method_by_methodref_cpool_index(
@@ -562,7 +561,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let special_method = self.method_area.get_method_by_methodref_cpool_index(
@@ -599,7 +598,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
 
                     let static_method = self.method_area.get_method_by_methodref_cpool_index(
@@ -629,7 +628,7 @@ impl<'a> Engine<'a> {
                     let java_class = self
                         .method_area
                         .loaded_classes
-                        .get(main_class_name)
+                        .get(current_class_name.as_str())
                         .unwrap();
                     let class_to_invoke_new_for = get_class_name_by_cpool_class_index(
                         class_constpool_index,
