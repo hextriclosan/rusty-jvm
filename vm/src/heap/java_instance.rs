@@ -11,6 +11,46 @@ pub(crate) struct JavaInstance<'a> {
     fields: HashMap<String, Field>,
 }
 
+#[derive(Debug)]
+pub(crate) struct Array {
+    data: Vec<i32>,
+}
+
+impl Array {
+    pub fn new(len: i32) -> Self {
+        Self {
+            data: vec![0; len as usize],
+        }
+    }
+
+    pub fn get_value(&self, index: i32) -> crate::error::Result<i32> {
+        if let Some(arr_value) = self.data.get(index as usize) {
+            Ok(*arr_value)
+        } else {
+            Err(Error::new_execution("error getting array value"))
+        }
+    }
+
+    pub fn set_value(&mut self, index: i32, value: i32) -> crate::error::Result<()> {
+        if let Some(arr_value) = self.data.get_mut(index as usize) {
+            *arr_value = value;
+            Ok(())
+        } else {
+            Err(Error::new_execution("error setting array value"))
+        }
+    }
+
+    pub fn get_length(&self) -> i32 {
+        self.data.len() as i32
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum HeapValue<'a> {
+    Object(JavaInstance<'a>),
+    Arr(Array),
+}
+
 impl<'a> JavaInstance<'a> {
     pub fn new(class_ref: &'a JavaClass) -> crate::error::Result<Self> {
         Ok(Self {

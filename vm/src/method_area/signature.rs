@@ -44,8 +44,9 @@ impl Signature {
 
     fn count_symbols_between_parentheses(s: &str) -> Option<usize> {
         //todo: remove this workaround
-        let open_index = s.find('(')?;
-        let close_index = s.find(')')?;
+        let result = s.replace("[", ""); // workaround for arrays
+        let open_index = result.find('(')?;
+        let close_index = result.find(')')?;
 
         if open_index < close_index {
             Some(close_index - open_index - 1)

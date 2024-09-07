@@ -4,7 +4,7 @@ use crate::heap::heap::Heap;
 use crate::heap::java_instance::JavaInstance;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
-use crate::util::get_class_name_by_cpool_class_index;
+use crate::util::{get_class_name_by_cpool_class_index, get_cpool_integer};
 
 pub(crate) struct Engine<'a> {
     method_area: &'a MethodArea,
@@ -80,6 +80,24 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
+                LDC => {
+                    stack_frame.incr_pc();
+                    let cpoolindex = stack_frame.get_bytecode_byte() as usize;
+
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(current_class_name.as_str())
+                        .unwrap();
+
+                    // todo add support of other types
+                    let value = get_cpool_integer(&java_class.class_file, cpoolindex).unwrap();
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("LDC -> cpoolindex={cpoolindex}, value={value}");
+                }
                 ILOAD => {
                     println!("ILOAD");
                     stack_frame.incr_pc();
@@ -89,6 +107,16 @@ impl<'a> Engine<'a> {
                     stack_frame.push(val);
 
                     stack_frame.incr_pc();
+                }
+                ALOAD => {
+                    stack_frame.incr_pc();
+                    let index = stack_frame.get_bytecode_byte() as usize;
+
+                    let objectref = stack_frame.get_local(index);
+                    stack_frame.push(objectref);
+
+                    stack_frame.incr_pc();
+                    println!("ALOAD -> index={index}, objectref={objectref}");
                 }
                 ILOAD_0 => {
                     println!("ILOAD_0");
@@ -125,12 +153,37 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("ALOAD_0 -> reference={reference}");
                 }
+                ALOAD_1 => {
+                    let reference = stack_frame.get_local(1);
+                    stack_frame.push(reference);
+
+                    stack_frame.incr_pc();
+                    println!("ALOAD_1 -> reference={reference}");
+                }
+                ALOAD_2 => {
+                    let reference = stack_frame.get_local(2);
+                    stack_frame.push(reference);
+
+                    stack_frame.incr_pc();
+                    println!("ALOAD_2 -> reference={reference}");
+                }
                 ALOAD_3 => {
                     let reference = stack_frame.get_local(3);
                     stack_frame.push(reference);
 
                     stack_frame.incr_pc();
                     println!("ALOAD_3 -> reference={reference}");
+                }
+                IALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    let value = self.heap.get_array_value(arrayref, index)?;
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("IALOAD -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 ISTORE => {
                     println!("ISTORE");
@@ -182,12 +235,43 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                 }
+                ASTORE_0 => {
+                    println!("ASTORE_0");
+                    let objectref = stack_frame.pop();
+                    stack_frame.set_local(0, objectref);
+
+                    stack_frame.incr_pc();
+                }
+                ASTORE_1 => {
+                    println!("ASTORE_1");
+                    let objectref = stack_frame.pop();
+                    stack_frame.set_local(1, objectref);
+
+                    stack_frame.incr_pc();
+                }
+                ASTORE_2 => {
+                    println!("ASTORE_2");
+                    let objectref = stack_frame.pop();
+                    stack_frame.set_local(2, objectref);
+
+                    stack_frame.incr_pc();
+                }
                 ASTORE_3 => {
                     println!("ASTORE_3");
                     let objectref = stack_frame.pop();
                     stack_frame.set_local(3, objectref);
 
                     stack_frame.incr_pc();
+                }
+                IASTORE => {
+                    let value = stack_frame.pop();
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    self.heap.set_array_value(arrayref, index, value)?;
+
+                    stack_frame.incr_pc();
+                    println!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 POP => {
                     stack_frame.pop();
@@ -202,6 +286,17 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                     println!("DUP -> {val}");
+                }
+                DUP2 => {
+                    let val1 = stack_frame.pop();
+                    let val2 = stack_frame.pop();
+                    stack_frame.push(val2);
+                    stack_frame.push(val1);
+                    stack_frame.push(val2);
+                    stack_frame.push(val1);
+
+                    stack_frame.incr_pc();
+                    println!("DUP2 -> {val1} {val2}");
                 }
                 IADD => {
                     let b = stack_frame.pop();
@@ -229,6 +324,15 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                     println!("IMUL -> {a} * {b} = {result}");
+                }
+                IDIV => {
+                    let b = stack_frame.pop();
+                    let a = stack_frame.pop();
+                    let result = a / b; //todo add check for ArithmeticException here
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("IDIV -> {a} / {b} = {result}");
                 }
                 IREM => {
                     println!("IREM");
@@ -277,6 +381,22 @@ impl<'a> Engine<'a> {
                     let offset = ((branchbyte1 << 8) | branchbyte2) as i16;
 
                     if value1 != 0 {
+                        stack_frame.advance_pc(offset);
+                    } else {
+                        stack_frame.advance_pc(3);
+                    }
+                }
+                IF_ICMPEQ => {
+                    println!("IF_ICMPEQ");
+
+                    let value2 = stack_frame.pop();
+                    let value1 = stack_frame.pop();
+
+                    let branchbyte1 = stack_frame.get_bytecode_byte_1() as u16;
+                    let branchbyte2 = stack_frame.get_bytecode_byte_2() as u16;
+                    let offset = ((branchbyte1 << 8) | branchbyte2) as i16;
+
+                    if value1 == value2 {
                         stack_frame.advance_pc(offset);
                     } else {
                         stack_frame.advance_pc(3);
@@ -346,6 +466,22 @@ impl<'a> Engine<'a> {
                         stack_frame.advance_pc(3);
                     }
                 }
+                IF_ICMPLE => {
+                    println!("IF_ICMPLE");
+
+                    let value2 = stack_frame.pop();
+                    let value1 = stack_frame.pop();
+
+                    let branchbyte1 = stack_frame.get_bytecode_byte_1() as u16;
+                    let branchbyte2 = stack_frame.get_bytecode_byte_2() as u16;
+                    let offset = ((branchbyte1 << 8) | branchbyte2) as i16;
+
+                    if value1 <= value2 {
+                        stack_frame.advance_pc(offset);
+                    } else {
+                        stack_frame.advance_pc(3);
+                    }
+                }
                 GOTO => {
                     println!("GOTO");
 
@@ -366,6 +502,19 @@ impl<'a> Engine<'a> {
                         .last_mut()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(ret);
+                }
+                ARETURN => {
+                    println!(
+                        "ARETURN -> locals={:?}, operand_stack={:?}",
+                        stack_frame.locals, stack_frame.operand_stack
+                    );
+                    let objref = stack_frame.pop();
+
+                    stack_frames.pop();
+                    stack_frames
+                        .last_mut()
+                        .ok_or(Error::new_execution("Error getting stack last value"))?
+                        .push(objref);
                 }
                 RETURN => {
                     println!(
@@ -647,6 +796,27 @@ impl<'a> Engine<'a> {
 
                     println!("NEW -> class={class_constpool_index}, reference={instanceref}");
                     stack_frame.incr_pc();
+                }
+                NEWARRAY => {
+                    stack_frame.incr_pc();
+                    let atype = stack_frame.get_bytecode_byte();
+
+                    let length = stack_frame.pop();
+
+                    let arrayref = self.heap.create_array(length);
+                    stack_frame.push(arrayref);
+
+                    stack_frame.incr_pc();
+                    println!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
+                }
+                ARRAYLENGTH => {
+                    let arrayref = stack_frame.pop();
+
+                    let len = self.heap.get_array_len(arrayref)?;
+                    stack_frame.push(len);
+
+                    stack_frame.incr_pc();
+                    println!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", stack_frame.get_bytecode_byte()}),
             }

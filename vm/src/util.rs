@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::method_area::field::Field;
 use jclass::class_file::ClassFile;
-use jclass::constant_pool::ConstantPool::{Class, Utf8};
+use jclass::constant_pool::ConstantPool::{Class, Integer, Utf8};
 use jclass::fields::FieldFlags;
 use std::collections::HashMap;
 
@@ -24,6 +24,15 @@ pub(crate) fn get_cpool_string(class_file: &ClassFile, index: usize) -> Option<S
 
     constant_pool.get(index).and_then(|item| match item {
         Utf8 { value } => Some(value.clone()),
+        _ => None,
+    })
+}
+
+pub(crate) fn get_cpool_integer(class_file: &ClassFile, index: usize) -> Option<i32> {
+    let constant_pool = class_file.constant_pool();
+
+    constant_pool.get(index).and_then(|item| match item {
+        Integer { value } => Some(value.clone()),
         _ => None,
     })
 }
