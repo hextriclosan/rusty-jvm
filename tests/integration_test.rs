@@ -74,3 +74,10 @@ fn should_do_calculate_fibonacci_recursively() {
     let last_frame_value = vm.run("FibonacciRecursive").unwrap();
     assert_eq!(55, last_frame_value.unwrap())
 }
+
+#[test]
+fn should_do_arrays() {
+    let vm = VM::new(vec!["tests/test_data/Array.class"], "tests/test_data/std").unwrap();
+    let last_frame_value = vm.run("Array").unwrap();
+    assert_eq!(740, last_frame_value.unwrap())
+}
