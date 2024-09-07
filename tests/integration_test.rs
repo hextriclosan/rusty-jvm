@@ -81,3 +81,30 @@ fn should_do_arrays() {
     let last_frame_value = vm.run("Array").unwrap();
     assert_eq!(740, last_frame_value.unwrap())
 }
+
+#[test]
+fn should_do_class_static_initialization() {
+    let vm = VM::new(
+        vec!["tests/test_data/StaticInitialization.class"],
+        "tests/test_data/std",
+    )
+    .unwrap();
+    let last_frame_value = vm.run("StaticInitialization").unwrap();
+    assert_eq!(257, last_frame_value.unwrap())
+}
+
+#[ignore]
+#[test]
+fn should_do_class_static_initialization_multiple_classes() {
+    let vm = VM::new(
+        vec![
+            "tests/test_data/Dependable.class",
+            "tests/test_data/DependsOnDependable.class",
+            "tests/test_data/StaticInitializationUser.class",
+        ],
+        "tests/test_data/std",
+    )
+    .unwrap();
+    let last_frame_value = vm.run("StaticInitializationUser").unwrap();
+    assert_eq!(350, last_frame_value.unwrap())
+}
