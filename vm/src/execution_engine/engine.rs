@@ -185,6 +185,17 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("IALOAD -> arrayref={arrayref}, index={index}, value={value}");
                 }
+                AALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    let value = self.heap.get_array_value(arrayref, index)?;
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("AALOAD -> arrayref={arrayref}, index={index}, value={value}");
+                }
                 ISTORE => {
                     println!("ISTORE");
                     stack_frame.incr_pc();
@@ -272,6 +283,16 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                     println!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                }
+                AASTORE => {
+                    let value = stack_frame.pop();
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    self.heap.set_array_value(arrayref, index, value)?;
+
+                    stack_frame.incr_pc();
+                    println!("AASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 POP => {
                     stack_frame.pop();
@@ -808,6 +829,32 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                     println!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
+                }
+                ANEWARRAY => {
+                    let length = stack_frame.pop();
+
+                    stack_frame.incr_pc();
+                    let high = stack_frame.get_bytecode_byte() as u16;
+
+                    stack_frame.incr_pc();
+                    let low = stack_frame.get_bytecode_byte() as u16;
+                    let class_constpool_index = ((high << 8) | low) as usize;
+                    let java_class = self
+                        .method_area
+                        .loaded_classes
+                        .get(current_class_name.as_str())
+                        .unwrap();
+                    let class_of_array = get_class_name_by_cpool_class_index(
+                        class_constpool_index,
+                        &java_class.class_file,
+                    )
+                    .unwrap();
+
+                    let arrayref = self.heap.create_array(length);
+                    stack_frame.push(arrayref);
+
+                    stack_frame.incr_pc();
+                    println!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
                 }
                 ARRAYLENGTH => {
                     let arrayref = stack_frame.pop();
