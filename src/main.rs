@@ -47,7 +47,7 @@ fn main() {
     };
 
     println!(
-        "result={}",
+        "\nresult={}",
         result.map_or_else(|| "<empty>".to_string(), |v| v.to_string())
     );
 }

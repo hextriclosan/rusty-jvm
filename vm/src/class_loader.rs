@@ -29,19 +29,16 @@ impl ClassLoader {
         let std_class_names = Self::get_class_files_in_dir(std_dir)?;
 
         for path in std_class_names {
-            let class = Self::load_class(path.to_str().ok_or(Error::new_io(io::Error::new(
-                Other,
-                "error getting path".to_string(),
-            )))?)?;
+            let (class_name, java_class) = Self::load_class(path.to_str().ok_or(
+                Error::new_io(io::Error::new(Other, "error getting path".to_string())),
+            )?)?;
 
-            loaded_classes.insert(class.0, class.1);
+            loaded_classes.insert(class_name, java_class);
         }
 
-        let mut classes: Vec<String> = vec![];
         for class_file_name in class_file_names {
-            let class = Self::load_class(class_file_name)?;
-            loaded_classes.insert(class.0.clone(), class.1);
-            classes.push(class.0);
+            let (class_name, java_class) = Self::load_class(class_file_name)?;
+            loaded_classes.insert(class_name.clone(), java_class);
         }
 
         Ok(Self {
@@ -87,7 +84,7 @@ impl ClassLoader {
                 .ok_or(Error::new_constant_pool(
                     "Error getting method method_signature",
                 ))?;
-            let code = Self::get_cpool_code_attribute(method.attributes())
+            let (max_stack, max_locals, code) = Self::get_cpool_code_attribute(method.attributes())
                 .ok_or(Error::new_constant_pool("Error getting method code"))?;
             let key_signature = method_name + ":" + method_signature.as_str();
 
@@ -95,9 +92,9 @@ impl ClassLoader {
                 key_signature.clone(),
                 JavaMethod::new(
                     Signature::from_str(method_signature.as_str())?,
-                    code.0,
-                    code.1,
-                    code.2,
+                    max_stack,
+                    max_locals,
+                    code,
                     class_name,
                 ),
             );
