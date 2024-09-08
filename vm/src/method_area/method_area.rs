@@ -61,7 +61,7 @@ impl MethodArea {
         let cpool = java_class.class_file.constant_pool();
 
         // Retrieve Methodref from the constant pool
-        let methodref = cpool
+        let (class_index, name_and_type_index) = cpool
             .get(methodref_cpool_index as usize)
             .and_then(|entry| match entry {
                 Methodref {
@@ -81,21 +81,22 @@ impl MethodArea {
             })?;
 
         // Retrieve class name from the constant pool
-        let class_name = get_class_name_by_cpool_class_index(methodref.0, &java_class.class_file);
+        let class_name = get_class_name_by_cpool_class_index(class_index, &java_class.class_file);
 
         // Retrieve method name and signature from the constant pool
         let (method_name, method_signature) = if let NameAndType {
             name_index,
             descriptor_index,
-        } = cpool.get(methodref.1).ok_or_else(|| {
-            Error::new_constant_pool(
-                format!(
-                    "Invalid NameAndType reference at index {} in class {:?}",
-                    methodref_cpool_index, java_class
+        } =
+            cpool.get(name_and_type_index).ok_or_else(|| {
+                Error::new_constant_pool(
+                    format!(
+                        "Invalid NameAndType reference at index {} in class {:?}",
+                        methodref_cpool_index, java_class
+                    )
+                    .as_str(),
                 )
-                .as_str(),
-            )
-        })? {
+            })? {
             let name = get_cpool_string(&java_class.class_file, *name_index as usize);
             let signature = get_cpool_string(&java_class.class_file, *descriptor_index as usize);
             (name, signature)
@@ -122,7 +123,7 @@ impl MethodArea {
         let cpool = java_class.class_file.constant_pool();
 
         // Retrieve Fieldref from the constant pool
-        let fieldref = cpool
+        let (class_index, name_and_type_index) = cpool
             .get(fieldref_cpool_index as usize)
             .and_then(|entry| match entry {
                 Fieldref {
@@ -142,13 +143,13 @@ impl MethodArea {
             })?;
 
         // Retrieve class name from the constant pool
-        let class_name = get_class_name_by_cpool_class_index(fieldref.0, &java_class.class_file);
+        let class_name = get_class_name_by_cpool_class_index(class_index, &java_class.class_file);
 
         // Retrieve field name from the constant pool
         let field_name = if let NameAndType {
             name_index,
             descriptor_index: _,
-        } = cpool.get(fieldref.1).ok_or_else(|| {
+        } = cpool.get(name_and_type_index).ok_or_else(|| {
             Error::new_constant_pool(
                 format!(
                     "Invalid NameAndType reference at index {} in class {:?}",
