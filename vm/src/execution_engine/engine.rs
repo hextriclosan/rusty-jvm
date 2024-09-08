@@ -847,7 +847,8 @@ impl<'a> Engine<'a> {
                     let class_of_array = get_class_name_by_cpool_class_index(
                         class_constpool_index,
                         &java_class.class_file,
-                    ).unwrap();
+                    )
+                    .unwrap();
 
                     let arrayref = self.heap.create_array(length);
                     stack_frame.push(arrayref);
