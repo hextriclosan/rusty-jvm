@@ -57,7 +57,7 @@ impl MethodArea {
         &self,
         java_class: &JavaClass,
         methodref_cpool_index: u16,
-    ) -> crate::error::Result<&JavaMethod> {
+    ) -> crate::error::Result<(String, String, &JavaMethod)> {
         let cpool = java_class.class_file.constant_pool();
 
         // Retrieve Methodref from the constant pool
@@ -81,10 +81,11 @@ impl MethodArea {
             })?;
 
         // Retrieve class name from the constant pool
-        let class_name = get_class_name_by_cpool_class_index(class_index, &java_class.class_file);
+        let class_name =
+            get_class_name_by_cpool_class_index(class_index, &java_class.class_file).unwrap();
 
         // Retrieve method name and signature from the constant pool
-        let (method_name, method_signature) = if let NameAndType {
+        let (method_name_opt, method_signature) = if let NameAndType {
             name_index,
             descriptor_index,
         } =
@@ -111,8 +112,12 @@ impl MethodArea {
         };
 
         // Construct method signature and retrieve method
-        let full_signature = format!("{}:{}", method_name.unwrap(), method_signature.unwrap());
-        self.get_method_by_name_signature(class_name.unwrap().as_str(), full_signature.as_str())
+        let method_name = method_name_opt.unwrap();
+        let full_signature = format!("{}:{}", method_name, method_signature.unwrap());
+        let java_method =
+            self.get_method_by_name_signature(class_name.as_str(), full_signature.as_str())?;
+
+        Ok((class_name, method_name, java_method))
     }
 
     pub(crate) fn get_fieldname_by_fieldref_cpool_index(
