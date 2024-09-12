@@ -3,7 +3,6 @@ use crate::method_area::field::Field;
 use crate::method_area::java_class::{Fields, JavaClass, Methods};
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
-use crate::method_area::signature::Signature;
 use crate::util::{get_class_name_by_cpool_class_index, get_cpool_string};
 use jclass::attributes::Attribute;
 use jclass::attributes::Attribute::Code;
@@ -91,7 +90,7 @@ impl ClassLoader {
             method_by_signature.insert(
                 key_signature.clone(),
                 JavaMethod::new(
-                    Signature::from_str(method_signature.as_str())?,
+                    method_signature.as_str().parse().map_err(|err| Error::new(ErrorKind::ClassFile(err)))?,
                     max_stack,
                     max_locals,
                     code,

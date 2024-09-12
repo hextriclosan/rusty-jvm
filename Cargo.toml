@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["jclass", "vm"]
+members = ["jclass", "jdescriptor", "vm"]
 
 [dependencies]
 clap = "4.5.16"
