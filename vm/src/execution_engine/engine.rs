@@ -537,7 +537,7 @@ impl<'a> Engine<'a> {
                         )?;
 
                     let mut next_frame = virtual_method.new_stack_frame();
-                    let arg_num = virtual_method.get_signature().get_arg_num();
+                    let arg_num = virtual_method.get_signature().parameter_types().len();
 
                     for i in (0..arg_num).rev() {
                         let val = stack_frame.pop();
@@ -568,7 +568,7 @@ impl<'a> Engine<'a> {
                         )?;
 
                     let mut next_frame = special_method.new_stack_frame();
-                    let arg_num = special_method.get_signature().get_arg_num();
+                    let arg_num = special_method.get_signature().parameter_types().len();
 
                     for i in (0..arg_num).rev() {
                         let val = stack_frame.pop();
@@ -597,7 +597,7 @@ impl<'a> Engine<'a> {
                         )?;
 
                     let mut next_frame = static_method.new_stack_frame();
-                    let arg_num = static_method.get_signature().get_arg_num();
+                    let arg_num = static_method.get_signature().parameter_types().len();
 
                     for i in (0..arg_num).rev() {
                         let val = stack_frame.pop();

@@ -1,9 +1,9 @@
-use crate::method_area::signature::Signature;
 use crate::stack::stack_frame::StackFrame;
+use jdescriptor::MethodDescriptor;
 
 #[derive(Debug)]
 pub(crate) struct JavaMethod {
-    signature: Signature,
+    signature: MethodDescriptor,
     max_stack: u16,
     max_locals: u16,
     bytecode: Vec<u8>,
@@ -12,7 +12,7 @@ pub(crate) struct JavaMethod {
 
 impl JavaMethod {
     pub fn new(
-        signature: Signature,
+        signature: MethodDescriptor,
         max_stack: u16,
         max_locals: u16,
         bytecode: Vec<u8>,
@@ -36,7 +36,7 @@ impl JavaMethod {
         )
     }
 
-    pub fn get_signature(&self) -> &Signature {
+    pub fn get_signature(&self) -> &MethodDescriptor {
         &self.signature
     }
 }
