@@ -1,8 +1,16 @@
 use crate::TypeDescriptor::*;
+use std::fmt::Display;
 use std::str::Chars;
 use std::str::FromStr;
 
-type DescriptorError = String;
+#[derive(Debug, PartialEq)]
+enum DescriptorError {
+    UnexpectedEndOfInput,
+    InvalidDescriptor,
+    UnrecognizedTypeDescriptor,
+    MissingSemicolonInClassNameDescriptor,
+    TooManyDimensions,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum TypeDescriptor {
@@ -43,15 +51,17 @@ impl MethodDescriptor {
 }
 
 impl FromStr for TypeDescriptor {
-    type Err = DescriptorError;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        get_next(&mut s.chars())?.ok_or("Invalid descriptor".to_string())
+        get_next(&mut s.chars())
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "Invalid descriptor".to_string())
     }
 }
 
 fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError> {
-    let result = match chars.next().ok_or_else(|| "Unexpected end of input")? {
+    let result = match chars.next().ok_or(DescriptorError::UnexpectedEndOfInput)? {
         'Z' => Some(Boolean),
         'B' => Some(Byte),
         'C' => Some(Char),
@@ -63,39 +73,34 @@ fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError
         'V' => Some(Void),
         'L' => {
             let mut class_name = String::new();
-            while let Some(c) = chars.next() {
+            for c in chars {
                 if c == ';' {
                     return Ok(Some(Object(class_name)));
                 }
                 class_name.push(c);
             }
-
-            return Err("Missing ';' in class name descriptor".to_string());
+            return Err(DescriptorError::MissingSemicolonInClassNameDescriptor);
         }
         '[' => {
             let mut dimensions = 1u8;
-
-            while let Some(next_char) = chars.clone().next() {
-                if next_char == '[' {
-                    chars.next();
-                    dimensions += 1;
-                } else {
-                    break;
-                }
+            while let Some('[') = chars.clone().next() {
+                chars.next();
+                dimensions = dimensions
+                    .checked_add(1)
+                    .ok_or(DescriptorError::TooManyDimensions)?;
             }
-
-            let base_type = get_next(chars)?.ok_or("Invalid array descriptor")?;
+            let base_type = get_next(chars)?.ok_or(DescriptorError::InvalidDescriptor)?;
             Some(Array(Box::new(base_type), dimensions))
         }
         ')' => None,
-        _ => return Err("Unrecognized type descriptor".to_string()),
+        _ => return Err(DescriptorError::UnrecognizedTypeDescriptor),
     };
 
     Ok(result)
 }
 
 impl FromStr for MethodDescriptor {
-    type Err = DescriptorError;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
@@ -104,12 +109,31 @@ impl FromStr for MethodDescriptor {
         }
 
         let mut parameter_types = Vec::new();
-        while let Some(descr) = get_next(&mut chars)? {
+        while let Some(descr) = get_next(&mut chars).map_err(|e| e.to_string())? {
             parameter_types.push(descr);
         }
 
-        let return_type = get_next(&mut chars)?.ok_or("Missing return type".to_string())?;
+        let return_type = get_next(&mut chars)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "Missing return type".to_string())?;
         Ok(Self::new(parameter_types, return_type))
+    }
+}
+
+impl Display for DescriptorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            DescriptorError::UnexpectedEndOfInput => "Unexpected end of input".to_string(),
+            DescriptorError::InvalidDescriptor => "Invalid descriptor".to_string(),
+            DescriptorError::UnrecognizedTypeDescriptor => {
+                "Unrecognized type descriptor".to_string()
+            }
+            DescriptorError::MissingSemicolonInClassNameDescriptor => {
+                "Missing ';' in class name descriptor".to_string()
+            }
+            DescriptorError::TooManyDimensions => "Array has too many dimensions".to_string(),
+        };
+        write!(f, "{}", str)
     }
 }
 
@@ -171,10 +195,13 @@ mod tests {
         );
     }
     #[test]
-    fn should_parse_24d_array_type() {
+    fn should_parse_255d_array_type() {
+        let mut type_descriptor = String::new();
+        type_descriptor.push_str("[".repeat(255usize).as_str());
+        type_descriptor.push_str("I");
         assert_eq!(
-            str::parse::<TypeDescriptor>("[[[[[[[[[[[[[[[[[[[[[[[[I"),
-            Ok(Array(Box::new(Int), 24))
+            str::parse::<TypeDescriptor>(type_descriptor.as_str()),
+            Ok(Array(Box::new(Int), 255))
         );
     }
     #[test]
@@ -256,8 +283,18 @@ mod tests {
     #[test]
     fn should_return_error_for_object_without_closing_symbol() {
         assert_eq!(
-            str::parse::<TypeDescriptor>("Ljava/lang/Object"),
-            Err("Missing ';' in class name descriptor".to_string())
+            str::parse::<TypeDescriptor>("["),
+            Err("Unexpected end of input".to_string())
+        );
+    }
+    #[test]
+    fn should_return_error_for_array_with_too_many_dimensions() {
+        let mut type_descriptor = String::new();
+        type_descriptor.push_str("[".repeat(256usize).as_str());
+        type_descriptor.push_str("I");
+        assert_eq!(
+            str::parse::<TypeDescriptor>(type_descriptor.as_str()),
+            Err("Array has too many dimensions".to_string())
         );
     }
 }
