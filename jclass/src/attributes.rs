@@ -573,7 +573,8 @@ fn get_attribute(
         }
         "LocalVariableTable" => {
             let local_variable_table_length: u16 = get_int(&data, &mut start_from)?;
-            let mut local_variable_table = Vec::with_capacity(local_variable_table_length as usize);
+            let mut local_variable_table =
+                Vec::with_capacity(local_variable_table_length as usize);
             for _ in 0..local_variable_table_length {
                 local_variable_table.push(LocalVariableTableRecord::new(
                     get_int(&data, &mut start_from)?,

@@ -19,13 +19,13 @@ impl MethodArea {
         &self,
         class_name: &str,
         fieldname: &str,
-        value: i32,
+        value: Vec<i32>,
     ) -> crate::error::Result<()> {
         self.loaded_classes
             .get(class_name)
-            .and_then(|java_class| java_class.fields.field_by_name.get(fieldname))
+            .and_then(|java_class| java_class.static_fields.field_by_name.get(fieldname))
             .and_then(|field| {
-                field.borrow_mut().set_value(value);
+                field.borrow_mut().set_raw_value(value);
 
                 Some(())
             })

@@ -8,10 +8,28 @@ fn should_do_adding() {
 }
 
 #[test]
+fn should_do_adding_with_longs() {
+    let vm = VM::new(
+        vec!["tests/test_data/AdderLong.class"],
+        "tests/test_data/std",
+    )
+    .unwrap();
+    let last_frame_value = vm.run("AdderLong").unwrap();
+    assert_eq!(1_000_000_000, last_frame_value.unwrap())
+}
+
+#[test]
 fn should_do_subtraction() {
     let vm = VM::new(vec!["tests/test_data/Sub.class"], "tests/test_data/std").unwrap();
     let last_frame_value = vm.run("Sub").unwrap();
     assert_eq!(-999, last_frame_value.unwrap())
+}
+
+#[test]
+fn should_do_subtraction_with_longs() {
+    let vm = VM::new(vec!["tests/test_data/SubLong.class"], "tests/test_data/std").unwrap();
+    let last_frame_value = vm.run("SubLong").unwrap();
+    assert_eq!(1_000_000_000, last_frame_value.unwrap())
 }
 
 #[test]

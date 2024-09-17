@@ -29,7 +29,7 @@ impl<'a> Heap<'a> {
         &mut self,
         objectref: i32,
         fieldname: &str,
-        value: i32,
+        value: Vec<i32>,
     ) -> crate::error::Result<()> {
         if let Some(Object(instance)) = self.data.get_mut(&objectref) {
             instance.set_field_value(fieldname, value)?;
@@ -43,7 +43,7 @@ impl<'a> Heap<'a> {
         &mut self,
         objectref: i32,
         fieldname: &str,
-    ) -> crate::error::Result<i32> {
+    ) -> crate::error::Result<&Vec<i32>> {
         if let Some(Object(java_instance)) = self.data.get(&objectref) {
             java_instance.get_field_value(fieldname)
         } else {

@@ -1,13 +1,15 @@
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
 use jclass::class_file::ClassFile;
+use jdescriptor::TypeDescriptor;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
     pub(crate) methods: Methods,
-    pub(crate) fields: Fields,
+    pub(crate) static_fields: Fields,
+    pub(crate) non_static_fields_descriptors: HashMap<String, TypeDescriptor>,
     pub(crate) class_file: ClassFile,
 }
 
@@ -28,10 +30,16 @@ impl Fields {
 }
 
 impl JavaClass {
-    pub fn new(methods: Methods, fields: Fields, class_file: ClassFile) -> Self {
+    pub fn new(
+        methods: Methods,
+        static_fields: Fields,
+        non_static_fields_descriptors: HashMap<String, TypeDescriptor>,
+        class_file: ClassFile,
+    ) -> Self {
         Self {
             methods,
-            fields,
+            static_fields,
+            non_static_fields_descriptors,
             class_file,
         }
     }
