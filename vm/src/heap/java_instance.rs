@@ -59,17 +59,21 @@ impl<'a> JavaInstance<'a> {
         })
     }
 
-    pub fn set_field_value(&mut self, fieldname: &str, value: i32) -> crate::error::Result<()> {
+    pub fn set_field_value(
+        &mut self,
+        fieldname: &str,
+        value: Vec<i32>,
+    ) -> crate::error::Result<()> {
         self.fields
             .get_mut(fieldname)
-            .and_then(|v| Some(v.set_value(value)))
+            .and_then(|v| Some(v.set_raw_value(value)))
             .ok_or(Error::new_execution("error setting instance field value"))
     }
 
-    pub fn get_field_value(&self, fieldname: &str) -> crate::error::Result<i32> {
+    pub fn get_field_value(&self, fieldname: &str) -> crate::error::Result<&Vec<i32>> {
         self.fields
             .get(fieldname)
-            .and_then(|v| Some(v.value()))
+            .and_then(|v| Some(v.raw_value()))
             .ok_or(Error::new_execution("error getting instance field value"))
     }
 }

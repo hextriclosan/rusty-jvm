@@ -1,18 +1,29 @@
+use jdescriptor::{default_value, TypeDescriptor};
+
 #[derive(Debug)]
 pub(crate) struct Field {
-    value: i32, // todo: support other types
+    type_descriptor: TypeDescriptor,
+    value: Vec<i32>,
 }
 
 impl Field {
-    pub fn new() -> Self {
-        Self { value: 0 }
+    pub fn new(type_descriptor: TypeDescriptor) -> Self {
+        let value = default_value(&type_descriptor);
+        Self {
+            type_descriptor,
+            value,
+        }
     }
 
-    pub fn set_value(&mut self, value: i32) {
+    pub fn set_raw_value(&mut self, value: Vec<i32>) {
         self.value = value;
     }
 
-    pub fn value(&self) -> i32 {
-        self.value
+    pub fn raw_value(&self) -> &Vec<i32> {
+        &self.value
+    }
+
+    pub fn type_descriptor(&self) -> &TypeDescriptor {
+        &self.type_descriptor
     }
 }

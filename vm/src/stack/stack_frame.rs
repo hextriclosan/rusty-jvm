@@ -50,6 +50,14 @@ impl<'a> StackFrame<'a> {
         self.operand_stack.push(val);
     }
 
+    pub fn push_i64(&mut self, value: i64) {
+        let low = value as i32;
+        let high = (value >> 32) as i32;
+
+        self.push(high);
+        self.push(low);
+    }
+
     pub fn pop(&mut self) -> i32 {
         self.operand_stack.pop().unwrap()
     }

@@ -30,13 +30,38 @@ pub enum TypeDescriptor {
 #[derive(Debug, PartialEq)]
 pub struct MethodDescriptor {
     parameter_types: Vec<TypeDescriptor>,
+    arguments_length: usize,
     return_type: TypeDescriptor,
+}
+
+pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
+    match type_descriptor {
+        Byte | Char | Int | Short | Boolean => vec![0],
+        Long => vec![0, 0],
+        Float => todo!(),
+        Double => todo!(),
+        Void => panic!("field can't be a void type"),
+        Array(_, _) => vec![0],
+        Object(_) => todo!(),
+    }
+}
+
+pub fn get_length(type_descriptor: &TypeDescriptor) -> usize {
+    match type_descriptor {
+        Byte | Char | Int | Short | Boolean | Float => 1,
+        Long | Double => 2,
+        Void => panic!("field can't be a void type"),
+        Array(_, _) => 1,
+        Object(_) => todo!(),
+    }
 }
 
 impl MethodDescriptor {
     pub fn new(parameter_types: Vec<TypeDescriptor>, return_type: TypeDescriptor) -> Self {
+        let arguments_length = calculate_arguments_length(&parameter_types);
         Self {
             parameter_types,
+            arguments_length,
             return_type,
         }
     }
@@ -45,9 +70,23 @@ impl MethodDescriptor {
         &self.parameter_types
     }
 
+    pub fn arguments_length(&self) -> usize {
+        self.arguments_length
+    }
+
     pub fn return_type(&self) -> &TypeDescriptor {
         &self.return_type
     }
+}
+
+fn calculate_arguments_length(parameter_types: &Vec<TypeDescriptor>) -> usize {
+    parameter_types
+        .iter()
+        .map(|t| match t {
+            Long | Double => 2,
+            _ => 1,
+        })
+        .sum()
 }
 
 impl FromStr for TypeDescriptor {

@@ -22,7 +22,9 @@ impl VM {
 
         for (class_name, java_class) in self.class_loader.method_area().loaded_classes.iter() {
             if let Some(java_method) = java_class.methods.method_by_signature.get("<clinit>:()V") {
-                println!("About to initialize java class {class_name} java_method={java_method:?}");
+                println!(
+                    "About to initialize java class {class_name} java_method={java_method:?}"
+                );
                 engine.execute(java_method)?; //todo implement multiclass correct initialization order
             }
         }

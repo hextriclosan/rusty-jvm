@@ -8,6 +8,7 @@ use jclass::attributes::Attribute;
 use jclass::attributes::Attribute::Code;
 use jclass::class_file::{parse, ClassFile};
 use jclass::fields::FieldFlags;
+use jdescriptor::TypeDescriptor;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
@@ -65,10 +66,16 @@ impl ClassLoader {
         let class_name = Self::get_class_name(&class_file)?;
         let methods = Self::get_methods(&class_file, class_name.as_str())?;
         let static_fields = Self::get_static_fields(&class_file)?;
+        let non_static_fields_descriptors = Self::get_non_static_fields_descriptors(&class_file)?;
 
         Ok((
             class_name.clone(),
-            JavaClass::new(methods, static_fields, class_file),
+            JavaClass::new(
+                methods,
+                static_fields,
+                non_static_fields_descriptors,
+                class_file,
+            ),
         ))
     }
 
@@ -79,18 +86,22 @@ impl ClassLoader {
         for method in methods.iter() {
             let method_name = get_cpool_string(class_file, method.name_index() as usize)
                 .ok_or(Error::new_constant_pool("Error getting method name"))?;
-            let method_signature = get_cpool_string(class_file, method.descriptor_index() as usize)
-                .ok_or(Error::new_constant_pool(
-                    "Error getting method method_signature",
-                ))?;
-            let (max_stack, max_locals, code) = Self::get_cpool_code_attribute(method.attributes())
-                .ok_or(Error::new_constant_pool("Error getting method code"))?;
+            let method_signature =
+                get_cpool_string(class_file, method.descriptor_index() as usize).ok_or(
+                    Error::new_constant_pool("Error getting method method_signature"),
+                )?;
+            let (max_stack, max_locals, code) =
+                Self::get_cpool_code_attribute(method.attributes())
+                    .ok_or(Error::new_constant_pool("Error getting method code"))?;
             let key_signature = method_name + ":" + method_signature.as_str();
 
             method_by_signature.insert(
                 key_signature.clone(),
                 JavaMethod::new(
-                    method_signature.as_str().parse().map_err(|err| Error::new(ErrorKind::ClassFile(err)))?,
+                    method_signature
+                        .as_str()
+                        .parse()
+                        .map_err(|err| Error::new(ErrorKind::ClassFile(err)))?,
                     max_stack,
                     max_locals,
                     code,
@@ -112,14 +123,18 @@ impl ClassLoader {
                         .ok_or_else(|| Error::new_constant_pool("Error getting field name"))
                         .ok()?;
 
-                    let _field_signature =
+                    let field_signature =
                         get_cpool_string(class_file, field.descriptor_index() as usize)
                             .ok_or_else(|| {
                                 Error::new_constant_pool("Error getting field signature")
                             })
                             .ok()?;
 
-                    Some((field_name, RefCell::new(Field::new())))
+                    let result = str::parse::<TypeDescriptor>(field_signature.as_str())
+                        .map_err(|e| Error::new_constant_pool(e.as_str())) //todo: return proper error type?
+                        .ok()?;
+
+                    Some((field_name, RefCell::new(Field::new(result))))
                 } else {
                     None
                 }
@@ -127,6 +142,40 @@ impl ClassLoader {
             .collect();
 
         Ok(Fields::new(field_by_name))
+    }
+
+    // todo: this helper and `JavaClass.non_static_fields_descriptors` field are for PUTFIELD ops - refactor this approach
+    fn get_non_static_fields_descriptors(
+        class_file: &ClassFile,
+    ) -> Result<HashMap<String, TypeDescriptor>> {
+        let non_static_fields_descriptors = class_file
+            .fields()
+            .iter()
+            .filter_map(|field| {
+                if !field.access_flags().contains(FieldFlags::ACC_STATIC) {
+                    let field_name = get_cpool_string(class_file, field.name_index() as usize)
+                        .ok_or_else(|| Error::new_constant_pool("Error getting field name"))
+                        .ok()?;
+
+                    let field_signature =
+                        get_cpool_string(class_file, field.descriptor_index() as usize)
+                            .ok_or_else(|| {
+                                Error::new_constant_pool("Error getting field signature")
+                            })
+                            .ok()?;
+
+                    let result = str::parse::<TypeDescriptor>(field_signature.as_str())
+                        .map_err(|e| Error::new_constant_pool(e.as_str())) //todo: return proper error type?
+                        .ok()?;
+
+                    Some((field_name, result))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(non_static_fields_descriptors)
     }
 
     fn get_cpool_code_attribute(attributes: &Vec<Attribute>) -> Option<(u16, u16, Vec<u8>)> {
