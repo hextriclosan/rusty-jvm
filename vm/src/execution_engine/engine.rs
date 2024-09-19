@@ -4,7 +4,7 @@ use crate::heap::heap::Heap;
 use crate::heap::java_instance::JavaInstance;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
-use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_frame::{i32toi64, StackFrame};
 use crate::util::{
     get_class_name_by_cpool_class_index, get_cpool_integer, get_cpool_long_double, Primitive,
 };
@@ -16,9 +16,9 @@ pub(crate) struct Engine<'a> {
 }
 
 impl<'a> Engine<'a> {
-    pub(crate) fn execute(&mut self, method: &JavaMethod) -> crate::error::Result<Option<i32>> {
+    pub(crate) fn execute(&mut self, method: &JavaMethod) -> crate::error::Result<Option<Vec<i32>>> {
         let mut stack_frames = vec![method.new_stack_frame()];
-        let mut last_value: Option<i32> = None;
+        let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
 
         while !stack_frames.is_empty() {
@@ -63,6 +63,11 @@ impl<'a> Engine<'a> {
                     stack_frame.push_i64(0i64);
                     stack_frame.incr_pc();
                     println!("LCONST_0");
+                }
+                LCONST_1 => {
+                    stack_frame.push_i64(1i64);
+                    stack_frame.incr_pc();
+                    println!("LCONST_1");
                 }
                 BIPUSH => {
                     stack_frame.incr_pc();
@@ -126,6 +131,18 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("ILOAD -> pos={pos}, value={value}");
                 }
+                LLOAD => {
+                    stack_frame.incr_pc();
+                    let pos = stack_frame.get_bytecode_byte() as usize;
+
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(pos);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("LLOAD -> pos={pos}, value={value}");
+                }
                 ALOAD => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -162,10 +179,7 @@ impl<'a> Engine<'a> {
                     println!("ILOAD_3 -> value={value}");
                 }
                 LLOAD_0 => {
-                    let high = stack_frame.get_local(0);
-                    let low = stack_frame.get_local(1);
-
-                    let value = ((high as i64) << 32) | (low as i64);
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(0);
 
                     stack_frame.push(low);
                     stack_frame.push(high);
@@ -173,17 +187,32 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("LLOAD_0 -> value={value}");
                 }
-                LLOAD_2 => {
-                    let high = stack_frame.get_local(2);
-                    let low = stack_frame.get_local(3);
+                LLOAD_1 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(1);
 
-                    let value = ((high as i64) << 32) | (low as i64);
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("LLOAD_1 -> value={value}");
+                }
+                LLOAD_2 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(2);
 
                     stack_frame.push(low);
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
                     println!("LLOAD_2 -> value={value}");
+                }
+                LLOAD_3 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(3);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("LLOAD_3 -> value={value}");
                 }
                 ALOAD_0 => {
                     let reference = stack_frame.get_local(0);
@@ -214,18 +243,31 @@ impl<'a> Engine<'a> {
                     let arrayref = stack_frame.pop();
                     let value = self.heap.get_array_value(arrayref, index)?;
 
-                    stack_frame.push(value);
+                    stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!("IALOAD -> arrayref={arrayref}, index={index}, value={value}");
+                    println!("IALOAD -> arrayref={arrayref}, index={index}, value={}", value[0]);
+                }
+                LALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+                    let value = self.heap.get_array_value(arrayref, index)?;
+
+                    let high = value[0];
+                    let low = value[1];
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+                    stack_frame.incr_pc();
+                    println!("LALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
                 AALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
                     let objref = self.heap.get_array_value(arrayref, index)?;
 
-                    stack_frame.push(objref);
+                    stack_frame.push(objref[0]);
                     stack_frame.incr_pc();
-                    println!("AALOAD -> arrayref={arrayref}, index={index}, objref={objref}");
+                    println!("AALOAD -> arrayref={arrayref}, index={index}, objref={}", objref[0]);
                 }
                 ISTORE => {
                     stack_frame.incr_pc();
@@ -235,6 +277,19 @@ impl<'a> Engine<'a> {
                     stack_frame.set_local(pos, value);
                     stack_frame.incr_pc();
                     println!("ISTORE -> pos={pos}, value={value}");
+                }
+                LSTORE => {
+                    stack_frame.incr_pc();
+                    let pos = stack_frame.get_bytecode_byte() as usize;
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(pos, low);
+                    stack_frame.set_local(pos+1, high);
+
+                    stack_frame.incr_pc();
+                    let value = i32toi64(high, low);
+                    println!("LSTORE -> value={value}");
                 }
                 ASTORE => {
                     stack_frame.incr_pc();
@@ -279,12 +334,34 @@ impl<'a> Engine<'a> {
                     let high = stack_frame.pop();
                     let low = stack_frame.pop();
 
-                    stack_frame.set_local(1, high);
-                    stack_frame.set_local(2, low);
+                    stack_frame.set_local(1, low);
+                    stack_frame.set_local(2, high);
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
                     println!("LSTORE_1 -> value={value}");
+                }
+                LSTORE_2 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(2, low);
+                    stack_frame.set_local(3, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!("LSTORE_2 -> value={value}");
+                }
+                LSTORE_3 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(3, low);
+                    stack_frame.set_local(4, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!("LSTORE_3 -> value={value}");
                 }
                 ASTORE_0 => {
                     let objectref = stack_frame.pop();
@@ -319,17 +396,30 @@ impl<'a> Engine<'a> {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap.set_array_value(arrayref, index, value)?;
+                    self.heap.set_array_value(arrayref, index, vec![value])?;
 
                     stack_frame.incr_pc();
                     println!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                }
+                LASTORE => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    let value = vec![high, low];
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    self.heap.set_array_value(arrayref, index, value.clone())?;
+
+                    stack_frame.incr_pc();
+                    println!("LASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
                 AASTORE => {
                     let objref = stack_frame.pop();
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap.set_array_value(arrayref, index, objref)?;
+                    self.heap.set_array_value(arrayref, index, vec![objref])?;
 
                     stack_frame.incr_pc();
                     println!("AASTORE -> arrayref={arrayref}, index={index}, objref={objref}");
@@ -369,20 +459,12 @@ impl<'a> Engine<'a> {
                     println!("IADD -> {a} + {b} = {result}");
                 }
                 LADD => {
-                    let b_high = stack_frame.pop() as i64;
-                    let b_low = stack_frame.pop() as i64;
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
 
-                    let a_high = stack_frame.pop() as i64;
-                    let a_low = stack_frame.pop() as i64;
-
-                    let b = (b_high << 32) | b_low;
-                    let a = (a_high << 32) | a_low;
                     let result = a + b;
 
-                    let result_low = result as i32;
-                    let result_high = (result >> 32) as i32;
-                    stack_frame.push(result_low);
-                    stack_frame.push(result_high);
+                    stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
                     println!("LADD -> {a} + {b} = {result}");
@@ -397,20 +479,12 @@ impl<'a> Engine<'a> {
                     println!("ISUB -> {a} - {b} = {result}");
                 }
                 LSUB => {
-                    let b_high = stack_frame.pop() as i64;
-                    let b_low = stack_frame.pop() as i64;
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
 
-                    let a_high = stack_frame.pop() as i64;
-                    let a_low = stack_frame.pop() as i64;
-
-                    let b = (b_high << 32) | b_low;
-                    let a = (a_high << 32) | a_low;
                     let result = a - b;
 
-                    let result_low = result as i32;
-                    let result_high = (result >> 32) as i32;
-                    stack_frame.push(result_low);
-                    stack_frame.push(result_high);
+                    stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
                     println!("LSUB -> {a} - {b} = {result}");
@@ -423,6 +497,17 @@ impl<'a> Engine<'a> {
 
                     stack_frame.incr_pc();
                     println!("IMUL -> {a} * {b} = {result}");
+                }
+                LMUL => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    let result = b.wrapping_mul(a);
+
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LMUL -> {a} * {b} = {result}");
                 }
                 IDIV => {
                     let b = stack_frame.pop();
@@ -442,6 +527,17 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("IREM -> {a} % {b} = {result}");
                 }
+                LREM => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    let result = a % b;
+
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LREM -> {a} % {b} = {result}");
+                }
                 IINC => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -456,6 +552,30 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("IINC -> {current_val} + {const_val} = {new_val}");
                 }
+                I2L => {
+                    let low = stack_frame.pop();
+
+                    stack_frame.push(low);
+                    stack_frame.push(0);
+
+                    stack_frame.incr_pc();
+                    println!("I2L -> {low}L");
+                }
+                LCMP => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    if a > b {
+                        stack_frame.push(1);
+                    } else if a < b {
+                        stack_frame.push(-1);
+                    } else {
+                        stack_frame.push(0);
+                    }
+
+                    stack_frame.incr_pc();
+                    println!("LCMP -> {a} ? {b}");
+                }
                 IFEQ => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
@@ -467,6 +587,24 @@ impl<'a> Engine<'a> {
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value != 0 { offset } else { 3 });
                     println!("IFNE -> value={value}, offset={offset}");
+                }
+                IFGE => {
+                    let value = stack_frame.pop();
+                    let offset = Self::get_two_bytes_ahead(stack_frame);
+                    stack_frame.advance_pc(if value >= 0 { offset } else { 3 });
+                    println!("IFGE -> value={value}, offset={offset}");
+                }
+                IFGT => {
+                    let value = stack_frame.pop();
+                    let offset = Self::get_two_bytes_ahead(stack_frame);
+                    stack_frame.advance_pc(if value > 0 { offset } else { 3 });
+                    println!("IFGT -> value={value}, offset={offset}");
+                }
+                IFLE => {
+                    let value = stack_frame.pop();
+                    let offset = Self::get_two_bytes_ahead(stack_frame);
+                    stack_frame.advance_pc(if value <= 0 { offset } else { 3 });
+                    println!("IFLE -> value={value}, offset={offset}");
                 }
                 IF_ICMPEQ => {
                     Self::branch(|a: i32, b| a == b, stack_frame, "IF_ICMPEQ");
@@ -511,8 +649,7 @@ impl<'a> Engine<'a> {
                     frame.push(ret_low);
                     frame.push(ret_high);
 
-                    let ret = ((ret_high as i64) << 32) | (ret_low as i64);
-
+                    let ret = i32toi64(ret_high, ret_low);
                     println!("LRETURN -> ret={ret}");
                 }
                 ARETURN => {
@@ -523,16 +660,16 @@ impl<'a> Engine<'a> {
                         .last_mut()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(objref);
-                    println!("IRETURN -> objref={objref}");
+                    println!("ARETURN -> objref={objref}");
                 }
                 RETURN => {
                     println!("RETURN -> stack_frame.locals={:?}", stack_frame.locals);
-                    last_value = stack_frames
+                    last_value = Some(stack_frames
                         .last()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .locals
-                        .last()
-                        .copied();
+                        .clone());
+
                     stack_frames.pop(); // Return from method, pop the current frame
                                         // add more logic here
                 }
@@ -562,15 +699,9 @@ impl<'a> Engine<'a> {
                         .unwrap()
                         .borrow();
 
-                    field.raw_value().iter().for_each(|x| stack_frame.push(*x));
+                    field.raw_value().iter().rev().for_each(|x| stack_frame.push(*x));
 
-                    let value_as_string = field
-                        .raw_value()
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",");
-                    println!("GETSTATIC -> {class_name}.{field_name} is {value_as_string}");
+                    println!("GETSTATIC -> {class_name}.{field_name} is {:?}", field.raw_value());
                     stack_frame.incr_pc();
                 }
                 PUTSTATIC => {
@@ -608,16 +739,10 @@ impl<'a> Engine<'a> {
                         value.push(stack_frame.pop());
                     }
 
-                    let value_as_string = value
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",");
-
                     self.method_area
-                        .set_static_field_value(&class_name, &field_name, value)?;
+                        .set_static_field_value(&class_name, &field_name, value.clone())?;
 
-                    println!("PUTSTATIC -> {class_name}.{field_name} = {value_as_string}");
+                    println!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
                     stack_frame.incr_pc();
                 }
                 GETFIELD => {
@@ -640,15 +765,10 @@ impl<'a> Engine<'a> {
                         .heap
                         .get_object_field_value(objectref, field_name.as_str())?;
 
-                    value.iter().for_each(|x| stack_frame.push(*x));
+                    value.iter().rev().for_each(|x| stack_frame.push(*x));
 
                     stack_frame.incr_pc();
-                    let value_as_string = value
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",");
-                    println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value_as_string}");
+                    println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
                 }
                 PUTFIELD => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
@@ -688,12 +808,7 @@ impl<'a> Engine<'a> {
                         value.clone(),
                     )?;
 
-                    let value_as_string = value
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",");
-                    println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value_as_string}");
+                    println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value:?}");
                     stack_frame.incr_pc();
                 }
                 INVOKEVIRTUAL => {

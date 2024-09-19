@@ -59,7 +59,7 @@ impl<'a> Heap<'a> {
         self.next_id
     }
 
-    pub(crate) fn get_array_value(&self, arrayref: i32, index: i32) -> crate::error::Result<i32> {
+    pub(crate) fn get_array_value(&self, arrayref: i32, index: i32) -> crate::error::Result<&Vec<i32>> {
         if let Some(Arr(arr)) = self.data.get(&arrayref) {
             arr.get_value(index)
         } else {
@@ -71,7 +71,7 @@ impl<'a> Heap<'a> {
         &mut self,
         arrayref: i32,
         index: i32,
-        value: i32,
+        value: Vec<i32>,
     ) -> crate::error::Result<()> {
         if let Some(Arr(arr)) = self.data.get_mut(&arrayref) {
             arr.set_value(index, value)

@@ -12,7 +12,7 @@ impl VM {
         Ok(Self { class_loader })
     }
 
-    pub fn run(&self, main_class_name: &str) -> crate::error::Result<Option<i32>> {
+    pub fn run(&self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
         let main_method = self
             .class_loader
             .method_area()
