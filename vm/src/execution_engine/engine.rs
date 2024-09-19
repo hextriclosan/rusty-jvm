@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::Heap;
@@ -20,6 +21,7 @@ impl<'a> Engine<'a> {
         let mut stack_frames = vec![method.new_stack_frame()];
         let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
+        let mut static_set: HashSet<String> = HashSet::new();
 
         while !stack_frames.is_empty() {
             let stack_frame = stack_frames
@@ -687,6 +689,20 @@ impl<'a> Engine<'a> {
                             java_class,
                             fieldref_constpool_index,
                         )?;
+
+                    //todo!!
+                    //try call invoke static `"<clinit>:()V"` on `class_name` (it should be done only once)
+                    if !static_set.contains(class_name.as_str()) {
+                        static_set.insert(class_name.clone());
+                        if let Ok(clinit) = self.method_area.get_method_by_name_signature(class_name.as_str(), "<clinit>:()V") {
+                            stack_frame.advance_pc(-2);
+                            let next_frame = clinit.new_stack_frame();
+                            //stack_frame.incr_pc(); //incr here because of borrowing problem
+                            stack_frames.push(next_frame);
+                            println!("!!!invoke -> {class_name}.<clinit>:()V");
+                            continue;
+                        }
+                    }
 
                     let field = self
                         .method_area
