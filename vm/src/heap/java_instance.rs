@@ -13,25 +13,25 @@ pub(crate) struct JavaInstance<'a> {
 
 #[derive(Debug)]
 pub(crate) struct Array {
-    data: Vec<i32>,
+    data: Vec<Vec<i32>>,
 }
 
 impl Array {
     pub fn new(len: i32) -> Self {
         Self {
-            data: vec![0; len as usize],
+            data: vec![vec![0,0]; len as usize], //todo: use either 1 or 2 elements vector for corresponding type
         }
     }
 
-    pub fn get_value(&self, index: i32) -> crate::error::Result<i32> {
+    pub fn get_value(&self, index: i32) -> crate::error::Result<&Vec<i32>> {
         if let Some(arr_value) = self.data.get(index as usize) {
-            Ok(*arr_value)
+            Ok(arr_value)
         } else {
             Err(Error::new_execution("error getting array value"))
         }
     }
 
-    pub fn set_value(&mut self, index: i32, value: i32) -> crate::error::Result<()> {
+    pub fn set_value(&mut self, index: i32, value: Vec<i32>) -> crate::error::Result<()> {
         if let Some(arr_value) = self.data.get_mut(index as usize) {
             *arr_value = value;
             Ok(())

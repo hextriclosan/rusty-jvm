@@ -1,9 +1,11 @@
-//javac -g -parameters Adder.java
 
 public class AdderLong {
 
     public static void main(String[] args) {
-         long result = add(100_000_000_000L, -99_000_000_000L);
+        long result = add(
+                42_949_672_980L/*h=10,l=20*/,
+                128_849_018_920L/*h=30,l=40*/
+        );
     }
 
     private static long add(long a, long b) {

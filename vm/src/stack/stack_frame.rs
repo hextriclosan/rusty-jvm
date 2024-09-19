@@ -54,8 +54,16 @@ impl<'a> StackFrame<'a> {
         let low = value as i32;
         let high = (value >> 32) as i32;
 
-        self.push(high);
         self.push(low);
+        self.push(high);
+    }
+
+
+    pub fn pop_i64(&mut self) -> i64 {
+        let high = self.pop();
+        let low = self.pop();
+
+        i32toi64(high, low)
     }
 
     pub fn pop(&mut self) -> i32 {
@@ -70,7 +78,23 @@ impl<'a> StackFrame<'a> {
         *self.locals.get(index).unwrap()
     }
 
+    pub fn get_two_bytes_from_local(&mut self, index: usize) -> (i32, i32, i64) {
+        let low = self.get_local(index);
+        let high = self.get_local(index + 1);
+
+        let value = i32toi64(high, low);
+
+        (low, high, value)
+    }
+
     pub fn current_class_name(&self) -> &str {
         &self.current_class_name
     }
+}
+
+pub fn i32toi64(high: i32, low: i32) -> i64 {
+    let high_converted = (high as i64) << 32;
+    let low_converted = low as u32/*to prevent sign extension*/ as i64;
+
+    high_converted | low_converted
 }

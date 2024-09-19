@@ -47,7 +47,7 @@ fn main() {
     };
 
     println!(
-        "\nresult={}",
-        result.map_or_else(|| "<empty>".to_string(), |v| v.to_string())
+        "\nresult={:?}",
+        result.map_or_else(|| vec![], |v| v)
     );
 }
