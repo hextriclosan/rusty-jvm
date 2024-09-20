@@ -42,7 +42,7 @@ pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
         Double => todo!(),
         Void => panic!("field can't be a void type"),
         Array(_, _) => vec![0],
-        Object(_) => todo!(),
+        Object(_) => vec![0],
     }
 }
 
@@ -52,7 +52,7 @@ pub fn get_length(type_descriptor: &TypeDescriptor) -> usize {
         Long | Double => 2,
         Void => panic!("field can't be a void type"),
         Array(_, _) => 1,
-        Object(_) => todo!(),
+        Object(_) => 1,
     }
 }
 

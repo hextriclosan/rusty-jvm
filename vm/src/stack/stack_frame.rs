@@ -58,7 +58,6 @@ impl<'a> StackFrame<'a> {
         self.push(high);
     }
 
-
     pub fn pop_i64(&mut self) -> i64 {
         let high = self.pop();
         let low = self.pop();

@@ -24,7 +24,7 @@ fn should_do_adding_with_negative_longs() {
         vec!["tests/test_data/AdderNegativeLong.class"],
         "tests/test_data/std",
     )
-        .unwrap();
+    .unwrap();
     let last_frame_value = vm.run("AdderNegativeLong").unwrap();
     assert_eq!(-1990000000000000, get_long(last_frame_value))
 }
@@ -66,7 +66,7 @@ fn should_write_read_instance_fields_with_longs() {
         ],
         "tests/test_data/std",
     )
-        .unwrap();
+    .unwrap();
     let last_frame_value = vm.run("InstanceFieldsUserLong").unwrap();
     assert_eq!(4_380_866_642_760, get_long(last_frame_value))
 }
@@ -102,7 +102,7 @@ fn should_do_extreme_stack_operations_with_longs() {
         vec!["tests/test_data/ExtremeStackTestLong.class"],
         "tests/test_data/std",
     )
-        .unwrap();
+    .unwrap();
     let last_frame_value = vm.run("ExtremeStackTestLong").unwrap();
     assert_eq!(454, get_long(last_frame_value))
 }
@@ -138,7 +138,11 @@ fn should_do_arrays() {
 
 #[test]
 fn should_do_arrays_with_longs() {
-    let vm = VM::new(vec!["tests/test_data/ArrayLong.class"], "tests/test_data/std").unwrap();
+    let vm = VM::new(
+        vec!["tests/test_data/ArrayLong.class"],
+        "tests/test_data/std",
+    )
+    .unwrap();
     let last_frame_value = vm.run("ArrayLong").unwrap();
     assert_eq!(233646220932000, get_long(last_frame_value))
 }
@@ -154,7 +158,6 @@ fn should_do_class_static_initialization() {
     assert_eq!(257, get_int(last_frame_value))
 }
 
-#[ignore]
 #[test]
 fn should_do_class_static_initialization_multiple_classes() {
     let vm = VM::new(
@@ -168,6 +171,51 @@ fn should_do_class_static_initialization_multiple_classes() {
     .unwrap();
     let last_frame_value = vm.run("StaticInitializationUser").unwrap();
     assert_eq!(350, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_class_static_initialization_within_one_class() {
+    let vm = VM::new(
+        vec!["tests/test_data/StaticInitializationWithinOneClass.class"],
+        "tests/test_data/std",
+    )
+    .unwrap();
+    let last_frame_value = vm.run("StaticInitializationWithinOneClass").unwrap();
+    assert_eq!(100, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_class_static_initialization_advanced() {
+    let vm = VM::new(
+        vec![
+            "tests/test_data/StaticInitializationAdvanced.class",
+            "tests/test_data/ClassA.class",
+            "tests/test_data/ClassB.class",
+            "tests/test_data/ClassC.class",
+            "tests/test_data/ClassD.class",
+            "tests/test_data/ClassE.class",
+            "tests/test_data/Helper.class",
+        ],
+        "tests/test_data/std",
+    )
+    .unwrap();
+    let last_frame_value = vm.run("StaticInitializationAdvanced").unwrap();
+    assert_eq!(826, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_class_static_initialization_circular() {
+    let vm = VM::new(
+        vec![
+            "tests/test_data/StaticInitializationCircular.class",
+            "tests/test_data/ClassACircular.class",
+            "tests/test_data/ClassBCircular.class",
+        ],
+        "tests/test_data/std",
+    )
+    .unwrap();
+    let last_frame_value = vm.run("StaticInitializationCircular").unwrap();
+    assert_eq!(700, get_int(last_frame_value))
 }
 
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
