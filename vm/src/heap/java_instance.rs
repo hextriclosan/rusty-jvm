@@ -19,7 +19,7 @@ pub(crate) struct Array {
 impl Array {
     pub fn new(len: i32) -> Self {
         Self {
-            data: vec![vec![0,0]; len as usize], //todo: use either 1 or 2 elements vector for corresponding type
+            data: vec![vec![0, 0]; len as usize], //todo: use either 1 or 2 elements vector for corresponding type
         }
     }
 

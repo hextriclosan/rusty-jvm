@@ -40,7 +40,7 @@ impl MethodArea {
         if let Some(found) = self
             .loaded_classes
             .get(class_name)
-            .unwrap()
+            .expect(format!("class {class_name} not found").as_str())
             .methods
             .method_by_signature
             .get(method_name_signature)

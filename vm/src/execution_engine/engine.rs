@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::Heap;
@@ -10,6 +9,7 @@ use crate::util::{
     get_class_name_by_cpool_class_index, get_cpool_integer, get_cpool_long_double, Primitive,
 };
 use jdescriptor::get_length;
+use std::collections::HashSet;
 
 pub(crate) struct Engine<'a> {
     method_area: &'a MethodArea,
@@ -17,7 +17,10 @@ pub(crate) struct Engine<'a> {
 }
 
 impl<'a> Engine<'a> {
-    pub(crate) fn execute(&mut self, method: &JavaMethod) -> crate::error::Result<Option<Vec<i32>>> {
+    pub(crate) fn execute(
+        &mut self,
+        method: &JavaMethod,
+    ) -> crate::error::Result<Option<Vec<i32>>> {
         let mut stack_frames = vec![method.new_stack_frame()];
         let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
@@ -247,7 +250,10 @@ impl<'a> Engine<'a> {
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!("IALOAD -> arrayref={arrayref}, index={index}, value={}", value[0]);
+                    println!(
+                        "IALOAD -> arrayref={arrayref}, index={index}, value={}",
+                        value[0]
+                    );
                 }
                 LALOAD => {
                     let index = stack_frame.pop();
@@ -269,7 +275,10 @@ impl<'a> Engine<'a> {
 
                     stack_frame.push(objref[0]);
                     stack_frame.incr_pc();
-                    println!("AALOAD -> arrayref={arrayref}, index={index}, objref={}", objref[0]);
+                    println!(
+                        "AALOAD -> arrayref={arrayref}, index={index}, objref={}",
+                        objref[0]
+                    );
                 }
                 ISTORE => {
                     stack_frame.incr_pc();
@@ -287,7 +296,7 @@ impl<'a> Engine<'a> {
                     let low = stack_frame.pop();
 
                     stack_frame.set_local(pos, low);
-                    stack_frame.set_local(pos+1, high);
+                    stack_frame.set_local(pos + 1, high);
 
                     stack_frame.incr_pc();
                     let value = i32toi64(high, low);
@@ -666,11 +675,13 @@ impl<'a> Engine<'a> {
                 }
                 RETURN => {
                     println!("RETURN -> stack_frame.locals={:?}", stack_frame.locals);
-                    last_value = Some(stack_frames
-                        .last()
-                        .ok_or(Error::new_execution("Error getting stack last value"))?
-                        .locals
-                        .clone());
+                    last_value = Some(
+                        stack_frames
+                            .last()
+                            .ok_or(Error::new_execution("Error getting stack last value"))?
+                            .locals
+                            .clone(),
+                    );
 
                     stack_frames.pop(); // Return from method, pop the current frame
                                         // add more logic here
@@ -690,16 +701,17 @@ impl<'a> Engine<'a> {
                             fieldref_constpool_index,
                         )?;
 
-                    //todo!!
-                    //try call invoke static `"<clinit>:()V"` on `class_name` (it should be done only once)
+                    //calling static block if needed, todo: move me to single place
                     if !static_set.contains(class_name.as_str()) {
                         static_set.insert(class_name.clone());
-                        if let Ok(clinit) = self.method_area.get_method_by_name_signature(class_name.as_str(), "<clinit>:()V") {
+                        if let Ok(clinit) = self
+                            .method_area
+                            .get_method_by_name_signature(class_name.as_str(), "<clinit>:()V")
+                        {
                             stack_frame.advance_pc(-2);
                             let next_frame = clinit.new_stack_frame();
-                            //stack_frame.incr_pc(); //incr here because of borrowing problem
                             stack_frames.push(next_frame);
-                            println!("!!!invoke -> {class_name}.<clinit>:()V");
+                            println!("<INVOKE> -> {class_name}.<clinit>:()V");
                             continue;
                         }
                     }
@@ -715,9 +727,16 @@ impl<'a> Engine<'a> {
                         .unwrap()
                         .borrow();
 
-                    field.raw_value().iter().rev().for_each(|x| stack_frame.push(*x));
+                    field
+                        .raw_value()
+                        .iter()
+                        .rev()
+                        .for_each(|x| stack_frame.push(*x));
 
-                    println!("GETSTATIC -> {class_name}.{field_name} is {:?}", field.raw_value());
+                    println!(
+                        "GETSTATIC -> {class_name}.{field_name} is {:?}",
+                        field.raw_value()
+                    );
                     stack_frame.incr_pc();
                 }
                 PUTSTATIC => {
@@ -734,6 +753,21 @@ impl<'a> Engine<'a> {
                             java_class,
                             fieldref_constpool_index,
                         )?;
+
+                    //calling static block if needed, todo: move me to single place
+                    if !static_set.contains(class_name.as_str()) {
+                        static_set.insert(class_name.clone());
+                        if let Ok(clinit) = self
+                            .method_area
+                            .get_method_by_name_signature(class_name.as_str(), "<clinit>:()V")
+                        {
+                            stack_frame.advance_pc(-2);
+                            let next_frame = clinit.new_stack_frame();
+                            stack_frames.push(next_frame);
+                            println!("<INVOKE> -> {class_name}.<clinit>:()V");
+                            continue;
+                        }
+                    }
 
                     let len = {
                         let field = self
@@ -755,8 +789,11 @@ impl<'a> Engine<'a> {
                         value.push(stack_frame.pop());
                     }
 
-                    self.method_area
-                        .set_static_field_value(&class_name, &field_name, value.clone())?;
+                    self.method_area.set_static_field_value(
+                        &class_name,
+                        &field_name,
+                        value.clone(),
+                    )?;
 
                     println!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
                     stack_frame.incr_pc();
@@ -902,6 +939,22 @@ impl<'a> Engine<'a> {
                             methodref_constpool_index,
                         )?;
 
+                    //calling static block if needed, todo: move me to single place
+                    // requirements of JVMS Section 5.4
+                    if !static_set.contains(class_name.as_str()) {
+                        static_set.insert(class_name.clone());
+                        if let Ok(clinit) = self
+                            .method_area
+                            .get_method_by_name_signature(class_name.as_str(), "<clinit>:()V")
+                        {
+                            stack_frame.advance_pc(-2);
+                            let next_frame = clinit.new_stack_frame();
+                            stack_frames.push(next_frame);
+                            println!("<INVOKE> -> {class_name}.<clinit>:()V");
+                            continue;
+                        }
+                    }
+
                     let mut next_frame = static_method.new_stack_frame();
                     let arg_num = static_method.get_signature().arguments_length();
 
@@ -931,7 +984,12 @@ impl<'a> Engine<'a> {
                         self.method_area
                             .loaded_classes
                             .get(class_to_invoke_new_for.as_str())
-                            .unwrap(),
+                            .expect(
+                                format!(
+                                    "class_to_invoke_new_for not found: {class_to_invoke_new_for}"
+                                )
+                                .as_str(),
+                            ),
                     )?;
 
                     let instanceref = self.heap.create_instance(default_field_values_instance);

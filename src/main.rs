@@ -46,8 +46,5 @@ fn main() {
         }
     };
 
-    println!(
-        "\nresult={:?}",
-        result.map_or_else(|| vec![], |v| v)
-    );
+    println!("\nresult={:?}", result.map_or_else(|| vec![], |v| v));
 }
