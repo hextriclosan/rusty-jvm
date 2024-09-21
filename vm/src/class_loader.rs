@@ -92,7 +92,7 @@ impl ClassLoader {
                 )?;
             let (max_stack, max_locals, code) =
                 Self::get_cpool_code_attribute(method.attributes())
-                    .ok_or(Error::new_constant_pool("Error getting method code"))?;
+                    .ok_or(Error::new_constant_pool(format!("Error getting method code: {class_name}.{method_name}(...)").as_str()))?;
             let key_signature = method_name + ":" + method_signature.as_str();
 
             method_by_signature.insert(
