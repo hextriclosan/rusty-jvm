@@ -322,8 +322,8 @@ mod tests {
     #[test]
     fn should_return_error_for_object_without_closing_symbol() {
         assert_eq!(
-            str::parse::<TypeDescriptor>("["),
-            Err("Unexpected end of input".to_string())
+            str::parse::<TypeDescriptor>("Ljava/lang/String"),
+            Err("Missing ';' in class name descriptor".to_string())
         );
     }
     #[test]
