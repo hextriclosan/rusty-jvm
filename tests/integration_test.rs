@@ -148,6 +148,13 @@ fn should_do_arrays_with_longs() {
 }
 
 #[test]
+fn should_do_3d_arrays() {
+    let vm = VM::new(vec!["tests/test_data/Array3D.class"], "tests/test_data/std").unwrap();
+    let last_frame_value = vm.run("Array3D").unwrap();
+    assert_eq!(780, get_int(last_frame_value))
+}
+
+#[test]
 fn should_do_class_static_initialization() {
     let vm = VM::new(
         vec!["tests/test_data/StaticInitialization.class"],
