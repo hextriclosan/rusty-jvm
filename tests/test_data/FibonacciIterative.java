@@ -1,4 +1,4 @@
-
+package samples.arithmetics.fibonacci.iterative;
 
 public class FibonacciIterative {
 

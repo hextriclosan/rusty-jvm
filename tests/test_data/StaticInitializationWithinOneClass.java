@@ -1,4 +1,4 @@
-
+package samples.fields.staticinitialization.oneclass;
 
 public class StaticInitializationWithinOneClass {
     static int staticField;

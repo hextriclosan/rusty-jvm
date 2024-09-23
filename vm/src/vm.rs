@@ -16,7 +16,10 @@ impl VM {
         let main_method = self
             .class_loader
             .method_area()
-            .get_method_by_name_signature(main_class_name, "main:([Ljava/lang/String;)V")?;
+            .get_method_by_name_signature(
+                &main_class_name.replace('.', "/"),
+                "main:([Ljava/lang/String;)V",
+            )?;
 
         let mut engine = Engine::new(&self.class_loader.method_area());
 

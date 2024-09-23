@@ -1,3 +1,5 @@
+package samples.arrays.array3d;
+
 public class Array3D {
     public static void main(String[] args) {
         int[][][] array = new int[][][]{

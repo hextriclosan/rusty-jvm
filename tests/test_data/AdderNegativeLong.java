@@ -1,3 +1,4 @@
+package samples.arithmetics.addernegative;
 
 public class AdderNegativeLong {
 
