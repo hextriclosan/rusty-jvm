@@ -1,3 +1,5 @@
+package samples.fields.staticinitialization.advanced;
+
 public class StaticInitializationAdvanced {
     public static void main(String[] args) {
         int classCWithHelperNonStaticGetter = ClassC.staticField;

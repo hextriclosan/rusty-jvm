@@ -1,4 +1,4 @@
-
+package samples.arithmetics.fibonacci.recursive;
 
 public class FibonacciRecursive {
 

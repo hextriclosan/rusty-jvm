@@ -1,4 +1,4 @@
-
+package samples.fields.staticinitialization.circular;
 
 public class StaticInitializationCircular {
     public static void main(String[] args) {

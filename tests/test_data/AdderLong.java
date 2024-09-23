@@ -1,3 +1,4 @@
+package samples.arithmetics.adder.longs;
 
 public class AdderLong {
 
