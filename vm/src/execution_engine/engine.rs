@@ -105,6 +105,26 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     println!("LDC -> cpoolindex={cpoolindex}, value={value}");
                 }
+                LDC_W => {
+                    //todo: merge me with LDC
+                    stack_frame.incr_pc();
+                    let cpoolindex = Self::extract_two_bytes(stack_frame);
+
+                    let java_class = self.method_area.get(current_class_name.as_str())?;
+                    let cpool_helper = java_class.cpool_helper();
+
+                    // todo add support of other types
+                    let value = cpool_helper.get_integer(cpoolindex).ok_or_else(|| {
+                        Error::new_constant_pool(&format!(
+                            "Error getting value as Integer by index {cpoolindex}"
+                        ))
+                    })?;
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("LDC -> cpoolindex={cpoolindex}, value={value}");
+                }
                 LDC2_W => {
                     let cpoolindex = Self::extract_two_bytes(stack_frame);
 
