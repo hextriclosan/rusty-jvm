@@ -31,7 +31,7 @@ impl JavaMethod {
         StackFrame::new(
             self.max_locals as usize,
             self.max_stack as usize,
-            &self.bytecode,
+            self.bytecode.clone(),
             self.class_name.clone(),
         )
     }

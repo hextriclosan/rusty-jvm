@@ -1,4 +1,4 @@
-use clap::{arg, Arg, ArgAction, Command};
+use clap::{arg, Command};
 use std::process;
 use vm::vm::VM;
 
@@ -14,29 +14,15 @@ fn main() {
                 .help("Class to run")
                 .required(true),
         )
-        .arg(
-            Arg::new("classes")
-                .action(ArgAction::Append)
-                .help("Java classes to load")
-                .required(true),
-        )
         .get_matches();
 
-    let std_dir = matches.get_one::<String>("std-dir").unwrap();
-    let entry_point = matches.get_one::<String>("entry-point").unwrap();
-    let classes = matches
-        .get_many::<String>("classes")
-        .unwrap()
-        .into_iter()
-        .map(|s| s.as_str())
-        .collect();
-    let vm = match VM::new(classes, std_dir) {
-        Ok(vm) => vm,
-        Err(err) => {
-            eprintln!("Failed to create VM: {}", err);
-            process::exit(1);
-        }
-    };
+    let std_dir = matches
+        .get_one::<String>("std-dir")
+        .expect("Missing standard library directory");
+    let entry_point = matches
+        .get_one::<String>("entry-point")
+        .expect("Missing entry point");
+    let mut vm = VM::new(std_dir);
 
     let result = match vm.run(entry_point) {
         Ok(output) => output,

@@ -1,13 +1,12 @@
 use crate::error::Error;
 use crate::method_area::field::Field;
 use crate::method_area::java_class::JavaClass;
-use crate::util::get_fields;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Debug)]
-pub(crate) struct JavaInstance<'a> {
-    #[allow(dead_code)]
-    class_ref: &'a JavaClass,
+pub(crate) struct JavaInstance {
+    _class_ref: Rc<JavaClass>, // todo use me or delete
     fields: HashMap<String, Field>,
 }
 
@@ -46,16 +45,21 @@ impl Array {
 }
 
 #[derive(Debug)]
-pub(crate) enum HeapValue<'a> {
-    Object(JavaInstance<'a>),
+pub(crate) enum HeapValue {
+    Object(JavaInstance),
     Arr(Array),
 }
 
-impl<'a> JavaInstance<'a> {
-    pub fn new(class_ref: &'a JavaClass) -> crate::error::Result<Self> {
+impl<'a> JavaInstance {
+    pub fn new(class_ref: Rc<JavaClass>) -> crate::error::Result<Self> {
         Ok(Self {
-            class_ref,
-            fields: get_fields(&class_ref.class_file)?,
+            _class_ref: Rc::clone(&class_ref),
+            fields: class_ref //todo: refactor me: remove static fields, put this code in right place
+                .field_descriptors
+                .descriptor_by_name
+                .iter()
+                .map(|(name, descriptor)| (name.clone(), Field::new(descriptor.clone())))
+                .collect(),
         })
     }
 
@@ -67,7 +71,11 @@ impl<'a> JavaInstance<'a> {
         self.fields
             .get_mut(fieldname)
             .and_then(|v| Some(v.set_raw_value(value)))
-            .ok_or(Error::new_execution("error setting instance field value"))
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
+                    "error setting value for instance field {fieldname}"
+                ))
+            })
     }
 
     pub fn get_field_value(&self, fieldname: &str) -> crate::error::Result<&Vec<i32>> {

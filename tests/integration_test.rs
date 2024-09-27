@@ -1,34 +1,36 @@
+use ctor::ctor;
+use std::env;
+use std::sync::Once;
 use vm::vm::VM;
+
+static INIT: Once = Once::new();
+
+const PATH: &str = "tests/test_data";
+
+#[ctor]
+fn setup() {
+    INIT.call_once(|| {
+        env::set_current_dir(PATH).expect("Failed to change working directory");
+    })
+}
 
 #[test]
 fn should_do_adding() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/adder/ints/AdderInt.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arithmetics.adder.ints.AdderInt").unwrap();
     assert_eq!(55, get_int(last_frame_value))
 }
 
 #[test]
 fn should_do_adding_with_longs() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/adder/longs/AdderLong.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arithmetics.adder.longs.AdderLong").unwrap();
     assert_eq!(171798691900, get_long(last_frame_value))
 }
 
 #[test]
 fn should_do_adding_with_negative_longs() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/addernegative/AdderNegativeLong.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.arithmetics.addernegative.AdderNegativeLong")
         .unwrap();
@@ -37,36 +39,21 @@ fn should_do_adding_with_negative_longs() {
 
 #[test]
 fn should_do_subtraction() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/sub/ints/SubInts.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arithmetics.sub.ints.SubInts").unwrap();
     assert_eq!(-999, get_int(last_frame_value))
 }
 
 #[test]
 fn should_do_subtraction_with_longs() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/sub/longs/SubLongs.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arithmetics.sub.longs.SubLongs").unwrap();
     assert_eq!(-1_000_000_000, get_long(last_frame_value))
 }
 
 #[test]
 fn should_write_read_instance_fields() {
-    let vm = VM::new(
-        vec![
-            "tests/test_data/samples/fields/instance/ints/InstanceFieldsUserInts.class",
-            "tests/test_data/samples/fields/instance/ints/InstanceFields.class",
-        ],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.instance.ints.InstanceFieldsUserInts")
         .unwrap();
@@ -75,14 +62,7 @@ fn should_write_read_instance_fields() {
 
 #[test]
 fn should_write_read_instance_fields_with_longs() {
-    let vm = VM::new(
-        vec![
-            "tests/test_data/samples/fields/instance/longs/InstanceFieldsUserLong.class",
-            "tests/test_data/samples/fields/instance/longs/InstanceFields.class",
-        ],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.instance.longs.InstanceFieldsUserLong")
         .unwrap();
@@ -91,14 +71,7 @@ fn should_write_read_instance_fields_with_longs() {
 
 #[test]
 fn should_write_read_static_fields() {
-    let vm = VM::new(
-        vec![
-            "tests/test_data/samples/fields/staticinitialization/ints/StaticFieldsUserInts.class",
-            "tests/test_data/samples/fields/staticinitialization/ints/StaticFields.class",
-        ],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.ints.StaticFieldsUserInts")
         .unwrap();
@@ -107,11 +80,7 @@ fn should_write_read_static_fields() {
 
 #[test]
 fn should_do_extreme_stack_operations() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/extremestack/ints/ExtremeStackInt.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.arithmetics.extremestack.ints.ExtremeStackInt")
         .unwrap();
@@ -120,11 +89,7 @@ fn should_do_extreme_stack_operations() {
 
 #[test]
 fn should_do_extreme_stack_operations_with_longs() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/extremestack/longs/ExtremeStackLong.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.arithmetics.extremestack.longs.ExtremeStackLong")
         .unwrap();
@@ -133,11 +98,7 @@ fn should_do_extreme_stack_operations_with_longs() {
 
 #[test]
 fn should_do_calculate_fibonacci_iteratively() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/fibonacci/iterative/FibonacciIterative.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.arithmetics.fibonacci.iterative.FibonacciIterative")
         .unwrap();
@@ -146,11 +107,7 @@ fn should_do_calculate_fibonacci_iteratively() {
 
 #[test]
 fn should_do_calculate_fibonacci_recursively() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arithmetics/fibonacci/recursive/FibonacciRecursive.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.arithmetics.fibonacci.recursive.FibonacciRecursive")
         .unwrap();
@@ -159,44 +116,28 @@ fn should_do_calculate_fibonacci_recursively() {
 
 #[test]
 fn should_do_arrays() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arrays/array/ints/ArrayInt.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arrays.array.ints.ArrayInt").unwrap();
     assert_eq!(740, get_int(last_frame_value))
 }
 
 #[test]
 fn should_do_arrays_with_longs() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arrays/array/longs/ArrayLong.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arrays.array.longs.ArrayLong").unwrap();
     assert_eq!(233646220932000, get_long(last_frame_value))
 }
 
 #[test]
 fn should_do_3d_arrays() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/arrays/array3d/Array3D.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.arrays.array3d.Array3D").unwrap();
     assert_eq!(780, get_int(last_frame_value))
 }
 
 #[test]
 fn should_do_class_static_initialization() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/fields/staticinitialization/array/StaticInitializationArray.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.array.StaticInitializationArray")
         .unwrap();
@@ -205,15 +146,7 @@ fn should_do_class_static_initialization() {
 
 #[test]
 fn should_do_class_static_initialization_multiple_classes() {
-    let vm = VM::new(
-        vec![
-            "tests/test_data/samples/fields/staticinitialization/chain/Dependable.class",
-            "tests/test_data/samples/fields/staticinitialization/chain/DependsOnDependable.class",
-            "tests/test_data/samples/fields/staticinitialization/chain/StaticInitializationChain.class",
-        ],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.chain.StaticInitializationChain")
         .unwrap();
@@ -222,11 +155,7 @@ fn should_do_class_static_initialization_multiple_classes() {
 
 #[test]
 fn should_do_class_static_initialization_within_one_class() {
-    let vm = VM::new(
-        vec!["tests/test_data/samples/fields/staticinitialization/oneclass/StaticInitializationWithinOneClass.class"],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.oneclass.StaticInitializationWithinOneClass")
         .unwrap();
@@ -235,17 +164,7 @@ fn should_do_class_static_initialization_within_one_class() {
 
 #[test]
 fn should_do_class_static_initialization_advanced() {
-    let vm = VM::new(
-        vec![
-            "tests/test_data/samples/fields/staticinitialization/advanced/StaticInitializationAdvanced.class",
-            "tests/test_data/samples/fields/staticinitialization/advanced/ClassC.class",
-            "tests/test_data/samples/fields/staticinitialization/advanced/ClassD.class",
-            "tests/test_data/samples/fields/staticinitialization/advanced/ClassE.class",
-            "tests/test_data/samples/fields/staticinitialization/advanced/Helper.class",
-        ],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.advanced.StaticInitializationAdvanced")
         .unwrap();
@@ -254,15 +173,7 @@ fn should_do_class_static_initialization_advanced() {
 
 #[test]
 fn should_do_class_static_initialization_circular() {
-    let vm = VM::new(
-        vec![
-            "tests/test_data/samples/fields/staticinitialization/circular/StaticInitializationCircular.class",
-            "tests/test_data/samples/fields/staticinitialization/circular/ClassACircular.class",
-            "tests/test_data/samples/fields/staticinitialization/circular/ClassBCircular.class",
-        ],
-        "tests/test_data/std",
-    )
-    .unwrap();
+    let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.circular.StaticInitializationCircular")
         .unwrap();

@@ -13,7 +13,7 @@ use crate::extractors::{get_bitfield, get_bytes, get_int};
 use bitflags::bitflags;
 use std::io::ErrorKind::InvalidData;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Attribute {
     ConstantValue {
         constantvalue_index: u16,
@@ -92,7 +92,7 @@ pub enum Attribute {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ExceptionRecord {
     start_pc: u16,
     end_pc: u16,
@@ -123,7 +123,7 @@ impl ExceptionRecord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LineNumberRecord {
     start_pc: u16,
     line_number: u16,
@@ -144,7 +144,7 @@ impl LineNumberRecord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LocalVariableTableRecord {
     start_pc: u16,
     length: u16,
@@ -186,7 +186,7 @@ impl LocalVariableTableRecord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LocalVariableTypeTableRecord {
     start_pc: u16,
     length: u16,
@@ -229,7 +229,7 @@ impl LocalVariableTypeTableRecord {
 }
 
 bitflags! {
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub struct MethodParameterFlags: u16 {
         const ACC_FINAL = 0x0010;       // Indicates that the formal parameter was declared final.
         const ACC_SYNTHETIC = 0x1000;   // Indicates that the formal parameter was not explicitly or implicitly declared in source code, according to the specification of the language in which the source code was written (JLS §13.1). (The formal parameter is an implementation artifact of the compiler which produced this class file.)
@@ -237,7 +237,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MethodParameterRecord {
     name_index: u16,
     access_flags: MethodParameterFlags,
@@ -258,7 +258,7 @@ impl MethodParameterRecord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum StackMapFrame {
     SameFrame {
         frame_type: u8,
@@ -295,7 +295,7 @@ pub enum StackMapFrame {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum VerificationTypeInfo {
     TopVariableInfo,
     IntegerVariableInfo,
@@ -308,7 +308,7 @@ pub enum VerificationTypeInfo {
     UninitializedVariableInfo { offset: u16 },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Annotation {
     type_index: u16,
     element_value_pairs: Vec<ElementValuePair>,
@@ -329,7 +329,7 @@ impl Annotation {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ElementValuePair {
     element_name_index: u16,
     value: ElementValue,
@@ -350,7 +350,7 @@ impl ElementValuePair {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ElementValue {
     ConstValueIndex {
         tag: u8,
@@ -376,7 +376,7 @@ pub enum ElementValue {
 }
 
 bitflags! {
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub struct NestedClassFlags: u16 {
         const ACC_PUBLIC = 0x0001;      // Marked or implicitly public in source.
         const ACC_PRIVATE = 0x0002;     // Marked private in source.
@@ -391,7 +391,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct InnerClassRecord {
     inner_class_info_index: u16,
     outer_class_info_index: u16,
@@ -427,7 +427,7 @@ impl InnerClassRecord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BootstrapMethodRecord {
     bootstrap_method_ref: u16,
     bootstrap_arguments: Vec<u16>,
@@ -448,7 +448,7 @@ impl BootstrapMethodRecord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RecordComponentInfo {
     name_index: u16,
     descriptor_index: u16,

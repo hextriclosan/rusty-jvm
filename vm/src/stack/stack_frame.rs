@@ -1,16 +1,17 @@
-pub(crate) struct StackFrame<'a> {
+#[derive(Clone)]
+pub(crate) struct StackFrame {
     pc: usize,
     pub locals: Vec<i32>,
     pub(crate) operand_stack: Vec<i32>,
-    bytecode_ref: &'a [u8],
+    bytecode_ref: Vec<u8>,
     current_class_name: String,
 }
 
-impl<'a> StackFrame<'a> {
+impl<'a> StackFrame {
     pub fn new(
         locals_size: usize,
         stack_size: usize,
-        bytecode_ref: &'a [u8],
+        bytecode_ref: Vec<u8>,
         current_class_name: String,
     ) -> Self {
         StackFrame {
