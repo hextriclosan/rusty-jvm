@@ -4,7 +4,7 @@ use crate::extractors::{get_float, get_int, get_string};
 use std::io::ErrorKind::InvalidInput;
 
 #[repr(u8)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ConstantPool {
     Empty = 0,
     Utf8 {

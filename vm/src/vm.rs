@@ -1,28 +1,35 @@
-use crate::class_loader::ClassLoader;
+use crate::error::Error;
 use crate::execution_engine::engine::Engine;
+use crate::method_area::method_area::MethodArea;
 
 #[derive(Debug)]
 pub struct VM {
-    class_loader: ClassLoader,
+    method_area: MethodArea,
 }
 
 impl VM {
-    pub fn new(class_file_names: Vec<&str>, std_dir: &str) -> crate::error::Result<Self> {
-        let class_loader = ClassLoader::new(class_file_names, std_dir)?;
-        Ok(Self { class_loader })
+    const ENTRY_POINT: &'static str = "main:([Ljava/lang/String;)V";
+
+    pub fn new(std_dir: &str) -> Self {
+        Self {
+            method_area: MethodArea::new(std_dir),
+        }
     }
 
-    pub fn run(&self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
-        let main_method = self
-            .class_loader
-            .method_area()
-            .get_method_by_name_signature(
-                &main_class_name.replace('.', "/"),
-                "main:([Ljava/lang/String;)V",
-            )?;
+    pub fn run(&mut self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
+        let internal_name = &main_class_name.replace('.', "/");
+        let java_class = self.method_area.get(internal_name)?;
 
-        let mut engine = Engine::new(&self.class_loader.method_area());
+        let java_method = java_class
+            .methods
+            .method_by_signature
+            .get(Self::ENTRY_POINT)
+            .ok_or(Error::new_execution(
+                format!("main method not found in {main_class_name}").as_str(),
+            ))?;
 
-        engine.execute(main_method)
+        let mut engine = Engine::new(&self.method_area);
+
+        engine.execute(java_method)
     }
 }

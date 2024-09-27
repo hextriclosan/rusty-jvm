@@ -1,26 +1,38 @@
+use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
-use jclass::class_file::ClassFile;
 use jdescriptor::TypeDescriptor;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
     pub(crate) methods: Methods,
     pub(crate) static_fields: Fields,
-    pub(crate) non_static_fields_descriptors: HashMap<String, TypeDescriptor>,
-    pub(crate) class_file: ClassFile,
+    pub(crate) field_descriptors: FieldDescriptors,
+    cpool_helper: CPoolHelper,
 }
 
 #[derive(Debug)]
 pub(crate) struct Methods {
-    pub(crate) method_by_signature: HashMap<String, JavaMethod>,
+    pub(crate) method_by_signature: HashMap<String, Rc<JavaMethod>>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Fields {
     pub(crate) field_by_name: HashMap<String, RefCell<Field>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct FieldDescriptors {
+    pub(crate) descriptor_by_name: HashMap<String, TypeDescriptor>,
+}
+
+impl FieldDescriptors {
+    pub fn new(descriptor_by_name: HashMap<String, TypeDescriptor>) -> Self {
+        Self { descriptor_by_name }
+    }
 }
 
 impl Fields {
@@ -33,20 +45,24 @@ impl JavaClass {
     pub fn new(
         methods: Methods,
         static_fields: Fields,
-        non_static_fields_descriptors: HashMap<String, TypeDescriptor>,
-        class_file: ClassFile,
+        field_descriptors: FieldDescriptors,
+        cpool_helper: CPoolHelper,
     ) -> Self {
         Self {
             methods,
             static_fields,
-            non_static_fields_descriptors,
-            class_file,
+            field_descriptors,
+            cpool_helper,
         }
+    }
+
+    pub fn cpool_helper(&self) -> &CPoolHelper {
+        &self.cpool_helper
     }
 }
 
 impl Methods {
-    pub fn new(method_by_signature: HashMap<String, JavaMethod>) -> Self {
+    pub fn new(method_by_signature: HashMap<String, Rc<JavaMethod>>) -> Self {
         Self {
             method_by_signature,
         }

@@ -4,12 +4,12 @@ use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub(crate) struct Heap<'a> {
-    data: HashMap<i32, HeapValue<'a>>,
+pub(crate) struct Heap {
+    data: HashMap<i32, HeapValue>,
     next_id: i32,
 }
 
-impl<'a> Heap<'a> {
+impl Heap {
     pub fn new() -> Self {
         Self {
             data: HashMap::new(),
@@ -17,7 +17,7 @@ impl<'a> Heap<'a> {
         }
     }
 
-    pub fn create_instance(&mut self, java_instance: JavaInstance<'a>) -> i32 {
+    pub fn create_instance(&mut self, java_instance: JavaInstance) -> i32 {
         self.next_id = self.next_id + 1; //todo: make me atomic
 
         self.data.insert(self.next_id, Object(java_instance));

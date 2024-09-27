@@ -12,7 +12,7 @@ enum DescriptorError {
     TooManyDimensions,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TypeDescriptor {
     Byte,
     Char,
