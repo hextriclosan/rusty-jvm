@@ -6,15 +6,18 @@ use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
 use crate::stack::stack_frame::{i32toi64, StackFrame};
 use jdescriptor::get_length;
-use std::collections::HashSet;
+use std::cell::RefCell;
+use std::rc::Rc;
 
-pub(crate) struct Engine<'a> {
-    method_area: &'a MethodArea,
-    heap: Heap,
+pub(crate) struct Engine {
+    method_area: Rc<RefCell<MethodArea>>,
+    heap: Rc<RefCell<Heap>>,
 }
 
-impl<'a> Engine<'a> {
-    const STATIC_INIT_METHOD: &'static str = "<clinit>:()V";
+impl Engine {
+    pub fn new(method_area: Rc<RefCell<MethodArea>>, heap: Rc<RefCell<Heap>>) -> Self {
+        Self { method_area, heap }
+    }
 
     pub(crate) fn execute(
         &mut self,
@@ -23,7 +26,6 @@ impl<'a> Engine<'a> {
         let mut stack_frames = vec![method.new_stack_frame()];
         let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
-        let mut static_set: HashSet<String> = HashSet::new();
 
         while !stack_frames.is_empty() {
             let stack_frame = stack_frames
@@ -90,7 +92,7 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     let cpoolindex = stack_frame.get_bytecode_byte() as u16;
 
-                    let java_class = self.method_area.get(current_class_name.as_str())?;
+                    let java_class = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = java_class.cpool_helper();
 
                     // todo add support of other types
@@ -110,7 +112,7 @@ impl<'a> Engine<'a> {
                     stack_frame.incr_pc();
                     let cpoolindex = Self::extract_two_bytes(stack_frame);
 
-                    let java_class = self.method_area.get(current_class_name.as_str())?;
+                    let java_class = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = java_class.cpool_helper();
 
                     // todo add support of other types
@@ -128,7 +130,7 @@ impl<'a> Engine<'a> {
                 LDC2_W => {
                     let cpoolindex = Self::extract_two_bytes(stack_frame);
 
-                    let java_class = self.method_area.get(current_class_name.as_str())?;
+                    let java_class = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = java_class.cpool_helper();
 
                     // todo add support of other types
@@ -262,7 +264,8 @@ impl<'a> Engine<'a> {
                 IALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
-                    let value = self.heap.get_array_value(arrayref, index)?;
+                    let heap = self.heap.borrow();
+                    let value = heap.get_array_value(arrayref, index)?;
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
@@ -274,7 +277,8 @@ impl<'a> Engine<'a> {
                 LALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
-                    let value = self.heap.get_array_value(arrayref, index)?;
+                    let heap = self.heap.borrow();
+                    let value = heap.get_array_value(arrayref, index)?;
 
                     let high = value[0];
                     let low = value[1];
@@ -287,7 +291,8 @@ impl<'a> Engine<'a> {
                 AALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
-                    let objref = self.heap.get_array_value(arrayref, index)?;
+                    let heap = self.heap.borrow();
+                    let objref = heap.get_array_value(arrayref, index)?;
 
                     stack_frame.push(objref[0]);
                     stack_frame.incr_pc();
@@ -423,7 +428,9 @@ impl<'a> Engine<'a> {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap.set_array_value(arrayref, index, vec![value])?;
+                    self.heap
+                        .borrow_mut()
+                        .set_array_value(arrayref, index, vec![value])?;
 
                     stack_frame.incr_pc();
                     println!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
@@ -436,7 +443,9 @@ impl<'a> Engine<'a> {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap.set_array_value(arrayref, index, value.clone())?;
+                    self.heap
+                        .borrow_mut()
+                        .set_array_value(arrayref, index, value.clone())?;
 
                     stack_frame.incr_pc();
                     println!("LASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
@@ -446,7 +455,9 @@ impl<'a> Engine<'a> {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap.set_array_value(arrayref, index, vec![objref])?;
+                    self.heap
+                        .borrow_mut()
+                        .set_array_value(arrayref, index, vec![objref])?;
 
                     stack_frame.incr_pc();
                     println!("AASTORE -> arrayref={arrayref}, index={index}, objref={objref}");
@@ -705,40 +716,17 @@ impl<'a> Engine<'a> {
                 GETSTATIC => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let java_class = self.method_area.get(current_class_name.as_str())?;
+                    let java_class = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = java_class.cpool_helper();
 
                     let (class_name, field_name, _) =
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
-                    //calling static block if needed, todo: move me to single place
-                    if !static_set.contains(class_name.as_str()) {
-                        static_set.insert(class_name.clone());
-                        let rc = self.method_area.get(class_name.as_str())?;
-                        if let Some(clinit) =
-                            rc.methods.method_by_signature.get(Self::STATIC_INIT_METHOD)
-                        {
-                            stack_frame.advance_pc(-2);
-                            let next_frame = clinit.new_stack_frame();
-                            stack_frames.push(next_frame);
-                            println!("<INVOKE> -> {class_name}.{}", Self::STATIC_INIT_METHOD);
-                            continue;
-                        }
-                    }
+                    let rc = self.method_area.borrow().get(&class_name)?;
+                    let field = rc.static_field(&field_name)?;
 
-                    let rc = self.method_area.get(&class_name)?;
-                    let field = rc
-                        .static_fields
-                        .field_by_name
-                        .get(&field_name)
-                        .ok_or_else(|| {
-                            Error::new_constant_pool(&format!(
-                                "Error getting field: {class_name}.{field_name}"
-                            ))
-                        })?
-                        .borrow();
-
+                    let field = field.borrow();
                     field
                         .raw_value()
                         .iter()
@@ -754,41 +742,17 @@ impl<'a> Engine<'a> {
                 PUTSTATIC => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
 
                     let cpool_helper = rc.cpool_helper();
                     let (class_name, field_name, _) =
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
-                    //calling static block if needed, todo: move me to single place
-                    if !static_set.contains(class_name.as_str()) {
-                        static_set.insert(class_name.clone());
-                        let rc = self.method_area.get(class_name.as_str())?;
-                        if let Some(clinit) =
-                            rc.methods.method_by_signature.get(Self::STATIC_INIT_METHOD)
-                        {
-                            stack_frame.advance_pc(-2);
-                            let next_frame = clinit.new_stack_frame();
-                            stack_frames.push(next_frame);
-                            println!("<INVOKE> -> {class_name}.{}", Self::STATIC_INIT_METHOD);
-                            continue;
-                        }
-                    }
-
                     let len = {
-                        let rc = self.method_area.get(&class_name)?;
-                        let field = rc
-                            .static_fields
-                            .field_by_name
-                            .get(&field_name)
-                            .ok_or_else(|| {
-                                Error::new_constant_pool(&format!(
-                                    "Error getting field: {class_name}.{field_name}"
-                                ))
-                            })?
-                            .borrow();
-
+                        let rc = self.method_area.borrow().get(&class_name)?;
+                        let field = rc.static_field(&field_name)?;
+                        let field = field.borrow();
                         get_length(field.type_descriptor())
                     };
 
@@ -797,7 +761,7 @@ impl<'a> Engine<'a> {
                         value.push(stack_frame.pop());
                     }
 
-                    self.method_area.set_static_field_value(
+                    self.method_area.borrow().set_static_field_value(
                         &class_name,
                         &field_name,
                         value.clone(),
@@ -809,7 +773,7 @@ impl<'a> Engine<'a> {
                 GETFIELD => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let objectref = stack_frame.pop();
@@ -817,9 +781,8 @@ impl<'a> Engine<'a> {
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
-                    let value = self
-                        .heap
-                        .get_object_field_value(objectref, field_name.as_str())?;
+                    let mut heap = self.heap.borrow_mut();
+                    let value = heap.get_object_field_value(objectref, field_name.as_str())?;
 
                     value.iter().rev().for_each(|x| stack_frame.push(*x));
 
@@ -829,14 +792,14 @@ impl<'a> Engine<'a> {
                 PUTFIELD => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let (class_name, field_name, _) =
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
-                    let rc = self.method_area.get(&class_name)?;
+                    let rc = self.method_area.borrow().get(&class_name)?;
                     let type_descriptor = rc
                         .field_descriptors
                         .descriptor_by_name
@@ -855,7 +818,7 @@ impl<'a> Engine<'a> {
 
                     let objectref = stack_frame.pop();
 
-                    self.heap.set_object_field_value(
+                    self.heap.borrow_mut().set_object_field_value(
                         objectref,
                         field_name.as_str(),
                         value.clone(),
@@ -867,14 +830,14 @@ impl<'a> Engine<'a> {
                 INVOKEVIRTUAL => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let (class_name, method_name, method_descriptor) = cpool_helper
                         .get_full_method_info(methodref_constpool_index)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full method info by index {methodref_constpool_index}")))?;
                     let full_signature = format!("{}:{}", method_name, method_descriptor);
-                    let rc = self.method_area.get(class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(class_name.as_str())?;
                     let virtual_method = rc
                         .methods
                         .method_by_signature
@@ -901,14 +864,14 @@ impl<'a> Engine<'a> {
                 INVOKESPECIAL => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let (class_name, method_name, method_descriptor) = cpool_helper
                         .get_full_method_info(methodref_constpool_index)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full method info by index {methodref_constpool_index}")))?;
                     let full_signature = format!("{}:{}", method_name, method_descriptor);
-                    let rc = self.method_area.get(class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(class_name.as_str())?;
                     let special_method = rc
                         .methods
                         .method_by_signature
@@ -933,35 +896,23 @@ impl<'a> Engine<'a> {
                 }
                 INVOKESTATIC => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let (class_name, method_name, method_descriptor) = cpool_helper
                         .get_full_method_info(methodref_constpool_index)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full method info by index {methodref_constpool_index}")))?;
                     let full_signature = format!("{}:{}", method_name, method_descriptor);
-                    let rc = self.method_area.get(class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(class_name.as_str())?;
                     let static_method = rc
                         .methods
                         .method_by_signature
                         .get(&full_signature)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature}")))?;
 
-                    //calling static block if needed, todo: move me to single place
-                    // requirements of JVMS Section 5.4
-                    if !static_set.contains(class_name.as_str()) {
-                        static_set.insert(class_name.clone());
-                        let rc = self.method_area.get(class_name.as_str())?;
-                        if let Some(clinit) =
-                            rc.methods.method_by_signature.get(Self::STATIC_INIT_METHOD)
-                        {
-                            stack_frame.advance_pc(-2);
-                            let next_frame = clinit.new_stack_frame();
-                            stack_frames.push(next_frame);
-                            println!("<INVOKE> -> {class_name}.{}", Self::STATIC_INIT_METHOD);
-                            continue;
-                        }
-                    }
+                    // todo: according to requirements of JVMS Section 5.4
+                    // all static fields of the class should be initialized
+                    // at this point
 
                     let mut next_frame = static_method.new_stack_frame();
                     let arg_num = static_method.get_signature().arguments_length();
@@ -978,7 +929,7 @@ impl<'a> Engine<'a> {
                 NEW => {
                     let class_constpool_index = Self::extract_two_bytes(stack_frame);
 
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let class_to_invoke_new_for = cpool_helper
@@ -988,10 +939,16 @@ impl<'a> Engine<'a> {
                                 "Error getting class name by index {class_constpool_index}"
                             ))
                         })?;
-                    let rc = self.method_area.get(class_to_invoke_new_for.as_str())?;
+                    let rc = self
+                        .method_area
+                        .borrow()
+                        .get(class_to_invoke_new_for.as_str())?;
                     let default_field_values_instance = JavaInstance::new(rc)?;
 
-                    let instanceref = self.heap.create_instance(default_field_values_instance);
+                    let instanceref = self
+                        .heap
+                        .borrow_mut()
+                        .create_instance(default_field_values_instance);
                     stack_frame.push(instanceref);
 
                     println!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
@@ -1003,7 +960,7 @@ impl<'a> Engine<'a> {
 
                     let length = stack_frame.pop();
 
-                    let arrayref = self.heap.create_array(length);
+                    let arrayref = self.heap.borrow_mut().create_array(length);
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
@@ -1013,7 +970,7 @@ impl<'a> Engine<'a> {
                     let length = stack_frame.pop();
 
                     let class_constpool_index = Self::extract_two_bytes(stack_frame);
-                    let rc = self.method_area.get(current_class_name.as_str())?;
+                    let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
                     let class_of_array = cpool_helper
@@ -1023,7 +980,7 @@ impl<'a> Engine<'a> {
                                 "Error getting class name by index {class_constpool_index}"
                             ))
                         })?;
-                    let arrayref = self.heap.create_array(length);
+                    let arrayref = self.heap.borrow_mut().create_array(length);
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
@@ -1032,7 +989,7 @@ impl<'a> Engine<'a> {
                 ARRAYLENGTH => {
                     let arrayref = stack_frame.pop();
 
-                    let len = self.heap.get_array_len(arrayref)?;
+                    let len = self.heap.borrow().get_array_len(arrayref)?;
                     stack_frame.push(len);
 
                     stack_frame.incr_pc();
@@ -1075,12 +1032,5 @@ impl<'a> Engine<'a> {
         stack_frame.advance_pc(if op(value1, value2) { offset } else { 3 });
 
         println!("{op_code} -> value1={value1}, value2={value2}, offset={offset}");
-    }
-
-    pub fn new(method_area: &'a MethodArea) -> Self {
-        Self {
-            method_area,
-            heap: Heap::new(),
-        }
     }
 }

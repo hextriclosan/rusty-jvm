@@ -1,4 +1,5 @@
 use crate::error::{Error, ErrorKind};
+use crate::heap::heap::Heap;
 use crate::method_area::attributes_helper::AttributesHelper;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
@@ -13,20 +14,30 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 #[derive(Debug)]
 pub(crate) struct MethodArea {
     std_dir: String,
     pub(crate) loaded_classes: RefCell<HashMap<String, Rc<JavaClass>>>,
+    heap: Rc<RefCell<Heap>>,
+    self_ref: RefCell<Weak<RefCell<MethodArea>>>,
 }
 
 impl MethodArea {
-    pub fn new(std_dir: &str) -> Self {
-        Self {
+    pub fn new(std_dir: &str, heap: Rc<RefCell<Heap>>) -> Rc<RefCell<Self>> {
+        let method_area = Rc::new(RefCell::new(MethodArea {
             std_dir: std_dir.to_string(),
             loaded_classes: RefCell::new(HashMap::new()),
-        }
+            heap,
+            self_ref: RefCell::new(Weak::new()),
+        }));
+
+        method_area
+            .borrow_mut()
+            .self_ref
+            .replace(Rc::downgrade(&method_area));
+        method_area
     }
 
     pub fn set_static_field_value(
@@ -38,7 +49,7 @@ impl MethodArea {
         self.loaded_classes
             .borrow_mut()
             .get(class_name)
-            .and_then(|java_class| java_class.static_fields.field_by_name.get(fieldname))
+            .and_then(|java_class| java_class.static_field(fieldname).ok())
             .and_then(|field| {
                 field.borrow_mut().set_raw_value(value);
 
@@ -78,13 +89,13 @@ impl MethodArea {
 
         paths
             .iter()
-            .find_map(|file_name| Self::try_open_and_parse(file_name))
+            .find_map(|file_name| self.try_open_and_parse(file_name))
             .ok_or_else(|| {
                 Error::new_execution(&format!("error opening file {fully_qualified_class_name}"))
             })
     }
 
-    fn try_open_and_parse(path: &PathBuf) -> Option<Rc<JavaClass>> {
+    fn try_open_and_parse(&self, path: &PathBuf) -> Option<Rc<JavaClass>> {
         let mut file = File::open(path).ok()?;
         let mut buff = Vec::new();
         file.read_to_end(&mut buff).ok()?;
@@ -93,12 +104,15 @@ impl MethodArea {
             .map_err(|err| Error::new(ErrorKind::ClassFile(err.to_string())))
             .ok()?;
 
-        Self::to_java_class(class_file)
+        self.to_java_class(class_file)
             .map(|(_, java_class)| java_class)
             .ok()
     }
 
-    fn to_java_class(class_file: ClassFile) -> crate::error::Result<(String, Rc<JavaClass>)> {
+    fn to_java_class(
+        &self,
+        class_file: ClassFile,
+    ) -> crate::error::Result<(String, Rc<JavaClass>)> {
         let cpool_helper = CPoolHelper::new(class_file.constant_pool());
 
         let this_class_index = class_file.this_class();
@@ -111,7 +125,7 @@ impl MethodArea {
             })?;
 
         let super_class_index = class_file.super_class();
-        let _super_class_name = if super_class_index > 0 {
+        let super_class_name = if super_class_index > 0 {
             cpool_helper
                 .get_class_name(super_class_index)
                 .map(Some)
@@ -125,7 +139,7 @@ impl MethodArea {
         }?;
 
         let interface_indexes = class_file.interfaces();
-        let _interface_names = interface_indexes
+        let interface_names = interface_indexes
             .iter()
             .map(|index| {
                 cpool_helper.get_class_name(*index).ok_or_else(|| {
@@ -138,15 +152,24 @@ impl MethodArea {
         let (field_descriptors, static_fields) =
             Self::get_field_descriptors(&class_file.fields(), &cpool_helper)?;
 
-        Ok((
-            class_name.clone(),
-            Rc::new(JavaClass::new(
-                methods,
-                static_fields,
-                field_descriptors,
-                cpool_helper,
-            )),
-        ))
+        if let Some(method_area) = self.self_ref.borrow().upgrade() {
+            Ok((
+                class_name.clone(),
+                Rc::new(JavaClass::new(
+                    methods,
+                    static_fields,
+                    field_descriptors,
+                    cpool_helper,
+                    class_name,
+                    super_class_name,
+                    interface_names,
+                    Rc::clone(&self.heap),
+                    Rc::clone(&method_area),
+                )),
+            ))
+        } else {
+            Err(Error::new_execution("Error upgrading method_area"))
+        }
     }
 
     fn get_methods(
@@ -222,7 +245,8 @@ impl MethodArea {
             descriptor_by_name.insert(field_name.clone(), descriptor.clone());
 
             if field_info.access_flags().contains(FieldFlags::ACC_STATIC) {
-                static_field_by_name.insert(field_name, RefCell::new(Field::new(descriptor)));
+                static_field_by_name
+                    .insert(field_name, Rc::new(RefCell::new(Field::new(descriptor))));
             }
         }
 
