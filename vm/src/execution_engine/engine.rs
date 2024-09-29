@@ -723,8 +723,8 @@ impl Engine {
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
-                    let rc = self.method_area.borrow().get(&class_name)?;
-                    let field = rc.static_field(&field_name)?;
+                    let field = self.method_area.borrow().lookup_for_static_field(&class_name, &field_name)
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting static field for reading: {class_name}.{field_name}")))?;
 
                     let field = field.borrow();
                     field
@@ -749,11 +749,12 @@ impl Engine {
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
-                    let len = {
-                        let rc = self.method_area.borrow().get(&class_name)?;
-                        let field = rc.static_field(&field_name)?;
-                        let field = field.borrow();
-                        get_length(field.type_descriptor())
+                    let (len, field_ref) = {
+                        let field_ref = self.method_area.borrow().lookup_for_static_field(&class_name, &field_name)
+                            .ok_or_else(||
+                                Error::new_constant_pool(&format!("Error getting static field for writing: {class_name}.{field_name}")))?;
+                        let len = get_length(field_ref.borrow().type_descriptor());
+                        (len, field_ref)
                     };
 
                     let mut value = Vec::with_capacity(len);
@@ -761,11 +762,7 @@ impl Engine {
                         value.push(stack_frame.pop());
                     }
 
-                    self.method_area.borrow().set_static_field_value(
-                        &class_name,
-                        &field_name,
-                        value.clone(),
-                    )?;
+                    field_ref.borrow_mut().set_raw_value(value.clone());
 
                     println!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
                     stack_frame.incr_pc();

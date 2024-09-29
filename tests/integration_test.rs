@@ -180,6 +180,15 @@ fn should_do_class_static_initialization_circular() {
     assert_eq!(700, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_inherited_static_fields() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.inheritance.staticfield.InheritanceStaticField")
+        .unwrap();
+    assert_eq!(128, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }
