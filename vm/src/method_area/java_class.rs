@@ -18,7 +18,7 @@ pub(crate) struct JavaClass {
     pub(crate) field_descriptors: FieldDescriptors,
     cpool_helper: CPoolHelper,
     this_class_name: String,
-    _parent: Option<String>,
+    parent: Option<String>,
     _interfaces: Vec<String>,
 
     static_fields_initialized: AtomicBool,
@@ -73,7 +73,7 @@ impl JavaClass {
             field_descriptors,
             cpool_helper,
             this_class_name,
-            _parent: parent,
+            parent,
             _interfaces: interfaces,
             static_fields_initialized: AtomicBool::new(false),
             heap,
@@ -85,8 +85,8 @@ impl JavaClass {
         &self.cpool_helper
     }
 
-    pub fn _parent(&self) -> &Option<String> {
-        &self._parent
+    pub fn parent(&self) -> &Option<String> {
+        &self.parent
     }
 
     pub fn _interfaces(&self) -> &Vec<String> {

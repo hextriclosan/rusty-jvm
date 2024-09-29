@@ -40,24 +40,6 @@ impl MethodArea {
         method_area
     }
 
-    pub fn set_static_field_value(
-        &self,
-        class_name: &str,
-        fieldname: &str,
-        value: Vec<i32>,
-    ) -> crate::error::Result<()> {
-        self.loaded_classes
-            .borrow_mut()
-            .get(class_name)
-            .and_then(|java_class| java_class.static_field(fieldname).ok())
-            .and_then(|field| {
-                field.borrow_mut().set_raw_value(value);
-
-                Some(())
-            })
-            .ok_or(Error::new_execution("Error modifying static field"))
-    }
-
     pub(crate) fn get(
         &self,
         fully_qualified_class_name: &str,
@@ -254,5 +236,21 @@ impl MethodArea {
             FieldDescriptors::new(descriptor_by_name),
             Fields::new(static_field_by_name),
         ))
+    }
+
+    pub fn lookup_for_static_field(
+        &self,
+        class_name: &str,
+        field_name: &str,
+    ) -> Option<Rc<RefCell<Field>>> {
+        let rc = self.get(class_name).ok()?;
+
+        if let Some(field) = rc.static_field(field_name).ok() {
+            Some(Rc::clone(&field))
+        } else {
+            let parent_class_name = rc.parent().clone()?;
+
+            self.lookup_for_static_field(&parent_class_name, field_name)
+        }
     }
 }
