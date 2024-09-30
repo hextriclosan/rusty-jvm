@@ -923,6 +923,55 @@ impl Engine {
                     stack_frames.push(next_frame);
                     println!("INVOKESTATIC -> {class_name}.{method_name}(...)");
                 }
+                INVOKEINTERFACE => {
+                    let interfacemethodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    stack_frame.incr_pc();
+
+                    let arg_count = stack_frame.get_bytecode_byte();
+                    stack_frame.incr_pc();
+
+                    let mut args = vec![0; arg_count as usize - 1];
+                    for i in (0..(arg_count - 1)).rev() {
+                        let val = stack_frame.pop();
+                        args[i as usize] = val;
+                    }
+                    let reference = stack_frame.pop();
+
+                    let zero = stack_frame.get_bytecode_byte();
+                    stack_frame.incr_pc();
+                    if zero != 0 {
+                        return Err(Error::new_execution(&format!("Error calling interface method by index {interfacemethodref_constpool_index}")));
+                    }
+
+                    let method_area = self.method_area.borrow();
+                    let rc = method_area.get(current_class_name.as_str())?;
+                    let cpool_helper = rc.cpool_helper();
+
+                    let (interface_class_name, method_name, method_descriptor) = cpool_helper
+                        .get_full_interfacemethodref_info(interfacemethodref_constpool_index)
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full interfacemethodref info by index {interfacemethodref_constpool_index}")))?;
+
+                    let heap = self.heap.borrow();
+                    let instance_name = heap.get_instance_name(reference)?;
+
+                    let full_method_signature = format!("{method_name}:{method_descriptor}");
+                    let interface_implementation_method = method_area.lookup_for_implementation(instance_name, &full_method_signature)
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {interface_class_name}.{method_name}{method_descriptor} in {instance_name}")))?;
+
+                    let mut next_frame = interface_implementation_method.new_stack_frame();
+                    let arg_num = interface_implementation_method
+                        .get_signature()
+                        .arguments_length();
+
+                    next_frame.set_local(0, reference);
+                    for i in (0..arg_num).rev() {
+                        next_frame.set_local(i + 1, args[i]);
+                    }
+
+                    stack_frames.push(next_frame);
+
+                    println!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({reference}, ...) for {instance_name}");
+                }
                 NEW => {
                     let class_constpool_index = Self::extract_two_bytes(stack_frame);
 

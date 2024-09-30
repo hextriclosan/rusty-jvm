@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 #[derive(Debug)]
 pub(crate) struct JavaInstance {
+    instance_name: String,
     _class_ref: Rc<JavaClass>, // todo use me or delete
     fields: HashMap<String, Field>,
 }
@@ -53,6 +54,7 @@ pub(crate) enum HeapValue {
 impl<'a> JavaInstance {
     pub fn new(class_ref: Rc<JavaClass>) -> crate::error::Result<Self> {
         Ok(Self {
+            instance_name: class_ref.this_class_name().to_owned(),
             _class_ref: Rc::clone(&class_ref),
             fields: class_ref //todo: refactor me: remove static fields, put this code in right place
                 .field_descriptors
@@ -83,5 +85,9 @@ impl<'a> JavaInstance {
             .get(fieldname)
             .and_then(|v| Some(v.raw_value()))
             .ok_or(Error::new_execution("error getting instance field value"))
+    }
+
+    pub fn instance_name(&self) -> &str {
+        &self.instance_name
     }
 }

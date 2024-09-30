@@ -51,6 +51,16 @@ impl Heap {
         }
     }
 
+    pub fn get_instance_name(&self, objectref: i32) -> crate::error::Result<&str> {
+        if let Some(Object(java_instance)) = self.data.get(&objectref) {
+            Ok(java_instance.instance_name())
+        } else {
+            Err(Error::new_execution(&format!(
+                "error getting object from heap by ref {objectref}"
+            )))
+        }
+    }
+
     pub(crate) fn create_array(&mut self, len: i32) -> i32 {
         self.next_id = self.next_id + 1; //todo: make me atomic
 
