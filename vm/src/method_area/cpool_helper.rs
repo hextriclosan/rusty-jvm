@@ -130,6 +130,25 @@ impl CPoolHelper {
         Some((class_name, method_name, method_descriptor))
     }
 
+    pub fn get_full_interfacemethodref_info(
+        &self,
+        index: u16,
+    ) -> Option<(String, String, String)> {
+        let (class_index, name_and_type_index) =
+            match self.get(CPoolType::InterfaceMethodref, index)? {
+                ConstantPool::InterfaceMethodref {
+                    class_index,
+                    name_and_type_index,
+                } => Some((class_index, name_and_type_index)),
+                _ => None,
+            }?;
+
+        let class_name = self.get_class_name(*class_index)?;
+        let (method_name, method_descriptor) = self.get_name_and_type(*name_and_type_index)?;
+
+        Some((class_name, method_name, method_descriptor))
+    }
+
     pub fn get_name_and_type(&self, index: u16) -> Option<(String, String)> {
         let (name_index, descriptor_index) = match self.get(CPoolType::NameAndType, index)? {
             ConstantPool::NameAndType {
@@ -150,7 +169,7 @@ impl CPoolHelper {
 mod tests {
     use super::*;
     use jclass::constant_pool::ConstantPool::{
-        Class, Empty, Fieldref, Integer, Long, Methodref, NameAndType, Utf8,
+        Class, Empty, Fieldref, Integer, InterfaceMethodref, Long, Methodref, NameAndType, Utf8,
     };
 
     #[test]
@@ -418,6 +437,41 @@ mod tests {
                 "TheClass".to_string(),
                 "theMethod".to_string(),
                 "()V".to_string()
+            )),
+            actual
+        );
+    }
+
+    #[test]
+    fn should_return_full_interfacemethod_info() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            InterfaceMethodref {
+                class_index: 2,
+                name_and_type_index: 3,
+            },
+            Class { name_index: 4 },
+            NameAndType {
+                name_index: 5,
+                descriptor_index: 6,
+            },
+            Utf8 {
+                value: "Interface".to_string(),
+            },
+            Utf8 {
+                value: "sub".to_string(),
+            },
+            Utf8 {
+                value: "(II)I".to_string(),
+            },
+        ]);
+
+        let actual = resolver.get_full_interfacemethodref_info(1);
+        assert_eq!(
+            Some((
+                "Interface".to_string(),
+                "sub".to_string(),
+                "(II)I".to_string()
             )),
             actual
         );

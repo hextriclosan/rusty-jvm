@@ -132,6 +132,10 @@ impl JavaClass {
 
         Ok(())
     }
+
+    pub fn this_class_name(&self) -> &str {
+        &self.this_class_name
+    }
 }
 
 impl Methods {

@@ -253,4 +253,20 @@ impl MethodArea {
             self.lookup_for_static_field(&parent_class_name, field_name)
         }
     }
+
+    pub fn lookup_for_implementation(
+        &self,
+        class_name: &str,
+        full_method_signature: &str,
+    ) -> Option<Rc<JavaMethod>> {
+        let rc = self.get(class_name).ok()?;
+
+        if let Some(java_method) = rc.methods.method_by_signature.get(full_method_signature) {
+            Some(Rc::clone(&java_method))
+        } else {
+            let parent_class_name = rc.parent().clone()?;
+
+            self.lookup_for_implementation(&parent_class_name, full_method_signature)
+        }
+    }
 }

@@ -189,6 +189,15 @@ fn should_do_inherited_static_fields() {
     assert_eq!(128, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_trivial_interfaces() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.inheritance.interfaces.trivial.TrivialInterface")
+        .unwrap();
+    assert_eq!(-200, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }
