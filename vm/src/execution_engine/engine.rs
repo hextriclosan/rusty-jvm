@@ -1,7 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::Heap;
-use crate::heap::java_instance::JavaInstance;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
 use crate::stack::stack_frame::{i32toi64, StackFrame};
@@ -23,7 +22,7 @@ impl Engine {
         &mut self,
         method: &JavaMethod,
     ) -> crate::error::Result<Option<Vec<i32>>> {
-        let mut stack_frames = vec![method.new_stack_frame()];
+        let mut stack_frames = vec![method.new_stack_frame()?];
         let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
 
@@ -710,8 +709,7 @@ impl Engine {
                             .clone(),
                     );
 
-                    stack_frames.pop(); // Return from method, pop the current frame
-                                        // add more logic here
+                    stack_frames.pop();
                 }
                 GETSTATIC => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
@@ -774,17 +772,22 @@ impl Engine {
                     let cpool_helper = rc.cpool_helper();
 
                     let objectref = stack_frame.pop();
-                    let (class_name, field_name, _) =
+                    let (class_name, field_name, field_descriptor) =
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
+                    let field_name_type = format!("{field_name}:{field_descriptor}");
 
                     let mut heap = self.heap.borrow_mut();
-                    let value = heap.get_object_field_value(objectref, field_name.as_str())?;
+                    let value = heap.get_object_field_value(
+                        objectref,
+                        class_name.as_str(),
+                        field_name_type.as_str(),
+                    )?;
 
                     value.iter().rev().for_each(|x| stack_frame.push(*x));
 
                     stack_frame.incr_pc();
-                    println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
+                    println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type}, value={value:?}");
                 }
                 PUTFIELD => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
@@ -792,18 +795,17 @@ impl Engine {
                     let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
-                    let (class_name, field_name, _) =
+                    let (class_name, field_name, field_descriptor) =
                         cpool_helper.get_full_field_info(fieldref_constpool_index)
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
+                    let field_name_type = format!("{field_name}:{field_descriptor}");
                     let rc = self.method_area.borrow().get(&class_name)?;
                     let type_descriptor = rc
-                        .field_descriptors
-                        .descriptor_by_name
-                        .get(&field_name)
+                        .instance_field_descriptor(&field_name_type)
                         .ok_or_else(|| {
                             Error::new_constant_pool(&format!(
-                                "Error getting type descriptor for {class_name}.{field_name}"
+                                "Error getting type descriptor for {class_name}.{field_name_type}"
                             ))
                         })?;
                     let len = get_length(type_descriptor);
@@ -817,49 +819,64 @@ impl Engine {
 
                     self.heap.borrow_mut().set_object_field_value(
                         objectref,
-                        field_name.as_str(),
+                        class_name.as_str(),
+                        field_name_type.as_str(),
                         value.clone(),
                     )?;
 
-                    println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value:?}");
+                    println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type} value={value:?}");
                     stack_frame.incr_pc();
                 }
                 INVOKEVIRTUAL => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    stack_frame.incr_pc();
 
                     let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
-                    let (class_name, method_name, method_descriptor) = cpool_helper
+                    let (reference_type_class_name, method_name, method_descriptor) = cpool_helper
                         .get_full_method_info(methodref_constpool_index)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full method info by index {methodref_constpool_index}")))?;
                     let full_signature = format!("{}:{}", method_name, method_descriptor);
-                    let rc = self.method_area.borrow().get(class_name.as_str())?;
-                    let virtual_method = rc
-                        .methods
-                        .method_by_signature
-                        .get(&full_signature)
-                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature}")))?;
-                    // ^^^ todo: implement lookup by instance type
 
-                    let mut next_frame = virtual_method.new_stack_frame();
-                    let arg_num = virtual_method.get_signature().arguments_length();
+                    let method_area = self.method_area.borrow();
 
-                    for i in (0..arg_num).rev() {
+                    let method_arg_num = {
+                        method_area.lookup_for_implementation(&reference_type_class_name, &full_signature)
+                            .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {reference_type_class_name} and full signature {full_signature} invoking virtual")))?
+                            .get_method_descriptor()
+                            .arguments_length()
+                    };
+                    let mut method_args = Vec::with_capacity(method_arg_num);
+                    for _ in 0..method_arg_num {
                         let val = stack_frame.pop();
-                        next_frame.set_local(i + 1, val);
+                        method_args.push(val);
                     }
                     let reference = stack_frame.pop();
-                    next_frame.set_local(0, reference);
+                    method_args.push(reference);
+                    method_args.reverse();
 
-                    stack_frame.incr_pc(); //incr here because of borrowing problem
+                    let heap = self.heap.borrow();
+                    let instance_type_class_name = heap.get_instance_name(reference)?;
+
+                    let virtual_method = method_area.lookup_for_implementation(&instance_type_class_name, &full_signature)
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} invoking virtual")))?;
+
+                    let mut next_frame = virtual_method.new_stack_frame()?;
+
+                    method_args
+                        .iter()
+                        .enumerate()
+                        .for_each(|(index, val)| next_frame.set_local(index, *val));
 
                     stack_frames.push(next_frame);
-
-                    println!("INVOKEVIRTUAL -> {class_name}.{method_name}({reference}, ...)");
+                    println!(
+                        "INVOKEVIRTUAL -> {instance_type_class_name}.{method_name}({method_args:?})"
+                    );
                 }
                 INVOKESPECIAL => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    stack_frame.incr_pc();
 
                     let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
@@ -873,23 +890,28 @@ impl Engine {
                         .methods
                         .method_by_signature
                         .get(&full_signature)
-                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature}")))?;
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature} invoking special")))?;
                     // ^^^ todo: implement lookup in parents
 
-                    let mut next_frame = special_method.new_stack_frame();
-                    let arg_num = special_method.get_signature().arguments_length();
+                    let mut next_frame = special_method.new_stack_frame()?;
+                    let arg_num = special_method.get_method_descriptor().arguments_length();
 
-                    for i in (0..arg_num).rev() {
+                    let mut method_args = Vec::with_capacity(arg_num);
+                    for _ in 0..arg_num {
                         let val = stack_frame.pop();
-                        next_frame.set_local(i + 1, val);
+                        method_args.push(val);
                     }
                     let reference = stack_frame.pop();
-                    next_frame.set_local(0, reference);
+                    method_args.push(reference);
+                    method_args.reverse();
 
-                    stack_frame.incr_pc(); //incr here because of borrowing problem
+                    method_args
+                        .iter()
+                        .enumerate()
+                        .for_each(|(index, val)| next_frame.set_local(index, *val));
 
                     stack_frames.push(next_frame);
-                    println!("INVOKESPECIAL -> {class_name}.{method_name}({reference}, ...)");
+                    println!("INVOKESPECIAL -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKESTATIC => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
@@ -905,37 +927,45 @@ impl Engine {
                         .methods
                         .method_by_signature
                         .get(&full_signature)
-                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature}")))?;
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature} invoking static")))?;
 
                     // todo: according to requirements of JVMS Section 5.4
                     // all static fields of the class should be initialized
                     // at this point
 
-                    let mut next_frame = static_method.new_stack_frame();
-                    let arg_num = static_method.get_signature().arguments_length();
+                    let mut next_frame = static_method.new_stack_frame()?;
+                    let arg_num = static_method.get_method_descriptor().arguments_length();
 
-                    for i in (0..arg_num).rev() {
+                    let mut method_args = Vec::with_capacity(arg_num);
+                    for _ in 0..arg_num {
                         let val = stack_frame.pop();
-                        next_frame.set_local(i, val);
+                        method_args.push(val);
                     }
+                    method_args.reverse();
+                    method_args
+                        .iter()
+                        .enumerate()
+                        .for_each(|(index, val)| next_frame.set_local(index, *val));
 
                     stack_frame.incr_pc(); //incr here because of borrowing problem
                     stack_frames.push(next_frame);
-                    println!("INVOKESTATIC -> {class_name}.{method_name}(...)");
+                    println!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKEINTERFACE => {
                     let interfacemethodref_constpool_index = Self::extract_two_bytes(stack_frame);
                     stack_frame.incr_pc();
 
-                    let arg_count = stack_frame.get_bytecode_byte();
+                    let arg_count = stack_frame.get_bytecode_byte() as usize;
                     stack_frame.incr_pc();
 
-                    let mut args = vec![0; arg_count as usize - 1];
-                    for i in (0..(arg_count - 1)).rev() {
+                    let mut method_args = Vec::with_capacity(arg_count);
+                    for _ in 0..(arg_count - 1) {
                         let val = stack_frame.pop();
-                        args[i as usize] = val;
+                        method_args.push(val);
                     }
                     let reference = stack_frame.pop();
+                    method_args.push(reference);
+                    method_args.reverse();
 
                     let zero = stack_frame.get_bytecode_byte();
                     stack_frame.incr_pc();
@@ -958,19 +988,16 @@ impl Engine {
                     let interface_implementation_method = method_area.lookup_for_implementation(instance_name, &full_method_signature)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {interface_class_name}.{method_name}{method_descriptor} in {instance_name}")))?;
 
-                    let mut next_frame = interface_implementation_method.new_stack_frame();
-                    let arg_num = interface_implementation_method
-                        .get_signature()
-                        .arguments_length();
+                    let mut next_frame = interface_implementation_method.new_stack_frame()?;
 
-                    next_frame.set_local(0, reference);
-                    for i in (0..arg_num).rev() {
-                        next_frame.set_local(i + 1, args[i]);
-                    }
+                    method_args
+                        .iter()
+                        .enumerate()
+                        .for_each(|(index, val)| next_frame.set_local(index, *val));
 
                     stack_frames.push(next_frame);
 
-                    println!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({reference}, ...) for {instance_name}");
+                    println!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({method_args:?}) on instance {instance_name}");
                 }
                 NEW => {
                     let class_constpool_index = Self::extract_two_bytes(stack_frame);
@@ -985,16 +1012,15 @@ impl Engine {
                                 "Error getting class name by index {class_constpool_index}"
                             ))
                         })?;
-                    let rc = self
+                    let instance_with_default_fields = self
                         .method_area
                         .borrow()
-                        .get(class_to_invoke_new_for.as_str())?;
-                    let default_field_values_instance = JavaInstance::new(rc)?;
+                        .create_instance_with_default_fields(&class_to_invoke_new_for);
 
                     let instanceref = self
                         .heap
                         .borrow_mut()
-                        .create_instance(default_field_values_instance);
+                        .create_instance(instance_with_default_fields);
                     stack_frame.push(instanceref);
 
                     println!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");

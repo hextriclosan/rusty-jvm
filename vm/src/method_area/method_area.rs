@@ -1,13 +1,15 @@
 use crate::error::{Error, ErrorKind};
 use crate::heap::heap::Heap;
+use crate::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::method_area::attributes_helper::AttributesHelper;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_class::{FieldDescriptors, Fields, JavaClass, Methods};
-use crate::method_area::java_method::JavaMethod;
+use crate::method_area::java_method::{CodeContext, JavaMethod};
+use indexmap::IndexMap;
 use jclass::class_file::{parse, ClassFile};
 use jclass::fields::{FieldFlags, FieldInfo};
-use jclass::methods::MethodInfo;
+use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -131,7 +133,7 @@ impl MethodArea {
             .collect::<crate::error::Result<Vec<String>>>()?;
 
         let methods = Self::get_methods(&class_file.methods(), &cpool_helper, &class_name)?;
-        let (field_descriptors, static_fields) =
+        let (non_static_field_descriptors, static_fields) =
             Self::get_field_descriptors(&class_file.fields(), &cpool_helper)?;
 
         if let Some(method_area) = self.self_ref.borrow().upgrade() {
@@ -140,7 +142,7 @@ impl MethodArea {
                 Rc::new(JavaClass::new(
                     methods,
                     static_fields,
-                    field_descriptors,
+                    non_static_field_descriptors,
                     cpool_helper,
                     class_name,
                     super_class_name,
@@ -176,23 +178,37 @@ impl MethodArea {
 
             let key = format!("{method_name}:{method_signature}");
 
-            let attributes_helper = AttributesHelper::new(method_info.attributes());
-            let (max_stack, max_locals, code) = attributes_helper.get_code().ok_or_else(|| {
-                Error::new_execution(&format!("Error getting code attribute for method {key}"))
+            let code_context = if !method_info
+                .access_flags()
+                .contains(MethodFlags::ACC_ABSTRACT)
+            {
+                AttributesHelper::new(method_info.attributes())
+                    .get_code()
+                    .map(|(max_stack, max_locals, code)| {
+                        Some(CodeContext::new(max_stack, max_locals, code))
+                    })
+                    .ok_or_else(|| {
+                        Error::new_execution(&format!(
+                            "Error getting code attribute for method {key}"
+                        ))
+                    })?
+            } else {
+                None
+            };
+
+            let method_descriptor = method_signature.parse().map_err(|err| {
+                Error::new_execution(&format!(
+                    "Error parsing signature {method_signature}: {err}"
+                ))
             })?;
 
             method_by_signature.insert(
-                key,
+                key.clone(),
                 Rc::new(JavaMethod::new(
-                    method_signature.parse().map_err(|err| {
-                        Error::new_execution(&format!(
-                            "Error parsing signature {method_signature}: {err}"
-                        ))
-                    })?,
-                    max_stack,
-                    max_locals,
-                    code,
+                    method_descriptor,
                     class_name,
+                    &key,
+                    code_context,
                 )),
             );
         }
@@ -204,7 +220,7 @@ impl MethodArea {
         field_infos: &[FieldInfo],
         cpool_helper: &CPoolHelper,
     ) -> crate::error::Result<(FieldDescriptors, Fields)> {
-        let mut descriptor_by_name = HashMap::new();
+        let mut non_static_field_descriptors = HashMap::new();
         let mut static_field_by_name = HashMap::new();
         for field_info in field_infos.iter() {
             let name_index = field_info.name_index();
@@ -224,16 +240,17 @@ impl MethodArea {
                 ))
             })?;
 
-            descriptor_by_name.insert(field_name.clone(), descriptor.clone());
-
             if field_info.access_flags().contains(FieldFlags::ACC_STATIC) {
                 static_field_by_name
                     .insert(field_name, Rc::new(RefCell::new(Field::new(descriptor))));
+            } else {
+                let field_name_key = format!("{field_name}:{field_descriptor}");
+                non_static_field_descriptors.insert(field_name_key, descriptor);
             }
         }
 
         Ok((
-            FieldDescriptors::new(descriptor_by_name),
+            FieldDescriptors::new(non_static_field_descriptors),
             Fields::new(static_field_by_name),
         ))
     }
@@ -268,5 +285,28 @@ impl MethodArea {
 
             self.lookup_for_implementation(&parent_class_name, full_method_signature)
         }
+    }
+
+    pub fn create_instance_with_default_fields(&self, class_name: &str) -> JavaInstance {
+        let mut instance_fields_hierarchy = IndexMap::new();
+        self.lookup_and_fill_instance_fields_hierarchy(class_name, &mut instance_fields_hierarchy);
+        JavaInstance::new(class_name.to_string(), instance_fields_hierarchy)
+    }
+
+    fn lookup_and_fill_instance_fields_hierarchy(
+        &self,
+        class_name: &str,
+        instance_fields_hierarchy: &mut IndexMap<ClassName, HashMap<FieldNameType, Field>>,
+    ) -> Option<Rc<JavaMethod>> {
+        let rc = self.get(class_name).ok()?;
+        let instance_fields = rc.default_value_instance_fields();
+        instance_fields_hierarchy.insert(class_name.to_string(), instance_fields);
+
+        let parent_class_name = rc.parent().clone()?;
+
+        self.lookup_and_fill_instance_fields_hierarchy(
+            &parent_class_name,
+            instance_fields_hierarchy,
+        )
     }
 }

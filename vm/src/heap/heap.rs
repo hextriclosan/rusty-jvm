@@ -28,11 +28,12 @@ impl Heap {
     pub fn set_object_field_value(
         &mut self,
         objectref: i32,
-        fieldname: &str,
+        class_name: &str,
+        field_name_type: &str,
         value: Vec<i32>,
     ) -> crate::error::Result<()> {
         if let Some(Object(instance)) = self.data.get_mut(&objectref) {
-            instance.set_field_value(fieldname, value)?;
+            instance.set_field_value(class_name, field_name_type, value)?;
             Ok(())
         } else {
             Err(Error::new_execution("error setting field value"))
@@ -42,10 +43,11 @@ impl Heap {
     pub fn get_object_field_value(
         &mut self,
         objectref: i32,
-        fieldname: &str,
+        class_name: &str,
+        field_name_type: &str,
     ) -> crate::error::Result<&Vec<i32>> {
         if let Some(Object(java_instance)) = self.data.get(&objectref) {
-            java_instance.get_field_value(fieldname)
+            java_instance.get_field_value(class_name, field_name_type)
         } else {
             Err(Error::new_execution("error getting field value"))
         }
