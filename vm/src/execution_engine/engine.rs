@@ -915,6 +915,8 @@ impl Engine {
                 }
                 INVOKESTATIC => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    stack_frame.incr_pc();
+
                     let rc = self.method_area.borrow().get(current_class_name.as_str())?;
                     let cpool_helper = rc.cpool_helper();
 
@@ -936,18 +938,17 @@ impl Engine {
                     let mut next_frame = static_method.new_stack_frame()?;
                     let arg_num = static_method.get_method_descriptor().arguments_length();
 
-                    let mut method_args = Vec::with_capacity(arg_num);
-                    for _ in 0..arg_num {
-                        let val = stack_frame.pop();
-                        method_args.push(val);
-                    }
-                    method_args.reverse();
+                    let method_args: Vec<i32> = (0..arg_num)
+                        .map(|_| stack_frame.pop())
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .rev()
+                        .collect();
                     method_args
                         .iter()
                         .enumerate()
                         .for_each(|(index, val)| next_frame.set_local(index, *val));
 
-                    stack_frame.incr_pc(); //incr here because of borrowing problem
                     stack_frames.push(next_frame);
                     println!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
                 }
