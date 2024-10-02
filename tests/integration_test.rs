@@ -236,6 +236,15 @@ fn should_do_interface_and_abstract_class() {
     assert_eq!(36630, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_composite_pattern() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.inheritance.interfaces.compositepattern.CompositePattern")
+        .unwrap();
+    assert_eq!(700, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }

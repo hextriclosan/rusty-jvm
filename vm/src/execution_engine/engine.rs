@@ -475,6 +475,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("DUP -> value={value}");
                 }
+                DUP_X1 => {
+                    let value1 = stack_frame.pop();
+                    let value2 = stack_frame.pop();
+                    stack_frame.push(value1);
+                    stack_frame.push(value2);
+                    stack_frame.push(value1);
+
+
+                    stack_frame.incr_pc();
+                    println!("DUP_X1 -> value1={value1}, value2={value2}, value1={value1}");
+                }
                 DUP2 => {
                     let value1 = stack_frame.pop();
                     let value2 = stack_frame.pop();
@@ -1067,6 +1078,12 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
+                }
+                IFNULL => { //todo: this one is opposite to IFNE ops code
+                    let value = stack_frame.pop();
+                    let offset = Self::get_two_bytes_ahead(stack_frame);
+                    stack_frame.advance_pc(if value == 0 { offset } else { 3 });
+                    println!("IFNULL -> value={value}, offset={offset}");
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", stack_frame.get_bytecode_byte()}),
             }
