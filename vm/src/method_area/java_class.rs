@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::execution_engine::engine::Engine;
 use crate::heap::heap::Heap;
+use crate::heap::java_instance::FieldNameType;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
@@ -15,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub(crate) struct JavaClass {
     pub(crate) methods: Methods,
     static_fields: Fields,
-    pub(crate) field_descriptors: FieldDescriptors,
+    non_static_field_descriptors: FieldDescriptors,
     cpool_helper: CPoolHelper,
     this_class_name: String,
     parent: Option<String>,
@@ -59,7 +60,7 @@ impl JavaClass {
     pub fn new(
         methods: Methods,
         static_fields: Fields,
-        field_descriptors: FieldDescriptors,
+        non_static_field_descriptors: FieldDescriptors,
         cpool_helper: CPoolHelper,
         this_class_name: String,
         parent: Option<String>,
@@ -70,7 +71,7 @@ impl JavaClass {
         Self {
             methods,
             static_fields,
-            field_descriptors,
+            non_static_field_descriptors,
             cpool_helper,
             this_class_name,
             parent,
@@ -133,8 +134,21 @@ impl JavaClass {
         Ok(())
     }
 
-    pub fn this_class_name(&self) -> &str {
-        &self.this_class_name
+    pub fn instance_field_descriptor(
+        &self,
+        instance_field_name_type: &str,
+    ) -> Option<&TypeDescriptor> {
+        self.non_static_field_descriptors
+            .descriptor_by_name
+            .get(instance_field_name_type)
+    }
+
+    pub fn default_value_instance_fields(&self) -> HashMap<FieldNameType, Field> {
+        self.non_static_field_descriptors
+            .descriptor_by_name
+            .iter()
+            .map(|(name, descriptor)| (name.clone(), Field::new(descriptor.to_owned())))
+            .collect()
     }
 }
 

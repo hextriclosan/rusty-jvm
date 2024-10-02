@@ -67,7 +67,7 @@ impl<'a> StackFrame {
     }
 
     pub fn pop(&mut self) -> i32 {
-        self.operand_stack.pop().unwrap()
+        self.operand_stack.pop().expect("Empty stack")
     }
 
     pub fn set_local(&mut self, index: usize, val: i32) {
@@ -75,7 +75,7 @@ impl<'a> StackFrame {
     }
 
     pub fn get_local(&mut self, index: usize) -> i32 {
-        *self.locals.get(index).unwrap()
+        *self.locals.get(index).expect("No value at index")
     }
 
     pub fn get_two_bytes_from_local(&mut self, index: usize) -> (i32, i32, i64) {

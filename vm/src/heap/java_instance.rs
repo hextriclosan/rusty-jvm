@@ -1,14 +1,15 @@
 use crate::error::Error;
 use crate::method_area::field::Field;
-use crate::method_area::java_class::JavaClass;
+use indexmap::IndexMap;
 use std::collections::HashMap;
-use std::rc::Rc;
+
+pub type ClassName = String;
+pub type FieldNameType = String;
 
 #[derive(Debug)]
 pub(crate) struct JavaInstance {
     instance_name: String,
-    _class_ref: Rc<JavaClass>, // todo use me or delete
-    fields: HashMap<String, Field>,
+    fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,
 }
 
 #[derive(Debug)]
@@ -52,39 +53,71 @@ pub(crate) enum HeapValue {
 }
 
 impl<'a> JavaInstance {
-    pub fn new(class_ref: Rc<JavaClass>) -> crate::error::Result<Self> {
-        Ok(Self {
-            instance_name: class_ref.this_class_name().to_owned(),
-            _class_ref: Rc::clone(&class_ref),
-            fields: class_ref //todo: refactor me: remove static fields, put this code in right place
-                .field_descriptors
-                .descriptor_by_name
-                .iter()
-                .map(|(name, descriptor)| (name.clone(), Field::new(descriptor.clone())))
-                .collect(),
-        })
+    pub fn new(
+        instance_name: String,
+        fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,
+    ) -> Self {
+        Self {
+            instance_name,
+            fields,
+        }
     }
 
     pub fn set_field_value(
         &mut self,
-        fieldname: &str,
+        class_name: &str,
+        field_name_type: &str,
         value: Vec<i32>,
     ) -> crate::error::Result<()> {
-        self.fields
-            .get_mut(fieldname)
+        self.lookup_for_field_mut(class_name, field_name_type)
             .and_then(|v| Some(v.set_raw_value(value)))
             .ok_or_else(|| {
                 Error::new_execution(&format!(
-                    "error setting value for instance field {fieldname}"
+                    "error setting value for instance field {class_name}.{field_name_type}"
                 ))
             })
     }
 
-    pub fn get_field_value(&self, fieldname: &str) -> crate::error::Result<&Vec<i32>> {
-        self.fields
-            .get(fieldname)
+    pub fn get_field_value(
+        &self,
+        class_name: &str,
+        field_name_type: &str,
+    ) -> crate::error::Result<&Vec<i32>> {
+        self.lookup_for_field(class_name, field_name_type)
             .and_then(|v| Some(v.raw_value()))
-            .ok_or(Error::new_execution("error getting instance field value"))
+            .ok_or(Error::new_execution(&format!(
+                "error getting instance field value {class_name}.{field_name_type}"
+            )))
+    }
+
+    fn lookup_for_field(
+        &self,
+        starting_from_class_name: &str,
+        field_name_type: &str,
+    ) -> Option<&Field> {
+        match self.fields.get_index_of(starting_from_class_name) {
+            Some(start_index) => self
+                .fields
+                .iter()
+                .skip(start_index)
+                .find_map(|(_, map)| map.get(field_name_type)),
+            None => None,
+        }
+    }
+
+    fn lookup_for_field_mut(
+        &mut self,
+        starting_from_class_name: &str,
+        field_name_type: &str,
+    ) -> Option<&mut Field> {
+        match self.fields.get_index_of(starting_from_class_name) {
+            Some(start_index) => self
+                .fields
+                .iter_mut()
+                .skip(start_index)
+                .find_map(|(_, map)| map.get_mut(field_name_type)),
+            None => None,
+        }
     }
 
     pub fn instance_name(&self) -> &str {

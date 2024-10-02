@@ -211,9 +211,29 @@ fn should_do_inherited_implementations_interfaces() {
 fn should_support_one_interface_extends_another() {
     let mut vm = VM::new("std");
     let last_frame_value = vm
-        .run("samples.inheritance.interfaces.oneinterfaceextendsanother.OneInterfaceExtendsAnother")
+        .run(
+            "samples.inheritance.interfaces.oneinterfaceextendsanother.OneInterfaceExtendsAnother",
+        )
         .unwrap();
     assert_eq!(-400, get_long(last_frame_value))
+}
+
+#[test]
+fn should_do_abstract_classes() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.inheritance.abstractclass.AbstractClass")
+        .unwrap();
+    assert_eq!(145, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_interface_and_abstract_class() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.inheritance.interfaceandabstractclass.InterfaceAndAbstractClass")
+        .unwrap();
+    assert_eq!(36630, get_int(last_frame_value))
 }
 
 fn get_int(locals: Option<Vec<i32>>) -> i32 {

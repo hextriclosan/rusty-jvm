@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 jclass = {path = "../jclass"}
 jdescriptor = {path = "../jdescriptor"}
+indexmap = "2.5.0"
