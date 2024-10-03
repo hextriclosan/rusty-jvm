@@ -15,7 +15,7 @@ public class ExtremeStackInt {
         int combinedRecursionResult = factorialPlusFibonacci(5);
         //System.out.println("combinedRecursionResult=" + combinedRecursionResult);
 
-        int result = nestedResult + loopResult + combinedRecursionResult; // 454
+        int result = nestedResult + loopResult + combinedRecursionResult; // 528
         //System.out.println("result=" + result);
     }
 
@@ -23,14 +23,14 @@ public class ExtremeStackInt {
     private static int nestedCalculations(int n) {
         int result = 0;
         for (int i = 0; i < n; i++) {
-            result += multiplyAndAdd(i, n - i);
+            result += multiplyAndAddAndBitAndUShiftRight(i, n - i);
         }
         return result * 2 - n; // Final operation after loop
     }
 
     // Helper method for nestedCalculations
-    private static int multiplyAndAdd(int x, int y) {
-        return (x * y) + (x - y); // Simple arithmetic operations
+    private static int multiplyAndAddAndBitAndUShiftRight(int x, int y) {
+        return (x * y) + (x - y) + (y & x) + (y >>> x); // Simple arithmetic operations
     }
 
     // Method with loop, conditions, and nested operations

@@ -150,6 +150,10 @@ impl JavaClass {
             .map(|(name, descriptor)| (name.clone(), Field::new(descriptor.to_owned())))
             .collect()
     }
+
+    pub fn this_class_name(&self) -> &str {
+        &self.this_class_name
+    }
 }
 
 impl Methods {
