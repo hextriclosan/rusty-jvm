@@ -34,6 +34,11 @@ impl Engine {
             current_class_name = stack_frame.current_class_name().to_string();
 
             match stack_frame.get_bytecode_byte() {
+                ACONST_NULL => {
+                    stack_frame.push(0);
+                    stack_frame.incr_pc();
+                    println!("ACONST_NULL");
+                }
                 ICONST_0 => {
                     stack_frame.push(0);
                     stack_frame.incr_pc();
@@ -586,6 +591,27 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LREM -> {a} % {b} = {result}");
                 }
+                IUSHR => {
+                    let b = stack_frame.pop() as u32;
+                    let a = stack_frame.pop() as u32;
+                    
+                    let b_trunc = b & 0b00011111u32;
+                    let result = a >> b_trunc;
+                    stack_frame.push(result as i32);
+
+                    stack_frame.incr_pc();
+                    println!("IUSHR -> {a} % {b} = {result}");
+                }
+                IAND => {
+                    let b = stack_frame.pop();
+                    let a = stack_frame.pop();
+
+                    let result = a & b;
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("IAND -> {a} & {b} = {result}");
+                }
                 IINC => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -636,6 +662,12 @@ impl Engine {
                     stack_frame.advance_pc(if value != 0 { offset } else { 3 });
                     println!("IFNE -> value={value}, offset={offset}");
                 }
+                IFLT => {
+                    let value = stack_frame.pop();
+                    let offset = Self::get_two_bytes_ahead(stack_frame);
+                    stack_frame.advance_pc(if value < 0 { offset } else { 3 });
+                    println!("IFLT -> value={value}, offset={offset}");
+                }
                 IFGE => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
@@ -671,6 +703,9 @@ impl Engine {
                 }
                 IF_ICMPLE => {
                     Self::branch(|a: i32, b| a <= b, stack_frame, "IF_ICMPLE");
+                }
+                IF_ACMPEQ => {
+                    Self::branch(|a: i32, b| a == b, stack_frame, "IF_ACMPEQ");
                 }
                 GOTO => {
                     let offset = Self::get_two_bytes_ahead(stack_frame);
@@ -811,15 +846,15 @@ impl Engine {
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
 
                     let field_name_type = format!("{field_name}:{field_descriptor}");
-                    let rc = self.method_area.borrow().get(&class_name)?;
-                    let type_descriptor = rc
-                        .instance_field_descriptor(&field_name_type)
+                    let method_area = self.method_area.borrow();
+                    let type_descriptor = method_area
+                        .lookup_for_field_descriptor(&class_name, &field_name_type)
                         .ok_or_else(|| {
                             Error::new_constant_pool(&format!(
                                 "Error getting type descriptor for {class_name}.{field_name_type}"
                             ))
                         })?;
-                    let len = get_length(type_descriptor);
+                    let len = get_length(&type_descriptor);
 
                     let mut value = Vec::with_capacity(len);
                     for _ in 0..len {
@@ -1078,6 +1113,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
+                }
+                CHECKCAST => {
+                    let class_constpool_index = Self::extract_two_bytes(stack_frame);
+                    stack_frame.incr_pc();
+
+                    let objectref = stack_frame.pop();
+                    // todo: implementation here
+                    stack_frame.push(objectref);
+                    
+                    println!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+                    todo!("add implementation");
                 }
                 IFNULL => { //todo: this one is opposite to IFNE ops code
                     let value = stack_frame.pop();

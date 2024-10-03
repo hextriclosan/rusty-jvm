@@ -84,7 +84,7 @@ fn should_do_extreme_stack_operations() {
     let last_frame_value = vm
         .run("samples.arithmetics.extremestack.ints.ExtremeStackInt")
         .unwrap();
-    assert_eq!(454, get_int(last_frame_value))
+    assert_eq!(528, get_int(last_frame_value))
 }
 
 #[test]
@@ -185,6 +185,15 @@ fn should_do_inherited_static_fields() {
     let mut vm = VM::new("std");
     let last_frame_value = vm
         .run("samples.inheritance.staticfield.InheritanceStaticField")
+        .unwrap();
+    assert_eq!(128, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_inherited_instance_fields() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.inheritance.instancefield.InheritanceInstanceField")
         .unwrap();
     assert_eq!(128, get_int(last_frame_value))
 }

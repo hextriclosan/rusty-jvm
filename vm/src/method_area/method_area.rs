@@ -56,6 +56,7 @@ impl MethodArea {
             fully_qualified_class_name.to_string(),
             Rc::clone(&java_class),
         );
+        println!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok(java_class)
     }
@@ -180,7 +181,7 @@ impl MethodArea {
 
             let code_context = if !method_info
                 .access_flags()
-                .contains(MethodFlags::ACC_ABSTRACT)
+                .intersects(MethodFlags::ACC_ABSTRACT|MethodFlags::ACC_NATIVE)
             {
                 AttributesHelper::new(method_info.attributes())
                     .get_code()
@@ -284,6 +285,22 @@ impl MethodArea {
             let parent_class_name = rc.parent().clone()?;
 
             self.lookup_for_implementation(&parent_class_name, full_method_signature)
+        }
+    }
+
+    pub fn lookup_for_field_descriptor(
+        &self,
+        class_name: &str,
+        field_name_type: &str,
+    ) -> Option<TypeDescriptor> {
+        let rc = self.get(class_name).ok()?;
+
+        if let Some(type_descriptor) = rc.instance_field_descriptor(field_name_type) {
+            Some(type_descriptor.clone())
+        } else {
+            let parent_class_name = rc.parent().clone()?;
+
+            self.lookup_for_field_descriptor(&parent_class_name, field_name_type)
         }
     }
 
