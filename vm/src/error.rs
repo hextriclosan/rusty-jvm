@@ -21,7 +21,7 @@ impl Error {
     }
 
     pub(crate) fn new_native(descr: &String) -> Error {
-        Self::new(Execution(String::from(descr)))
+        Self::new(Native(String::from(descr)))
     }
 
     pub fn kind(&self) -> &ErrorKind {
