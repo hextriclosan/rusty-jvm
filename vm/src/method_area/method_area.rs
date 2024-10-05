@@ -181,7 +181,7 @@ impl MethodArea {
 
             let code_context = if !method_info
                 .access_flags()
-                .intersects(MethodFlags::ACC_ABSTRACT|MethodFlags::ACC_NATIVE)
+                .intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE)
             {
                 AttributesHelper::new(method_info.attributes())
                     .get_code()
@@ -203,6 +203,8 @@ impl MethodArea {
                 ))
             })?;
 
+            let native = method_info.access_flags().contains(MethodFlags::ACC_NATIVE);
+
             method_by_signature.insert(
                 key.clone(),
                 Rc::new(JavaMethod::new(
@@ -210,6 +212,7 @@ impl MethodArea {
                     class_name,
                     &key,
                     code_context,
+                    native,
                 )),
             );
         }
