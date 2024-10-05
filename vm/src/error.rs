@@ -1,4 +1,4 @@
-use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io};
+use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
 use std::fmt::{Debug, Display, Formatter};
 use std::{io, result};
 
@@ -20,6 +20,10 @@ impl Error {
         Self::new(Execution(String::from(descr)))
     }
 
+    pub(crate) fn new_native(descr: &String) -> Error {
+        Self::new(Execution(String::from(descr)))
+    }
+
     pub fn kind(&self) -> &ErrorKind {
         &self.0
     }
@@ -36,6 +40,7 @@ impl Display for Error {
             ClassFile(err) => write!(f, "ClassFile Error: {err}"),
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
             Execution(descr) => write!(f, "Execution Error: {descr}"),
+            Native(descr) => write!(f, "Native Call Error: {descr}"),
 
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -54,6 +59,7 @@ pub enum ErrorKind {
     ClassFile(String),
     ConstantPool(String),
     Execution(String),
+    Native(String),
 
     #[doc(hidden)]
     __Nonexhaustive,

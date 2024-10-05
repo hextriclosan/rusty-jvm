@@ -7,3 +7,4 @@ edition = "2021"
 jclass = {path = "../jclass"}
 jdescriptor = {path = "../jdescriptor"}
 indexmap = "2.5.0"
+once_cell = "1.20.1"

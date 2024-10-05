@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
+use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::Heap;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
@@ -487,7 +488,6 @@ impl Engine {
                     stack_frame.push(value2);
                     stack_frame.push(value1);
 
-
                     stack_frame.incr_pc();
                     println!("DUP_X1 -> value1={value1}, value2={value2}, value1={value1}");
                 }
@@ -594,7 +594,7 @@ impl Engine {
                 IUSHR => {
                     let b = stack_frame.pop() as u32;
                     let a = stack_frame.pop() as u32;
-                    
+
                     let b_trunc = b & 0b00011111u32;
                     let result = a >> b_trunc;
                     stack_frame.push(result as i32);
@@ -981,21 +981,33 @@ impl Engine {
                     // all static fields of the class should be initialized
                     // at this point
 
-                    let mut next_frame = static_method.new_stack_frame()?;
                     let arg_num = static_method.get_method_descriptor().arguments_length();
-
                     let method_args: Vec<i32> = (0..arg_num)
                         .map(|_| stack_frame.pop())
                         .collect::<Vec<_>>()
                         .into_iter()
                         .rev()
                         .collect();
-                    method_args
-                        .iter()
-                        .enumerate()
-                        .for_each(|(index, val)| next_frame.set_local(index, *val));
 
-                    stack_frames.push(next_frame);
+                    if static_method.is_native() {
+                        let full_native_signature = format!("{class_name}:{full_signature}");
+                        println!(
+                            "<Calling native method> -> {full_native_signature} ({method_args:?})"
+                        );
+
+                        let result = invoke_native_method(&full_native_signature, &method_args)?;
+
+                        result.iter().rev().for_each(|x| stack_frame.push(*x));
+                    } else {
+                        let mut next_frame = static_method.new_stack_frame()?;
+
+                        method_args
+                            .iter()
+                            .enumerate()
+                            .for_each(|(index, val)| next_frame.set_local(index, *val));
+
+                        stack_frames.push(next_frame);
+                    }
                     println!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKEINTERFACE => {
@@ -1121,11 +1133,12 @@ impl Engine {
                     let objectref = stack_frame.pop();
                     // todo: implementation here
                     stack_frame.push(objectref);
-                    
+
                     println!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
                     todo!("add implementation");
                 }
-                IFNULL => { //todo: this one is opposite to IFNE ops code
+                IFNULL => {
+                    //todo: this one is opposite to IFNE ops code
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value == 0 { offset } else { 3 });

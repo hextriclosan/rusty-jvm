@@ -8,6 +8,7 @@ pub(crate) struct JavaMethod {
     class_name: String,
     name_signature: String,
     code_context: Option<CodeContext>,
+    native: bool,
 }
 
 #[derive(Debug)]
@@ -45,12 +46,14 @@ impl JavaMethod {
         class_name: &str,
         name_signature: &str,
         code_context: Option<CodeContext>,
+        native: bool,
     ) -> Self {
         Self {
             method_descriptor,
             class_name: class_name.to_string(),
             name_signature: name_signature.to_string(),
             code_context,
+            native,
         }
     }
 
@@ -71,5 +74,9 @@ impl JavaMethod {
 
     pub fn get_method_descriptor(&self) -> &MethodDescriptor {
         &self.method_descriptor
+    }
+
+    pub fn is_native(&self) -> bool {
+        self.native
     }
 }

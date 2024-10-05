@@ -1,6 +1,7 @@
 use ctor::ctor;
 use std::env;
 use std::sync::Once;
+use std::time::{SystemTime, UNIX_EPOCH};
 use vm::vm::VM;
 
 static INIT: Once = Once::new();
@@ -252,6 +253,23 @@ fn should_do_composite_pattern() {
         .run("samples.inheritance.interfaces.compositepattern.CompositePattern")
         .unwrap();
     assert_eq!(700, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_native_call_on_system() {
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let expected_millis = since_the_epoch.as_millis() as i64;
+
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.nativecall.system.NativeCallSystem")
+        .unwrap();
+
+    let actual_millis = get_long(last_frame_value);
+    assert!((expected_millis..expected_millis + 2000).contains(&actual_millis))
 }
 
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
