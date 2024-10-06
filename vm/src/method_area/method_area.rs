@@ -1,5 +1,4 @@
 use crate::error::{Error, ErrorKind};
-use crate::heap::heap::Heap;
 use crate::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::method_area::attributes_helper::AttributesHelper;
 use crate::method_area::cpool_helper::CPoolHelper;
@@ -22,16 +21,14 @@ use std::rc::{Rc, Weak};
 pub(crate) struct MethodArea {
     std_dir: String,
     pub(crate) loaded_classes: RefCell<HashMap<String, Rc<JavaClass>>>,
-    heap: Rc<RefCell<Heap>>,
     self_ref: RefCell<Weak<RefCell<MethodArea>>>,
 }
 
 impl MethodArea {
-    pub fn new(std_dir: &str, heap: Rc<RefCell<Heap>>) -> Rc<RefCell<Self>> {
+    pub fn new(std_dir: &str) -> Rc<RefCell<Self>> {
         let method_area = Rc::new(RefCell::new(MethodArea {
             std_dir: std_dir.to_string(),
             loaded_classes: RefCell::new(HashMap::new()),
-            heap,
             self_ref: RefCell::new(Weak::new()),
         }));
 
@@ -148,7 +145,6 @@ impl MethodArea {
                     class_name,
                     super_class_name,
                     interface_names,
-                    Rc::clone(&self.heap),
                     Rc::clone(&method_area),
                 )),
             ))

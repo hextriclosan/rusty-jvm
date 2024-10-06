@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
-use crate::heap::heap::Heap;
+use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::MethodArea;
 use crate::stack::stack_frame::{i32toi64, StackFrame};
@@ -11,12 +11,11 @@ use std::rc::Rc;
 
 pub(crate) struct Engine {
     method_area: Rc<RefCell<MethodArea>>,
-    heap: Rc<RefCell<Heap>>,
 }
 
 impl Engine {
-    pub fn new(method_area: Rc<RefCell<MethodArea>>, heap: Rc<RefCell<Heap>>) -> Self {
-        Self { method_area, heap }
+    pub fn new(method_area: Rc<RefCell<MethodArea>>) -> Self {
+        Self { method_area }
     }
 
     pub(crate) fn execute(
@@ -269,8 +268,9 @@ impl Engine {
                 IALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
-                    let heap = self.heap.borrow();
-                    let value = heap.get_array_value(arrayref, index)?;
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
@@ -282,8 +282,9 @@ impl Engine {
                 LALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
-                    let heap = self.heap.borrow();
-                    let value = heap.get_array_value(arrayref, index)?;
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
 
                     let high = value[0];
                     let low = value[1];
@@ -296,8 +297,9 @@ impl Engine {
                 AALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
-                    let heap = self.heap.borrow();
-                    let objref = heap.get_array_value(arrayref, index)?;
+                    let objref = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
 
                     stack_frame.push(objref[0]);
                     stack_frame.incr_pc();
@@ -433,9 +435,9 @@ impl Engine {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap
-                        .borrow_mut()
-                        .set_array_value(arrayref, index, vec![value])?;
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, vec![value])
+                    })?;
 
                     stack_frame.incr_pc();
                     println!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
@@ -448,9 +450,9 @@ impl Engine {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap
-                        .borrow_mut()
-                        .set_array_value(arrayref, index, value.clone())?;
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, value.clone())
+                    })?;
 
                     stack_frame.incr_pc();
                     println!("LASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
@@ -460,9 +462,9 @@ impl Engine {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
 
-                    self.heap
-                        .borrow_mut()
-                        .set_array_value(arrayref, index, vec![objref])?;
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, vec![objref])
+                    })?;
 
                     stack_frame.incr_pc();
                     println!("AASTORE -> arrayref={arrayref}, index={index}, objref={objref}");
@@ -823,12 +825,14 @@ impl Engine {
                             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full field info by index {fieldref_constpool_index}")))?;
                     let field_name_type = format!("{field_name}:{field_descriptor}");
 
-                    let mut heap = self.heap.borrow_mut();
-                    let value = heap.get_object_field_value(
-                        objectref,
-                        class_name.as_str(),
-                        field_name_type.as_str(),
-                    )?;
+                    let value = with_heap_write_lock(|heap| {
+                        heap.get_object_field_value(
+                            objectref,
+                            class_name.as_str(),
+                            field_name_type.as_str(),
+                        )
+                        .cloned()
+                    })?;
 
                     value.iter().rev().for_each(|x| stack_frame.push(*x));
 
@@ -863,12 +867,14 @@ impl Engine {
 
                     let objectref = stack_frame.pop();
 
-                    self.heap.borrow_mut().set_object_field_value(
-                        objectref,
-                        class_name.as_str(),
-                        field_name_type.as_str(),
-                        value.clone(),
-                    )?;
+                    with_heap_write_lock(|heap| {
+                        heap.set_object_field_value(
+                            objectref,
+                            class_name.as_str(),
+                            field_name_type.as_str(),
+                            value.clone(),
+                        )
+                    })?;
 
                     println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type} value={value:?}");
                     stack_frame.incr_pc();
@@ -902,8 +908,8 @@ impl Engine {
                     method_args.push(reference);
                     method_args.reverse();
 
-                    let heap = self.heap.borrow();
-                    let instance_type_class_name = heap.get_instance_name(reference)?;
+                    let instance_type_class_name =
+                        with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
 
                     let virtual_method = method_area.lookup_for_implementation(&instance_type_class_name, &full_signature)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} invoking virtual")))?;
@@ -1040,11 +1046,11 @@ impl Engine {
                         .get_full_interfacemethodref_info(interfacemethodref_constpool_index)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full interfacemethodref info by index {interfacemethodref_constpool_index}")))?;
 
-                    let heap = self.heap.borrow();
-                    let instance_name = heap.get_instance_name(reference)?;
+                    let instance_name =
+                        with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
 
                     let full_method_signature = format!("{method_name}:{method_descriptor}");
-                    let interface_implementation_method = method_area.lookup_for_implementation(instance_name, &full_method_signature)
+                    let interface_implementation_method = method_area.lookup_for_implementation(&instance_name, &full_method_signature)
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {interface_class_name}.{method_name}{method_descriptor} in {instance_name}")))?;
 
                     let mut next_frame = interface_implementation_method.new_stack_frame()?;
@@ -1076,10 +1082,9 @@ impl Engine {
                         .borrow()
                         .create_instance_with_default_fields(&class_to_invoke_new_for);
 
-                    let instanceref = self
-                        .heap
-                        .borrow_mut()
-                        .create_instance(instance_with_default_fields);
+                    let instanceref = with_heap_write_lock(|heap| {
+                        heap.create_instance(instance_with_default_fields)
+                    });
                     stack_frame.push(instanceref);
 
                     println!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
@@ -1091,7 +1096,7 @@ impl Engine {
 
                     let length = stack_frame.pop();
 
-                    let arrayref = self.heap.borrow_mut().create_array(length);
+                    let arrayref = with_heap_write_lock(|heap| heap.create_array(length));
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
@@ -1111,7 +1116,7 @@ impl Engine {
                                 "Error getting class name by index {class_constpool_index}"
                             ))
                         })?;
-                    let arrayref = self.heap.borrow_mut().create_array(length);
+                    let arrayref = with_heap_write_lock(|heap| heap.create_array(length));
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
@@ -1120,7 +1125,7 @@ impl Engine {
                 ARRAYLENGTH => {
                     let arrayref = stack_frame.pop();
 
-                    let len = self.heap.borrow().get_array_len(arrayref)?;
+                    let len = with_heap_read_lock(|heap| heap.get_array_len(arrayref))?;
                     stack_frame.push(len);
 
                     stack_frame.incr_pc();

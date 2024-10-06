@@ -1,7 +1,27 @@
 use crate::error::Error;
 use crate::heap::java_instance::HeapValue::{Arr, Object};
 use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use std::sync::RwLock;
+
+static HEAP: Lazy<RwLock<Heap>> = Lazy::new(|| RwLock::new(Heap::new()));
+
+pub(crate) fn with_heap_read_lock<F, R>(f: F) -> R
+where
+    F: FnOnce(&Heap) -> R,
+{
+    let heap = HEAP.read().expect("error getting heap read lock");
+    f(&heap)
+}
+
+pub(crate) fn with_heap_write_lock<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut Heap) -> R,
+{
+    let mut heap = HEAP.write().expect("error getting heap write lock");
+    f(&mut heap)
+}
 
 #[derive(Debug)]
 pub(crate) struct Heap {
@@ -10,7 +30,7 @@ pub(crate) struct Heap {
 }
 
 impl Heap {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             data: HashMap::new(),
             next_id: 0,
@@ -53,9 +73,9 @@ impl Heap {
         }
     }
 
-    pub fn get_instance_name(&self, objectref: i32) -> crate::error::Result<&str> {
+    pub fn get_instance_name(&self, objectref: i32) -> crate::error::Result<String> {
         if let Some(Object(java_instance)) = self.data.get(&objectref) {
-            Ok(java_instance.instance_name())
+            Ok(java_instance.instance_name().to_string())
         } else {
             Err(Error::new_execution(&format!(
                 "error getting object from heap by ref {objectref}"
