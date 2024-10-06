@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::execution_engine::engine::Engine;
-use crate::heap::heap::Heap;
 use crate::heap::java_instance::FieldNameType;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
@@ -23,7 +22,6 @@ pub(crate) struct JavaClass {
     _interfaces: Vec<String>,
 
     static_fields_initialized: AtomicBool,
-    heap: Rc<RefCell<Heap>>,
     method_area: Rc<RefCell<MethodArea>>,
 }
 
@@ -65,7 +63,6 @@ impl JavaClass {
         this_class_name: String,
         parent: Option<String>,
         interfaces: Vec<String>,
-        heap: Rc<RefCell<Heap>>,
         method_area: Rc<RefCell<MethodArea>>,
     ) -> Self {
         Self {
@@ -77,7 +74,6 @@ impl JavaClass {
             parent,
             _interfaces: interfaces,
             static_fields_initialized: AtomicBool::new(false),
-            heap,
             method_area,
         }
     }
@@ -122,7 +118,7 @@ impl JavaClass {
                 self.this_class_name,
                 Self::STATIC_INIT_METHOD
             );
-            let mut engine = Engine::new(Rc::clone(&self.method_area), Rc::clone(&self.heap));
+            let mut engine = Engine::new(Rc::clone(&self.method_area));
             engine.execute(static_init_method)?;
             println!(
                 "<RETURN> -> {}.{}",
