@@ -10,48 +10,59 @@ use jclass::class_file::{parse, ClassFile};
 use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
-use std::cell::RefCell;
+use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::rc::{Rc, Weak};
+use std::sync::{Arc, RwLock};
+
+static METHOD_AREA: OnceCell<MethodArea> = OnceCell::new();
+
+pub(crate) fn with_method_area<F, R>(f: F) -> R
+where
+    F: FnOnce(&MethodArea) -> R,
+{
+    let method_area = METHOD_AREA.get().expect("error getting method area");
+
+    f(&method_area)
+}
 
 #[derive(Debug)]
 pub(crate) struct MethodArea {
     std_dir: String,
-    pub(crate) loaded_classes: RefCell<HashMap<String, Rc<JavaClass>>>,
-    self_ref: RefCell<Weak<RefCell<MethodArea>>>,
+    pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
+}
+
+pub(crate) fn init_method_area(std_dir: &str) {
+    match METHOD_AREA.set(MethodArea {
+        std_dir: std_dir.to_string(),
+        loaded_classes: RwLock::new(HashMap::new()),
+    }) {
+        Ok(_) => (),
+        Err(_) => (),
+    }
 }
 
 impl MethodArea {
-    pub fn new(std_dir: &str) -> Rc<RefCell<Self>> {
-        let method_area = Rc::new(RefCell::new(MethodArea {
-            std_dir: std_dir.to_string(),
-            loaded_classes: RefCell::new(HashMap::new()),
-            self_ref: RefCell::new(Weak::new()),
-        }));
-
-        method_area
-            .borrow_mut()
-            .self_ref
-            .replace(Rc::downgrade(&method_area));
-        method_area
-    }
-
     pub(crate) fn get(
         &self,
         fully_qualified_class_name: &str,
-    ) -> crate::error::Result<Rc<JavaClass>> {
-        if let Some(java_class) = self.loaded_classes.borrow().get(fully_qualified_class_name) {
-            return Ok(Rc::clone(java_class));
+    ) -> crate::error::Result<Arc<JavaClass>> {
+        if let Some(java_class) = self
+            .loaded_classes
+            .read()
+            .unwrap()
+            .get(fully_qualified_class_name)
+        {
+            return Ok(Arc::clone(java_class));
         }
 
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;
-        self.loaded_classes.borrow_mut().insert(
+        self.loaded_classes.write().unwrap().insert(
             fully_qualified_class_name.to_string(),
-            Rc::clone(&java_class),
+            Arc::clone(&java_class),
         );
         println!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
@@ -61,7 +72,7 @@ impl MethodArea {
     fn load_class_file(
         &self,
         fully_qualified_class_name: &str,
-    ) -> crate::error::Result<Rc<JavaClass>> {
+    ) -> crate::error::Result<Arc<JavaClass>> {
         let paths = vec![
             Path::new(&self.std_dir)
                 .join(fully_qualified_class_name)
@@ -77,7 +88,7 @@ impl MethodArea {
             })
     }
 
-    fn try_open_and_parse(&self, path: &PathBuf) -> Option<Rc<JavaClass>> {
+    fn try_open_and_parse(&self, path: &PathBuf) -> Option<Arc<JavaClass>> {
         let mut file = File::open(path).ok()?;
         let mut buff = Vec::new();
         file.read_to_end(&mut buff).ok()?;
@@ -94,7 +105,7 @@ impl MethodArea {
     fn to_java_class(
         &self,
         class_file: ClassFile,
-    ) -> crate::error::Result<(String, Rc<JavaClass>)> {
+    ) -> crate::error::Result<(String, Arc<JavaClass>)> {
         let cpool_helper = CPoolHelper::new(class_file.constant_pool());
 
         let this_class_index = class_file.this_class();
@@ -134,23 +145,18 @@ impl MethodArea {
         let (non_static_field_descriptors, static_fields) =
             Self::get_field_descriptors(&class_file.fields(), &cpool_helper)?;
 
-        if let Some(method_area) = self.self_ref.borrow().upgrade() {
-            Ok((
-                class_name.clone(),
-                Rc::new(JavaClass::new(
-                    methods,
-                    static_fields,
-                    non_static_field_descriptors,
-                    cpool_helper,
-                    class_name,
-                    super_class_name,
-                    interface_names,
-                    Rc::clone(&method_area),
-                )),
-            ))
-        } else {
-            Err(Error::new_execution("Error upgrading method_area"))
-        }
+        Ok((
+            class_name.clone(),
+            Arc::new(JavaClass::new(
+                methods,
+                static_fields,
+                non_static_field_descriptors,
+                cpool_helper,
+                class_name,
+                super_class_name,
+                interface_names,
+            )),
+        ))
     }
 
     fn get_methods(
@@ -203,7 +209,7 @@ impl MethodArea {
 
             method_by_signature.insert(
                 key.clone(),
-                Rc::new(JavaMethod::new(
+                Arc::new(JavaMethod::new(
                     method_descriptor,
                     class_name,
                     &key,
@@ -241,8 +247,7 @@ impl MethodArea {
             })?;
 
             if field_info.access_flags().contains(FieldFlags::ACC_STATIC) {
-                static_field_by_name
-                    .insert(field_name, Rc::new(RefCell::new(Field::new(descriptor))));
+                static_field_by_name.insert(field_name, Arc::new(Field::new(descriptor)));
             } else {
                 let field_name_key = format!("{field_name}:{field_descriptor}");
                 non_static_field_descriptors.insert(field_name_key, descriptor);
@@ -259,11 +264,11 @@ impl MethodArea {
         &self,
         class_name: &str,
         field_name: &str,
-    ) -> Option<Rc<RefCell<Field>>> {
+    ) -> Option<Arc<Field>> {
         let rc = self.get(class_name).ok()?;
 
         if let Some(field) = rc.static_field(field_name).ok() {
-            Some(Rc::clone(&field))
+            Some(Arc::clone(&field))
         } else {
             let parent_class_name = rc.parent().clone()?;
 
@@ -275,11 +280,11 @@ impl MethodArea {
         &self,
         class_name: &str,
         full_method_signature: &str,
-    ) -> Option<Rc<JavaMethod>> {
+    ) -> Option<Arc<JavaMethod>> {
         let rc = self.get(class_name).ok()?;
 
         if let Some(java_method) = rc.methods.method_by_signature.get(full_method_signature) {
-            Some(Rc::clone(&java_method))
+            Some(Arc::clone(&java_method))
         } else {
             let parent_class_name = rc.parent().clone()?;
 
@@ -313,7 +318,7 @@ impl MethodArea {
         &self,
         class_name: &str,
         instance_fields_hierarchy: &mut IndexMap<ClassName, HashMap<FieldNameType, Field>>,
-    ) -> Option<Rc<JavaMethod>> {
+    ) -> Option<JavaMethod> {
         let rc = self.get(class_name).ok()?;
         let instance_fields = rc.default_value_instance_fields();
         instance_fields_hierarchy.insert(class_name.to_string(), instance_fields);

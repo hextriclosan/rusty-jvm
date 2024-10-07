@@ -1,26 +1,21 @@
 use crate::error::Error;
 use crate::execution_engine::engine::Engine;
-use crate::method_area::method_area::MethodArea;
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::method_area::method_area::{init_method_area, with_method_area};
 
 #[derive(Debug)]
-pub struct VM {
-    method_area: Rc<RefCell<MethodArea>>,
-}
+pub struct VM {}
 
 impl VM {
     const ENTRY_POINT: &'static str = "main:([Ljava/lang/String;)V";
 
     pub fn new(std_dir: &str) -> Self {
-        Self {
-            method_area: MethodArea::new(std_dir),
-        }
+        init_method_area(std_dir);
+        Self {}
     }
 
     pub fn run(&mut self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
         let internal_name = &main_class_name.replace('.', "/");
-        let java_class = self.method_area.borrow().get(internal_name)?;
+        let java_class = with_method_area(|area| area.get(internal_name))?;
 
         let java_method = java_class
             .methods
@@ -30,7 +25,7 @@ impl VM {
                 format!("main method not found in {main_class_name}").as_str(),
             ))?;
 
-        let mut engine = Engine::new(Rc::clone(&self.method_area));
+        let mut engine = Engine::new();
 
         engine.execute(java_method)
     }

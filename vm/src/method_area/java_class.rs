@@ -4,12 +4,10 @@ use crate::heap::java_instance::FieldNameType;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
-use crate::method_area::method_area::MethodArea;
 use jdescriptor::TypeDescriptor;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
@@ -22,17 +20,16 @@ pub(crate) struct JavaClass {
     _interfaces: Vec<String>,
 
     static_fields_initialized: AtomicBool,
-    method_area: Rc<RefCell<MethodArea>>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Methods {
-    pub(crate) method_by_signature: HashMap<String, Rc<JavaMethod>>,
+    pub(crate) method_by_signature: HashMap<String, Arc<JavaMethod>>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Fields {
-    pub(crate) field_by_name: HashMap<String, Rc<RefCell<Field>>>,
+    pub(crate) field_by_name: HashMap<String, Arc<Field>>,
 }
 
 #[derive(Debug)]
@@ -47,7 +44,7 @@ impl FieldDescriptors {
 }
 
 impl Fields {
-    pub fn new(field_by_name: HashMap<String, Rc<RefCell<Field>>>) -> Self {
+    pub fn new(field_by_name: HashMap<String, Arc<Field>>) -> Self {
         Self { field_by_name }
     }
 }
@@ -63,7 +60,6 @@ impl JavaClass {
         this_class_name: String,
         parent: Option<String>,
         interfaces: Vec<String>,
-        method_area: Rc<RefCell<MethodArea>>,
     ) -> Self {
         Self {
             methods,
@@ -74,7 +70,6 @@ impl JavaClass {
             parent,
             _interfaces: interfaces,
             static_fields_initialized: AtomicBool::new(false),
-            method_area,
         }
     }
 
@@ -90,14 +85,14 @@ impl JavaClass {
         &self._interfaces
     }
 
-    pub fn static_field(&self, field_name: &str) -> crate::error::Result<Rc<RefCell<Field>>> {
+    pub fn static_field(&self, field_name: &str) -> crate::error::Result<Arc<Field>> {
         if !self.static_fields_initialized.load(Ordering::SeqCst) {
             self.static_fields_initialized.store(true, Ordering::SeqCst);
             self.do_static_fields_initialization()?;
         }
 
         match self.static_fields.field_by_name.get(field_name) {
-            Some(field) => Ok(Rc::clone(field)),
+            Some(field) => Ok(Arc::clone(field)),
             None => Err(Error::new_constant_pool(&format!(
                 "Error getting field: {}.{field_name}",
                 self.this_class_name
@@ -118,7 +113,7 @@ impl JavaClass {
                 self.this_class_name,
                 Self::STATIC_INIT_METHOD
             );
-            let mut engine = Engine::new(Rc::clone(&self.method_area));
+            let mut engine = Engine::new();
             engine.execute(static_init_method)?;
             println!(
                 "<RETURN> -> {}.{}",
@@ -153,7 +148,7 @@ impl JavaClass {
 }
 
 impl Methods {
-    pub fn new(method_by_signature: HashMap<String, Rc<JavaMethod>>) -> Self {
+    pub fn new(method_by_signature: HashMap<String, Arc<JavaMethod>>) -> Self {
         Self {
             method_by_signature,
         }
