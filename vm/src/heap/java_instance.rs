@@ -82,7 +82,7 @@ impl<'a> JavaInstance {
         &self,
         class_name: &str,
         field_name_type: &str,
-    ) -> crate::error::Result<&Vec<i32>> {
+    ) -> crate::error::Result<Vec<i32>> {
         self.lookup_for_field(class_name, field_name_type)
             .and_then(|v| Some(v.raw_value()))
             .ok_or(Error::new_execution(&format!(

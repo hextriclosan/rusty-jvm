@@ -65,7 +65,7 @@ impl Heap {
         objectref: i32,
         class_name: &str,
         field_name_type: &str,
-    ) -> crate::error::Result<&Vec<i32>> {
+    ) -> crate::error::Result<Vec<i32>> {
         if let Some(Object(java_instance)) = self.data.get(&objectref) {
             java_instance.get_field_value(class_name, field_name_type)
         } else {
