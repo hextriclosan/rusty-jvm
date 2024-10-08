@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
@@ -7,11 +8,15 @@ use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::{i32toi64, StackFrame};
 use jdescriptor::get_length;
 
-pub(crate) struct Engine {}
+pub(crate) struct Engine {
+    ldc_resolution_manager: LdcResolutionManager,
+}
 
 impl Engine {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            ldc_resolution_manager: LdcResolutionManager::new(),
+        }
     }
 
     pub(crate) fn execute(
@@ -92,17 +97,9 @@ impl Engine {
                     stack_frame.incr_pc();
                     let cpoolindex = stack_frame.get_bytecode_byte() as u16;
 
-                    let java_class = with_method_area(|method_area| {
-                        method_area.get(current_class_name.as_str())
-                    })?;
-                    let cpool_helper = java_class.cpool_helper();
-
-                    // todo add support of other types
-                    let value = cpool_helper.get_integer(cpoolindex).ok_or_else(|| {
-                        Error::new_constant_pool(&format!(
-                            "Error getting value as Integer by index {cpoolindex}"
-                        ))
-                    })?;
+                    let value = self
+                        .ldc_resolution_manager
+                        .resolve_ldc(&current_class_name, cpoolindex)?;
 
                     stack_frame.push(value);
 
@@ -926,14 +923,26 @@ impl Engine {
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} invoking virtual")))
                     })?;
 
-                    let mut next_frame = virtual_method.new_stack_frame()?;
+                    if virtual_method.is_native() {
+                        let full_native_signature =
+                            format!("{instance_type_class_name}:{full_signature}");
+                        println!(
+                            "<Calling native method> -> {full_native_signature} ({method_args:?})"
+                        );
 
-                    method_args
-                        .iter()
-                        .enumerate()
-                        .for_each(|(index, val)| next_frame.set_local(index, *val));
+                        let result = invoke_native_method(&full_native_signature, &method_args)?;
 
-                    stack_frames.push(next_frame);
+                        result.iter().rev().for_each(|x| stack_frame.push(*x));
+                    } else {
+                        let mut next_frame = virtual_method.new_stack_frame()?;
+
+                        method_args
+                            .iter()
+                            .enumerate()
+                            .for_each(|(index, val)| next_frame.set_local(index, *val));
+
+                        stack_frames.push(next_frame);
+                    }
                     println!(
                         "INVOKEVIRTUAL -> {instance_type_class_name}.{method_name}({method_args:?})"
                     );

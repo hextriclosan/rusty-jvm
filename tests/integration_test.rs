@@ -272,6 +272,15 @@ fn should_do_native_call_on_system() {
     assert!((expected_millis..expected_millis + 2000).contains(&actual_millis))
 }
 
+#[test]
+fn should_do_trivial_reflection() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.reflection.trivial.TrivialReflection")
+        .unwrap();
+    assert_eq!(2578, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }

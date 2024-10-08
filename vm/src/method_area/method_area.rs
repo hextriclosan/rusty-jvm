@@ -32,19 +32,25 @@ where
 pub(crate) struct MethodArea {
     std_dir: String,
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
-}
-
-pub(crate) fn init_method_area(std_dir: &str) {
-    match METHOD_AREA.set(MethodArea {
-        std_dir: std_dir.to_string(),
-        loaded_classes: RwLock::new(HashMap::new()),
-    }) {
-        Ok(_) => (),
-        Err(_) => (),
-    }
+    javaclass_by_reflectionref: RwLock<HashMap<i32, Arc<JavaClass>>>,
 }
 
 impl MethodArea {
+    pub(crate) fn init(std_dir: &str) {
+        match METHOD_AREA.set(MethodArea::new(std_dir)) {
+            Ok(_) => (),
+            Err(_) => (), // treated as not error to be aligned with tests
+        }
+    }
+
+    fn new(std_dir: &str) -> Self {
+        Self {
+            std_dir: std_dir.to_string(),
+            loaded_classes: RwLock::new(HashMap::new()),
+            javaclass_by_reflectionref: RwLock::new(HashMap::new()),
+        }
+    }
+
     pub(crate) fn get(
         &self,
         fully_qualified_class_name: &str,
@@ -52,7 +58,7 @@ impl MethodArea {
         if let Some(java_class) = self
             .loaded_classes
             .read()
-            .unwrap()
+            .expect("error getting read lock")
             .get(fully_qualified_class_name)
         {
             return Ok(Arc::clone(java_class));
@@ -60,10 +66,13 @@ impl MethodArea {
 
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;
-        self.loaded_classes.write().unwrap().insert(
-            fully_qualified_class_name.to_string(),
-            Arc::clone(&java_class),
-        );
+        self.loaded_classes
+            .write()
+            .expect("error getting write lock")
+            .insert(
+                fully_qualified_class_name.to_string(),
+                Arc::clone(&java_class),
+            );
         println!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok(java_class)
@@ -145,6 +154,8 @@ impl MethodArea {
         let (non_static_field_descriptors, static_fields) =
             Self::get_field_descriptors(&class_file.fields(), &cpool_helper)?;
 
+        let access_flags = class_file.access_flags().bits();
+
         Ok((
             class_name.clone(),
             Arc::new(JavaClass::new(
@@ -155,6 +166,7 @@ impl MethodArea {
                 class_name,
                 super_class_name,
                 interface_names,
+                access_flags,
             )),
         ))
     }
@@ -329,5 +341,21 @@ impl MethodArea {
             &parent_class_name,
             instance_fields_hierarchy,
         )
+    }
+
+    pub(crate) fn put_to_reflection_table(&self, reflection_ref: i32, java_class_name: &str) {
+        let java_class = self.get(java_class_name).expect("error getting java class");
+        self.javaclass_by_reflectionref
+            .write()
+            .expect("error writing to lookup table")
+            .insert(reflection_ref, Arc::clone(&java_class));
+    }
+
+    pub(crate) fn get_from_reflection_table(&self, reflection_ref: i32) -> Option<Arc<JavaClass>> {
+        self.javaclass_by_reflectionref
+            .read()
+            .expect("error getting read lock")
+            .get(&reflection_ref)
+            .and_then(|java_class| Some(Arc::clone(java_class)))
     }
 }

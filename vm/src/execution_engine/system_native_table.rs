@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::system_native::class::get_modifiers_wrp;
 use crate::system_native::system::current_time_millis_wrp;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -9,6 +10,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, fn(&[i32]) -> Vec<i32>>> 
         table.insert(
             "java/lang/System:currentTimeMillis:()J",
             current_time_millis_wrp as fn(&[i32]) -> Vec<i32>,
+        );
+        table.insert(
+            "java/lang/Class:getModifiers:()I",
+            get_modifiers_wrp as fn(&[i32]) -> Vec<i32>,
         );
 
         table

@@ -1,10 +1,13 @@
 use crate::error::Error;
 use crate::execution_engine::engine::Engine;
+use crate::heap::heap::with_heap_write_lock;
 use crate::heap::java_instance::FieldNameType;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
+use crate::method_area::method_area::with_method_area;
 use jdescriptor::TypeDescriptor;
+use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -18,8 +21,11 @@ pub(crate) struct JavaClass {
     this_class_name: String,
     parent: Option<String>,
     _interfaces: Vec<String>,
+    access_flags: u16,
 
     static_fields_initialized: AtomicBool,
+
+    reflection_ref: OnceCell<i32>,
 }
 
 #[derive(Debug)]
@@ -60,6 +66,7 @@ impl JavaClass {
         this_class_name: String,
         parent: Option<String>,
         interfaces: Vec<String>,
+        access_flags: u16,
     ) -> Self {
         Self {
             methods,
@@ -69,8 +76,25 @@ impl JavaClass {
             this_class_name,
             parent,
             _interfaces: interfaces,
+            access_flags,
             static_fields_initialized: AtomicBool::new(false),
+            reflection_ref: OnceCell::new(),
         }
+    }
+
+    fn create_reflection_instance(&self) -> i32 {
+        let reflection_instance = with_method_area(|method_area| {
+            method_area.create_instance_with_default_fields("java/lang/Class")
+        });
+
+        let reflection_reference =
+            with_heap_write_lock(|heap| heap.create_instance(reflection_instance));
+
+        with_method_area(|method_area| {
+            method_area.put_to_reflection_table(reflection_reference, &self.this_class_name)
+        });
+
+        reflection_reference
     }
 
     pub fn cpool_helper(&self) -> &CPoolHelper {
@@ -144,6 +168,17 @@ impl JavaClass {
 
     pub fn this_class_name(&self) -> &str {
         &self.this_class_name
+    }
+
+    pub fn reflection_ref(&self) -> i32 {
+        let class_ref = self
+            .reflection_ref
+            .get_or_init(|| self.create_reflection_instance());
+        *class_ref
+    }
+
+    pub fn access_flags(&self) -> u16 {
+        self.access_flags
     }
 }
 
