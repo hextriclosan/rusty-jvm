@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::engine::Engine;
-use crate::method_area::method_area::{init_method_area, with_method_area};
+use crate::method_area::method_area::{with_method_area, MethodArea};
 
 #[derive(Debug)]
 pub struct VM {}
@@ -9,7 +9,7 @@ impl VM {
     const ENTRY_POINT: &'static str = "main:([Ljava/lang/String;)V";
 
     pub fn new(std_dir: &str) -> Self {
-        init_method_area(std_dir);
+        MethodArea::init(std_dir);
         Self {}
     }
 

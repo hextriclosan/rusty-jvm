@@ -86,6 +86,22 @@ impl CPoolHelper {
         }
     }
 
+    pub fn get_float(&self, index: u16) -> Option<f32> {
+        match self.get(CPoolType::Float, index)? {
+            ConstantPool::Float { value } => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn get_class(&self, index: u16) -> Option<String> {
+        let name_index = match self.get(CPoolType::Class, index)? {
+            ConstantPool::Class { name_index } => Some(name_index),
+            _ => None,
+        }?;
+
+        self.get_utf8(*name_index)
+    }
+
     pub fn get_long(&self, index: u16) -> Option<i64> {
         match self.get(CPoolType::Long, index)? {
             ConstantPool::Long { value } => Some(*value),
@@ -169,7 +185,8 @@ impl CPoolHelper {
 mod tests {
     use super::*;
     use jclass::constant_pool::ConstantPool::{
-        Class, Empty, Fieldref, Integer, InterfaceMethodref, Long, Methodref, NameAndType, Utf8,
+        Class, Empty, Fieldref, Float, Integer, InterfaceMethodref, Long, Methodref, NameAndType,
+        Utf8,
     };
 
     #[test]
@@ -518,5 +535,28 @@ mod tests {
 
         let actual = resolver.get_long(2);
         assert_eq!(Some(9_000_000_000), actual)
+    }
+
+    #[test]
+    fn should_return_float() {
+        let resolver =
+            CPoolHelper::new(&vec![Empty, Class { name_index: 2 }, Float { value: 3.14 }]);
+
+        let actual = resolver.get_float(2);
+        assert_eq!(Some(3.14), actual)
+    }
+
+    #[test]
+    fn should_return_class_as_string() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            Class { name_index: 2 },
+            Utf8 {
+                value: "java/lang/Byte".to_string(),
+            },
+        ]);
+
+        let actual = resolver.get_class(1);
+        assert_eq!(Some("java/lang/Byte".to_string()), actual)
     }
 }
