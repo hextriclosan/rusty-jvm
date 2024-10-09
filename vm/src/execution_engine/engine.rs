@@ -112,7 +112,7 @@ impl Engine {
                 LDC_W => {
                     //todo: merge me with LDC
                     stack_frame.incr_pc();
-                    let cpoolindex = Self::extract_two_bytes(stack_frame);
+                    let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
 
                     let java_class = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -132,7 +132,7 @@ impl Engine {
                     println!("LDC -> cpoolindex={cpoolindex}, value={value}");
                 }
                 LDC2_W => {
-                    let cpoolindex = Self::extract_two_bytes(stack_frame);
+                    let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
 
                     let java_class = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -646,6 +646,16 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("IAND -> {a} & {b} = {result}");
                 }
+                IXOR => {
+                    let b = stack_frame.pop();
+                    let a = stack_frame.pop();
+
+                    let result = a ^ b;
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("IXOR -> {a} & {b} = {result}");
+                }
                 IINC => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -749,6 +759,9 @@ impl Engine {
                 IF_ACMPEQ => {
                     Self::branch(|a: i32, b| a == b, stack_frame, "IF_ACMPEQ");
                 }
+                IF_ACMPNE => {
+                    Self::branch(|a: i32, b| a != b, stack_frame, "IF_ACMPEQ");
+                }
                 GOTO => {
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(offset);
@@ -800,7 +813,7 @@ impl Engine {
                     stack_frames.pop();
                 }
                 GETSTATIC => {
-                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
 
                     let java_class = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -829,7 +842,7 @@ impl Engine {
                     stack_frame.incr_pc();
                 }
                 PUTSTATIC => {
-                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
 
                     let rc = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -861,7 +874,7 @@ impl Engine {
                     stack_frame.incr_pc();
                 }
                 GETFIELD => {
-                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
 
                     let rc = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -888,7 +901,7 @@ impl Engine {
                     println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type}, value={value:?}");
                 }
                 PUTFIELD => {
-                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let fieldref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
 
                     let rc = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -931,7 +944,7 @@ impl Engine {
                     stack_frame.incr_pc();
                 }
                 INVOKEVIRTUAL => {
-                    let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let methodref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
                     stack_frame.incr_pc();
 
                     let rc = with_method_area(|method_area| {
@@ -989,7 +1002,7 @@ impl Engine {
                     );
                 }
                 INVOKESPECIAL => {
-                    let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let methodref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
                     stack_frame.incr_pc();
 
                     let rc = with_method_area(|method_area| {
@@ -1030,7 +1043,7 @@ impl Engine {
                     println!("INVOKESPECIAL -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKESTATIC => {
-                    let methodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let methodref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
                     stack_frame.incr_pc();
 
                     let rc = with_method_area(|method_area| {
@@ -1083,7 +1096,8 @@ impl Engine {
                     println!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKEINTERFACE => {
-                    let interfacemethodref_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let interfacemethodref_constpool_index =
+                        Self::extract_two_bytes(stack_frame) as u16;
                     stack_frame.incr_pc();
 
                     let arg_count = stack_frame.get_bytecode_byte() as usize;
@@ -1134,7 +1148,7 @@ impl Engine {
                     println!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({method_args:?}) on instance {instance_name}");
                 }
                 NEW => {
-                    let class_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let class_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
 
                     let rc = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
@@ -1175,7 +1189,7 @@ impl Engine {
                 ANEWARRAY => {
                     let length = stack_frame.pop();
 
-                    let class_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let class_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
                     let rc = with_method_area(|method_area| {
                         method_area.get(current_class_name.as_str())
                     })?;
@@ -1204,36 +1218,71 @@ impl Engine {
                     println!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
                 }
                 CHECKCAST => {
-                    let class_constpool_index = Self::extract_two_bytes(stack_frame);
+                    let class_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
                     stack_frame.incr_pc();
-                    let rc = with_method_area(|method_area| {
-                        method_area.get(current_class_name.as_str())
-                    })?;
-                    let cpool_helper = rc.cpool_helper();
-                    let class_name = cpool_helper
-                        .get_class_name(class_constpool_index)
-                        .ok_or_else(|| {
-                            Error::new_constant_pool(&format!(
-                                "Error getting class name by index {class_constpool_index}"
-                            ))
-                        })?;
-
                     let objectref = stack_frame.pop();
-                    let instance_class_name =
-                        with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
 
-                    let possible_cast = self
-                        .instance_checker
-                        .checkcast(&instance_class_name, &class_name)?;
-                    if !possible_cast {
-                        return Err(Error::new_execution(&format!(
-                            "Error casting {instance_class_name} to {class_name}"
-                        ))); //todo: throw ClassCastException here
+                    if objectref != 0 {
+                        let rc = with_method_area(|method_area| {
+                            method_area.get(current_class_name.as_str())
+                        })?;
+                        let cpool_helper = rc.cpool_helper();
+                        let class_name = cpool_helper
+                            .get_class_name(class_constpool_index)
+                            .ok_or_else(|| {
+                                Error::new_constant_pool(&format!(
+                                    "Error getting class name by index {class_constpool_index}"
+                                ))
+                            })?;
+
+                        let instance_class_name =
+                            with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
+
+                        let possible_cast = self
+                            .instance_checker
+                            .checkcast(&instance_class_name, &class_name)?;
+                        if !possible_cast {
+                            return Err(Error::new_execution(&format!(
+                                "Error casting {instance_class_name} to {class_name}"
+                            ))); //todo: throw ClassCastException here
+                        }
                     }
 
                     stack_frame.push(objectref);
 
                     println!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+                }
+                INSTANCEOF => {
+                    // todo: merge me with CHECKCAST
+                    let class_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
+                    stack_frame.incr_pc();
+                    let mut objectref = stack_frame.pop();
+
+                    if objectref != 0 {
+                        let rc = with_method_area(|method_area| {
+                            method_area.get(current_class_name.as_str())
+                        })?;
+                        let cpool_helper = rc.cpool_helper();
+                        let class_name = cpool_helper
+                            .get_class_name(class_constpool_index)
+                            .ok_or_else(|| {
+                                Error::new_constant_pool(&format!(
+                                    "Error getting class name by index {class_constpool_index}"
+                                ))
+                            })?;
+
+                        let instance_class_name =
+                            with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
+
+                        let instanse_of = self
+                            .instance_checker
+                            .checkcast(&instance_class_name, &class_name)?;
+                        objectref = if instanse_of { 1 } else { 0 };
+                    }
+
+                    stack_frame.push(objectref);
+
+                    println!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
                 }
                 IFNULL => {
                     //todo: this one is opposite to IFNE ops code
@@ -1241,6 +1290,13 @@ impl Engine {
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value == 0 { offset } else { 3 });
                     println!("IFNULL -> value={value}, offset={offset}");
+                }
+                IFNONNULL => {
+                    //todo: this one is opposite to IFNULL ops code
+                    let value = stack_frame.pop();
+                    let offset = Self::get_two_bytes_ahead(stack_frame);
+                    stack_frame.advance_pc(if value != 0 { offset } else { 3 });
+                    println!("IFNONNULL -> value={value}, offset={offset}");
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", stack_frame.get_bytecode_byte()}),
             }
@@ -1256,13 +1312,13 @@ impl Engine {
         ((branchbyte1 << 8) | branchbyte2) as i16
     }
 
-    fn extract_two_bytes(stack_frame: &mut StackFrame) -> u16 {
+    fn extract_two_bytes(stack_frame: &mut StackFrame) -> i16 {
         stack_frame.incr_pc();
-        let high = stack_frame.get_bytecode_byte() as u16;
+        let high = stack_frame.get_bytecode_byte() as i16;
         stack_frame.incr_pc();
-        let low = stack_frame.get_bytecode_byte() as u16;
+        let low = stack_frame.get_bytecode_byte() as i16;
 
-        (high << 8) | low
+        (high << 8) | (low)
     }
 
     fn branch<T>(op: impl Fn(T, T) -> bool, stack_frame: &mut StackFrame, op_code: &str)

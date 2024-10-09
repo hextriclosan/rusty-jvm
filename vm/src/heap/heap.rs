@@ -69,7 +69,9 @@ impl Heap {
         if let Some(Object(java_instance)) = self.data.get(&objectref) {
             java_instance.get_field_value(class_name, field_name_type)
         } else {
-            Err(Error::new_execution("error getting field value"))
+            Err(Error::new_execution(&format!(
+                "error getting field value {class_name}.{field_name_type}"
+            )))
         }
     }
 
