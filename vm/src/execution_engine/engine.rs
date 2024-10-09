@@ -240,6 +240,13 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LLOAD_3 -> value={value}");
                 }
+                FLOAD_1 => {
+                    let value = stack_frame.get_local(1);
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("FLOAD_1 -> value={value}");
+                }
                 ALOAD_0 => {
                     let reference = stack_frame.get_local(0);
                     stack_frame.push(reference);
@@ -401,6 +408,20 @@ impl Engine {
                     let value = ((high as i64) << 32) | (low as i64);
                     println!("LSTORE_3 -> value={value}");
                 }
+                FSTORE_1 => {
+                    let value = stack_frame.pop();
+                    stack_frame.set_local(1, value);
+
+                    stack_frame.incr_pc();
+                    println!("FSTORE_1 -> value={value}");
+                }
+                FSTORE_3 => {
+                    let value = stack_frame.pop();
+                    stack_frame.set_local(3, value);
+
+                    stack_frame.incr_pc();
+                    println!("FSTORE_3 -> value={value}");
+                }
                 ASTORE_0 => {
                     let objectref = stack_frame.pop();
                     stack_frame.set_local(0, objectref);
@@ -543,6 +564,15 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LSUB -> {a} - {b} = {result}");
                 }
+                FSUB => {
+                    let b = stack_frame.pop_f32();
+                    let a = stack_frame.pop_f32();
+                    let result = a - b;
+                    stack_frame.push_f32(result);
+
+                    stack_frame.incr_pc();
+                    println!("FSUB -> {a} - {b} = {result}");
+                }
                 IMUL => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -635,6 +665,14 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("I2L -> {low}L");
+                }
+                I2F => {
+                    let value = stack_frame.pop() as f32;
+                    
+                    stack_frame.push_f32(value);
+
+                    stack_frame.incr_pc();
+                    println!("I2F -> {value}F");
                 }
                 LCMP => {
                     let b = stack_frame.pop_i64();

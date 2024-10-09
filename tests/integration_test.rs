@@ -281,6 +281,15 @@ fn should_do_trivial_reflection() {
     assert_eq!(2578, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_subtraction_with_floats() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.arithmetics.sub.floats.SubFloats")
+        .unwrap();
+    assert_eq!(-998.9, get_float(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }
@@ -293,4 +302,10 @@ fn get_long(locals_opt: Option<Vec<i32>>) -> i64 {
     let high = two[1];
 
     ((high as i64) << 32) | (low as i64)
+}
+
+fn get_float(locals: Option<Vec<i32>>) -> f32 {
+    let value = *locals.unwrap().last().unwrap();
+    
+    f32::from_bits(value as u32)
 }

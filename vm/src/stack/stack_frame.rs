@@ -59,6 +59,10 @@ impl<'a> StackFrame {
         self.push(high);
     }
 
+    pub(crate) fn push_f32(&mut self, value: f32) {
+        self.push(value.to_bits() as i32);
+    }
+
     pub fn pop_i64(&mut self) -> i64 {
         let high = self.pop();
         let low = self.pop();
@@ -66,6 +70,12 @@ impl<'a> StackFrame {
         i32toi64(high, low)
     }
 
+    pub fn pop_f32(&mut self) -> f32 {
+        let high = self.pop();
+
+        f32::from_bits(high as u32)
+    }
+    
     pub fn pop(&mut self) -> i32 {
         self.operand_stack.pop().expect("Empty stack")
     }
