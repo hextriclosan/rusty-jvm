@@ -110,7 +110,7 @@ impl JavaClass {
     pub fn interfaces(&self) -> &HashSet<String> {
         &self.interfaces
     }
-    
+
     pub fn is_interface(&self) -> bool {
         self.access_flags & INTERFACE != 0
     }

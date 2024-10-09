@@ -41,14 +41,15 @@ impl InstanceChecker {
         if !class.is_interface() {
             return None;
         }
-        let class_implementor = with_method_area(|method_area| method_area.get(implementor)).ok()?;
+        let class_implementor =
+            with_method_area(|method_area| method_area.get(implementor)).ok()?;
 
         if class_implementor.interfaces().contains(interface) {
             return Some(true);
         }
 
         let class_name = class_implementor.parent().clone()?;
-        
+
         Self::is_implements(interface, &class_name)
     }
 }
