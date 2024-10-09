@@ -38,7 +38,7 @@ pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
     match type_descriptor {
         Byte | Char | Int | Short | Boolean => vec![0],
         Long => vec![0, 0],
-        Float => todo!(),
+        Float => from_f32(0.0),
         Double => todo!(),
         Void => panic!("field can't be a void type"),
         Array(_, _) => vec![0],
@@ -174,6 +174,10 @@ impl Display for DescriptorError {
         };
         write!(f, "{}", str)
     }
+}
+
+fn from_f32(value: f32) -> Vec<i32> {
+    vec![value.to_bits() as i32]
 }
 
 #[cfg(test)]
