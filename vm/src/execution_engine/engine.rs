@@ -43,6 +43,11 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("ACONST_NULL");
                 }
+                ICONST_M1 => {
+                    stack_frame.push(-1);
+                    stack_frame.incr_pc();
+                    println!("ICONST_M1");
+                }
                 ICONST_0 => {
                     stack_frame.push(0);
                     stack_frame.incr_pc();

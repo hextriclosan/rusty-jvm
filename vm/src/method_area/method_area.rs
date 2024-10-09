@@ -11,7 +11,7 @@ use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -148,7 +148,7 @@ impl MethodArea {
                     Error::new_constant_pool(&format!("Error getting interface by index={index}"))
                 })
             })
-            .collect::<crate::error::Result<Vec<String>>>()?;
+            .collect::<crate::error::Result<HashSet<String>>>()?;
 
         let methods = Self::get_methods(&class_file.methods(), &cpool_helper, &class_name)?;
         let (non_static_field_descriptors, static_fields) =

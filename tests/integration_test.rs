@@ -301,7 +301,16 @@ fn should_do_trivial_hashmaps() {
     let last_frame_value = vm
         .run("samples.javabase.util.hashmap.trivial.TrivialHashMap")
         .unwrap();
-    assert_eq!(-999, get_int(last_frame_value))
+    assert_eq!(84, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_trivial_treemaps() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.javabase.util.treemap.trivial.TrivialTreeMap")
+        .unwrap();
+    assert_eq!(84, get_int(last_frame_value))
 }
 
 fn get_int(locals: Option<Vec<i32>>) -> i32 {

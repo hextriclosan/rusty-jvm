@@ -8,9 +8,11 @@ use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+
+const INTERFACE: u16 = 0x00000200;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
@@ -20,7 +22,7 @@ pub(crate) struct JavaClass {
     cpool_helper: CPoolHelper,
     this_class_name: String,
     parent: Option<String>,
-    _interfaces: Vec<String>,
+    interfaces: HashSet<String>,
     access_flags: u16,
 
     static_fields_initialized: AtomicBool,
@@ -65,7 +67,7 @@ impl JavaClass {
         cpool_helper: CPoolHelper,
         this_class_name: String,
         parent: Option<String>,
-        interfaces: Vec<String>,
+        interfaces: HashSet<String>,
         access_flags: u16,
     ) -> Self {
         Self {
@@ -75,7 +77,7 @@ impl JavaClass {
             cpool_helper,
             this_class_name,
             parent,
-            _interfaces: interfaces,
+            interfaces,
             access_flags,
             static_fields_initialized: AtomicBool::new(false),
             reflection_ref: OnceCell::new(),
@@ -105,8 +107,12 @@ impl JavaClass {
         &self.parent
     }
 
-    pub fn _interfaces(&self) -> &Vec<String> {
-        &self._interfaces
+    pub fn interfaces(&self) -> &HashSet<String> {
+        &self.interfaces
+    }
+    
+    pub fn is_interface(&self) -> bool {
+        self.access_flags & INTERFACE != 0
     }
 
     pub fn static_field(&self, field_name: &str) -> crate::error::Result<Arc<Field>> {
