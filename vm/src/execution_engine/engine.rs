@@ -3,6 +3,7 @@ use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::{i32toi64, StackFrame};
@@ -10,12 +11,14 @@ use jdescriptor::get_length;
 
 pub(crate) struct Engine {
     ldc_resolution_manager: LdcResolutionManager,
+    instance_checker: InstanceChecker,
 }
 
 impl Engine {
     pub fn new() -> Self {
         Self {
             ldc_resolution_manager: LdcResolutionManager::new(),
+            instance_checker: InstanceChecker::new(),
         }
     }
 
@@ -668,7 +671,7 @@ impl Engine {
                 }
                 I2F => {
                     let value = stack_frame.pop() as f32;
-                    
+
                     stack_frame.push_f32(value);
 
                     stack_frame.incr_pc();
@@ -1203,13 +1206,34 @@ impl Engine {
                 CHECKCAST => {
                     let class_constpool_index = Self::extract_two_bytes(stack_frame);
                     stack_frame.incr_pc();
+                    let rc = with_method_area(|method_area| {
+                        method_area.get(current_class_name.as_str())
+                    })?;
+                    let cpool_helper = rc.cpool_helper();
+                    let class_name = cpool_helper
+                        .get_class_name(class_constpool_index)
+                        .ok_or_else(|| {
+                            Error::new_constant_pool(&format!(
+                                "Error getting class name by index {class_constpool_index}"
+                            ))
+                        })?;
 
                     let objectref = stack_frame.pop();
-                    // todo: implementation here
+                    let instance_class_name =
+                        with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
+
+                    let possible_cast = self
+                        .instance_checker
+                        .checkcast(&instance_class_name, &class_name)?;
+                    if !possible_cast {
+                        return Err(Error::new_execution(&format!(
+                            "Error casting {instance_class_name} to {class_name}"
+                        ))); //todo: throw ClassCastException here
+                    }
+
                     stack_frame.push(objectref);
 
                     println!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
-                    todo!("add implementation");
                 }
                 IFNULL => {
                     //todo: this one is opposite to IFNE ops code
