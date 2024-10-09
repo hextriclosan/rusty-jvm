@@ -18,6 +18,10 @@ impl InstanceChecker {
             return Ok(base_of);
         }
 
+        if let Some(implements) = Self::is_implements(class_cast_to, class_cast_from) {
+            return Ok(implements);
+        }
+
         Ok(false)
     }
 
@@ -30,5 +34,22 @@ impl InstanceChecker {
         let class_name = class.parent().clone()?;
 
         Self::is_base_of(base, &class_name)
+    }
+
+    fn is_implements(interface: &str, implementor: &str) -> Option<bool> {
+        let class = with_method_area(|method_area| method_area.get(interface)).ok()?;
+        if !class.is_interface() {
+            return None;
+        }
+        let class_implementor =
+            with_method_area(|method_area| method_area.get(implementor)).ok()?;
+
+        if class_implementor.interfaces().contains(interface) {
+            return Some(true);
+        }
+
+        let class_name = class_implementor.parent().clone()?;
+
+        Self::is_implements(interface, &class_name)
     }
 }

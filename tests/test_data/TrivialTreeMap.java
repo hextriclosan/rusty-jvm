@@ -1,15 +1,15 @@
-package samples.javabase.util.hashmap.trivial;
+package samples.javabase.util.treemap.trivial;
 
 import java.util.Map;
-import java.util.HashMap;
+import java.util.TreeMap;
 
-public class TrivialHashMap {
+public class TrivialTreeMap {
     public static void main(String[] args) {
         int result = getSum();
     }
 
     private static int getSum() {
-        Map<Integer, Integer> map = new HashMap<>();
+        Map<Integer, Integer> map = new TreeMap<>();
         map.put(1, 10);
         map.put(2, 20);
         map.put(3, 30);
@@ -24,4 +24,3 @@ public class TrivialHashMap {
         return sum;
     }
 }
-
