@@ -75,7 +75,7 @@ impl<'a> StackFrame {
 
         f32::from_bits(high as u32)
     }
-    
+
     pub fn pop(&mut self) -> i32 {
         self.operand_stack.pop().expect("Empty stack")
     }
