@@ -322,6 +322,34 @@ impl Engine {
                         objref[0]
                     );
                 }
+                BALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
+
+                    stack_frame.push(value[0]);
+                    stack_frame.incr_pc();
+                    println!(
+                        "BALOAD -> arrayref={arrayref}, index={index}, value={}",
+                        value[0]
+                    );
+                }
+                CALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
+
+                    stack_frame.push(value[0]);
+                    stack_frame.incr_pc();
+                    println!(
+                        "CALOAD -> arrayref={arrayref}, index={index}, value={}",
+                        value[0]
+                    );
+                }
                 ISTORE => {
                     stack_frame.incr_pc();
                     let pos = stack_frame.get_bytecode_byte() as usize;
@@ -496,6 +524,30 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("AASTORE -> arrayref={arrayref}, index={index}, objref={objref}");
+                }
+                BASTORE => {
+                    let value = stack_frame.pop();
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, vec![value])
+                    })?;
+
+                    stack_frame.incr_pc();
+                    println!("BASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                }
+                CASTORE => {
+                    let value = stack_frame.pop();
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, vec![value])
+                    })?;
+
+                    stack_frame.incr_pc();
+                    println!("CASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 POP => {
                     stack_frame.pop();
@@ -691,6 +743,14 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("I2F -> {value}F");
+                }
+                I2B => {
+                    let value = stack_frame.pop() as i8;
+
+                    stack_frame.push(value as i32);
+
+                    stack_frame.incr_pc();
+                    println!("I2B -> {value}B");
                 }
                 LCMP => {
                     let b = stack_frame.pop_i64();
