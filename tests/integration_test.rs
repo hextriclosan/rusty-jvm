@@ -313,6 +313,15 @@ fn should_do_trivial_treemaps() {
     assert_eq!(84, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_trivial_strings() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.javacore.strings.trivial.TrivialStrings")
+        .unwrap();
+    assert_eq!(8, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }
