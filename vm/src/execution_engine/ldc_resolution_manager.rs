@@ -39,8 +39,11 @@ impl LdcResolutionManager {
             value
         } else if let Some(value) = cpool_helper.get_float(cpoolindex) {
             Self::float_to_int(value)
-        } else if let Some(_value) = cpool_helper.get_utf8(cpoolindex) {
-            todo!("should return reference to string (in heap)");
+        } else if let Some(_value) = cpool_helper.get_string(cpoolindex) {
+            todo!(
+                "should return reference to string (in heap) cpoolindex={}",
+                cpoolindex
+            );
         } else if let Some(class_name) = cpool_helper.get_class(cpoolindex) {
             let class = with_method_area(|method_area| method_area.get(&class_name))?;
 
