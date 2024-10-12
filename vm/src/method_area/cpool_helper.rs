@@ -102,6 +102,15 @@ impl CPoolHelper {
         self.get_utf8(*name_index)
     }
 
+    pub fn get_string(&self, index: u16) -> Option<String> {
+        let name_index = match self.get(CPoolType::String, index)? {
+            ConstantPool::String { string_index } => Some(string_index),
+            _ => None,
+        }?;
+
+        self.get_utf8(*name_index)
+    }
+
     pub fn get_long(&self, index: u16) -> Option<i64> {
         match self.get(CPoolType::Long, index)? {
             ConstantPool::Long { value } => Some(*value),
@@ -186,7 +195,7 @@ mod tests {
     use super::*;
     use jclass::constant_pool::ConstantPool::{
         Class, Empty, Fieldref, Float, Integer, InterfaceMethodref, Long, Methodref, NameAndType,
-        Utf8,
+        String, Utf8,
     };
 
     #[test]
@@ -558,5 +567,19 @@ mod tests {
 
         let actual = resolver.get_class(1);
         assert_eq!(Some("java/lang/Byte".to_string()), actual)
+    }
+
+    #[test]
+    fn should_return_string_as_utf8() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            String { string_index: 2 },
+            Utf8 {
+                value: "int".to_string(),
+            },
+        ]);
+
+        let actual = resolver.get_string(1);
+        assert_eq!(Some("int".to_string()), actual)
     }
 }

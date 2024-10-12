@@ -116,25 +116,16 @@ impl Engine {
                 }
                 LDC_W => {
                     //todo: merge me with LDC
-                    stack_frame.incr_pc();
                     let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
 
-                    let java_class = with_method_area(|method_area| {
-                        method_area.get(current_class_name.as_str())
-                    })?;
-                    let cpool_helper = java_class.cpool_helper();
-
-                    // todo add support of other types
-                    let value = cpool_helper.get_integer(cpoolindex).ok_or_else(|| {
-                        Error::new_constant_pool(&format!(
-                            "Error getting value as Integer by index {cpoolindex}"
-                        ))
-                    })?;
+                    let value = self
+                        .ldc_resolution_manager
+                        .resolve_ldc(&current_class_name, cpoolindex)?;
 
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("LDC -> cpoolindex={cpoolindex}, value={value}");
+                    println!("LDC_W -> cpoolindex={cpoolindex}, value={value}");
                 }
                 LDC2_W => {
                     let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
