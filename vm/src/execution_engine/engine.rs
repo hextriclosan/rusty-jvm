@@ -728,13 +728,12 @@ impl Engine {
                     println!("IINC -> {current_val} + {const_val} = {new_val}");
                 }
                 I2L => {
-                    let low = stack_frame.pop();
+                    let value = stack_frame.pop() as i64;
 
-                    stack_frame.push(low);
-                    stack_frame.push(0);
+                    stack_frame.push_i64(value);
 
                     stack_frame.incr_pc();
-                    println!("I2L -> {low}L");
+                    println!("I2L -> {value}L");
                 }
                 I2F => {
                     let value = stack_frame.pop() as f32;

@@ -1,8 +1,8 @@
 pub(crate) fn current_time_millis_wrp(_args: &[i32]) -> Vec<i32> {
     let millis = current_time_millis();
 
-    let low = millis as i32;
-    let high = (millis >> 32) as i32;
+    let high = ((millis >> 32) & 0xFFFFFFFF) as i32;
+    let low = (millis & 0xFFFFFFFF) as i32;
 
     vec![high, low]
 }

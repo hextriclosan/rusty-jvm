@@ -342,7 +342,10 @@ fn get_long(locals_opt: Option<Vec<i32>>) -> i64 {
     let low = two[0];
     let high = two[1];
 
-    ((high as i64) << 32) | (low as i64)
+    let high_i64 = (high as i64) << 32;
+    let low_i64 = low as u32 as i64;
+
+    high_i64 | low_i64
 }
 
 fn get_float(locals: Option<Vec<i32>>) -> f32 {
