@@ -7,7 +7,7 @@ type CPoolIndex = u16;
 type Value = i32;
 
 pub struct LdcResolutionManager {
-    cache: RwLock<HashMap<CPoolIndex, Value>>,
+    cache: RwLock<HashMap<String, HashMap<CPoolIndex, Value>>>,
 }
 
 impl LdcResolutionManager {
@@ -22,11 +22,12 @@ impl LdcResolutionManager {
         current_class_name: &str,
         cpoolindex: u16,
     ) -> crate::error::Result<i32> {
-        if let Some(value) = self
+        if let Some(Some(value)) = self
             .cache
             .read()
             .expect("error getting cache lock")
-            .get(&cpoolindex)
+            .get(current_class_name)
+            .map(|map| map.get(&cpoolindex))
         {
             return Ok(*value);
         }
@@ -54,6 +55,8 @@ impl LdcResolutionManager {
         self.cache
             .write()
             .expect("error getting cache write lock")
+            .entry(current_class_name.to_string())
+            .or_insert_with(HashMap::new)
             .insert(cpoolindex, result);
 
         Ok(result)
