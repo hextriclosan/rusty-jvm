@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::method_area::method_area::with_method_area;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -39,11 +40,8 @@ impl LdcResolutionManager {
             value
         } else if let Some(value) = cpool_helper.get_float(cpoolindex) {
             Self::float_to_int(value)
-        } else if let Some(_value) = cpool_helper.get_string(cpoolindex) {
-            todo!(
-                "should return reference to string (in heap) cpoolindex={}",
-                cpoolindex
-            );
+        } else if let Some(value) = cpool_helper.get_string(cpoolindex) {
+            StringPoolHelper::get_string(value)?
         } else if let Some(class_name) = cpool_helper.get_class(cpoolindex) {
             let class = with_method_area(|method_area| method_area.get(&class_name))?;
 

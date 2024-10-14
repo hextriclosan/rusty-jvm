@@ -144,7 +144,7 @@ impl JavaClass {
                 Self::STATIC_INIT_METHOD
             );
             let mut engine = Engine::new();
-            engine.execute(static_init_method)?;
+            engine.execute(static_init_method.new_stack_frame()?)?;
             println!(
                 "<RETURN> -> {}.{}",
                 self.this_class_name,

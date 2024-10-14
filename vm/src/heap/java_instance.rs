@@ -24,6 +24,14 @@ impl Array {
         }
     }
 
+    pub fn new_with_values(array: &[i32]) -> Self {
+        //todo: is not suitable for long and double
+        let converted_arr = array.iter().map(|item| vec![*item]).collect();
+        Self {
+            data: converted_arr,
+        }
+    }
+
     pub fn get_value(&self, index: i32) -> crate::error::Result<&Vec<i32>> {
         if let Some(arr_value) = self.data.get(index as usize) {
             Ok(arr_value)

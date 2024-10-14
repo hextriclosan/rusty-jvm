@@ -323,6 +323,24 @@ fn should_do_trivial_strings() {
 }
 
 #[test]
+fn should_do_trivial_strings_cpool() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.javacore.strings.cpool.trivial.TrivialStringsCPool")
+        .unwrap();
+    assert_eq!(8, get_int(last_frame_value))
+}
+
+#[test]
+fn should_do_strings_cpool_advanced() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.javacore.strings.cpool.advanced.StringPoolAdvanced")
+        .unwrap();
+    assert_eq!(29, get_int(last_frame_value))
+}
+
+#[test]
 fn should_do_trivial_util_arrays() {
     let mut vm = VM::new("std");
     let last_frame_value = vm

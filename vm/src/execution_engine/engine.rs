@@ -4,7 +4,6 @@ use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::instance_checker::InstanceChecker;
-use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::{i32toi64, StackFrame};
 use jdescriptor::get_length;
@@ -24,9 +23,9 @@ impl Engine {
 
     pub(crate) fn execute(
         &mut self,
-        method: &JavaMethod,
+        stack_frame: StackFrame,
     ) -> crate::error::Result<Option<Vec<i32>>> {
-        let mut stack_frames = vec![method.new_stack_frame()?];
+        let mut stack_frames = vec![stack_frame];
         let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
 
@@ -673,6 +672,29 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LREM -> {a} % {b} = {result}");
                 }
+                ISHL => {
+                    let b = stack_frame.pop();
+                    let a = stack_frame.pop();
+
+                    let b_trunc = b & 0b00011111;
+                    let result = a << b_trunc;
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("ISHL -> {a} << {b} = {result}");
+                }
+                ISHR => {
+                    // todo: recheck spec
+                    let b = stack_frame.pop() as u32;
+                    let a = stack_frame.pop();
+
+                    let b_trunc = b & 0b00011111u32;
+                    let result = a >> b_trunc;
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("ISHR -> {a} >> {b} = {result}");
+                }
                 IUSHR => {
                     let b = stack_frame.pop() as u32;
                     let a = stack_frame.pop() as u32;
@@ -693,6 +715,16 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("IAND -> {a} & {b} = {result}");
+                }
+                IOR => {
+                    let b = stack_frame.pop();
+                    let a = stack_frame.pop();
+
+                    let result = a | b;
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("IOR -> {a} | {b} = {result}");
                 }
                 IXOR => {
                     let b = stack_frame.pop();
