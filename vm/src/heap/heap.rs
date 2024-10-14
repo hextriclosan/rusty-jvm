@@ -27,6 +27,7 @@ where
 pub(crate) struct Heap {
     data: HashMap<i32, HeapValue>,
     next_id: i32,
+    ref_by_stringvalue: HashMap<String, i32>,
 }
 
 impl Heap {
@@ -34,6 +35,7 @@ impl Heap {
         Self {
             data: HashMap::new(),
             next_id: 0,
+            ref_by_stringvalue: HashMap::new(),
         }
     }
 
@@ -93,6 +95,15 @@ impl Heap {
         self.next_id
     }
 
+    pub(crate) fn create_array_with_values(&mut self, array: &[i32]) -> i32 {
+        self.next_id = self.next_id + 1; //todo: make me atomic
+
+        self.data
+            .insert(self.next_id, Arr(Array::new_with_values(array)));
+
+        self.next_id
+    }
+
     pub(crate) fn get_array_value(
         &self,
         arrayref: i32,
@@ -124,5 +135,14 @@ impl Heap {
         } else {
             Err(Error::new_execution("error getting array length"))
         }
+    }
+
+    pub(crate) fn get_const_string_ref(&self, string: &str) -> Option<i32> {
+        self.ref_by_stringvalue.get(string).map(|v| *v)
+    }
+
+    pub(crate) fn put_const_string_ref(&mut self, string: &str, reference: i32) -> Option<i32> {
+        self.ref_by_stringvalue
+            .insert(string.to_string(), reference)
     }
 }

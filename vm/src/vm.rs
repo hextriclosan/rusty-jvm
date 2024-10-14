@@ -27,6 +27,6 @@ impl VM {
 
         let mut engine = Engine::new();
 
-        engine.execute(java_method)
+        engine.execute(java_method.new_stack_frame()?)
     }
 }
