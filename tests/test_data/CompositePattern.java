@@ -1,14 +1,17 @@
 package samples.inheritance.interfaces.compositepattern;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CompositePattern {
     public static void main(String[] args) {
-        Composite outerComposite = new Composite(5);
+        Composite outerComposite = new Composite();
         outerComposite.addUnit(new Zealot());
         outerComposite.addUnit(new Zealot());
         outerComposite.addUnit(new DarkTemplar());
         outerComposite.addUnit(new DarkTemplar());
 
-        Composite innerComposite = new Composite(3);
+        Composite innerComposite = new Composite();
         innerComposite.addUnit(new Zealot());
         innerComposite.addUnit(new Unit() {
             @Override
@@ -44,16 +47,14 @@ class DarkTemplar implements Unit {
 
 class Composite implements Unit {
 
-    private final Unit[] units;
-    private int currentIndex;
+    private final List<Unit> units;
 
-    public Composite(int size) {
-        units = new Unit[size];
-        currentIndex = 0;
+    public Composite() {
+        units = new ArrayList<>();
     }
 
     public void addUnit(Unit unit) {
-        units[currentIndex++] = unit;
+        units.add(unit);
     }
 
     @Override
