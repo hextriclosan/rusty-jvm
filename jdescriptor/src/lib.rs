@@ -39,7 +39,7 @@ pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
         Byte | Char | Int | Short | Boolean => vec![0],
         Long => vec![0, 0],
         Float => from_f32(0.0),
-        Double => todo!(),
+        Double => from_f64(0.0),
         Void => panic!("field can't be a void type"),
         Array(_, _) => vec![0],
         Object(_) => vec![0],
@@ -178,6 +178,11 @@ impl Display for DescriptorError {
 
 fn from_f32(value: f32) -> Vec<i32> {
     vec![value.to_bits() as i32]
+}
+
+fn from_f64(value: f64) -> Vec<i32> {
+    let bits = value.to_bits();
+    vec![(bits >> 32) as i32, bits as i32]
 }
 
 #[cfg(test)]
