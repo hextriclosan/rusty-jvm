@@ -20,10 +20,10 @@ const STRICT: u16 = 0x00000800;
 const MODIFIERS: u16 =
     PUBLIC | PROTECTED | PRIVATE | ABSTRACT | STATIC | FINAL | STRICT | INTERFACE;
 
-pub(crate) fn get_modifiers_wrp(args: &[i32]) -> Vec<i32> {
+pub(crate) fn get_modifiers_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let modifiers = get_modifiers(args[0]);
 
-    vec![modifiers]
+    Ok(vec![modifiers])
 }
 fn get_modifiers(reference: i32) -> i32 {
     with_method_area(|method_area| {

@@ -1,5 +1,6 @@
 use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
 use std::fmt::{Debug, Display, Formatter};
+use std::time::SystemTimeError;
 use std::{io, result};
 
 pub type Result<T> = result::Result<T, Error>;
@@ -50,6 +51,12 @@ impl Display for Error {
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Error::new(Io(error))
+    }
+}
+
+impl From<SystemTimeError> for Error {
+    fn from(error: SystemTimeError) -> Self {
+        Error::new_execution(&format!("SystemTimeError: {error}"))
     }
 }
 
