@@ -307,6 +307,15 @@ fn should_do_subtraction_with_doubles() {
 }
 
 #[test]
+fn should_do_operations_with_doubles() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.arithmetics.operations.doubles.DoubleOperations")
+        .unwrap();
+    assert_eq!(2.8547008547008547E278, get_double(last_frame_value))
+}
+
+#[test]
 fn should_do_trivial_cast() {
     let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.javacore.cast.trivial.TrivialCast").unwrap();
