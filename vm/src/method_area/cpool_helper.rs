@@ -93,6 +93,13 @@ impl CPoolHelper {
         }
     }
 
+    pub fn get_double(&self, index: u16) -> Option<f64> {
+        match self.get(CPoolType::Double, index)? {
+            ConstantPool::Double { value } => Some(*value),
+            _ => None,
+        }
+    }
+
     pub fn get_class(&self, index: u16) -> Option<String> {
         let name_index = match self.get(CPoolType::Class, index)? {
             ConstantPool::Class { name_index } => Some(name_index),
@@ -194,8 +201,8 @@ impl CPoolHelper {
 mod tests {
     use super::*;
     use jclass::constant_pool::ConstantPool::{
-        Class, Empty, Fieldref, Float, Integer, InterfaceMethodref, Long, Methodref, NameAndType,
-        String, Utf8,
+        Class, Double, Empty, Fieldref, Float, Integer, InterfaceMethodref, Long, Methodref,
+        NameAndType, String, Utf8,
     };
 
     #[test]
@@ -553,6 +560,18 @@ mod tests {
 
         let actual = resolver.get_float(2);
         assert_eq!(Some(3.14), actual)
+    }
+
+    #[test]
+    fn should_return_double() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            Class { name_index: 2 },
+            Double { value: 4.2217E-105 },
+        ]);
+
+        let actual = resolver.get_double(2);
+        assert_eq!(Some(4.2217E-105), actual)
     }
 
     #[test]

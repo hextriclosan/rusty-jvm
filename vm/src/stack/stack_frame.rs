@@ -1,3 +1,5 @@
+use crate::helper::i32toi64;
+
 #[derive(Clone)]
 pub(crate) struct StackFrame {
     pc: usize,
@@ -100,11 +102,4 @@ impl<'a> StackFrame {
     pub fn current_class_name(&self) -> &str {
         &self.current_class_name
     }
-}
-
-pub fn i32toi64(high: i32, low: i32) -> i64 {
-    let high_converted = (high as i64) << 32;
-    let low_converted = low as u32/*to prevent sign extension*/ as i64;
-
-    high_converted | low_converted
 }

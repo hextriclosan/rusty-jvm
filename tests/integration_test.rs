@@ -298,6 +298,15 @@ fn should_do_subtraction_with_floats() {
 }
 
 #[test]
+fn should_do_subtraction_with_doubles() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.arithmetics.sub.doubles.SubDoubles")
+        .unwrap();
+    assert_eq!(-8.76543211E200, get_double(last_frame_value))
+}
+
+#[test]
 fn should_do_trivial_cast() {
     let mut vm = VM::new("std");
     let last_frame_value = vm.run("samples.javacore.cast.trivial.TrivialCast").unwrap();
@@ -388,4 +397,17 @@ fn get_float(locals: Option<Vec<i32>>) -> f32 {
     let value = *locals.unwrap().last().unwrap();
 
     f32::from_bits(value as u32)
+}
+
+fn get_double(locals_opt: Option<Vec<i32>>) -> f64 {
+    let locals = locals_opt.unwrap();
+
+    let two = &locals[locals.len().saturating_sub(2)..];
+    let low = two[0] as u32;
+    let high = two[1] as u32;
+
+    let high_i64 = (high as u64) << 32;
+    let low_i64 = low as u64;
+
+    f64::from_bits(high_i64 | low_i64)
 }
