@@ -3,9 +3,10 @@ use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::helper::i32toi64;
 use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::method_area::with_method_area;
-use crate::stack::stack_frame::{i32toi64, StackFrame};
+use crate::stack::stack_frame::StackFrame;
 use jdescriptor::get_length;
 
 pub(crate) struct Engine {
@@ -127,19 +128,13 @@ impl Engine {
                     println!("LDC_W -> cpoolindex={cpoolindex}, value={value}");
                 }
                 LDC2_W => {
+                    //todo: merge me with LDC
                     let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
 
-                    let java_class = with_method_area(|method_area| {
-                        method_area.get(current_class_name.as_str())
-                    })?;
-                    let cpool_helper = java_class.cpool_helper();
+                    let value = self
+                        .ldc_resolution_manager
+                        .resolve_ldc2_w(&current_class_name, cpoolindex)?;
 
-                    // todo add support of other types
-                    let value = cpool_helper.get_long(cpoolindex).ok_or_else(|| {
-                        Error::new_constant_pool(&format!(
-                            "Error getting value as Long by index {cpoolindex}"
-                        ))
-                    })?;
                     stack_frame.push_i64(value);
 
                     stack_frame.incr_pc();
@@ -244,6 +239,24 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("FLOAD_1 -> value={value}");
+                }
+                DLOAD_1 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(1);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("DLOAD_1 -> value={value}");
+                }
+                DLOAD_3 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(3);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("DLOAD_3 -> value={value}");
                 }
                 ALOAD_0 => {
                     let reference = stack_frame.get_local(0);
@@ -362,6 +375,19 @@ impl Engine {
                     let value = i32toi64(high, low);
                     println!("LSTORE -> value={value}");
                 }
+                DSTORE => {
+                    stack_frame.incr_pc();
+                    let pos = stack_frame.get_bytecode_byte() as usize;
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(pos, low);
+                    stack_frame.set_local(pos + 1, high);
+
+                    stack_frame.incr_pc();
+                    let value = i32toi64(high, low);
+                    println!("DSTORE -> value={value}");
+                }
                 ASTORE => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -447,6 +473,28 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("FSTORE_3 -> value={value}");
+                }
+                DSTORE_1 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(1, low);
+                    stack_frame.set_local(2, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!("DSTORE_1 -> value={value}");
+                }
+                DSTORE_3 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(3, low);
+                    stack_frame.set_local(4, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!("DSTORE_3 -> value={value}");
                 }
                 ASTORE_0 => {
                     let objectref = stack_frame.pop();
@@ -622,6 +670,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("FSUB -> {a} - {b} = {result}");
+                }
+                DSUB => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = a - b;
+
+                    stack_frame.push_i64(result.to_bits() as i64);
+
+                    stack_frame.incr_pc();
+                    println!("DSUB -> {a} - {b} = {result}");
                 }
                 IMUL => {
                     let b = stack_frame.pop();
