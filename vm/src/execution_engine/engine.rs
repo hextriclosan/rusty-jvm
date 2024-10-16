@@ -774,6 +774,14 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("I2B -> {value}B");
                 }
+                I2C => {
+                    let value = stack_frame.pop() as u16;
+
+                    stack_frame.push(value as i32);
+
+                    stack_frame.incr_pc();
+                    println!("I2C -> {value}C");
+                }
                 LCMP => {
                     let b = stack_frame.pop_i64();
                     let a = stack_frame.pop_i64();
