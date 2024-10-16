@@ -12,7 +12,7 @@ pub(crate) struct JavaInstance {
     fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Array {
     data: Vec<Vec<i32>>,
 }
@@ -47,6 +47,11 @@ impl Array {
         } else {
             Err(Error::new_execution("error setting array value"))
         }
+    }
+
+    pub fn set_entire_value(&mut self, value: Array) -> crate::error::Result<()> {
+        self.data = value.data;
+        Ok(())
     }
 
     pub fn get_length(&self) -> i32 {

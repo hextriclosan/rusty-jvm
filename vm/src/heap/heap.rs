@@ -104,6 +104,26 @@ impl Heap {
         self.next_id
     }
 
+    pub(crate) fn get_entire_array(&self, array_ref: i32) -> crate::error::Result<Array> {
+        if let Some(Arr(array)) = self.data.get(&array_ref) {
+            Ok(array.clone())
+        } else {
+            Err(Error::new_execution("error getting array"))
+        }
+    }
+
+    pub(crate) fn set_entire_array(
+        &mut self,
+        array_ref: i32,
+        array_val: Array,
+    ) -> crate::error::Result<()> {
+        if let Some(Arr(array)) = self.data.get_mut(&array_ref) {
+            array.set_entire_value(array_val)
+        } else {
+            Err(Error::new_execution("error getting array"))
+        }
+    }
+
     pub(crate) fn get_array_value(
         &self,
         arrayref: i32,

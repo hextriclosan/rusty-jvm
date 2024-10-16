@@ -256,7 +256,7 @@ fn should_do_composite_pattern() {
 }
 
 #[test]
-fn should_do_native_call_on_system() {
+fn should_do_native_call_on_system_current_time() {
     let start = SystemTime::now();
     let since_the_epoch = start
         .duration_since(UNIX_EPOCH)
@@ -265,11 +265,20 @@ fn should_do_native_call_on_system() {
 
     let mut vm = VM::new("std");
     let last_frame_value = vm
-        .run("samples.nativecall.system.NativeCallSystem")
+        .run("samples.nativecall.system.NativeCallSystemCurrentTimeMillis")
         .unwrap();
 
     let actual_millis = get_long(last_frame_value);
     assert!((expected_millis..expected_millis + 2000).contains(&actual_millis))
+}
+
+#[test]
+fn should_do_native_call_on_system_array_copy() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.nativecall.system.NativeCallSystemArrayCopy")
+        .unwrap();
+    assert_eq!(644_245_094_908, get_long(last_frame_value))
 }
 
 #[test]
