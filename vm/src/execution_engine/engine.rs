@@ -162,6 +162,18 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LLOAD -> pos={pos}, value={value}");
                 }
+                DLOAD => {
+                    stack_frame.incr_pc();
+                    let pos = stack_frame.get_bytecode_byte() as usize;
+
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(pos);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("DLOAD -> pos={pos}, value={value}");
+                }
                 ALOAD => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -239,6 +251,15 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("FLOAD_1 -> value={value}");
+                }
+                DLOAD_0 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(0);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!("DLOAD_0 -> value={value}");
                 }
                 DLOAD_1 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(1);
@@ -642,6 +663,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LADD -> {a} + {b} = {result}");
                 }
+                DADD => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = a + b;
+
+                    stack_frame.push_i64(result.to_bits() as i64);
+
+                    stack_frame.incr_pc();
+                    println!("DADD -> {a} + {b} = {result}");
+                }
                 ISUB => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -702,6 +734,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LMUL -> {a} * {b} = {result}");
                 }
+                DMUL => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = a * b;
+
+                    stack_frame.push_i64(result.to_bits() as i64);
+
+                    stack_frame.incr_pc();
+                    println!("DMUL -> {a} * {b} = {result}");
+                }
                 IDIV => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -710,6 +753,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("IDIV -> {a} / {b} = {result}");
+                }
+                DDIV => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = a / b;
+
+                    stack_frame.push_i64(result.to_bits() as i64);
+
+                    stack_frame.incr_pc();
+                    println!("DDIV -> {a} / {b} = {result}");
                 }
                 IREM => {
                     let b = stack_frame.pop();
@@ -730,6 +784,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("LREM -> {a} % {b} = {result}");
+                }
+                DREM => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = a % b;
+
+                    stack_frame.push_i64(result.to_bits() as i64);
+
+                    stack_frame.incr_pc();
+                    println!("DREM -> {a} % {b} = {result}");
                 }
                 ISHL => {
                     let b = stack_frame.pop();
@@ -825,6 +890,14 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("I2F -> {value}F");
                 }
+                I2D => {
+                    let value = stack_frame.pop() as f64;
+
+                    stack_frame.push_i64(value.to_bits() as i64);
+
+                    stack_frame.incr_pc();
+                    println!("I2D -> {value}D");
+                }
                 I2B => {
                     let value = stack_frame.pop() as i8;
 
@@ -855,6 +928,25 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("LCMP -> {a} ? {b}");
+                }
+                DCMPL => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = if a.is_nan() || b.is_nan() {
+                        -1
+                    } else if a < b {
+                        -1
+                    } else if a > b {
+                        1
+                    } else {
+                        0
+                    };
+
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("DCMPL -> {a} ? {b}");
                 }
                 IFEQ => {
                     let value = stack_frame.pop();
