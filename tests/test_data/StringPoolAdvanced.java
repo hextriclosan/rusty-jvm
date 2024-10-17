@@ -11,7 +11,7 @@ public class StringPoolAdvanced {
         // Example 1: Creating a string with new keyword
         String str3 = new String("Hello");
         // str3 is created in the heap, not in the string pool
-        int bit1 = str1 == str3 ? 1 : 0;
+        int bit1 = str1 != str3 ? 1 : 0;
 
         // Example 2: Comparing strings with equals method
         int bit2 = str1.equals(str3) ? 1 : 0;
@@ -24,16 +24,13 @@ public class StringPoolAdvanced {
         String str4 = new AnotherClass().getAnotherString();
         int bit4 = str1 == str4 ? 1 : 0;
 
-        // Example X: Concatenation with non-literals at runtime
-        //String part1 = "Hel";
-        //String part2 = "lo";
-        //String str6 = part1 + part2; // New object is created in the heap
-        //System.out.println("str1 == str6 : " + (str1 == str6)); // false
+        // Example 5: Interning the string (forcing it into the pool)
+        String str6 = str3.intern();
+        int bit5 = str1 == str6 ? 1 : 0;
 
-        // Example X: Interning the string (forcing it into the pool)
-        //String str4 = str3.intern();
-        // Now str4 refers to the string from the pool
-        //System.out.println("str1 == str4 : " + (str1 == str4)); // true
+        // Example 6: Creation in runtime
+        String str7 = new String(new char[] {'H', 'e', 'l', 'l', 'o'}); // New object is created in the heap
+        int bit6 = str1 != str7 ? 1 : 0;
 
         int result = 0;
         result = setBit(result, 0, bit0);
@@ -41,6 +38,8 @@ public class StringPoolAdvanced {
         result = setBit(result, 2, bit2);
         result = setBit(result, 3, bit3);
         result = setBit(result, 4, bit4);
+        result = setBit(result, 5, bit5);
+        result = setBit(result, 6, bit6);
     }
 
     private static int setBit(int num, int position, int value) {
