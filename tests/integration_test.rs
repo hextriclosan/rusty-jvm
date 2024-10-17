@@ -385,6 +385,15 @@ fn should_do_trivial_util_arrays() {
     assert_eq!(9, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_trivial_reflection_with_primitives() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.reflection.trivial.synthetic.classes.SyntheticPrimitiveClasses")
+        .unwrap();
+    assert_eq!(9369, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }

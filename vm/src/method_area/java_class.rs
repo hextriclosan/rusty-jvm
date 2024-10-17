@@ -1,4 +1,3 @@
-use crate::error::Error;
 use crate::execution_engine::engine::Engine;
 use crate::heap::heap::with_heap_write_lock;
 use crate::heap::java_instance::FieldNameType;
@@ -25,7 +24,7 @@ pub(crate) struct JavaClass {
     interfaces: HashSet<String>,
     access_flags: u16,
 
-    static_fields_initialized: AtomicBool,
+    static_fields_initialized: AtomicBool, //todo: use lazy initialization with OnceCell instead
 
     reflection_ref: OnceCell<i32>,
 }
@@ -115,19 +114,17 @@ impl JavaClass {
         self.access_flags & INTERFACE != 0
     }
 
-    pub fn static_field(&self, field_name: &str) -> crate::error::Result<Arc<Field>> {
+    pub fn static_field(&self, field_name: &str) -> crate::error::Result<Option<Arc<Field>>> {
         if !self.static_fields_initialized.load(Ordering::SeqCst) {
             self.static_fields_initialized.store(true, Ordering::SeqCst);
             self.do_static_fields_initialization()?;
         }
 
-        match self.static_fields.field_by_name.get(field_name) {
-            Some(field) => Ok(Arc::clone(field)),
-            None => Err(Error::new_constant_pool(&format!(
-                "Error getting field: {}.{field_name}",
-                self.this_class_name
-            ))),
-        }
+        Ok(self
+            .static_fields
+            .field_by_name
+            .get(field_name)
+            .map(|field| Arc::clone(field)))
     }
 
     fn do_static_fields_initialization(&self) -> crate::error::Result<()> {

@@ -54,6 +54,10 @@ impl Array {
         Ok(())
     }
 
+    pub fn get_entire_value(&self) -> &Vec<Vec<i32>> {
+        &self.data
+    }
+
     pub fn get_length(&self) -> i32 {
         self.data.len() as i32
     }

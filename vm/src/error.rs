@@ -1,5 +1,6 @@
 use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
 use std::fmt::{Debug, Display, Formatter};
+use std::string::FromUtf8Error;
 use std::time::SystemTimeError;
 use std::{io, result};
 
@@ -57,6 +58,12 @@ impl From<io::Error> for Error {
 impl From<SystemTimeError> for Error {
     fn from(error: SystemTimeError) -> Self {
         Error::new_execution(&format!("SystemTimeError: {error}"))
+    }
+}
+
+impl From<FromUtf8Error> for Error {
+    fn from(error: FromUtf8Error) -> Self {
+        Error::new_execution(&format!("FromUtf8Error: {error}"))
     }
 }
 

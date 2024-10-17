@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::system_native::class::get_modifiers_wrp;
+use crate::system_native::class::{get_modifiers_wrp, get_primitive_class_wrp};
 use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -20,6 +20,18 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         "java/lang/Class:getModifiers:()I",
         get_modifiers_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
+    table.insert(
+        "java/lang/Class:getPrimitiveClass:(Ljava/lang/String;)Ljava/lang/Class;",
+        get_primitive_class_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
+        bool_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:registerNatives:()V",
+        void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
 
     table
 });
@@ -35,4 +47,12 @@ pub(crate) fn invoke_native_method(
     let result = native_method(args)?;
 
     Ok(result)
+}
+
+fn void_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    Ok(vec![])
+}
+
+fn bool_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    Ok(vec![false as i32])
 }
