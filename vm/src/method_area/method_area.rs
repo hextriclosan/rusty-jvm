@@ -44,9 +44,10 @@ impl MethodArea {
     }
 
     fn new(std_dir: &str) -> Self {
+        let synthetic_classes = Self::generate_synthetic_classes();
         Self {
             std_dir: std_dir.to_string(),
-            loaded_classes: RwLock::new(HashMap::new()),
+            loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::new(HashMap::new()),
         }
     }
@@ -276,15 +277,19 @@ impl MethodArea {
         &self,
         class_name: &str,
         field_name: &str,
-    ) -> Option<Arc<Field>> {
-        let rc = self.get(class_name).ok()?;
+    ) -> crate::error::Result<Arc<Field>> {
+        let rc = self.get(class_name)?;
 
-        if let Some(field) = rc.static_field(field_name).ok() {
-            Some(Arc::clone(&field))
-        } else {
-            let parent_class_name = rc.parent().clone()?;
-
-            self.lookup_for_static_field(&parent_class_name, field_name)
+        match rc.static_field(field_name)? {
+            Some(field) => Ok(Arc::clone(&field)),
+            None => match rc.parent() {
+                Some(parent_class_name) => {
+                    self.lookup_for_static_field(&parent_class_name, field_name)
+                }
+                None => Err(Error::new_execution(&format!(
+                    "No field {field_name} found in class hierarchy"
+                ))),
+            },
         }
     }
 
@@ -357,5 +362,33 @@ impl MethodArea {
             .expect("error getting read lock")
             .get(&reflection_ref)
             .and_then(|java_class| Some(Arc::clone(java_class)))
+    }
+
+    fn generate_synthetic_classes() -> HashMap<String, Arc<JavaClass>> {
+        ["I", "J", "F", "D", "B", "C", "S", "Z", "V"]
+            .into_iter()
+            .map(|class_name| {
+                (
+                    class_name.to_string(),
+                    Self::generate_synthetic_class(class_name),
+                )
+            })
+            .collect()
+    }
+
+    fn generate_synthetic_class(class_name: &str) -> Arc<JavaClass> {
+        const PUBLIC: u16 = 0x00000001;
+        const FINAL: u16 = 0x00000010;
+        const ABSTRACT: u16 = 0x00000400;
+        Arc::new(JavaClass::new(
+            Methods::new(HashMap::new()),
+            Fields::new(HashMap::new()),
+            FieldDescriptors::new(HashMap::new()),
+            CPoolHelper::new(&Vec::new()),
+            class_name.to_string(),
+            None,
+            HashSet::new(),
+            PUBLIC | FINAL | ABSTRACT,
+        ))
     }
 }

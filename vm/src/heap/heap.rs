@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::heap::java_instance::HeapValue::{Arr, Object};
 use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
+use indexmap::IndexMap;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -25,7 +26,7 @@ where
 
 #[derive(Debug)]
 pub(crate) struct Heap {
-    data: HashMap<i32, HeapValue>,
+    data: IndexMap<i32, HeapValue>,
     next_id: i32,
     ref_by_stringvalue: HashMap<String, i32>,
 }
@@ -33,7 +34,7 @@ pub(crate) struct Heap {
 impl Heap {
     fn new() -> Self {
         Self {
-            data: HashMap::new(),
+            data: IndexMap::new(),
             next_id: 0,
             ref_by_stringvalue: HashMap::new(),
         }
@@ -63,7 +64,7 @@ impl Heap {
     }
 
     pub fn get_object_field_value(
-        &mut self,
+        &self,
         objectref: i32,
         class_name: &str,
         field_name_type: &str,

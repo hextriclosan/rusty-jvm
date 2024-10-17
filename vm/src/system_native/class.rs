@@ -1,5 +1,6 @@
+use crate::error::Error;
 use crate::method_area::method_area::with_method_area;
-
+use crate::system_native::string::get_utf8_string_by_ref;
 /*
  * Access modifier flag constants from tables 4.1, 4.4, 4.5, and 4.7 of
  * The Java Virtual Machine Specification
@@ -34,4 +35,41 @@ fn get_modifiers(reference: i32) -> i32 {
 
         access_flags & MODIFIERS
     }) as i32
+}
+
+pub(crate) fn get_primitive_class_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let string_ref = args[0];
+    let class_ref = get_primitive_class(string_ref)?;
+    Ok(vec![class_ref])
+}
+
+fn get_primitive_class(string_ref: i32) -> crate::error::Result<i32> {
+    let string_content = get_utf8_string_by_ref(string_ref)?;
+    let mapped_class_name = map_primitive_class(&string_content)?;
+
+    let class = with_method_area(|method_area| method_area.get(mapped_class_name))?;
+
+    let reflection_ref = class.reflection_ref();
+
+    Ok(reflection_ref)
+}
+fn map_primitive_class(primitive_type: &str) -> crate::error::Result<&str> {
+    let matched = match primitive_type {
+        "boolean" => "Z",
+        "byte" => "B",
+        "char" => "C",
+        "short" => "S",
+        "int" => "I",
+        "long" => "J",
+        "float" => "F",
+        "double" => "D",
+        "void" => "V",
+        _ => {
+            return Err(Error::new_execution(&format!(
+                "Unsupported primitive type: {primitive_type}"
+            )))
+        }
+    };
+
+    Ok(matched)
 }

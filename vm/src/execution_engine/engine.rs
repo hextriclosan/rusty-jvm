@@ -1072,7 +1072,6 @@ impl Engine {
 
                     let field = with_method_area(|method_area| {
                         method_area.lookup_for_static_field(&class_name, &field_name)
-                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting static field for reading: {class_name}.{field_name}")))
                     })?;
 
                     field
@@ -1102,8 +1101,6 @@ impl Engine {
                     let (len, field_ref) = {
                         let field_ref = with_method_area(|method_area| {
                             method_area.lookup_for_static_field(&class_name, &field_name)
-                            .ok_or_else(||
-                                Error::new_constant_pool(&format!("Error getting static field for writing: {class_name}.{field_name}")))
                         })?;
                         let len = get_length(field_ref.type_descriptor());
                         (len, field_ref)
