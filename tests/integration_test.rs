@@ -394,6 +394,15 @@ fn should_do_trivial_reflection_with_primitives() {
     assert_eq!(9369, get_int(last_frame_value))
 }
 
+#[test]
+fn should_do_trivial_unsafe_things() {
+    let mut vm = VM::new("std");
+    let last_frame_value = vm
+        .run("samples.jdkinternal.unsafe.trivial.UnsafeUsage")
+        .unwrap();
+    assert_eq!(1, get_int(last_frame_value))
+}
+
 fn get_int(locals: Option<Vec<i32>>) -> i32 {
     *locals.unwrap().last().unwrap()
 }

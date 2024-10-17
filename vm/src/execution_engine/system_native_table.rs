@@ -34,6 +34,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:arrayBaseOffset0:(Ljava/lang/Class;)I",
+        int_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:arrayIndexScale0:(Ljava/lang/Class;)I",
+        int_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
         intern_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
@@ -60,4 +68,8 @@ fn void_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
 
 fn bool_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     Ok(vec![false as i32])
+}
+
+fn int_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    Ok(vec![0])
 }
