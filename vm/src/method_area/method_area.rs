@@ -365,15 +365,34 @@ impl MethodArea {
     }
 
     fn generate_synthetic_classes() -> HashMap<String, Arc<JavaClass>> {
-        ["I", "J", "F", "D", "B", "C", "S", "Z", "V"]
-            .into_iter()
-            .map(|class_name| {
-                (
-                    class_name.to_string(),
-                    Self::generate_synthetic_class(class_name),
-                )
-            })
-            .collect()
+        [
+            "I",
+            "J",
+            "F",
+            "D",
+            "B",
+            "C",
+            "S",
+            "Z",
+            "V",
+            "[I",
+            "[J",
+            "[F",
+            "[D",
+            "[B",
+            "[C",
+            "[S",
+            "[Z", //todo implement real Classes for arrays
+            "[Ljava/lang/Object;",
+        ] //todo implement real Classes for array of objects
+        .into_iter()
+        .map(|class_name| {
+            (
+                class_name.to_string(),
+                Self::generate_synthetic_class(class_name),
+            )
+        })
+        .collect()
     }
 
     fn generate_synthetic_class(class_name: &str) -> Arc<JavaClass> {
