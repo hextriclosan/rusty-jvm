@@ -1,3 +1,4 @@
+use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_read_lock;
 
 const STRING_CLASS_NAME: &str = "java/lang/String";
@@ -33,4 +34,14 @@ pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> crate::error::Result<St
     let result = String::from_utf8(bytes)?;
 
     Ok(result)
+}
+
+pub(crate) fn intern_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let reference = intern(args[0])?;
+    Ok(vec![reference])
+}
+fn intern(reference: i32) -> crate::error::Result<i32> {
+    let string = get_utf8_string_by_ref(reference)?;
+
+    StringPoolHelper::get_string(string)
 }
