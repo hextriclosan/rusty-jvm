@@ -3,13 +3,13 @@ package samples.javacore.strings.cpool.advanced;
 public class StringPoolAdvanced {
     public static void main(String[] args) {
         // Example 0: String literals of same class are stored in the string pool
-        String str1 = "Hello";
-        String str2 = "Hello";
+        String str1 = "Hello😂";
+        String str2 = "Hello😂";
         // Both str1 and str2 refer to the same string literal from the pool
         int bit0 = str1 == str2 ? 1 : 0;
 
         // Example 1: Creating a string with new keyword
-        String str3 = new String("Hello");
+        String str3 = new String("Hello😂");
         // str3 is created in the heap, not in the string pool
         int bit1 = str1 != str3 ? 1 : 0;
 
@@ -17,7 +17,7 @@ public class StringPoolAdvanced {
         int bit2 = str1.equals(str3) ? 1 : 0;
 
         // Example 3: Concatenation with literals at compile-time
-        String str5 = "Hel" + "lo"; // Compiler optimizes this to "Hello"
+        String str5 = "Hel" + "lo😂"; // Compiler optimizes this to "Hello😂"
         int bit3 = str1 == str5 ? 1 : 0;
 
         // Example 4: Creating a string in another class
@@ -29,7 +29,7 @@ public class StringPoolAdvanced {
         int bit5 = str1 == str6 ? 1 : 0;
 
         // Example 6: Creation in runtime
-        String str7 = new String(new char[] {'H', 'e', 'l', 'l', 'o'}); // New object is created in the heap
+        String str7 = new String(new char[] {'H', 'e', 'l', 'l', 'o', '😂'}); // New object is created in the heap
         int bit6 = str1 != str7 ? 1 : 0;
 
         int result = 0;
@@ -49,6 +49,6 @@ public class StringPoolAdvanced {
 
 class AnotherClass {
     public String getAnotherString() {
-        return "Hello";
+        return "Hello😂";
     }
 }

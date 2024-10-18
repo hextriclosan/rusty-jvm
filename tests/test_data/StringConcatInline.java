@@ -9,7 +9,7 @@ public class StringConcatInline {
 
     private static int concat() {
         String abc = "abc";
-        String def = "def";
+        String def = "def😂";
         String abcdef = abc + def;
 
         int sum = 0;
