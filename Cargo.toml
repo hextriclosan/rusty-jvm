@@ -11,4 +11,4 @@ clap = "4.5.16"
 vm = {path = "vm"}
 
 [dev-dependencies]
-ctor = "0.2.8"
+rusty-fork = "0.3"
