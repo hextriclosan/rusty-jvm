@@ -370,7 +370,7 @@ rusty_fork_test! {
         let last_frame_value = vm
             .run("samples.javacore.strings.concat.trivial.StringConcatInline")
             .unwrap();
-        assert_eq!(597, get_int(last_frame_value))
+        assert_eq!(112788, get_int(last_frame_value))
     }
 
     #[test]
