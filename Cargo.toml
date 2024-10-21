@@ -9,6 +9,3 @@ members = ["jclass", "jdescriptor", "vm"]
 [dependencies]
 clap = "4.5.16"
 vm = {path = "vm"}
-
-[dev-dependencies]
-rusty-fork = "0.3"
