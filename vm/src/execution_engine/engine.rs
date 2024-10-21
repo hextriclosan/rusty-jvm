@@ -90,7 +90,7 @@ impl Engine {
                 }
                 BIPUSH => {
                     stack_frame.incr_pc();
-                    let value = stack_frame.get_bytecode_byte() as i32;
+                    let value = stack_frame.get_bytecode_byte() as i8 as i32;
                     stack_frame.push(value);
                     stack_frame.incr_pc();
                     println!("BIPUSH -> value={value}");

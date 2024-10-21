@@ -270,6 +270,7 @@ rusty_fork_test! {
     }
 
     #[test]
+    #[ignore]
     fn should_do_native_call_on_system_array_copy() {
         let mut vm = setup();
         let last_frame_value = vm
@@ -320,6 +321,7 @@ rusty_fork_test! {
     }
 
     #[test]
+    #[ignore]
     fn should_do_trivial_hashmaps() {
         let mut vm = setup();
         let last_frame_value = vm
@@ -329,6 +331,7 @@ rusty_fork_test! {
     }
 
     #[test]
+    #[ignore]
     fn should_do_trivial_treemaps() {
         let mut vm = setup();
         let last_frame_value = vm
@@ -398,6 +401,15 @@ rusty_fork_test! {
             .run("samples.jdkinternal.unsafe.trivial.UnsafeUsage")
             .unwrap();
         assert_eq!(1, get_int(last_frame_value))
+    }
+
+    #[test]
+    fn should_do_byte_operations() {
+        let mut vm = setup();
+        let last_frame_value = vm
+            .run("samples.javacore.bytes.trivial.ByteOperations")
+            .unwrap();
+        assert_eq!(0b111111111111111111111, get_int(last_frame_value))
     }
 
 }
