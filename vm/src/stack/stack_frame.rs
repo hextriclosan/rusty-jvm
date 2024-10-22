@@ -29,6 +29,17 @@ impl<'a> StackFrame {
         self.advance_pc(1)
     }
 
+    pub fn adjust_pc_to_4(&mut self) {
+        while self.pc % 4 != 0 {
+            self.pc += 1;
+        }
+    }
+
+    pub fn pc(&self) -> usize {
+        println!("bytecode_ref: {:?}", self.bytecode_ref);
+        self.pc
+    }
+
     pub(crate) fn advance_pc(&mut self, offset: i16) {
         if offset >= 0 {
             self.pc += offset as usize;

@@ -1013,6 +1013,35 @@ impl Engine {
                     stack_frame.advance_pc(offset);
                     println!("GOTO -> offset={offset}");
                 }
+                LOOKUPSWITCH => {
+                    let key = stack_frame.pop();
+                    let instruction_pc = stack_frame.pc() as i16;
+                    stack_frame.adjust_pc_to_4();
+
+                    stack_frame.advance_pc(-1);
+                    let default_offset = Self::extract_four_bytes(stack_frame) as i16;
+                    let npairs = Self::extract_four_bytes(stack_frame);
+
+                    let mut match_found = false;
+                    for _ in 0..npairs {
+                        let case_key = Self::extract_four_bytes(stack_frame);
+                        let offset = Self::extract_four_bytes(stack_frame) as i16;
+
+                        if key == case_key {
+                            let current_pc = stack_frame.pc() as i16;
+                            stack_frame.advance_pc(offset + instruction_pc - current_pc);
+                            match_found = true;
+                            break;
+                        }
+                    }
+
+                    if !match_found {
+                        let current_pc = stack_frame.pc() as i16;
+                        stack_frame.advance_pc(default_offset + instruction_pc - current_pc);
+                    }
+
+                    println!("LOOKUPSWITCH -> default_offset={default_offset}, npairs={npairs}");
+                }
                 IRETURN => {
                     let ret = stack_frame.pop();
                     stack_frames.pop();
@@ -1562,6 +1591,19 @@ impl Engine {
         let low = stack_frame.get_bytecode_byte() as i16;
 
         (high << 8) | (low)
+    }
+
+    fn extract_four_bytes(stack_frame: &mut StackFrame) -> i32 {
+        stack_frame.incr_pc();
+        let byte1 = stack_frame.get_bytecode_byte() as u32;
+        stack_frame.incr_pc();
+        let byte2 = stack_frame.get_bytecode_byte() as u32;
+        stack_frame.incr_pc();
+        let byte3 = stack_frame.get_bytecode_byte() as u32;
+        stack_frame.incr_pc();
+        let byte4 = stack_frame.get_bytecode_byte() as u32;
+
+        ((byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4) as i32
     }
 
     fn branch<T>(op: impl Fn(T, T) -> bool, stack_frame: &mut StackFrame, op_code: &str)
