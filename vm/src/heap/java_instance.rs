@@ -14,20 +14,23 @@ pub(crate) struct JavaInstance {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Array {
+    type_name: String,
     data: Vec<Vec<i32>>,
 }
 
 impl Array {
-    pub fn new(len: i32) -> Self {
+    pub fn new(type_name: &str, len: i32) -> Self {
         Self {
+            type_name: type_name.to_string(),
             data: vec![vec![0, 0]; len as usize], //todo: use either 1 or 2 elements vector for corresponding type
         }
     }
 
-    pub fn new_with_values(array: &[i32]) -> Self {
+    pub fn new_with_values(type_name: &str, array: &[i32]) -> Self {
         //todo: is not suitable for long and double
         let converted_arr = array.iter().map(|item| vec![*item]).collect();
         Self {
+            type_name: type_name.to_string(),
             data: converted_arr,
         }
     }
@@ -60,6 +63,10 @@ impl Array {
 
     pub fn get_length(&self) -> i32 {
         self.data.len() as i32
+    }
+
+    pub fn type_name(&self) -> &str {
+        &self.type_name
     }
 }
 
