@@ -79,28 +79,33 @@ impl Heap {
     }
 
     pub fn get_instance_name(&self, objectref: i32) -> crate::error::Result<String> {
-        if let Some(Object(java_instance)) = self.data.get(&objectref) {
-            Ok(java_instance.instance_name().to_string())
-        } else {
-            Err(Error::new_execution(&format!(
-                "error getting object from heap by ref {objectref}"
-            )))
-        }
+        self.data.get(&objectref).map_or_else(
+            || {
+                Err(Error::new_execution(&format!(
+                    "error getting object from heap by ref {objectref}"
+                )))
+            },
+            |obj| match obj {
+                Object(java_instance) => Ok(java_instance.instance_name().to_string()),
+                Arr(array) => Ok(array.type_name().to_string()),
+            },
+        )
     }
 
-    pub(crate) fn create_array(&mut self, len: i32) -> i32 {
+    pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> i32 {
         self.next_id = self.next_id + 1; //todo: make me atomic
 
-        self.data.insert(self.next_id, Arr(Array::new(len)));
+        self.data
+            .insert(self.next_id, Arr(Array::new(type_name, len)));
 
         self.next_id
     }
 
-    pub(crate) fn create_array_with_values(&mut self, array: &[i32]) -> i32 {
+    pub(crate) fn create_array_with_values(&mut self, type_name: &str, array: &[i32]) -> i32 {
         self.next_id = self.next_id + 1; //todo: make me atomic
 
         self.data
-            .insert(self.next_id, Arr(Array::new_with_values(array)));
+            .insert(self.next_id, Arr(Array::new_with_values(type_name, array)));
 
         self.next_id
     }

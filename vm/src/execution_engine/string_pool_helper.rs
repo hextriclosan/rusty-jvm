@@ -19,7 +19,8 @@ impl StringPoolHelper {
     fn create_string(string: &str) -> crate::error::Result<i32> {
         let codepoints = Self::string_to_codepoints(&string);
 
-        let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values(&codepoints));
+        let array_ref =
+            with_heap_write_lock(|heap| heap.create_array_with_values("[I", &codepoints));
         let string_class_name = "java/lang/String".to_string();
         let instance_with_default_fields = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields(&string_class_name)

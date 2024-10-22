@@ -1472,9 +1472,26 @@ impl Engine {
                     stack_frame.incr_pc();
                     let atype = stack_frame.get_bytecode_byte();
 
+                    let type_name = match atype {
+                        4 => "[Z",
+                        5 => "[C",
+                        6 => "[F",
+                        7 => "[D",
+                        8 => "[B",
+                        9 => "[S",
+                        10 => "[I",
+                        11 => "[J",
+                        _ => {
+                            return Err(Error::new_execution(&format!(
+                                "Error creating array of type {atype}"
+                            )))
+                        }
+                    };
+
                     let length = stack_frame.pop();
 
-                    let arrayref = with_heap_write_lock(|heap| heap.create_array(length));
+                    let arrayref =
+                        with_heap_write_lock(|heap| heap.create_array(type_name, length));
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
@@ -1496,7 +1513,8 @@ impl Engine {
                                 "Error getting class name by index {class_constpool_index}"
                             ))
                         })?;
-                    let arrayref = with_heap_write_lock(|heap| heap.create_array(length));
+                    let arrayref =
+                        with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
