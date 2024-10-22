@@ -12,6 +12,9 @@ public class TrivialCast {
         Object o2 = new long[] { 1, 2, 3 };
         var longArray = (long[]) o2;
 
+        Object o3 = new String[10];
+        var stringArray = (String[]) o3;
+
         int result = 1337;
     }
 }

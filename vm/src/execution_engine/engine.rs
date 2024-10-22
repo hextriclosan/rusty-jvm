@@ -1513,6 +1513,7 @@ impl Engine {
                                 "Error getting class name by index {class_constpool_index}"
                             ))
                         })?;
+                    let class_of_array = format!("[L{class_of_array};");
                     let arrayref =
                         with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
                     stack_frame.push(arrayref);
