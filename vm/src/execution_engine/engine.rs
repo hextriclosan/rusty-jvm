@@ -1018,7 +1018,6 @@ impl Engine {
                     let instruction_pc = stack_frame.pc() as i16;
                     stack_frame.adjust_pc_to_4();
 
-                    stack_frame.advance_pc(-1);
                     let default_offset = Self::extract_four_bytes(stack_frame) as i16;
                     let npairs = Self::extract_four_bytes(stack_frame);
 
@@ -1041,6 +1040,29 @@ impl Engine {
                     }
 
                     println!("LOOKUPSWITCH -> default_offset={default_offset}, npairs={npairs}");
+                }
+                TABLESWITCH => {
+                    let index = stack_frame.pop();
+                    let instruction_pc = stack_frame.pc() as i16;
+                    stack_frame.adjust_pc_to_4();
+
+                    let default_offset = Self::extract_four_bytes(stack_frame) as i16;
+                    let low = Self::extract_four_bytes(stack_frame);
+                    let high = Self::extract_four_bytes(stack_frame);
+
+                    let offset_table = (low..=high)
+                        .map(|_| Self::extract_four_bytes(stack_frame))
+                        .collect::<Vec<_>>();
+
+                    let offset = offset_table
+                        .get((index - low) as usize)
+                        .map_or(default_offset, |offset| *offset as i16);
+                    let current_pc = stack_frame.pc() as i16;
+                    stack_frame.advance_pc(offset + instruction_pc - current_pc);
+
+                    println!(
+                        "TABLESWITCH -> default_offset={default_offset}, low={low}, high={high}"
+                    );
                 }
                 IRETURN => {
                     let ret = stack_frame.pop();
