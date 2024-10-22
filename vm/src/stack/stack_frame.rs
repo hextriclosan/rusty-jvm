@@ -30,13 +30,12 @@ impl<'a> StackFrame {
     }
 
     pub fn adjust_pc_to_4(&mut self) {
-        while self.pc % 4 != 0 {
+        while (self.pc + 1) % 4 != 0 {
             self.pc += 1;
         }
     }
 
     pub fn pc(&self) -> usize {
-        println!("bytecode_ref: {:?}", self.bytecode_ref);
         self.pc
     }
 
