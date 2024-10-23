@@ -45,6 +45,22 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         "java/lang/String:intern:()Ljava/lang/String;",
         intern_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
+    table.insert(
+        "java/lang/Float:floatToRawIntBits:(F)I",
+        return_argument_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/lang/Double:doubleToRawLongBits:(D)J",
+        return_argument_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/lang/Double:longBitsToDouble:(J)D",
+        return_argument_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "jdk/internal/misc/CDS:initializeFromArchive:(Ljava/lang/Class;)V",
+        void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
 
     table
 });
@@ -72,4 +88,8 @@ fn bool_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
 
 fn int_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     Ok(vec![0])
+}
+
+fn return_argument_stub(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    Ok(args.to_vec())
 }

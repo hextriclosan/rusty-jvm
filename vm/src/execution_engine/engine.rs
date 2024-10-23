@@ -88,6 +88,26 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LCONST_1");
                 }
+                FCONST_0 => {
+                    stack_frame.push_f32(0.0);
+                    stack_frame.incr_pc();
+                    println!("FCONST_0");
+                }
+                FCONST_1 => {
+                    stack_frame.push_f32(1.0);
+                    stack_frame.incr_pc();
+                    println!("FCONST_1");
+                }
+                DCONST_0 => {
+                    stack_frame.push_f64(0.0);
+                    stack_frame.incr_pc();
+                    println!("DCONST_0");
+                }
+                DCONST_1 => {
+                    stack_frame.push_f64(1.0);
+                    stack_frame.incr_pc();
+                    println!("DCONST_1");
+                }
                 BIPUSH => {
                     stack_frame.incr_pc();
                     let value = stack_frame.get_bytecode_byte() as i8 as i32;
@@ -161,6 +181,16 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("LLOAD -> pos={pos}, value={value}");
+                }
+                FLOAD => {
+                    stack_frame.incr_pc();
+                    let pos = stack_frame.get_bytecode_byte() as usize;
+
+                    let value = stack_frame.get_local(pos);
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("FLOAD -> pos={pos}, value={value}");
                 }
                 DLOAD => {
                     stack_frame.incr_pc();
@@ -245,12 +275,26 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LLOAD_3 -> value={value}");
                 }
+                FLOAD_0 => {
+                    let value = stack_frame.get_local(0);
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("FLOAD_0 -> value={value}");
+                }
                 FLOAD_1 => {
                     let value = stack_frame.get_local(1);
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
                     println!("FLOAD_1 -> value={value}");
+                }
+                FLOAD_3 => {
+                    let value = stack_frame.get_local(3);
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("FLOAD_3 -> value={value}");
                 }
                 DLOAD_0 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(0);
@@ -332,6 +376,35 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
+                FALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
+
+                    stack_frame.push(value[0]);
+                    stack_frame.incr_pc();
+                    println!(
+                        "FALOAD -> arrayref={arrayref}, index={index}, value={}",
+                        value[0]
+                    );
+                }
+                DALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
+
+                    let high = value[0];
+                    let low = value[1];
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+                    stack_frame.incr_pc();
+                    println!("DALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
+                }
                 AALOAD => {
                     let index = stack_frame.pop();
                     let arrayref = stack_frame.pop();
@@ -374,6 +447,20 @@ impl Engine {
                         value[0]
                     );
                 }
+                SALOAD => {
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+                    let value = with_heap_read_lock(|heap| {
+                        heap.get_array_value(arrayref, index).cloned()
+                    })?;
+
+                    stack_frame.push(value[0]);
+                    stack_frame.incr_pc();
+                    println!(
+                        "SALOAD -> arrayref={arrayref}, index={index}, value={}",
+                        value[0]
+                    );
+                }
                 ISTORE => {
                     stack_frame.incr_pc();
                     let pos = stack_frame.get_bytecode_byte() as usize;
@@ -395,6 +482,15 @@ impl Engine {
                     stack_frame.incr_pc();
                     let value = i32toi64(high, low);
                     println!("LSTORE -> value={value}");
+                }
+                FSTORE => {
+                    stack_frame.incr_pc();
+                    let pos = stack_frame.get_bytecode_byte() as usize;
+                    let value = stack_frame.pop();
+
+                    stack_frame.set_local(pos, value);
+                    stack_frame.incr_pc();
+                    println!("FSTORE -> pos={pos}, value={value}");
                 }
                 DSTORE => {
                     stack_frame.incr_pc();
@@ -448,6 +544,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("ISTORE_3 -> value={value}");
                 }
+                LSTORE_0 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(0, low);
+                    stack_frame.set_local(1, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!("LSTORE_0 -> value={value}");
+                }
                 LSTORE_1 => {
                     let high = stack_frame.pop();
                     let low = stack_frame.pop();
@@ -481,6 +588,13 @@ impl Engine {
                     let value = ((high as i64) << 32) | (low as i64);
                     println!("LSTORE_3 -> value={value}");
                 }
+                FSTORE_0 => {
+                    let value = stack_frame.pop();
+                    stack_frame.set_local(0, value);
+
+                    stack_frame.incr_pc();
+                    println!("FSTORE_0 -> value={value}");
+                }
                 FSTORE_1 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(1, value);
@@ -494,6 +608,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("FSTORE_3 -> value={value}");
+                }
+                DSTORE_0 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(0, low);
+                    stack_frame.set_local(1, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!("DSTORE_0 -> value={value}");
                 }
                 DSTORE_1 => {
                     let high = stack_frame.pop();
@@ -572,6 +697,33 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
+                FASTORE => {
+                    let value = stack_frame.pop();
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, vec![value])
+                    })?;
+
+                    stack_frame.incr_pc();
+                    println!("FASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                }
+                DASTORE => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    let value = vec![high, low];
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, value.clone())
+                    })?;
+
+                    stack_frame.incr_pc();
+                    println!("DASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
+                }
                 AASTORE => {
                     let objref = stack_frame.pop();
                     let index = stack_frame.pop();
@@ -607,6 +759,18 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("CASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                }
+                SASTORE => {
+                    let value = stack_frame.pop();
+                    let index = stack_frame.pop();
+                    let arrayref = stack_frame.pop();
+
+                    with_heap_write_lock(|heap| {
+                        heap.set_array_value(arrayref, index, vec![value])
+                    })?;
+
+                    stack_frame.incr_pc();
+                    println!("SASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 POP => {
                     stack_frame.pop();
@@ -656,7 +820,7 @@ impl Engine {
                     let b = stack_frame.pop_i64();
                     let a = stack_frame.pop_i64();
 
-                    let result = a + b;
+                    let result = a.wrapping_add(b);
 
                     stack_frame.push_i64(result);
 
@@ -717,7 +881,7 @@ impl Engine {
                 IMUL => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
-                    let result = a * b;
+                    let result = a.wrapping_mul(b);
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
@@ -753,6 +917,26 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("IDIV -> {a} / {b} = {result}");
+                }
+                LDIV => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    let result = a / b; //todo add check for ArithmeticException here
+
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LDIV -> {a} / {b} = {result}");
+                }
+                FDIV => {
+                    let b = stack_frame.pop_f32();
+                    let a = stack_frame.pop_f32();
+                    let result = a / b;
+                    stack_frame.push_f32(result);
+
+                    stack_frame.incr_pc();
+                    println!("FDIV -> {a} / {b} = {result}");
                 }
                 DDIV => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -796,6 +980,22 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("DREM -> {a} % {b} = {result}");
                 }
+                INEG => {
+                    let value = stack_frame.pop();
+                    let result = -value;
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("INEG -> {result}");
+                }
+                LNEG => {
+                    let value = stack_frame.pop_i64();
+                    let result = -value;
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LNEG -> {result}");
+                }
                 ISHL => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -806,6 +1006,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("ISHL -> {a} << {b} = {result}");
+                }
+                LSHL => {
+                    let b = stack_frame.pop() as u32;
+                    let a = stack_frame.pop_i64();
+
+                    let b_trunc = b & 0b00111111u32;
+                    let result = a << b_trunc;
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LSHL -> {a} << {b} = {result}");
                 }
                 ISHR => {
                     // todo: recheck spec
@@ -819,6 +1030,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("ISHR -> {a} >> {b} = {result}");
                 }
+                LSHR => {
+                    let b = stack_frame.pop() as u32;
+                    let a = stack_frame.pop_i64();
+
+                    let b_trunc = b & 0b00111111u32;
+                    let result = a >> b_trunc;
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LSHR -> {a} >> {b} = {result}");
+                }
                 IUSHR => {
                     let b = stack_frame.pop() as u32;
                     let a = stack_frame.pop() as u32;
@@ -828,7 +1050,18 @@ impl Engine {
                     stack_frame.push(result as i32);
 
                     stack_frame.incr_pc();
-                    println!("IUSHR -> {a} % {b} = {result}");
+                    println!("IUSHR -> {a} >> {b} = {result}");
+                }
+                LUSHR => {
+                    let b = stack_frame.pop() as u32;
+                    let a = stack_frame.pop_i64() as u64;
+
+                    let b_trunc = b & 0b00111111u32;
+                    let result = a >> b_trunc;
+                    stack_frame.push_i64(result as i64);
+
+                    stack_frame.incr_pc();
+                    println!("LUSHR -> {a} >> {b} = {result}");
                 }
                 IAND => {
                     let b = stack_frame.pop();
@@ -840,6 +1073,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("IAND -> {a} & {b} = {result}");
                 }
+                LAND => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    let result = a & b;
+
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LAND -> {a} & {b} = {result}");
+                }
                 IOR => {
                     let b = stack_frame.pop();
                     let a = stack_frame.pop();
@@ -849,6 +1093,17 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("IOR -> {a} | {b} = {result}");
+                }
+                LOR => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    let result = a | b;
+
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LOR -> {a} | {b} = {result}");
                 }
                 IXOR => {
                     let b = stack_frame.pop();
@@ -898,6 +1153,38 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("I2D -> {value}D");
                 }
+                L2I => {
+                    let value = stack_frame.pop_i64() as i32;
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("L2I -> {value}I");
+                }
+                L2D => {
+                    let value = stack_frame.pop_i64() as f64;
+
+                    stack_frame.push_f64(value);
+
+                    stack_frame.incr_pc();
+                    println!("L2D -> {value}D");
+                }
+                F2L => {
+                    let value = stack_frame.pop_f32();
+
+                    stack_frame.push_i64(value as i64);
+
+                    stack_frame.incr_pc();
+                    println!("F2L -> {value}L");
+                }
+                D2L => {
+                    let value = stack_frame.pop_f64();
+
+                    stack_frame.push_i64(value as i64);
+
+                    stack_frame.incr_pc();
+                    println!("D2L -> {value}L");
+                }
                 I2B => {
                     let value = stack_frame.pop() as i8;
 
@@ -914,6 +1201,14 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("I2C -> {value}C");
                 }
+                I2S => {
+                    let value = stack_frame.pop() as i16;
+
+                    stack_frame.push(value as i32);
+
+                    stack_frame.incr_pc();
+                    println!("I2S -> {value}S");
+                }
                 LCMP => {
                     let b = stack_frame.pop_i64();
                     let a = stack_frame.pop_i64();
@@ -928,6 +1223,25 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("LCMP -> {a} ? {b}");
+                }
+                FCMPL => {
+                    let b = stack_frame.pop_f32();
+                    let a = stack_frame.pop_f32();
+
+                    let result = if a.is_nan() || b.is_nan() {
+                        -1
+                    } else if a < b {
+                        -1
+                    } else if a > b {
+                        1
+                    } else {
+                        0
+                    };
+
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("FCMPL -> {a} ? {b}");
                 }
                 DCMPL => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1086,6 +1400,29 @@ impl Engine {
 
                     let ret = i32toi64(ret_high, ret_low);
                     println!("LRETURN -> ret={ret}");
+                }
+                FRETURN => {
+                    let ret = stack_frame.pop();
+                    stack_frames.pop();
+                    stack_frames
+                        .last_mut()
+                        .ok_or(Error::new_execution("Error getting stack last value"))?
+                        .push(ret);
+                    println!("FRETURN -> ret={ret}");
+                }
+                DRETURN => {
+                    let ret_high = stack_frame.pop();
+                    let ret_low = stack_frame.pop();
+                    stack_frames.pop();
+                    let frame = stack_frames
+                        .last_mut()
+                        .ok_or(Error::new_execution("Error getting stack last value"))?;
+
+                    frame.push(ret_low);
+                    frame.push(ret_high);
+
+                    let ret = i32toi64(ret_high, ret_low);
+                    println!("DRETURN -> ret={ret}");
                 }
                 ARETURN => {
                     let objref = stack_frame.pop();
@@ -1596,6 +1933,85 @@ impl Engine {
                     stack_frame.push(objectref);
 
                     println!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+                }
+                WIDE => {
+                    stack_frame.incr_pc();
+                    let opcode = stack_frame.get_bytecode_byte();
+                    match opcode {
+                        ILOAD => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.get_local(index);
+                            stack_frame.push(value);
+                            stack_frame.incr_pc();
+                            println!("WIDE ILOAD -> index={index}, value={value}");
+                        }
+                        LLOAD => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.get_local(index);
+                            stack_frame.push(value);
+                            stack_frame.push(value);
+                            stack_frame.incr_pc();
+                            println!("WIDE LLOAD -> index={index}, value={value}");
+                        }
+                        FLOAD => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.get_local(index);
+                            stack_frame.push(value);
+                            stack_frame.incr_pc();
+                            println!("WIDE FLOAD -> index={index}, value={value}");
+                        }
+                        DLOAD => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.get_local(index);
+                            stack_frame.push(value);
+                            stack_frame.push(value);
+                            stack_frame.incr_pc();
+                            println!("WIDE DLOAD -> index={index}, value={value}");
+                        }
+                        ALOAD => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.get_local(index);
+                            stack_frame.push(value);
+                            stack_frame.incr_pc();
+                            println!("WIDE ALOAD -> index={index}, value={value}");
+                        }
+                        ISTORE => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.pop();
+                            stack_frame.set_local(index, value);
+                            stack_frame.incr_pc();
+                            println!("WIDE ISTORE -> index={index}, value={value}");
+                        }
+                        LSTORE => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.pop();
+                            stack_frame.set_local(index, value);
+                            stack_frame.incr_pc();
+                            println!("WIDE LSTORE -> index={index}, value={value}");
+                        }
+                        FSTORE => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let value = stack_frame.pop();
+                            stack_frame.set_local(index, value);
+                            stack_frame.incr_pc();
+                        }
+                        IINC => {
+                            let index = Self::extract_two_bytes(stack_frame) as u16 as usize;
+                            let const_val = Self::extract_two_bytes(stack_frame);
+
+                            let current_val = stack_frame.get_local(index);
+                            let new_val = current_val + const_val as i32;
+                            stack_frame.set_local(index, new_val);
+
+                            stack_frame.incr_pc();
+                            println!("WIDE IINC -> {current_val} + {const_val} = {new_val}");
+                        }
+                        _ => {
+                            return Err(Error::new_execution(&format!(
+                                "Error executing WIDE opcode {opcode}"
+                            )))
+                        }
+                    }
                 }
                 IFNULL => {
                     //todo: this one is opposite to IFNE ops code
