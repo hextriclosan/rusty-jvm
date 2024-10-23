@@ -48,7 +48,9 @@ impl Array {
             *arr_value = value;
             Ok(())
         } else {
-            Err(Error::new_execution("error setting array value"))
+            Err(Error::new_execution(&format!(
+                "error setting array value: {value:?}"
+            )))
         }
     }
 

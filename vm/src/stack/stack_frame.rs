@@ -75,11 +75,21 @@ impl<'a> StackFrame {
         self.push(value.to_bits() as i32);
     }
 
+    pub(crate) fn push_f64(&mut self, value: f64) {
+        self.push_i64(value.to_bits() as i64);
+    }
+
     pub fn pop_i64(&mut self) -> i64 {
         let high = self.pop();
         let low = self.pop();
 
         i32toi64(high, low)
+    }
+
+    pub fn pop_f64(&mut self) -> f64 {
+        let high = self.pop_i64();
+
+        f64::from_bits(high as u64)
     }
 
     pub fn pop_f32(&mut self) -> f32 {
