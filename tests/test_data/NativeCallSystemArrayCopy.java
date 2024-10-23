@@ -1,7 +1,14 @@
 package samples.nativecall.system;
 
+import java.util.Map;
+import java.util.HashMap;
+
 public class NativeCallSystemArrayCopy {
     public static void main(String[] args) {
+        var props = new HashMap<String, String>();
+        props.put("java.class.version", "67.0"); //  fixme: move to VM init stage
+        jdk.internal.misc.VM.saveProperties(props); // javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED  -d . NativeCallSystemArrayCopy.java
+
         long sum = intArr() + longArr() + intArrOverlapping() + fromBaseArray();
     }
 
