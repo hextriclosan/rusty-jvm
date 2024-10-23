@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::helper::i64_to_vec;
 use crate::system_native::class::{get_modifiers_wrp, get_primitive_class_wrp};
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
@@ -61,6 +62,13 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         "jdk/internal/misc/CDS:initializeFromArchive:(Ljava/lang/Class;)V",
         void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
+    table.insert(
+        "jdk/internal/misc/VM:initialize:()V",
+        void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert("java/lang/Runtime:maxMemory:()J", |_args: &[i32]| {
+        return_argument_stub(&i64_to_vec(i64::MAX))
+    });
 
     table
 });
