@@ -10,6 +10,9 @@ public class UnsafeUsage {
         Unsafe unsafe = Unsafe.getUnsafe();
 
         int isBigEndian = !unsafe.isBigEndian() ? 1 : 0;
+        var bytes = (byte[]) unsafe.allocateUninitializedArray(byte.class, 3);
+
+        int result = isBigEndian + bytes.length;
     }
 
 }

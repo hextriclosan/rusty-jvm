@@ -73,3 +73,19 @@ fn map_primitive_class(primitive_type: &str) -> crate::error::Result<&str> {
 
     Ok(matched)
 }
+
+pub(crate) fn is_primitive_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let primitive = is_primitive(args[0]);
+
+    Ok(vec![primitive as i32])
+}
+fn is_primitive(reference: i32) -> bool {
+    const PRIMITIVE_TYPES: &[&str] = &["Z", "B", "C", "S", "I", "J", "F", "D", "V"];
+
+    with_method_area(|method_area| {
+        let rc = method_area
+            .get_from_reflection_table(reference)
+            .expect("error getting method area");
+        PRIMITIVE_TYPES.contains(&rc.this_class_name())
+    })
+}

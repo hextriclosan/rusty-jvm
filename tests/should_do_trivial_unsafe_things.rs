@@ -8,5 +8,5 @@ fn should_do_trivial_unsafe_things() {
     let last_frame_value = vm
         .run("samples.jdkinternal.unsafe.trivial.UnsafeUsage")
         .unwrap();
-    assert_eq!(1, get_int(last_frame_value))
+    assert_eq!(4, get_int(last_frame_value))
 }
