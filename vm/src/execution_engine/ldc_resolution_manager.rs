@@ -8,6 +8,7 @@ use std::sync::RwLock;
 type CPoolIndex = u16;
 type Value = Vec<i32>;
 
+#[derive(Debug)]
 pub struct LdcResolutionManager {
     cache: RwLock<HashMap<String, HashMap<CPoolIndex, Value>>>,
 }

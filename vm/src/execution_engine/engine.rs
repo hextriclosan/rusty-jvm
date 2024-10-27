@@ -1,5 +1,4 @@
 use crate::error::Error;
-use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
@@ -10,14 +9,12 @@ use crate::stack::stack_frame::StackFrame;
 use jdescriptor::get_length;
 
 pub(crate) struct Engine {
-    ldc_resolution_manager: LdcResolutionManager,
     instance_checker: InstanceChecker,
 }
 
 impl Engine {
     pub fn new() -> Self {
         Self {
-            ldc_resolution_manager: LdcResolutionManager::new(),
             instance_checker: InstanceChecker::new(),
         }
     }
@@ -125,9 +122,9 @@ impl Engine {
                     stack_frame.incr_pc();
                     let cpoolindex = stack_frame.get_bytecode_byte() as u16;
 
-                    let value = self
-                        .ldc_resolution_manager
-                        .resolve_ldc(&current_class_name, cpoolindex)?;
+                    let value = with_method_area(|method_area| {
+                        method_area.resolve_ldc(&current_class_name, cpoolindex)
+                    })?;
 
                     stack_frame.push(value);
 
@@ -138,9 +135,9 @@ impl Engine {
                     //todo: merge me with LDC
                     let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
 
-                    let value = self
-                        .ldc_resolution_manager
-                        .resolve_ldc(&current_class_name, cpoolindex)?;
+                    let value = with_method_area(|method_area| {
+                        method_area.resolve_ldc(&current_class_name, cpoolindex)
+                    })?;
 
                     stack_frame.push(value);
 
@@ -151,9 +148,9 @@ impl Engine {
                     //todo: merge me with LDC
                     let cpoolindex = Self::extract_two_bytes(stack_frame) as u16;
 
-                    let value = self
-                        .ldc_resolution_manager
-                        .resolve_ldc2_w(&current_class_name, cpoolindex)?;
+                    let value = with_method_area(|method_area| {
+                        method_area.resolve_ldc2_w(&current_class_name, cpoolindex)
+                    })?;
 
                     stack_frame.push_i64(value);
 

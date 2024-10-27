@@ -1,4 +1,5 @@
 use crate::error::{Error, ErrorKind};
+use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::method_area::attributes_helper::AttributesHelper;
 use crate::method_area::cpool_helper::CPoolHelper;
@@ -33,6 +34,7 @@ pub(crate) struct MethodArea {
     std_dir: String,
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, Arc<JavaClass>>>,
+    ldc_resolution_manager: LdcResolutionManager,
 }
 
 impl MethodArea {
@@ -49,6 +51,7 @@ impl MethodArea {
             std_dir: std_dir.to_string(),
             loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::new(HashMap::new()),
+            ldc_resolution_manager: LdcResolutionManager::new(),
         }
     }
 
@@ -409,5 +412,23 @@ impl MethodArea {
             HashSet::new(),
             PUBLIC | FINAL | ABSTRACT,
         ))
+    }
+
+    pub(crate) fn resolve_ldc(
+        &self,
+        current_class_name: &str,
+        cpoolindex: u16,
+    ) -> crate::error::Result<i32> {
+        self.ldc_resolution_manager
+            .resolve_ldc(current_class_name, cpoolindex)
+    }
+
+    pub(crate) fn resolve_ldc2_w(
+        &self,
+        current_class_name: &str,
+        cpoolindex: u16,
+    ) -> crate::error::Result<i64> {
+        self.ldc_resolution_manager
+            .resolve_ldc2_w(current_class_name, cpoolindex)
     }
 }
