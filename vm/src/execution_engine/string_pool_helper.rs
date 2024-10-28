@@ -17,6 +17,10 @@ impl StringPoolHelper {
     }
 
     fn create_string(string: &str) -> crate::error::Result<i32> {
+        if string.is_empty() {
+            return Self::create_empty_string();
+        }
+
         let codepoints = Self::string_to_codepoints(&string);
 
         let array_ref =
@@ -47,6 +51,37 @@ impl StringPoolHelper {
         engine.execute(stack_frame)?;
 
         // todo: ensure that array_ref is collected by GC
+        Ok(string_instance_ref)
+    }
+
+    // todo: consider creating all CPool strings like this
+    fn create_empty_string() -> crate::error::Result<i32> {
+        let byte_array_ref =
+            with_heap_write_lock(|heap| heap.create_array_with_values("[b", &vec![]));
+        let string_class_name = "java/lang/String".to_string();
+        let instance_with_default_fields = with_method_area(|method_area| {
+            method_area.create_instance_with_default_fields(&string_class_name)
+        });
+
+        let string_instance_ref =
+            with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
+
+        let full_signature = "<init>:([BB)V";
+        let rc = with_method_area(|method_area| method_area.get(string_class_name.as_str()))?;
+        let special_method = rc
+            .methods
+            .method_by_signature
+            .get(full_signature)
+            .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {string_class_name} and full signature {full_signature} invoking special")))?;
+
+        let mut engine = Engine::new();
+        let mut stack_frame = special_method.new_stack_frame()?;
+        stack_frame.set_local(0, string_instance_ref);
+        stack_frame.set_local(1, byte_array_ref);
+        stack_frame.set_local(2, 0); // coder LATIN1
+
+        engine.execute(stack_frame)?;
+
         Ok(string_instance_ref)
     }
 
