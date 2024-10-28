@@ -73,6 +73,12 @@ impl From<FromUtf16Error> for Error {
     }
 }
 
+impl From<String> for Error {
+    fn from(error: String) -> Self {
+        Error::new_execution(&format!("{error}"))
+    }
+}
+
 #[derive(Debug)]
 pub enum ErrorKind {
     Io(io::Error),

@@ -1,6 +1,8 @@
 use crate::error::Error;
 use crate::helper::i64_to_vec;
-use crate::system_native::class::{get_modifiers_wrp, get_primitive_class_wrp, is_primitive_wrp};
+use crate::system_native::class::{
+    get_modifiers_wrp, get_primitive_class_wrp, is_array_wrp, is_primitive_wrp,
+};
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
 use once_cell::sync::Lazy;
@@ -33,6 +35,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<
     table.insert(
         "java/lang/Class:isPrimitive:()Z",
         is_primitive_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/lang/Class:isArray:()Z",
+        is_array_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",

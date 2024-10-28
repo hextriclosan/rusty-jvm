@@ -33,7 +33,7 @@ where
 pub(crate) struct MethodArea {
     std_dir: String,
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
-    javaclass_by_reflectionref: RwLock<HashMap<i32, Arc<JavaClass>>>,
+    javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
 }
 
@@ -352,50 +352,38 @@ impl MethodArea {
     }
 
     pub(crate) fn put_to_reflection_table(&self, reflection_ref: i32, java_class_name: &str) {
-        let java_class = self.get(java_class_name).expect("error getting java class");
         self.javaclass_by_reflectionref
             .write()
             .expect("error writing to lookup table")
-            .insert(reflection_ref, Arc::clone(&java_class));
+            .insert(reflection_ref, java_class_name.to_string());
     }
 
-    pub(crate) fn get_from_reflection_table(&self, reflection_ref: i32) -> Option<Arc<JavaClass>> {
+    pub(crate) fn get_from_reflection_table(
+        &self,
+        reflection_ref: i32,
+    ) -> crate::error::Result<String> {
         self.javaclass_by_reflectionref
             .read()
             .expect("error getting read lock")
             .get(&reflection_ref)
-            .and_then(|java_class| Some(Arc::clone(java_class)))
+            .and_then(|class_name| Some(class_name.clone()))
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
+                    "error getting class name by reflection ref {reflection_ref}"
+                ))
+            })
     }
 
     fn generate_synthetic_classes() -> HashMap<String, Arc<JavaClass>> {
-        [
-            "I",
-            "J",
-            "F",
-            "D",
-            "B",
-            "C",
-            "S",
-            "Z",
-            "V",
-            "[I",
-            "[J",
-            "[F",
-            "[D",
-            "[B",
-            "[C",
-            "[S",
-            "[Z", //todo implement real Classes for arrays
-            "[Ljava/lang/Object;",
-        ] //todo implement real Classes for array of objects
-        .into_iter()
-        .map(|class_name| {
-            (
-                class_name.to_string(),
-                Self::generate_synthetic_class(class_name),
-            )
-        })
-        .collect()
+        ["I", "J", "F", "D", "B", "C", "S", "Z", "V"]
+            .into_iter()
+            .map(|class_name| {
+                (
+                    class_name.to_string(),
+                    Self::generate_synthetic_class(class_name),
+                )
+            })
+            .collect()
     }
 
     fn generate_synthetic_class(class_name: &str) -> Arc<JavaClass> {
@@ -430,5 +418,9 @@ impl MethodArea {
     ) -> crate::error::Result<i64> {
         self.ldc_resolution_manager
             .resolve_ldc2_w(current_class_name, cpoolindex)
+    }
+
+    pub(crate) fn load_reflection_class(&self, name: &str) -> crate::error::Result<i32> {
+        self.ldc_resolution_manager.load_reflection_class(name)
     }
 }

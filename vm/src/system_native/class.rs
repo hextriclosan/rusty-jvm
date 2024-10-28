@@ -22,19 +22,22 @@ const MODIFIERS: u16 =
     PUBLIC | PROTECTED | PRIVATE | ABSTRACT | STATIC | FINAL | STRICT | INTERFACE;
 
 pub(crate) fn get_modifiers_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
-    let modifiers = get_modifiers(args[0]);
+    let modifiers = get_modifiers(args[0])?;
 
     Ok(vec![modifiers])
 }
-fn get_modifiers(reference: i32) -> i32 {
-    with_method_area(|method_area| {
-        let rc = method_area
+fn get_modifiers(reference: i32) -> crate::error::Result<i32> {
+    let modifiers = with_method_area(|method_area| {
+        let name = method_area
             .get_from_reflection_table(reference)
             .expect("error getting method area");
+        let rc = method_area.get(&name).expect("error getting method area");
         let access_flags = rc.access_flags();
 
         access_flags & MODIFIERS
-    }) as i32
+    }) as i32;
+
+    Ok(modifiers)
 }
 
 pub(crate) fn get_primitive_class_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -47,9 +50,8 @@ fn get_primitive_class(string_ref: i32) -> crate::error::Result<i32> {
     let string_content = get_utf8_string_by_ref(string_ref)?;
     let mapped_class_name = map_primitive_class(&string_content)?;
 
-    let class = with_method_area(|method_area| method_area.get(mapped_class_name))?;
-
-    let reflection_ref = class.reflection_ref();
+    let reflection_ref =
+        with_method_area(|method_area| method_area.load_reflection_class(mapped_class_name))?;
 
     Ok(reflection_ref)
 }
@@ -83,9 +85,23 @@ fn is_primitive(reference: i32) -> bool {
     const PRIMITIVE_TYPES: &[&str] = &["Z", "B", "C", "S", "I", "J", "F", "D", "V"];
 
     with_method_area(|method_area| {
-        let rc = method_area
+        let name = method_area
             .get_from_reflection_table(reference)
             .expect("error getting method area");
-        PRIMITIVE_TYPES.contains(&rc.this_class_name())
+        PRIMITIVE_TYPES.contains(&name.as_str())
+    })
+}
+
+pub(crate) fn is_array_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let array = is_array(args[0]);
+
+    Ok(vec![array as i32])
+}
+fn is_array(reference: i32) -> bool {
+    with_method_area(|method_area| {
+        let name = method_area
+            .get_from_reflection_table(reference)
+            .expect("error getting method area");
+        name.starts_with('[')
     })
 }
