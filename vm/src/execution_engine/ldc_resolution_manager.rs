@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::reflection_class_loader::ReflectionClassLoader;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::helper::{i32toi64, i64_to_vec};
 use crate::method_area::method_area::with_method_area;
@@ -10,12 +11,14 @@ type Value = Vec<i32>;
 
 #[derive(Debug)]
 pub struct LdcResolutionManager {
+    reflection_class_loader: ReflectionClassLoader,
     cache: RwLock<HashMap<String, HashMap<CPoolIndex, Value>>>,
 }
 
 impl LdcResolutionManager {
     pub fn new() -> Self {
         Self {
+            reflection_class_loader: ReflectionClassLoader::new(),
             cache: RwLock::new(HashMap::new()),
         }
     }
@@ -45,9 +48,7 @@ impl LdcResolutionManager {
         } else if let Some(value) = cpool_helper.get_string(cpoolindex) {
             StringPoolHelper::get_string(value)?
         } else if let Some(class_name) = cpool_helper.get_class(cpoolindex) {
-            let class = with_method_area(|method_area| method_area.get(&class_name))?;
-
-            class.reflection_ref()
+            self.load_reflection_class(&class_name)?
         } else {
             return Err(Error::new_constant_pool(&format!(
                 "Error resolving ldc: {}",
@@ -63,6 +64,10 @@ impl LdcResolutionManager {
             .insert(cpoolindex, vec![result]);
 
         Ok(result)
+    }
+
+    pub fn load_reflection_class(&self, class_name: &str) -> crate::error::Result<i32> {
+        self.reflection_class_loader.load(&class_name)
     }
 
     pub fn resolve_ldc2_w(
