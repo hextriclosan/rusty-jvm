@@ -120,7 +120,10 @@ impl JavaClass {
                 Self::STATIC_INIT_METHOD
             );
             let mut engine = Engine::new();
-            engine.execute(static_init_method.new_stack_frame()?)?;
+            engine.execute(
+                static_init_method.new_stack_frame()?,
+                &format!("static initialization {}", self.this_class_name),
+            )?;
             println!(
                 "<RETURN> -> {}.{}",
                 self.this_class_name,

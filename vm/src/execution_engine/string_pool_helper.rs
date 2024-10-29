@@ -48,7 +48,7 @@ impl StringPoolHelper {
         stack_frame.set_local(2, 0);
         stack_frame.set_local(3, codepoints.len() as i32);
 
-        engine.execute(stack_frame)?;
+        engine.execute(stack_frame, &format!("creating \"{string}\""))?;
 
         // todo: ensure that array_ref is collected by GC
         Ok(string_instance_ref)
@@ -80,7 +80,7 @@ impl StringPoolHelper {
         stack_frame.set_local(1, byte_array_ref);
         stack_frame.set_local(2, 0); // coder LATIN1
 
-        engine.execute(stack_frame)?;
+        engine.execute(stack_frame, "creating \"\"")?;
 
         Ok(string_instance_ref)
     }

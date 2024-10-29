@@ -27,6 +27,9 @@ impl VM {
 
         let mut engine = Engine::new();
 
-        engine.execute(java_method.new_stack_frame()?)
+        engine.execute(
+            java_method.new_stack_frame()?,
+            "invoke main:([Ljava/lang/String;)V",
+        )
     }
 }

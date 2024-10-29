@@ -22,7 +22,10 @@ impl Engine {
     pub(crate) fn execute(
         &mut self,
         stack_frame: StackFrame,
+        reason: &str,
     ) -> crate::error::Result<Option<Vec<i32>>> {
+        println!("@@@ Entering execute: {reason}");
+
         let mut stack_frames = vec![stack_frame];
         let mut last_value: Option<Vec<i32>> = None;
         let mut current_class_name: String;
