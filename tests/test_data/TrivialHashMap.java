@@ -9,17 +9,17 @@ public class TrivialHashMap {
     }
 
     private static int getSum() {
-        Map<Integer, Integer> map = new HashMap<>();
-        map.put(1, 10);
-        map.put(2, 20);
-        map.put(3, 30);
+        Map<String, String> map = new HashMap<>();
+        map.put("1", "10");
+        map.put("2", "20");
+        map.put("3", "30");
 
-        map.remove(2);
-        map.put(1, 50);
+        map.remove("2");
+        map.put("1", "50");
 
         int sum = 0;
         for (var entry : map.entrySet()) {
-            sum += entry.getKey() + entry.getValue();
+            sum += Integer.parseInt(entry.getKey()) + Integer.parseInt(entry.getValue());
         }
         return sum;
     }
