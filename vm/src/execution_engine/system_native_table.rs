@@ -62,11 +62,19 @@ static SYSTEM_NATIVE_TABLE: Lazy<
     );
     table.insert(
         "java/lang/Double:doubleToRawLongBits:(D)J",
-        return_argument_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+        |args: &[i32]| {
+            let mut vec = args.to_vec();
+            vec.reverse();
+            return_argument_stub(&vec)
+        },
     );
     table.insert(
         "java/lang/Double:longBitsToDouble:(J)D",
-        return_argument_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+        |args: &[i32]| {
+            let mut vec = args.to_vec();
+            vec.reverse();
+            return_argument_stub(&vec)
+        },
     );
     table.insert(
         "jdk/internal/misc/CDS:initializeFromArchive:(Ljava/lang/Class;)V",
