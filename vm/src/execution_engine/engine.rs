@@ -827,6 +827,15 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LADD -> {a} + {b} = {result}");
                 }
+                FADD => {
+                    let b = stack_frame.pop_f32();
+                    let a = stack_frame.pop_f32();
+                    let result = a + b;
+                    stack_frame.push_f32(result);
+
+                    stack_frame.incr_pc();
+                    println!("FADD -> {a} + {b} = {result}");
+                }
                 DADD => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
                     let a = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1243,6 +1252,25 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("FCMPL -> {a} ? {b}");
                 }
+                FCMPG => {
+                    let b = stack_frame.pop_f32();
+                    let a = stack_frame.pop_f32();
+
+                    let result = if a.is_nan() || b.is_nan() {
+                        1
+                    } else if a < b {
+                        -1
+                    } else if a > b {
+                        1
+                    } else {
+                        0
+                    };
+
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("FCMPG -> {a} ? {b}");
+                }
                 DCMPL => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
                     let a = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1261,6 +1289,25 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("DCMPL -> {a} ? {b}");
+                }
+                DCMPG => {
+                    let b = f64::from_bits(stack_frame.pop_i64() as u64);
+                    let a = f64::from_bits(stack_frame.pop_i64() as u64);
+
+                    let result = if a.is_nan() || b.is_nan() {
+                        1
+                    } else if a < b {
+                        -1
+                    } else if a > b {
+                        1
+                    } else {
+                        0
+                    };
+
+                    stack_frame.push(result);
+
+                    stack_frame.incr_pc();
+                    println!("DCMPG -> {a} ? {b}");
                 }
                 IFEQ => {
                     let value = stack_frame.pop();
@@ -1947,9 +1994,12 @@ impl Engine {
                         }
                         LLOAD => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
-                            let value = stack_frame.get_local(index);
-                            stack_frame.push(value);
-                            stack_frame.push(value);
+
+                            let (low, high, value) = stack_frame.get_two_bytes_from_local(index);
+
+                            stack_frame.push(low);
+                            stack_frame.push(high);
+
                             stack_frame.incr_pc();
                             println!("WIDE LLOAD -> index={index}, value={value}");
                         }
@@ -1958,15 +2008,23 @@ impl Engine {
                             let value = stack_frame.get_local(index);
                             stack_frame.push(value);
                             stack_frame.incr_pc();
-                            println!("WIDE FLOAD -> index={index}, value={value}");
+                            println!(
+                                "WIDE FLOAD -> index={index}, value={}",
+                                f32::from_bits(value as u32)
+                            );
                         }
                         DLOAD => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
-                            let value = stack_frame.get_local(index);
-                            stack_frame.push(value);
-                            stack_frame.push(value);
+                            let (low, high, value) = stack_frame.get_two_bytes_from_local(index);
+
+                            stack_frame.push(low);
+                            stack_frame.push(high);
+
                             stack_frame.incr_pc();
-                            println!("WIDE DLOAD -> index={index}, value={value}");
+                            println!(
+                                "WIDE DLOAD -> index={index}, value={}",
+                                f64::from_bits(value as u64)
+                            );
                         }
                         ALOAD => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
@@ -1984,9 +2042,14 @@ impl Engine {
                         }
                         LSTORE => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
-                            let value = stack_frame.pop();
-                            stack_frame.set_local(index, value);
+                            let high = stack_frame.pop();
+                            let low = stack_frame.pop();
+
+                            stack_frame.set_local(index, low);
+                            stack_frame.set_local(index + 1, high);
+
                             stack_frame.incr_pc();
+                            let value = i32toi64(high, low);
                             println!("WIDE LSTORE -> index={index}, value={value}");
                         }
                         FSTORE => {
@@ -1994,6 +2057,32 @@ impl Engine {
                             let value = stack_frame.pop();
                             stack_frame.set_local(index, value);
                             stack_frame.incr_pc();
+                            println!(
+                                "WIDE FSTORE -> index={index}, value={}",
+                                f32::from_bits(value as u32)
+                            );
+                        }
+                        DSTORE => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+
+                            let high = stack_frame.pop();
+                            let low = stack_frame.pop();
+                            stack_frame.set_local(index, low);
+                            stack_frame.set_local(index + 1, high);
+
+                            stack_frame.incr_pc();
+                            let value = ((high as i64) << 32) | (low as i64);
+                            println!(
+                                "WIDE DSTORE -> index={index}, value={}",
+                                f64::from_bits(value as u64)
+                            );
+                        }
+                        ASTORE => {
+                            let index = Self::extract_two_bytes(stack_frame) as usize;
+                            let obj_ref = stack_frame.pop();
+                            stack_frame.set_local(index, obj_ref);
+                            stack_frame.incr_pc();
+                            println!("WIDE ASTORE -> index={index}, obj_ref={obj_ref}");
                         }
                         IINC => {
                             let index = Self::extract_two_bytes(stack_frame) as u16 as usize;
