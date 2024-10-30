@@ -158,7 +158,10 @@ impl Engine {
                     stack_frame.push_i64(value);
 
                     stack_frame.incr_pc();
-                    println!("LDC2_W -> cpoolindex={cpoolindex}, value={value}");
+                    println!(
+                        "LDC2_W -> cpoolindex={cpoolindex}, value={value} or {:e}",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 ILOAD => {
                     stack_frame.incr_pc();
@@ -303,7 +306,10 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("DLOAD_0 -> value={value}");
+                    println!(
+                        "DLOAD_0 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 DLOAD_1 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(1);
@@ -312,7 +318,22 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("DLOAD_1 -> value={value}");
+                    println!(
+                        "DLOAD_1 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
+                }
+                DLOAD_2 => {
+                    let (low, high, value) = stack_frame.get_two_bytes_from_local(2);
+
+                    stack_frame.push(low);
+                    stack_frame.push(high);
+
+                    stack_frame.incr_pc();
+                    println!(
+                        "DLOAD_2 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 DLOAD_3 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(3);
@@ -321,7 +342,10 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("DLOAD_3 -> value={value}");
+                    println!(
+                        "DLOAD_3 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 ALOAD_0 => {
                     let reference = stack_frame.get_local(0);
@@ -618,7 +642,10 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("DSTORE_0 -> value={value}");
+                    println!(
+                        "DSTORE_0 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 DSTORE_1 => {
                     let high = stack_frame.pop();
@@ -629,7 +656,24 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("DSTORE_1 -> value={value}");
+                    println!(
+                        "DSTORE_1 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
+                }
+                DSTORE_2 => {
+                    let high = stack_frame.pop();
+                    let low = stack_frame.pop();
+
+                    stack_frame.set_local(2, low);
+                    stack_frame.set_local(3, high);
+
+                    stack_frame.incr_pc();
+                    let value = ((high as i64) << 32) | (low as i64);
+                    println!(
+                        "DSTORE_2 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 DSTORE_3 => {
                     let high = stack_frame.pop();
@@ -640,7 +684,10 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("DSTORE_3 -> value={value}");
+                    println!(
+                        "DSTORE_3 -> value={value} ({:e})",
+                        f64::from_bits(value as u64)
+                    );
                 }
                 ASTORE_0 => {
                     let objectref = stack_frame.pop();
@@ -1124,6 +1171,17 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("IXOR -> {a} & {b} = {result}");
                 }
+                LXOR => {
+                    let b = stack_frame.pop_i64();
+                    let a = stack_frame.pop_i64();
+
+                    let result = a ^ b;
+
+                    stack_frame.push_i64(result);
+
+                    stack_frame.incr_pc();
+                    println!("LXOR -> {a} & {b} = {result}");
+                }
                 IINC => {
                     stack_frame.incr_pc();
                     let index = stack_frame.get_bytecode_byte() as usize;
@@ -1185,6 +1243,14 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("F2L -> {value}L");
+                }
+                D2I => {
+                    let value = stack_frame.pop_f64();
+
+                    stack_frame.push(value as i32);
+
+                    stack_frame.incr_pc();
+                    println!("D2I -> {value}I");
                 }
                 D2L => {
                     let value = stack_frame.pop_f64();
