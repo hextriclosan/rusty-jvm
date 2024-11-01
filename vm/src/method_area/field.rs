@@ -1,7 +1,8 @@
 use jdescriptor::{default_value, TypeDescriptor};
+use serde::Serialize;
 use std::sync::RwLock;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub(crate) struct Field {
     type_descriptor: TypeDescriptor,
     value: RwLock<Vec<i32>>,
