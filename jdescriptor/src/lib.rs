@@ -1,4 +1,5 @@
 use crate::TypeDescriptor::*;
+use serde::Serialize;
 use std::fmt::Display;
 use std::str::Chars;
 use std::str::FromStr;
@@ -12,7 +13,7 @@ enum DescriptorError {
     TooManyDimensions,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum TypeDescriptor {
     Byte,
     Char,

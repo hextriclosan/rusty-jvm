@@ -1,18 +1,19 @@
 use crate::error::Error;
 use crate::method_area::field::Field;
 use indexmap::IndexMap;
+use serde::Serialize;
 use std::collections::HashMap;
 
 pub type ClassName = String;
 pub type FieldNameType = String;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub(crate) struct JavaInstance {
     instance_name: String,
     fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub(crate) struct Array {
     type_name: String,
     data: Vec<Vec<i32>>,
@@ -72,7 +73,7 @@ impl Array {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub(crate) enum HeapValue {
     Object(JavaInstance),
     Arr(Array),

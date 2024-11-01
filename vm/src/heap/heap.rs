@@ -3,6 +3,7 @@ use crate::heap::java_instance::HeapValue::{Arr, Object};
 use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
 use indexmap::IndexMap;
 use once_cell::sync::Lazy;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -24,7 +25,7 @@ where
     f(&mut heap)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub(crate) struct Heap {
     data: IndexMap<i32, HeapValue>,
     next_id: i32,
@@ -170,5 +171,11 @@ impl Heap {
     pub(crate) fn put_const_string_ref(&mut self, string: &str, reference: i32) -> Option<i32> {
         self.ref_by_stringvalue
             .insert(string.to_string(), reference)
+    }
+
+    pub(crate) fn dump(&self) -> crate::error::Result<()> {
+        let json_string = serde_json::to_string(self)?;
+        println!("HEAP DUMP: {json_string}");
+        Ok(())
     }
 }

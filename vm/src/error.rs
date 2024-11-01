@@ -79,6 +79,12 @@ impl From<String> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Error::new_execution(&format!("serde_json::Error: {error}"))
+    }
+}
+
 #[derive(Debug)]
 pub enum ErrorKind {
     Io(io::Error),
