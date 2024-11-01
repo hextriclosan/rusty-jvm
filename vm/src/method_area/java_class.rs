@@ -7,6 +7,7 @@ use jdescriptor::TypeDescriptor;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use indexmap::IndexMap;
 
 const INTERFACE: u16 = 0x00000200;
 
@@ -36,11 +37,11 @@ pub(crate) struct Fields {
 
 #[derive(Debug)]
 pub(crate) struct FieldDescriptors {
-    pub(crate) descriptor_by_name: HashMap<String, TypeDescriptor>,
+    pub(crate) descriptor_by_name: IndexMap<String, TypeDescriptor>,
 }
 
 impl FieldDescriptors {
-    pub fn new(descriptor_by_name: HashMap<String, TypeDescriptor>) -> Self {
+    pub fn new(descriptor_by_name: IndexMap<String, TypeDescriptor>) -> Self {
         Self { descriptor_by_name }
     }
 }
@@ -157,6 +158,31 @@ impl JavaClass {
 
     pub fn access_flags(&self) -> u16 {
         self.access_flags
+    }
+
+    pub fn get_field_offset(&self, field_name: &str) -> crate::error::Result<i64> {
+        let key = self
+            .non_static_field_descriptors
+            .descriptor_by_name
+            .iter()
+            .find_map(|(key, _)| {
+                let first = key.split(':')
+                    .next()
+                    .map(|n| n.to_string())?;
+                if first == field_name {
+                    Some(key)
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| crate::error::Error::new_native(&format!("Field {field_name} not found")))?;
+
+        let offset = self
+            .non_static_field_descriptors
+            .descriptor_by_name.get_index_of(key)
+            .ok_or_else(|| crate::error::Error::new_native(&format!("Failed to get index by key {field_name}")))?;
+        
+        Ok(offset as i64)
     }
 }
 

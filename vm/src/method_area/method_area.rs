@@ -242,7 +242,7 @@ impl MethodArea {
         field_infos: &[FieldInfo],
         cpool_helper: &CPoolHelper,
     ) -> crate::error::Result<(FieldDescriptors, Fields)> {
-        let mut non_static_field_descriptors = HashMap::new();
+        let mut non_static_field_descriptors = IndexMap::new();
         let mut static_field_by_name = HashMap::new();
         for field_info in field_infos.iter() {
             let name_index = field_info.name_index();
@@ -393,7 +393,7 @@ impl MethodArea {
         Arc::new(JavaClass::new(
             Methods::new(HashMap::new()),
             Fields::new(HashMap::new()),
-            FieldDescriptors::new(HashMap::new()),
+            FieldDescriptors::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
             class_name.to_string(),
             None,
