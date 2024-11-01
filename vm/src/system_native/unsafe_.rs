@@ -64,3 +64,23 @@ fn compare_and_set_int(
 
     Ok(updated)
 }
+
+pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+
+    let result = get_reference_volatile(obj_ref, offset)?;
+    Ok(vec![result])
+}
+fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
+    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+
+    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+
+    let field_name = jc.get_field_name_by_offset(offset)?;
+    let field_value = with_heap_read_lock(|heap| {
+        heap.get_object_field_value(obj_ref, &class_name, &field_name)
+    })?;
+    Ok(field_value[0])
+}

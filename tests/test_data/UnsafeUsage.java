@@ -26,6 +26,10 @@ public class UnsafeUsage {
         int bit4 = updated ? 0 : 1;
         int bit5 = examinee.field3 == 40 ? 1 : 0;
 
+        long stringFieldOffset = unsafe.objectFieldOffset(Examinee.class, "field4");
+        Object stringFieldValue = unsafe.getReferenceVolatile(examinee, stringFieldOffset);
+        int bit6 = "FIELD4".equals(stringFieldValue) ? 1 : 0;
+
         int result = 0;
         result = setBit(result, 0, bit0);
         result = setBit(result, 1, bit1);
@@ -33,6 +37,7 @@ public class UnsafeUsage {
         result = setBit(result, 3, bit3);
         result = setBit(result, 4, bit4);
         result = setBit(result, 5, bit5);
+        result = setBit(result, 6, bit6);
     }
 
     private static int setBit(int num, int position, int value) {
@@ -44,4 +49,5 @@ class Examinee {
     int field1 = 10;
     int field2 = 20;
     int field3 = 30;
+    String field4 = "FIELD4";
 }
