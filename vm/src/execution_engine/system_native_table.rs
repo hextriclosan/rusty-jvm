@@ -60,6 +60,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         compare_and_set_int_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:compareAndSetReference:(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+        compare_and_set_int_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:getReferenceVolatile:(Ljava/lang/Object;J)Ljava/lang/Object;",
         get_reference_volatile_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
