@@ -3,11 +3,11 @@ use crate::heap::java_instance::FieldNameType;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
+use indexmap::IndexMap;
 use jdescriptor::TypeDescriptor;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use indexmap::IndexMap;
 
 const INTERFACE: u16 = 0x00000200;
 
@@ -166,23 +166,40 @@ impl JavaClass {
             .descriptor_by_name
             .iter()
             .find_map(|(key, _)| {
-                let first = key.split(':')
-                    .next()
-                    .map(|n| n.to_string())?;
+                let first = key.split(':').next().map(|n| n.to_string())?;
                 if first == field_name {
                     Some(key)
                 } else {
                     None
                 }
             })
-            .ok_or_else(|| crate::error::Error::new_native(&format!("Field {field_name} not found")))?;
+            .ok_or_else(|| {
+                crate::error::Error::new_native(&format!("Field {field_name} not found"))
+            })?;
 
         let offset = self
             .non_static_field_descriptors
-            .descriptor_by_name.get_index_of(key)
-            .ok_or_else(|| crate::error::Error::new_native(&format!("Failed to get index by key {field_name}")))?;
-        
+            .descriptor_by_name
+            .get_index_of(key)
+            .ok_or_else(|| {
+                crate::error::Error::new_native(&format!(
+                    "Failed to get index by key {field_name}"
+                ))
+            })?;
+
         Ok(offset as i64)
+    }
+
+    pub fn get_field_name_by_offset(&self, offset: i64) -> crate::error::Result<String> {
+        let (field_name, _) = self
+            .non_static_field_descriptors
+            .descriptor_by_name
+            .get_index(offset as usize)
+            .ok_or_else(|| {
+                crate::error::Error::new_native(&format!("Failed to get entry by index {offset}"))
+            })?;
+
+        Ok(field_name.clone())
     }
 }
 
