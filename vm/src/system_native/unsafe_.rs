@@ -43,24 +43,36 @@ fn compare_and_set_int(
     x: i32,
 ) -> crate::error::Result<bool> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+    let updated = if class_name.starts_with("[") {
+        with_heap_write_lock(|heap| {
+            let result = heap
+                .get_array_value(obj_ref, offset as i32)
+                .expect("error getting array value")[0];
+            if result == expected {
+                heap.set_array_value(obj_ref, offset as i32, vec![x])
+                    .expect("error setting field value");
+                true
+            } else {
+                false
+            }
+        })
+    } else {
+        let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+        let field_name = jc.get_field_name_by_offset(offset)?;
+        with_heap_write_lock(|heap| {
+            let result = heap
+                .get_object_field_value(obj_ref, &class_name, &field_name)
+                .expect("error getting field value")[0];
 
-    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-
-    let field_name = jc.get_field_name_by_offset(offset)?;
-
-    let updated = with_heap_write_lock(|heap| {
-        let result = heap
-            .get_object_field_value(obj_ref, &class_name, &field_name)
-            .expect("error getting field value")[0];
-
-        if result == expected {
-            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])
-                .expect("error setting field value");
-            true
-        } else {
-            false
-        }
-    });
+            if result == expected {
+                heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])
+                    .expect("error setting field value");
+                true
+            } else {
+                false
+            }
+        })
+    };
 
     Ok(updated)
 }
