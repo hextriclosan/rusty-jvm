@@ -50,7 +50,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<
     );
     table.insert(
         "jdk/internal/misc/Unsafe:arrayBaseOffset0:(Ljava/lang/Class;)I",
-        int_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+        |_args: &[i32]| return_argument_stub(&vec![0]),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:objectFieldOffset1:(Ljava/lang/Class;Ljava/lang/String;)J",
@@ -74,7 +74,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<
     );
     table.insert(
         "jdk/internal/misc/Unsafe:arrayIndexScale0:(Ljava/lang/Class;)I",
-        int_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+        |_args: &[i32]| return_argument_stub(&vec![1]),
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",

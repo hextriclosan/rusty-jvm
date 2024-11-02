@@ -47,6 +47,21 @@ public class UnsafeUsage {
         int bit13 = updated ? 0 : 1;
         int bit14 = examinee.field5 == 128_849_018_920L ? 1 : 0;
 
+        Examinee one = new Examinee();
+        Examinee two = new Examinee();
+        Examinee three = new Examinee();
+        Examinee[] examinees = new Examinee[] {one, two, three};
+        int index = 1;
+        int arrayBaseOffset = unsafe.arrayBaseOffset(Examinee[].class);
+        int scale = unsafe.arrayIndexScale(Examinee[].class);
+        if ((scale & (scale - 1)) != 0) {
+            throw new RuntimeException("array index scale not a power of two");
+        }
+        int arrayShift = 31 - Integer.numberOfLeadingZeros(scale);
+        long offset = ((long)index << arrayShift) + arrayBaseOffset;
+        Examinee item = (Examinee)unsafe.getReferenceAcquire(examinees, offset);
+        int bit15 = item == two ? 1 : 0;
+
         int result = 0;
         result = setBit(result, 0, bit0);
         result = setBit(result, 1, bit1);
@@ -63,6 +78,7 @@ public class UnsafeUsage {
         result = setBit(result, 12, bit12);
         result = setBit(result, 13, bit13);
         result = setBit(result, 14, bit14);
+        result = setBit(result, 15, bit15);
     }
 
     private static int setBit(int num, int position, int value) {
