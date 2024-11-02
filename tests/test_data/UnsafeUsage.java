@@ -61,6 +61,12 @@ public class UnsafeUsage {
         long offset = ((long)index << arrayShift) + arrayBaseOffset;
         Examinee item = (Examinee)unsafe.getReferenceAcquire(examinees, offset);
         int bit15 = item == two ? 1 : 0;
+        updated = unsafe.compareAndSetReference(examinees, offset, two, three);
+        int bit16 = updated ? 1 : 0;
+        int bit17 = examinees[1] == three ? 1 : 0;
+        updated = unsafe.compareAndSetReference(examinees, offset, two, one);
+        int bit18 = updated ? 0 : 1;
+        int bit19 = examinees[1] == three ? 1 : 0;
 
         int result = 0;
         result = setBit(result, 0, bit0);
@@ -79,6 +85,10 @@ public class UnsafeUsage {
         result = setBit(result, 13, bit13);
         result = setBit(result, 14, bit14);
         result = setBit(result, 15, bit15);
+        result = setBit(result, 16, bit16);
+        result = setBit(result, 17, bit17);
+        result = setBit(result, 18, bit18);
+        result = setBit(result, 19, bit19);
     }
 
     private static int setBit(int num, int position, int value) {
