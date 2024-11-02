@@ -75,14 +75,15 @@ pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<V
 }
 fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+    let raw_value = if class_name.starts_with("[") {
+        with_heap_read_lock(|heap| heap.get_array_value(obj_ref, offset as i32).cloned())?
+    } else {
+        let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+        let field_name = jc.get_field_name_by_offset(offset)?;
+        with_heap_read_lock(|heap| heap.get_object_field_value(obj_ref, &class_name, &field_name))?
+    };
 
-    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-
-    let field_name = jc.get_field_name_by_offset(offset)?;
-    let field_value = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(obj_ref, &class_name, &field_name)
-    })?;
-    Ok(field_value[0])
+    Ok(raw_value[0])
 }
 
 pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
