@@ -79,4 +79,8 @@ impl JavaMethod {
     pub fn is_native(&self) -> bool {
         self.native
     }
+
+    pub fn class_name(&self) -> &str {
+        &self.class_name
+    }
 }
