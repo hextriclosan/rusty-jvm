@@ -6,7 +6,8 @@ use crate::system_native::class::{
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
 use crate::system_native::unsafe_::{
-    compare_and_set_int_wrp, get_reference_volatile_wrp, object_field_offset_1_wrp,
+    compare_and_set_int_wrp, compare_and_set_long_wrp, get_reference_volatile_wrp,
+    object_field_offset_1_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -62,6 +63,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetReference:(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
         compare_and_set_int_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:compareAndSetLong:(Ljava/lang/Object;JJJ)Z",
+        compare_and_set_long_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getReferenceVolatile:(Ljava/lang/Object;J)Ljava/lang/Object;",

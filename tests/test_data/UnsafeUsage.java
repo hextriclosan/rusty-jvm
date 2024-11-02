@@ -38,6 +38,15 @@ public class UnsafeUsage {
         int bit9 = updated ? 0 : 1;
         int bit10 = "FIELD4_UPDATED".equals(examinee.field4) ? 1 : 0;
 
+        long longFieldOffset = unsafe.objectFieldOffset(Examinee.class, "field5");
+        updated = unsafe.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 128_849_018_920L);
+        int bit11 = updated ? 1 : 0;
+        int bit12 = examinee.field5 == 128_849_018_920L ? 1 : 0;
+
+        updated = unsafe.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 1L);
+        int bit13 = updated ? 0 : 1;
+        int bit14 = examinee.field5 == 128_849_018_920L ? 1 : 0;
+
         int result = 0;
         result = setBit(result, 0, bit0);
         result = setBit(result, 1, bit1);
@@ -50,6 +59,10 @@ public class UnsafeUsage {
         result = setBit(result, 8, bit8);
         result = setBit(result, 9, bit9);
         result = setBit(result, 10, bit10);
+        result = setBit(result, 11, bit11);
+        result = setBit(result, 12, bit12);
+        result = setBit(result, 13, bit13);
+        result = setBit(result, 14, bit14);
     }
 
     private static int setBit(int num, int position, int value) {
@@ -62,4 +75,5 @@ class Examinee {
     int field2 = 20;
     int field3 = 30;
     String field4 = "FIELD4";
+    long field5 = 42_949_672_980L/*h=10,l=20*/;
 }
