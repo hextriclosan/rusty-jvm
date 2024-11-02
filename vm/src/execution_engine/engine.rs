@@ -1721,9 +1721,10 @@ impl Engine {
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} invoking virtual")))
                     })?;
 
+                    let found_impl_type_class_name = virtual_method.class_name();
                     if virtual_method.is_native() {
                         let full_native_signature =
-                            format!("{instance_type_class_name}:{full_signature}");
+                            format!("{found_impl_type_class_name}:{full_signature}");
                         println!(
                             "<Calling native method> -> {full_native_signature} ({method_args:?})"
                         );
@@ -1742,7 +1743,7 @@ impl Engine {
                         stack_frames.push(next_frame);
                     }
                     println!(
-                        "INVOKEVIRTUAL -> {instance_type_class_name}.{method_name}({method_args:?})"
+                        "INVOKEVIRTUAL -> {found_impl_type_class_name}.{method_name}({method_args:?})"
                     );
                 }
                 INVOKESPECIAL => {
