@@ -1,5 +1,5 @@
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::helper::i32toi64;
+use crate::helper::{i32toi64, i64_to_vec};
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::string::get_utf8_string_by_ref;
 
@@ -83,4 +83,44 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32
         heap.get_object_field_value(obj_ref, &class_name, &field_name)
     })?;
     Ok(field_value[0])
+}
+
+pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let expected = i32toi64(args[5], args[4]);
+    let x = i32toi64(args[7], args[6]);
+
+    let result = compare_and_set_long(obj_ref, offset, expected, x)?;
+    Ok(vec![result as i32])
+}
+fn compare_and_set_long(
+    obj_ref: i32,
+    offset: i64,
+    expected: i64,
+    x: i64,
+) -> crate::error::Result<bool> {
+    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+
+    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+
+    let field_name = jc.get_field_name_by_offset(offset)?;
+
+    let updated = with_heap_write_lock(|heap| {
+        let bytes = heap
+            .get_object_field_value(obj_ref, &class_name, &field_name)
+            .expect("error getting field value");
+        let result = i32toi64(bytes[0], bytes[1]);
+
+        if result == expected {
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))
+                .expect("error setting field value");
+            true
+        } else {
+            false
+        }
+    });
+
+    Ok(updated)
 }
