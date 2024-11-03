@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::heap::java_instance::HeapValue::{Arr, Object};
 use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
+use crate::method_area::method_area::with_method_area;
 use indexmap::IndexMap;
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -96,6 +97,10 @@ impl Heap {
     pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> i32 {
         self.next_id = self.next_id + 1; //todo: make me atomic
 
+        //ensure creation of ephemeral array class
+        with_method_area(|method_area| method_area.create_array_class_if_needed(type_name))
+            .expect("error creating array class");
+
         self.data
             .insert(self.next_id, Arr(Array::new(type_name, len)));
 
@@ -184,6 +189,11 @@ impl Heap {
             let new_instance = instance.clone();
             let new_instance_ref = self.create_instance(new_instance);
             Ok(vec![new_instance_ref])
+        } else if let Some(Arr(array)) = self.data.get(&objectref) {
+            let new_array = array.clone();
+            let new_array_ref = self.create_array(new_array.type_name(), new_array.get_length());
+            self.set_entire_array(new_array_ref, new_array)?;
+            Ok(vec![new_array_ref])
         } else {
             Err(Error::new_execution(&format!(
                 "error cloning object with ref {objectref}"

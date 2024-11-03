@@ -402,6 +402,22 @@ impl MethodArea {
         ))
     }
 
+    fn generate_synthetic_array_class(array_class_name: &str) -> Arc<JavaClass> {
+        const PUBLIC: u16 = 0x00000001;
+        const FINAL: u16 = 0x00000010;
+        const ABSTRACT: u16 = 0x00000400;
+        Arc::new(JavaClass::new(
+            Methods::new(HashMap::new()),
+            Fields::new(HashMap::new()),
+            FieldDescriptors::new(IndexMap::new()),
+            CPoolHelper::new(&Vec::new()),
+            array_class_name.to_string(),
+            Some("java/lang/Object".to_string()),
+            HashSet::new(),
+            PUBLIC | FINAL | ABSTRACT,
+        ))
+    }
+
     pub(crate) fn resolve_ldc(
         &self,
         current_class_name: &str,
@@ -422,5 +438,22 @@ impl MethodArea {
 
     pub(crate) fn load_reflection_class(&self, name: &str) -> crate::error::Result<i32> {
         self.ldc_resolution_manager.load_reflection_class(name)
+    }
+
+    pub(crate) fn create_array_class_if_needed(
+        &self,
+        array_class_name: &str,
+    ) -> crate::error::Result<()> {
+        match self.get(array_class_name) {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                let arc = Self::generate_synthetic_array_class(array_class_name);
+                self.loaded_classes
+                    .write()
+                    .expect("error getting write lock")
+                    .insert(array_class_name.to_string(), arc);
+                Ok(())
+            }
+        }
     }
 }

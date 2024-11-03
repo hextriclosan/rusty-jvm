@@ -1777,7 +1777,6 @@ impl Engine {
                     method_args.push(reference);
                     method_args.reverse();
 
-
                     if special_method.is_native() {
                         let full_native_signature = format!("{class_name}:{full_signature}");
                         println!(
