@@ -3,7 +3,7 @@ use crate::helper::i64_to_vec;
 use crate::system_native::class::{
     get_modifiers_wrp, get_primitive_class_wrp, is_array_wrp, is_primitive_wrp,
 };
-use crate::system_native::object::get_class_wrp;
+use crate::system_native::object::{clone_wrp, get_class_wrp};
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
 use crate::system_native::unsafe_::{
@@ -20,6 +20,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<
     table.insert(
         "java/lang/Object:getClass:()Ljava/lang/Class;",
         get_class_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/lang/Object:clone:()Ljava/lang/Object;",
+        clone_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
     table.insert(
         "java/lang/System:currentTimeMillis:()J",

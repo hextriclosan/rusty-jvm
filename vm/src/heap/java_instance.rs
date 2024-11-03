@@ -7,7 +7,7 @@ use std::collections::HashMap;
 pub type ClassName = String;
 pub type FieldNameType = String;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub(crate) struct JavaInstance {
     instance_name: String,
     fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,

@@ -1702,7 +1702,7 @@ impl Engine {
                     let full_signature = format!("{}:{}", method_name, method_descriptor);
 
                     let java_method = with_method_area(|method_area| method_area.lookup_for_implementation(&reference_type_class_name, &full_signature))
-                            .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {reference_type_class_name} and full signature {full_signature} invoking virtual")))?;
+                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {reference_type_class_name} and full signature {full_signature} getting java_method")))?;
                     let method_arg_num = java_method.get_method_descriptor().arguments_length();
                     let mut method_args = Vec::with_capacity(method_arg_num);
                     for _ in 0..method_arg_num {
@@ -1718,7 +1718,7 @@ impl Engine {
 
                     let virtual_method = with_method_area(|method_area| {
                         method_area.lookup_for_implementation(&instance_type_class_name, &full_signature)
-                        .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} invoking virtual")))
+                            .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} getting virtual_method")))
                     })?;
 
                     let found_impl_type_class_name = virtual_method.class_name();
@@ -1726,7 +1726,7 @@ impl Engine {
                         let full_native_signature =
                             format!("{found_impl_type_class_name}:{full_signature}");
                         println!(
-                            "<Calling native method> -> {full_native_signature} ({method_args:?})"
+                            "<Calling native virtual method> -> {full_native_signature} ({method_args:?})"
                         );
 
                         let result = invoke_native_method(&full_native_signature, &method_args)?;
@@ -1767,9 +1767,7 @@ impl Engine {
                         .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature} invoking special")))?;
                     // ^^^ todo: implement lookup in parents
 
-                    let mut next_frame = special_method.new_stack_frame()?;
                     let arg_num = special_method.get_method_descriptor().arguments_length();
-
                     let mut method_args = Vec::with_capacity(arg_num);
                     for _ in 0..arg_num {
                         let val = stack_frame.pop();
@@ -1779,12 +1777,26 @@ impl Engine {
                     method_args.push(reference);
                     method_args.reverse();
 
-                    method_args
-                        .iter()
-                        .enumerate()
-                        .for_each(|(index, val)| next_frame.set_local(index, *val));
 
-                    stack_frames.push(next_frame);
+                    if special_method.is_native() {
+                        let full_native_signature = format!("{class_name}:{full_signature}");
+                        println!(
+                            "<Calling native special method> -> {full_native_signature} ({method_args:?})"
+                        );
+
+                        let result = invoke_native_method(&full_native_signature, &method_args)?;
+
+                        result.iter().rev().for_each(|x| stack_frame.push(*x));
+                    } else {
+                        let mut next_frame = special_method.new_stack_frame()?;
+
+                        method_args
+                            .iter()
+                            .enumerate()
+                            .for_each(|(index, val)| next_frame.set_local(index, *val));
+
+                        stack_frames.push(next_frame);
+                    }
                     println!("INVOKESPECIAL -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKESTATIC => {

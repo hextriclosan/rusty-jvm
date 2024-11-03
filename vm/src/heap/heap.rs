@@ -178,4 +178,16 @@ impl Heap {
         println!("HEAP DUMP: {json_string}");
         Ok(())
     }
+
+    pub(crate) fn clone_instance(&mut self, objectref: i32) -> crate::error::Result<Vec<i32>> {
+        if let Some(Object(instance)) = self.data.get(&objectref) {
+            let new_instance = instance.clone();
+            let new_instance_ref = self.create_instance(new_instance);
+            Ok(vec![new_instance_ref])
+        } else {
+            Err(Error::new_execution(&format!(
+                "error cloning object with ref {objectref}"
+            )))
+        }
+    }
 }
