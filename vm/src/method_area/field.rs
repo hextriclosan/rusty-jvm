@@ -37,3 +37,17 @@ impl Field {
         &self.type_descriptor
     }
 }
+
+impl Clone for Field {
+    fn clone(&self) -> Self {
+        Self {
+            type_descriptor: self.type_descriptor.clone(),
+            value: RwLock::new(
+                self.value
+                    .read()
+                    .expect("error getting lock to clone field")
+                    .clone(),
+            ),
+        }
+    }
+}
