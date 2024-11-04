@@ -178,6 +178,7 @@ impl Heap {
             .insert(string.to_string(), reference)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn dump(&self) -> crate::error::Result<()> {
         let json_string = serde_json::to_string(self)?;
         println!("HEAP DUMP: {json_string}");
