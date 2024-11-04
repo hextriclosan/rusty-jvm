@@ -2,7 +2,7 @@ use clap::{arg, Command};
 use std::process;
 use vm::vm::VM;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = Command::new("rusty-jvm")
         .arg(
             arg!(--"std-dir" <dir>)
@@ -22,7 +22,7 @@ fn main() {
     let entry_point = matches
         .get_one::<String>("entry-point")
         .expect("Missing entry point");
-    let mut vm = VM::new(std_dir);
+    let mut vm = VM::new(std_dir)?;
 
     let result = match vm.run(entry_point) {
         Ok(output) => output,
@@ -33,4 +33,5 @@ fn main() {
     };
 
     println!("\nresult={:?}", result.map_or_else(|| vec![], |v| v));
+    Ok(())
 }

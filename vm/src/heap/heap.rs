@@ -144,7 +144,7 @@ impl Heap {
         if let Some(Arr(arr)) = self.data.get(&arrayref) {
             arr.get_value(index)
         } else {
-            Err(Error::new_execution("error getting array value"))
+            Err(Error::new_execution("error getting array value from heap"))
         }
     }
 

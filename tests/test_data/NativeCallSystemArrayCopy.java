@@ -1,15 +1,17 @@
 package samples.nativecall.system;
 
-import java.util.Map;
-import java.util.HashMap;
-
 public class NativeCallSystemArrayCopy {
     public static void main(String[] args) {
-        var props = new HashMap<String, String>();
-        props.put("java.class.version", "67.0"); //  fixme: move to VM init stage
-        jdk.internal.misc.VM.saveProperties(props); // javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED  -d . NativeCallSystemArrayCopy.java
+        int bit0 = intArr() == 99 ? 1 : 0;
+        int bit1 = longArr() == 644245094589L ? 1 : 0;
+        int bit2 = intArrOverlapping() == 160 ? 1 : 0;
+        int bit3 = fromBaseArray() == 60 ? 1 : 0;
 
-        long sum = intArr() + longArr() + intArrOverlapping() + fromBaseArray();
+        int result = 0;
+        result = setBit(result, 0, bit0);
+        result = setBit(result, 1, bit1);
+        result = setBit(result, 2, bit2);
+        result = setBit(result, 3, bit3);
     }
 
     private static int intArr() {
@@ -68,5 +70,9 @@ public class NativeCallSystemArrayCopy {
             sum += number.intValue();
         }
         return sum;
+    }
+
+    private static int setBit(int num, int position, int value) {
+        return value == 0 ? num & ~(1 << position) : num | (1 << position);
     }
 }

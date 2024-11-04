@@ -37,6 +37,8 @@ impl Engine {
 
             current_class_name = stack_frame.current_class_name().to_string();
 
+            print!("{current_class_name}: ");
+
             match stack_frame.get_bytecode_byte() {
                 ACONST_NULL => {
                     stack_frame.push(0);
@@ -97,6 +99,11 @@ impl Engine {
                     stack_frame.push_f32(1.0);
                     stack_frame.incr_pc();
                     println!("FCONST_1");
+                }
+                FCONST_2 => {
+                    stack_frame.push_f32(2.0);
+                    stack_frame.incr_pc();
+                    println!("FCONST_2");
                 }
                 DCONST_0 => {
                     stack_frame.push_f64(0.0);
@@ -291,6 +298,13 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("FLOAD_1 -> value={value}");
+                }
+                FLOAD_2 => {
+                    let value = stack_frame.get_local(2);
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("FLOAD_2 -> value={value}");
                 }
                 FLOAD_3 => {
                     let value = stack_frame.get_local(3);
@@ -954,6 +968,15 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("LMUL -> {a} * {b} = {result}");
                 }
+                FMUL => {
+                    let b = stack_frame.pop_f32();
+                    let a = stack_frame.pop_f32();
+                    let result = a * b;
+                    stack_frame.push_f32(result);
+
+                    stack_frame.incr_pc();
+                    println!("FMUL -> {a} * {b} = {result}");
+                }
                 DMUL => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
                     let a = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1228,6 +1251,14 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("L2I -> {value}I");
                 }
+                L2F => {
+                    let value = stack_frame.pop_i64() as f32;
+
+                    stack_frame.push_f32(value);
+
+                    stack_frame.incr_pc();
+                    println!("L2F -> {value}F");
+                }
                 L2D => {
                     let value = stack_frame.pop_i64() as f64;
 
@@ -1236,6 +1267,14 @@ impl Engine {
                     stack_frame.incr_pc();
                     println!("L2D -> {value}D");
                 }
+                F2I => {
+                    let value = stack_frame.pop_f32() as i32;
+
+                    stack_frame.push(value);
+
+                    stack_frame.incr_pc();
+                    println!("F2I -> {value}I");
+                }
                 F2L => {
                     let value = stack_frame.pop_f32();
 
@@ -1243,6 +1282,14 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     println!("F2L -> {value}L");
+                }
+                F2D => {
+                    let value = stack_frame.pop_f32() as f64;
+
+                    stack_frame.push_f64(value);
+
+                    stack_frame.incr_pc();
+                    println!("F2D -> {value}D");
                 }
                 D2I => {
                     let value = stack_frame.pop_f64();
@@ -2058,6 +2105,18 @@ impl Engine {
                     stack_frame.push(objectref);
 
                     println!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+                }
+                MONITORENTER => {
+                    let objectref = stack_frame.pop();
+                    // todo: implement me
+                    stack_frame.incr_pc();
+                    println!("MONITORENTER -> objectref={objectref}");
+                }
+                MONITOREXIT => {
+                    let objectref = stack_frame.pop();
+                    // todo: implement me
+                    stack_frame.incr_pc();
+                    println!("MONITOREXIT -> objectref={objectref}");
                 }
                 WIDE => {
                     stack_frame.incr_pc();

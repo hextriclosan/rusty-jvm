@@ -40,7 +40,10 @@ impl Array {
         if let Some(arr_value) = self.data.get(index as usize) {
             Ok(arr_value)
         } else {
-            Err(Error::new_execution("error getting array value"))
+            Err(Error::new_execution(&format!(
+                "error getting array value at index={index}, from data={:?}",
+                self.data
+            )))
         }
     }
 
