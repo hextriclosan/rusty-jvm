@@ -97,6 +97,24 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32
 
     Ok(raw_value[0])
 }
+pub(crate) fn get_long_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+
+    let result = get_long_volatile(obj_ref, offset)?;
+
+    let high = ((result >> 32) & 0xFFFFFFFF) as i32;
+    let low = (result & 0xFFFFFFFF) as i32;
+
+    Ok(vec![high, low])
+}
+fn get_long_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i64> {
+    if obj_ref != 0 {
+        todo!("implement get_long_volatile for non null object");
+    }
+    Ok(offset) // not real implementation, just a placeholder for case when object is null
+}
 
 pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
@@ -114,6 +132,10 @@ fn compare_and_set_long(
     expected: i64,
     x: i64,
 ) -> crate::error::Result<bool> {
+    if obj_ref == 0 {
+        return Ok(true); // not real implementation, just a placeholder for case when object is null
+    }
+
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
 
     let jc = with_method_area(|area| area.get(class_name.as_str()))?;

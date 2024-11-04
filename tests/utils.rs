@@ -5,7 +5,7 @@ const PATH: &str = "tests/test_data";
 
 pub fn setup() -> VM {
     env::set_current_dir(PATH).expect("Failed to change working directory");
-    VM::new("std")
+    VM::new("std").expect("Failed to create VM")
 }
 
 #[allow(dead_code)]

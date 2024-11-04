@@ -1,4 +1,5 @@
 use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
+use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
 use std::string::{FromUtf16Error, FromUtf8Error};
 use std::time::SystemTimeError;
@@ -84,6 +85,8 @@ impl From<serde_json::Error> for Error {
         Error::new_execution(&format!("serde_json::Error: {error}"))
     }
 }
+
+impl StdError for Error {}
 
 #[derive(Debug)]
 pub enum ErrorKind {

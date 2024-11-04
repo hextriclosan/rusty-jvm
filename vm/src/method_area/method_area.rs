@@ -35,6 +35,7 @@ pub(crate) struct MethodArea {
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
+    system_thread_id: RwLock<Option<i32>>, // initial thread, spawned by VM
 }
 
 impl MethodArea {
@@ -52,6 +53,7 @@ impl MethodArea {
             loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::new(HashMap::new()),
             ldc_resolution_manager: LdcResolutionManager::new(),
+            system_thread_id: RwLock::new(None),
         }
     }
 
@@ -455,5 +457,20 @@ impl MethodArea {
                 Ok(())
             }
         }
+    }
+
+    pub fn system_thread_id(&self) -> crate::error::Result<i32> {
+        self.system_thread_id
+            .read()
+            .expect("error getting read lock")
+            .ok_or_else(|| Error::new_execution("system_thread_id wasn't set"))
+    }
+
+    pub fn set_system_thread_id(&self, thread_id: i32) {
+        let mut guard = self
+            .system_thread_id
+            .write()
+            .expect("error getting write lock");
+        *guard = Some(thread_id);
     }
 }

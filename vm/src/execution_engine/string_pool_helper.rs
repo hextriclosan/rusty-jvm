@@ -16,6 +16,7 @@ impl StringPoolHelper {
         Ok(string_ref)
     }
 
+    // refactor candidate A: generalize object creation and constructor invocation
     fn create_string(string: &str) -> crate::error::Result<i32> {
         if string.is_empty() {
             return Self::create_empty_string();
@@ -55,6 +56,7 @@ impl StringPoolHelper {
     }
 
     // todo: consider creating all CPool strings like this
+    // refactor candidate A: generalize object creation and constructor invocation
     fn create_empty_string() -> crate::error::Result<i32> {
         let byte_array_ref =
             with_heap_write_lock(|heap| heap.create_array_with_values("[b", &vec![]));
