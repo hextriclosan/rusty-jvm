@@ -5,10 +5,28 @@ import java.util.TreeMap;
 
 public class TrivialTreeMap {
     public static void main(String[] args) {
-        int result = getSum();
+        int sumOfIntegerMap = getSumOfIntegerMap();
+        String sorted = getSortedFromStringMap();
+        int result = sumOfIntegerMap == 84 && "150330".equals(sorted) ? 1 : 0;
     }
 
-    private static int getSum() {
+    private static int getSumOfIntegerMap() {
+        Map<Integer, Integer> map = new TreeMap<>();
+        map.put(1, 10);
+        map.put(2, 20);
+        map.put(3, 30);
+
+        map.remove(2);
+        map.put(1, 50);
+
+        int sum = 0;
+        for (var entry : map.entrySet()) {
+            sum += entry.getKey() + entry.getValue();
+        }
+        return sum;
+    }
+
+    private static String getSortedFromStringMap() {
         Map<String, String> map = new TreeMap<>();
         map.put("1", "10");
         map.put("2", "20");
@@ -17,10 +35,10 @@ public class TrivialTreeMap {
         map.remove("2");
         map.put("1", "50");
 
-        int sum = 0;
+        StringBuilder sb = new StringBuilder();
         for (var entry : map.entrySet()) {
-            sum += Integer.parseInt(entry.getKey()) + Integer.parseInt(entry.getValue());
+            sb.append(entry.getKey()).append(entry.getValue());
         }
-        return sum;
+        return sb.toString();
     }
 }
