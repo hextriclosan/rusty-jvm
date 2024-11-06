@@ -4,7 +4,7 @@ use crate::helper::i32toi64;
 pub(crate) struct StackFrame {
     pc: usize,
     pub locals: Vec<i32>,
-    pub(crate) operand_stack: Vec<i32>,
+    operand_stack: Vec<i32>,
     bytecode_ref: Vec<u8>,
     current_class_name: String,
 }

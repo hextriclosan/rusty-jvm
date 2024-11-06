@@ -30,7 +30,6 @@ where
 #[derive(Debug, Serialize)]
 pub(crate) struct Heap {
     data: IndexMap<i32, HeapValue>,
-    next_id: i32,
     ref_by_stringvalue: HashMap<String, i32>,
 }
 
@@ -38,17 +37,25 @@ impl Heap {
     fn new() -> Self {
         Self {
             data: IndexMap::new(),
-            next_id: 0,
             ref_by_stringvalue: HashMap::new(),
         }
     }
 
+    // todo: still possible race condition here
+    fn next_id(&self) -> i32 {
+        let last_key = if let Some((last_key, _)) = self.data.iter().last() {
+            *last_key
+        } else {
+            0
+        };
+
+        last_key + 1
+    }
+
     pub fn create_instance(&mut self, java_instance: JavaInstance) -> i32 {
-        self.next_id = self.next_id + 1; //todo: make me atomic
-
-        self.data.insert(self.next_id, Object(java_instance));
-
-        self.next_id
+        let id = self.next_id();
+        self.data.insert(id, Object(java_instance));
+        id
     }
 
     pub fn set_object_field_value(
@@ -96,25 +103,22 @@ impl Heap {
     }
 
     pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> i32 {
-        self.next_id = self.next_id + 1; //todo: make me atomic
+        let id = self.next_id();
 
         //ensure creation of ephemeral array class
         with_method_area(|method_area| method_area.create_array_class_if_needed(type_name))
             .expect("error creating array class");
 
-        self.data
-            .insert(self.next_id, Arr(Array::new(type_name, len)));
+        self.data.insert(id, Arr(Array::new(type_name, len)));
 
-        self.next_id
+        id
     }
 
     pub(crate) fn create_array_with_values(&mut self, type_name: &str, array: &[i32]) -> i32 {
-        self.next_id = self.next_id + 1; //todo: make me atomic
-
+        let id = self.next_id();
         self.data
-            .insert(self.next_id, Arr(Array::new_with_values(type_name, array)));
-
-        self.next_id
+            .insert(id, Arr(Array::new_with_values(type_name, array)));
+        id
     }
 
     pub(crate) fn get_entire_array(&self, array_ref: i32) -> crate::error::Result<Array> {
