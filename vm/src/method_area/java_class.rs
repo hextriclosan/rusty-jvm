@@ -121,8 +121,7 @@ impl JavaClass {
                 self.this_class_name,
                 Self::STATIC_INIT_METHOD
             );
-            let mut engine = Engine::new();
-            engine.execute(
+            Engine::execute(
                 static_init_method.new_stack_frame()?,
                 &format!("static initialization {}", self.this_class_name),
             )?;

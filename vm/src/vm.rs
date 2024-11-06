@@ -69,9 +69,7 @@ impl VM {
                 format!("method {method_name} not found in {class_name}").as_str(),
             ))?;
 
-        let mut engine = Engine::new();
-
-        let _result = engine.execute(
+        let _result = Engine::execute(
             java_method.new_stack_frame()?,
             &format!("invoke {class_name}.{method_name}"),
         )?;
@@ -104,11 +102,10 @@ impl VM {
             .get(full_signature)
             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {tg_class_name} and full signature {full_signature} invoking special")))?;
 
-        let mut engine = Engine::new();
         let mut stack_frame = special_method.new_stack_frame()?;
         stack_frame.set_local(0, tg_instance_ref);
 
-        engine.execute(stack_frame, "invoking java/lang/ThreadGroup()")?;
+        Engine::execute(stack_frame, "invoking java/lang/ThreadGroup()")?;
 
         Ok(tg_instance_ref)
     }
@@ -132,13 +129,12 @@ impl VM {
             .get(full_signature)
             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {thread_class_name} and full signature {full_signature} invoking special")))?;
 
-        let mut engine = Engine::new();
         let mut stack_frame = special_method.new_stack_frame()?;
         stack_frame.set_local(0, thread_instance_ref);
         stack_frame.set_local(1, tg_obj_ref);
         stack_frame.set_local(2, string_obj_ref);
 
-        engine.execute(
+        Engine::execute(
             stack_frame,
             "invoking java/lang/Thread(ThreadGroup group, String name)",
         )?;
@@ -158,9 +154,7 @@ impl VM {
                 format!("main method not found in {main_class_name}").as_str(),
             ))?;
 
-        let mut engine = Engine::new();
-
-        engine.execute(
+        Engine::execute(
             java_method.new_stack_frame()?,
             "invoke main:([Ljava/lang/String;)V",
         )

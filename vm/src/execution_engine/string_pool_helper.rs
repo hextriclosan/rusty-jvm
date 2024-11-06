@@ -42,14 +42,13 @@ impl StringPoolHelper {
             .get(full_signature)
             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {string_class_name} and full signature {full_signature} invoking special")))?;
 
-        let mut engine = Engine::new();
         let mut stack_frame = special_method.new_stack_frame()?;
         stack_frame.set_local(0, string_instance_ref);
         stack_frame.set_local(1, array_ref);
         stack_frame.set_local(2, 0);
         stack_frame.set_local(3, codepoints.len() as i32);
 
-        engine.execute(stack_frame, &format!("creating \"{string}\""))?;
+        Engine::execute(stack_frame, &format!("creating \"{string}\""))?;
 
         // todo: ensure that array_ref is collected by GC
         Ok(string_instance_ref)
@@ -76,13 +75,12 @@ impl StringPoolHelper {
             .get(full_signature)
             .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {string_class_name} and full signature {full_signature} invoking special")))?;
 
-        let mut engine = Engine::new();
         let mut stack_frame = special_method.new_stack_frame()?;
         stack_frame.set_local(0, string_instance_ref);
         stack_frame.set_local(1, byte_array_ref);
         stack_frame.set_local(2, 0); // coder LATIN1
 
-        engine.execute(stack_frame, "creating \"\"")?;
+        Engine::execute(stack_frame, "creating \"\"")?;
 
         Ok(string_instance_ref)
     }

@@ -9,19 +9,10 @@ use crate::stack::stack_frame::StackFrame;
 use jdescriptor::get_length;
 use tracing::{span, trace, Level};
 
-pub(crate) struct Engine {
-    instance_checker: InstanceChecker,
-}
+pub(crate) struct Engine {}
 
 impl Engine {
-    pub fn new() -> Self {
-        Self {
-            instance_checker: InstanceChecker::new(),
-        }
-    }
-
     pub(crate) fn execute(
-        &mut self,
         stack_frame: StackFrame,
         reason: &str,
     ) -> crate::error::Result<Option<Vec<i32>>> {
@@ -2063,9 +2054,8 @@ impl Engine {
                         let instance_class_name =
                             with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
 
-                        let possible_cast = self
-                            .instance_checker
-                            .checkcast(&instance_class_name, &class_name)?;
+                        let possible_cast =
+                            InstanceChecker::checkcast(&instance_class_name, &class_name)?;
                         if !possible_cast {
                             return Err(Error::new_execution(&format!(
                                 "Error casting {instance_class_name} to {class_name}"
@@ -2099,9 +2089,8 @@ impl Engine {
                         let instance_class_name =
                             with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
 
-                        let instanse_of = self
-                            .instance_checker
-                            .checkcast(&instance_class_name, &class_name)?;
+                        let instanse_of =
+                            InstanceChecker::checkcast(&instance_class_name, &class_name)?;
                         objectref = if instanse_of { 1 } else { 0 };
                     }
 
