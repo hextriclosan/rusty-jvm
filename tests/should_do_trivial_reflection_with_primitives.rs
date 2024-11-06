@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_trivial_reflection_with_primitives() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.reflection.trivial.synthetic.classes.SyntheticPrimitiveClasses")
         .unwrap();

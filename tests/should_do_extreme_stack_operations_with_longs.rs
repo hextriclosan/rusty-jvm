@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_extreme_stack_operations_with_longs() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.arithmetics.extremestack.longs.ExtremeStackLong")
         .unwrap();

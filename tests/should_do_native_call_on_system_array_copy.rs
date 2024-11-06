@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_native_call_on_system_array_copy() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.nativecall.system.NativeCallSystemArrayCopy")
         .unwrap();

@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_class_static_initialization_advanced() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.fields.staticinitialization.advanced.StaticInitializationAdvanced")
         .unwrap();

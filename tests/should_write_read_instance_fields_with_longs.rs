@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_write_read_instance_fields_with_longs() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.fields.instance.longs.InstanceFieldsUserLong")
         .unwrap();

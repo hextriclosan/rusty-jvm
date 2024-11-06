@@ -142,7 +142,7 @@ impl VM {
         Ok(thread_instance_ref)
     }
 
-    pub fn run(&mut self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
+    pub fn run(&self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
         let internal_name = &main_class_name.replace('.', "/");
         let java_class = with_method_area(|area| area.get(internal_name))?;
 

@@ -4,7 +4,7 @@ use utils::setup;
 #[test]
 
 fn should_do_inherited_instance_fields() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.inheritance.instancefield.InheritanceInstanceField")
         .unwrap();

@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_trivial_hashmaps() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.javabase.util.hashmap.trivial.TrivialHashMap")
         .unwrap();

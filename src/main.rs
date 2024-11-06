@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let entry_point = matches
         .get_one::<String>("entry-point")
         .expect("Missing entry point");
-    let mut vm = VM::new(std_dir)?;
+    let vm = VM::new(std_dir)?;
 
     let result = match vm.run(entry_point) {
         Ok(output) => output,

@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_operations_with_doubles() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.arithmetics.operations.doubles.DoubleOperations")
         .unwrap();

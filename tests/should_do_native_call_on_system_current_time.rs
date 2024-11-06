@@ -11,7 +11,7 @@ fn should_do_native_call_on_system_current_time() {
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
     let expected_millis = since_the_epoch.as_millis() as i64;
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.nativecall.system.NativeCallSystemCurrentTimeMillis")
         .unwrap();

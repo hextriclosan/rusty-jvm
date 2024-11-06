@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_composite_pattern() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.inheritance.interfaces.compositepattern.CompositePattern")
         .unwrap();

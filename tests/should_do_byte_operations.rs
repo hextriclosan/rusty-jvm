@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_byte_operations() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.javacore.bytes.trivial.ByteOperations")
         .unwrap();

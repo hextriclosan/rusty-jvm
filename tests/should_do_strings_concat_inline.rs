@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_strings_concat_inline() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.javacore.strings.concat.trivial.StringConcatInline")
         .unwrap();

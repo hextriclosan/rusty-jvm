@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_calculate_fibonacci_iteratively() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.arithmetics.fibonacci.iterative.FibonacciIterative")
         .unwrap();

@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_do_strings_cpool_advanced() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.javacore.strings.cpool.advanced.StringPoolAdvanced")
         .unwrap();

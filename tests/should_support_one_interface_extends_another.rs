@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_support_one_interface_extends_another() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run(
             "samples.inheritance.interfaces.oneinterfaceextendsanother.OneInterfaceExtendsAnother",

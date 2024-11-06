@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_clone_cloneables() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.javacore.cloneable.trivial.CloneExample")
         .unwrap();

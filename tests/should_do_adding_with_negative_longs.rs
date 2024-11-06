@@ -3,7 +3,7 @@ use utils::get_long;
 use utils::setup;
 #[test]
 fn should_do_adding_with_negative_longs() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.arithmetics.addernegative.AdderNegativeLong")
         .unwrap();

@@ -4,7 +4,7 @@ use utils::setup;
 
 #[test]
 fn should_call_object_methods() {
-    let mut vm = setup();
+    let vm = setup();
     let last_frame_value = vm
         .run("samples.javacore.object.trivial.ObjectMethods")
         .unwrap();
