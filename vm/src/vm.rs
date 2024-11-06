@@ -3,6 +3,9 @@ use crate::execution_engine::engine::Engine;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::{with_method_area, MethodArea};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{fmt, EnvFilter};
 
 #[derive(Debug)]
 pub struct VM {}
@@ -11,11 +14,29 @@ impl VM {
     const ENTRY_POINT: &'static str = "main:([Ljava/lang/String;)V";
 
     pub fn new(std_dir: &str) -> crate::error::Result<Self> {
+        Self::init_logger()?;
+
         MethodArea::init(std_dir);
 
         Self::init()?;
 
         Ok(Self {})
+    }
+
+    fn init_logger() -> crate::error::Result<()> {
+        let fmt_layer = fmt::layer()
+            .with_target(false)
+            .without_time()
+            .with_ansi(false);
+        let filter_layer = EnvFilter::try_from_default_env()
+            .or_else(|_| EnvFilter::try_new("info"))
+            .map_err(|e| Error::new_execution(&format!("Error creating EnvFilter: {e}")))?;
+        tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(fmt_layer)
+            .init();
+
+        Ok(())
     }
 
     fn init() -> crate::error::Result<()> {

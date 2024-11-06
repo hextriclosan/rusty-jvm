@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::RwLock;
+use tracing::trace;
 
 static HEAP: Lazy<RwLock<Heap>> = Lazy::new(|| RwLock::new(Heap::new()));
 
@@ -181,7 +182,7 @@ impl Heap {
     #[allow(dead_code)]
     pub(crate) fn dump(&self) -> crate::error::Result<()> {
         let json_string = serde_json::to_string(self)?;
-        println!("HEAP DUMP: {json_string}");
+        trace!("HEAP DUMP: {json_string}");
         Ok(())
     }
 

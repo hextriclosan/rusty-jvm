@@ -8,6 +8,7 @@ use jdescriptor::TypeDescriptor;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tracing::trace;
 
 const INTERFACE: u16 = 0x00000200;
 
@@ -115,7 +116,7 @@ impl JavaClass {
             .method_by_signature
             .get(Self::STATIC_INIT_METHOD)
         {
-            println!(
+            trace!(
                 "<INVOKE> -> {}.{}",
                 self.this_class_name,
                 Self::STATIC_INIT_METHOD
@@ -125,7 +126,7 @@ impl JavaClass {
                 static_init_method.new_stack_frame()?,
                 &format!("static initialization {}", self.this_class_name),
             )?;
-            println!(
+            trace!(
                 "<RETURN> -> {}.{}",
                 self.this_class_name,
                 Self::STATIC_INIT_METHOD

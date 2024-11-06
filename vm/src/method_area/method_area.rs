@@ -17,6 +17,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
+use tracing::trace;
 
 static METHOD_AREA: OnceCell<MethodArea> = OnceCell::new();
 
@@ -79,7 +80,7 @@ impl MethodArea {
                 fully_qualified_class_name.to_string(),
                 Arc::clone(&java_class),
             );
-        println!("<CLASS LOADED> -> {}", java_class.this_class_name());
+        trace!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok(java_class)
     }

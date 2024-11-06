@@ -7,6 +7,7 @@ use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrame;
 use jdescriptor::get_length;
+use tracing::{span, trace, Level};
 
 pub(crate) struct Engine {
     instance_checker: InstanceChecker,
@@ -24,7 +25,7 @@ impl Engine {
         stack_frame: StackFrame,
         reason: &str,
     ) -> crate::error::Result<Option<Vec<i32>>> {
-        println!("@@@ Entering execute: {reason}");
+        trace!("@@@ Entering execute: {reason}");
 
         let mut stack_frames = vec![stack_frame];
         let mut last_value: Option<Vec<i32>> = None;
@@ -37,96 +38,98 @@ impl Engine {
 
             current_class_name = stack_frame.current_class_name().to_string();
 
-            print!("{current_class_name}: ");
+            let class = stack_frame.current_class_name();
+            let span = span!(Level::TRACE, "", class);
+            let _entered = span.enter();
 
             match stack_frame.get_bytecode_byte() {
                 ACONST_NULL => {
                     stack_frame.push(0);
                     stack_frame.incr_pc();
-                    println!("ACONST_NULL");
+                    trace!("ACONST_NULL");
                 }
                 ICONST_M1 => {
                     stack_frame.push(-1);
                     stack_frame.incr_pc();
-                    println!("ICONST_M1");
+                    trace!("ICONST_M1");
                 }
                 ICONST_0 => {
                     stack_frame.push(0);
                     stack_frame.incr_pc();
-                    println!("ICONST_0");
+                    trace!("ICONST_0");
                 }
                 ICONST_1 => {
                     stack_frame.push(1);
                     stack_frame.incr_pc();
-                    println!("ICONST_1");
+                    trace!("ICONST_1");
                 }
                 ICONST_2 => {
                     stack_frame.push(2);
                     stack_frame.incr_pc();
-                    println!("ICONST_2");
+                    trace!("ICONST_2");
                 }
                 ICONST_3 => {
                     stack_frame.push(3);
                     stack_frame.incr_pc();
-                    println!("ICONST_3");
+                    trace!("ICONST_3");
                 }
                 ICONST_4 => {
                     stack_frame.push(4);
                     stack_frame.incr_pc();
-                    println!("ICONST_4");
+                    trace!("ICONST_4");
                 }
                 ICONST_5 => {
                     stack_frame.push(5);
                     stack_frame.incr_pc();
-                    println!("ICONST_5");
+                    trace!("ICONST_5");
                 }
                 LCONST_0 => {
                     stack_frame.push_i64(0i64);
                     stack_frame.incr_pc();
-                    println!("LCONST_0");
+                    trace!("LCONST_0");
                 }
                 LCONST_1 => {
                     stack_frame.push_i64(1i64);
                     stack_frame.incr_pc();
-                    println!("LCONST_1");
+                    trace!("LCONST_1");
                 }
                 FCONST_0 => {
                     stack_frame.push_f32(0.0);
                     stack_frame.incr_pc();
-                    println!("FCONST_0");
+                    trace!("FCONST_0");
                 }
                 FCONST_1 => {
                     stack_frame.push_f32(1.0);
                     stack_frame.incr_pc();
-                    println!("FCONST_1");
+                    trace!("FCONST_1");
                 }
                 FCONST_2 => {
                     stack_frame.push_f32(2.0);
                     stack_frame.incr_pc();
-                    println!("FCONST_2");
+                    trace!("FCONST_2");
                 }
                 DCONST_0 => {
                     stack_frame.push_f64(0.0);
                     stack_frame.incr_pc();
-                    println!("DCONST_0");
+                    trace!("DCONST_0");
                 }
                 DCONST_1 => {
                     stack_frame.push_f64(1.0);
                     stack_frame.incr_pc();
-                    println!("DCONST_1");
+                    trace!("DCONST_1");
                 }
                 BIPUSH => {
                     stack_frame.incr_pc();
                     let value = stack_frame.get_bytecode_byte() as i8 as i32;
                     stack_frame.push(value);
                     stack_frame.incr_pc();
-                    println!("BIPUSH -> value={value}");
+                    trace!("BIPUSH -> value={value}");
                 }
                 SIPUSH => {
                     let value = Self::extract_two_bytes(stack_frame) as i32;
                     stack_frame.push(value);
                     stack_frame.incr_pc();
-                    println!("SIPUSH -> value={value}");
+                    trace!("SIPUSH -> value={value}");
                 }
                 LDC => {
                     stack_frame.incr_pc();
@@ -139,7 +142,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("LDC -> cpoolindex={cpoolindex}, value={value}");
+                    trace!("LDC -> cpoolindex={cpoolindex}, value={value}");
                 }
                 LDC_W => {
                     //todo: merge me with LDC
@@ -152,7 +155,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("LDC_W -> cpoolindex={cpoolindex}, value={value}");
+                    trace!("LDC_W -> cpoolindex={cpoolindex}, value={value}");
                 }
                 LDC2_W => {
                     //todo: merge me with LDC
@@ -165,7 +168,7 @@ impl Engine {
                     stack_frame.push_i64(value);
 
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "LDC2_W -> cpoolindex={cpoolindex}, value={value} or {:e}",
                         f64::from_bits(value as u64)
                     );
@@ -178,7 +181,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("ILOAD -> pos={pos}, value={value}");
+                    trace!("ILOAD -> pos={pos}, value={value}");
                 }
                 LLOAD => {
                     stack_frame.incr_pc();
@@ -190,7 +193,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("LLOAD -> pos={pos}, value={value}");
+                    trace!("LLOAD -> pos={pos}, value={value}");
                 }
                 FLOAD => {
                     stack_frame.incr_pc();
@@ -200,7 +203,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("FLOAD -> pos={pos}, value={value}");
+                    trace!("FLOAD -> pos={pos}, value={value}");
                 }
                 DLOAD => {
                     stack_frame.incr_pc();
@@ -212,7 +215,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("DLOAD -> pos={pos}, value={value}");
+                    trace!("DLOAD -> pos={pos}, value={value}");
                 }
                 ALOAD => {
                     stack_frame.incr_pc();
@@ -222,32 +225,32 @@ impl Engine {
                     stack_frame.push(objectref);
 
                     stack_frame.incr_pc();
-                    println!("ALOAD -> index={index}, objectref={objectref}");
+                    trace!("ALOAD -> index={index}, objectref={objectref}");
                 }
                 ILOAD_0 => {
                     let value = stack_frame.get_local(0);
                     stack_frame.push(value);
                     stack_frame.incr_pc();
-                    println!("ILOAD_0 -> value={value}");
+                    trace!("ILOAD_0 -> value={value}");
                 }
                 ILOAD_1 => {
                     let value = stack_frame.get_local(1);
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("ILOAD_1 -> value={value}");
+                    trace!("ILOAD_1 -> value={value}");
                 }
                 ILOAD_2 => {
                     let value = stack_frame.get_local(2);
                     stack_frame.push(value);
                     stack_frame.incr_pc();
-                    println!("ILOAD_2 -> value={value}");
+                    trace!("ILOAD_2 -> value={value}");
                 }
                 ILOAD_3 => {
                     let value = stack_frame.get_local(3);
                     stack_frame.push(value);
                     stack_frame.incr_pc();
-                    println!("ILOAD_3 -> value={value}");
+                    trace!("ILOAD_3 -> value={value}");
                 }
                 LLOAD_0 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(0);
@@ -256,7 +259,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("LLOAD_0 -> value={value}");
+                    trace!("LLOAD_0 -> value={value}");
                 }
                 LLOAD_1 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(1);
@@ -265,7 +268,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("LLOAD_1 -> value={value}");
+                    trace!("LLOAD_1 -> value={value}");
                 }
                 LLOAD_2 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(2);
@@ -274,7 +277,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("LLOAD_2 -> value={value}");
+                    trace!("LLOAD_2 -> value={value}");
                 }
                 LLOAD_3 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(3);
@@ -283,35 +286,35 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!("LLOAD_3 -> value={value}");
+                    trace!("LLOAD_3 -> value={value}");
                 }
                 FLOAD_0 => {
                     let value = stack_frame.get_local(0);
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("FLOAD_0 -> value={value}");
+                    trace!("FLOAD_0 -> value={value}");
                 }
                 FLOAD_1 => {
                     let value = stack_frame.get_local(1);
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("FLOAD_1 -> value={value}");
+                    trace!("FLOAD_1 -> value={value}");
                 }
                 FLOAD_2 => {
                     let value = stack_frame.get_local(2);
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("FLOAD_2 -> value={value}");
+                    trace!("FLOAD_2 -> value={value}");
                 }
                 FLOAD_3 => {
                     let value = stack_frame.get_local(3);
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("FLOAD_3 -> value={value}");
+                    trace!("FLOAD_3 -> value={value}");
                 }
                 DLOAD_0 => {
                     let (low, high, value) = stack_frame.get_two_bytes_from_local(0);
@@ -320,7 +323,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "DLOAD_0 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -332,7 +335,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "DLOAD_1 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -344,7 +347,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "DLOAD_2 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -356,7 +359,7 @@ impl Engine {
                     stack_frame.push(high);
 
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "DLOAD_3 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -365,25 +368,25 @@ impl Engine {
                     let reference = stack_frame.get_local(0);
                     stack_frame.push(reference);
                     stack_frame.incr_pc();
-                    println!("ALOAD_0 -> reference={reference}");
+                    trace!("ALOAD_0 -> reference={reference}");
                 }
                 ALOAD_1 => {
                     let reference = stack_frame.get_local(1);
                     stack_frame.push(reference);
                     stack_frame.incr_pc();
-                    println!("ALOAD_1 -> reference={reference}");
+                    trace!("ALOAD_1 -> reference={reference}");
                 }
                 ALOAD_2 => {
                     let reference = stack_frame.get_local(2);
                     stack_frame.push(reference);
                     stack_frame.incr_pc();
-                    println!("ALOAD_2 -> reference={reference}");
+                    trace!("ALOAD_2 -> reference={reference}");
                 }
                 ALOAD_3 => {
                     let reference = stack_frame.get_local(3);
                     stack_frame.push(reference);
                     stack_frame.incr_pc();
-                    println!("ALOAD_3 -> reference={reference}");
+                    trace!("ALOAD_3 -> reference={reference}");
                 }
                 IALOAD => {
                     let index = stack_frame.pop();
@@ -394,7 +397,7 @@ impl Engine {
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "IALOAD -> arrayref={arrayref}, index={index}, value={}",
                         value[0]
                     );
@@ -412,7 +415,7 @@ impl Engine {
                     stack_frame.push(low);
                     stack_frame.push(high);
                     stack_frame.incr_pc();
-                    println!("LALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
+                    trace!("LALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
                 FALOAD => {
                     let index = stack_frame.pop();
@@ -423,7 +426,7 @@ impl Engine {
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "FALOAD -> arrayref={arrayref}, index={index}, value={}",
                         value[0]
                     );
@@ -441,7 +444,7 @@ impl Engine {
                     stack_frame.push(low);
                     stack_frame.push(high);
                     stack_frame.incr_pc();
-                    println!("DALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
+                    trace!("DALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
                 AALOAD => {
                     let index = stack_frame.pop();
@@ -452,7 +455,7 @@ impl Engine {
 
                     stack_frame.push(objref[0]);
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "AALOAD -> arrayref={arrayref}, index={index}, objref={}",
                         objref[0]
                     );
@@ -466,7 +469,7 @@ impl Engine {
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "BALOAD -> arrayref={arrayref}, index={index}, value={}",
                         value[0]
                     );
@@ -480,7 +483,7 @@ impl Engine {
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "CALOAD -> arrayref={arrayref}, index={index}, value={}",
                         value[0]
                     );
@@ -494,7 +497,7 @@ impl Engine {
 
                     stack_frame.push(value[0]);
                     stack_frame.incr_pc();
-                    println!(
+                    trace!(
                         "SALOAD -> arrayref={arrayref}, index={index}, value={}",
                         value[0]
                     );
@@ -506,7 +509,7 @@ impl Engine {
 
                     stack_frame.set_local(pos, value);
                     stack_frame.incr_pc();
-                    println!("ISTORE -> pos={pos}, value={value}");
+                    trace!("ISTORE -> pos={pos}, value={value}");
                 }
                 LSTORE => {
                     stack_frame.incr_pc();
@@ -519,7 +522,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = i32toi64(high, low);
-                    println!("LSTORE -> value={value}");
+                    trace!("LSTORE -> value={value}");
                 }
                 FSTORE => {
                     stack_frame.incr_pc();
@@ -528,7 +531,7 @@ impl Engine {
 
                     stack_frame.set_local(pos, value);
                     stack_frame.incr_pc();
-                    println!("FSTORE -> pos={pos}, value={value}");
+                    trace!("FSTORE -> pos={pos}, value={value}");
                 }
                 DSTORE => {
                     stack_frame.incr_pc();
@@ -541,7 +544,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = i32toi64(high, low);
-                    println!("DSTORE -> value={value}");
+                    trace!("DSTORE -> value={value}");
                 }
                 ASTORE => {
                     stack_frame.incr_pc();
@@ -552,35 +555,35 @@ impl Engine {
                     stack_frame.set_local(index, objectref);
 
                     stack_frame.incr_pc();
-                    println!("ASTORE -> index={index}, objectref={objectref}");
+                    trace!("ASTORE -> index={index}, objectref={objectref}");
                 }
                 ISTORE_0 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(0, value);
 
                     stack_frame.incr_pc();
-                    println!("ISTORE_0 -> value={value}");
+                    trace!("ISTORE_0 -> value={value}");
                 }
                 ISTORE_1 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(1, value);
 
                     stack_frame.incr_pc();
-                    println!("ISTORE_1 -> value={value}");
+                    trace!("ISTORE_1 -> value={value}");
                 }
                 ISTORE_2 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(2, value);
 
                     stack_frame.incr_pc();
-                    println!("ISTORE_2 -> value={value}");
+                    trace!("ISTORE_2 -> value={value}");
                 }
                 ISTORE_3 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(3, value);
 
                     stack_frame.incr_pc();
-                    println!("ISTORE_3 -> value={value}");
+                    trace!("ISTORE_3 -> value={value}");
                 }
                 LSTORE_0 => {
                     let high = stack_frame.pop();
@@ -591,7 +594,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("LSTORE_0 -> value={value}");
+                    trace!("LSTORE_0 -> value={value}");
                 }
                 LSTORE_1 => {
                     let high = stack_frame.pop();
@@ -602,7 +605,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("LSTORE_1 -> value={value}");
+                    trace!("LSTORE_1 -> value={value}");
                 }
                 LSTORE_2 => {
                     let high = stack_frame.pop();
@@ -613,7 +616,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("LSTORE_2 -> value={value}");
+                    trace!("LSTORE_2 -> value={value}");
                 }
                 LSTORE_3 => {
                     let high = stack_frame.pop();
@@ -624,28 +627,28 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!("LSTORE_3 -> value={value}");
+                    trace!("LSTORE_3 -> value={value}");
                 }
                 FSTORE_0 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(0, value);
 
                     stack_frame.incr_pc();
-                    println!("FSTORE_0 -> value={value}");
+                    trace!("FSTORE_0 -> value={value}");
                 }
                 FSTORE_1 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(1, value);
 
                     stack_frame.incr_pc();
-                    println!("FSTORE_1 -> value={value}");
+                    trace!("FSTORE_1 -> value={value}");
                 }
                 FSTORE_3 => {
                     let value = stack_frame.pop();
                     stack_frame.set_local(3, value);
 
                     stack_frame.incr_pc();
-                    println!("FSTORE_3 -> value={value}");
+                    trace!("FSTORE_3 -> value={value}");
                 }
                 DSTORE_0 => {
                     let high = stack_frame.pop();
@@ -656,7 +659,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!(
+                    trace!(
                         "DSTORE_0 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -670,7 +673,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!(
+                    trace!(
                         "DSTORE_1 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -684,7 +687,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!(
+                    trace!(
                         "DSTORE_2 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -698,7 +701,7 @@ impl Engine {
 
                     stack_frame.incr_pc();
                     let value = ((high as i64) << 32) | (low as i64);
-                    println!(
+                    trace!(
                         "DSTORE_3 -> value={value} ({:e})",
                         f64::from_bits(value as u64)
                     );
@@ -708,28 +711,28 @@ impl Engine {
                     stack_frame.set_local(0, objectref);
 
                     stack_frame.incr_pc();
-                    println!("ASTORE_0 -> objectref={objectref}");
+                    trace!("ASTORE_0 -> objectref={objectref}");
                 }
                 ASTORE_1 => {
                     let objectref = stack_frame.pop();
                     stack_frame.set_local(1, objectref);
 
                     stack_frame.incr_pc();
-                    println!("ASTORE_1 -> objectref={objectref}");
+                    trace!("ASTORE_1 -> objectref={objectref}");
                 }
                 ASTORE_2 => {
                     let objectref = stack_frame.pop();
                     stack_frame.set_local(2, objectref);
 
                     stack_frame.incr_pc();
-                    println!("ASTORE_2 -> objectref={objectref}");
+                    trace!("ASTORE_2 -> objectref={objectref}");
                 }
                 ASTORE_3 => {
                     let objectref = stack_frame.pop();
                     stack_frame.set_local(3, objectref);
 
                     stack_frame.incr_pc();
-                    println!("ASTORE_3 -> objectref={objectref}");
+                    trace!("ASTORE_3 -> objectref={objectref}");
                 }
                 IASTORE => {
                     let value = stack_frame.pop();
@@ -741,7 +744,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                    trace!("IASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 LASTORE => {
                     let high = stack_frame.pop();
@@ -756,7 +759,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("LASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
+                    trace!("LASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
                 FASTORE => {
                     let value = stack_frame.pop();
@@ -768,7 +771,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("FASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                    trace!("FASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 DASTORE => {
                     let high = stack_frame.pop();
@@ -783,7 +786,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("DASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
+                    trace!("DASTORE -> arrayref={arrayref}, index={index}, value={value:?}");
                 }
                 AASTORE => {
                     let objref = stack_frame.pop();
@@ -795,7 +798,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("AASTORE -> arrayref={arrayref}, index={index}, objref={objref}");
+                    trace!("AASTORE -> arrayref={arrayref}, index={index}, objref={objref}");
                 }
                 BASTORE => {
                     let value = stack_frame.pop();
@@ -807,7 +810,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("BASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                    trace!("BASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 CASTORE => {
                     let value = stack_frame.pop();
@@ -819,7 +822,7 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("CASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                    trace!("CASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 SASTORE => {
                     let value = stack_frame.pop();
@@ -831,13 +834,13 @@ impl Engine {
                     })?;
 
                     stack_frame.incr_pc();
-                    println!("SASTORE -> arrayref={arrayref}, index={index}, value={value}");
+                    trace!("SASTORE -> arrayref={arrayref}, index={index}, value={value}");
                 }
                 POP => {
                     stack_frame.pop();
 
                     stack_frame.incr_pc();
-                    println!("POP");
+                    trace!("POP");
                 }
                 DUP => {
                     let value = stack_frame.pop();
@@ -845,7 +848,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("DUP -> value={value}");
+                    trace!("DUP -> value={value}");
                 }
                 DUP_X1 => {
                     let value1 = stack_frame.pop();
@@ -855,7 +858,7 @@ impl Engine {
                     stack_frame.push(value1);
 
                     stack_frame.incr_pc();
-                    println!("DUP_X1 -> value1={value1}, value2={value2}, value1={value1}");
+                    trace!("DUP_X1 -> value1={value1}, value2={value2}, value1={value1}");
                 }
                 DUP2 => {
                     let value1 = stack_frame.pop();
@@ -866,7 +869,7 @@ impl Engine {
                     stack_frame.push(value1);
 
                     stack_frame.incr_pc();
-                    println!("DUP2 -> value1={value1}, value2={value2}");
+                    trace!("DUP2 -> value1={value1}, value2={value2}");
                 }
                 IADD => {
                     let b = stack_frame.pop();
@@ -875,7 +878,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IADD -> {a} + {b} = {result}");
+                    trace!("IADD -> {a} + {b} = {result}");
                 }
                 LADD => {
                     let b = stack_frame.pop_i64();
@@ -886,7 +889,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LADD -> {a} + {b} = {result}");
+                    trace!("LADD -> {a} + {b} = {result}");
                 }
                 FADD => {
                     let b = stack_frame.pop_f32();
@@ -895,7 +898,7 @@ impl Engine {
                     stack_frame.push_f32(result);
 
                     stack_frame.incr_pc();
-                    println!("FADD -> {a} + {b} = {result}");
+                    trace!("FADD -> {a} + {b} = {result}");
                 }
                 DADD => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -906,7 +909,7 @@ impl Engine {
                     stack_frame.push_i64(result.to_bits() as i64);
 
                     stack_frame.incr_pc();
-                    println!("DADD -> {a} + {b} = {result}");
+                    trace!("DADD -> {a} + {b} = {result}");
                 }
                 ISUB => {
                     let b = stack_frame.pop();
@@ -915,7 +918,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("ISUB -> {a} - {b} = {result}");
+                    trace!("ISUB -> {a} - {b} = {result}");
                 }
                 LSUB => {
                     let b = stack_frame.pop_i64();
@@ -926,7 +929,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LSUB -> {a} - {b} = {result}");
+                    trace!("LSUB -> {a} - {b} = {result}");
                 }
                 FSUB => {
                     let b = stack_frame.pop_f32();
@@ -935,7 +938,7 @@ impl Engine {
                     stack_frame.push_f32(result);
 
                     stack_frame.incr_pc();
-                    println!("FSUB -> {a} - {b} = {result}");
+                    trace!("FSUB -> {a} - {b} = {result}");
                 }
                 DSUB => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -946,7 +949,7 @@ impl Engine {
                     stack_frame.push_i64(result.to_bits() as i64);
 
                     stack_frame.incr_pc();
-                    println!("DSUB -> {a} - {b} = {result}");
+                    trace!("DSUB -> {a} - {b} = {result}");
                 }
                 IMUL => {
                     let b = stack_frame.pop();
@@ -955,7 +958,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IMUL -> {a} * {b} = {result}");
+                    trace!("IMUL -> {a} * {b} = {result}");
                 }
                 LMUL => {
                     let b = stack_frame.pop_i64();
@@ -966,7 +969,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LMUL -> {a} * {b} = {result}");
+                    trace!("LMUL -> {a} * {b} = {result}");
                 }
                 FMUL => {
                     let b = stack_frame.pop_f32();
@@ -975,7 +978,7 @@ impl Engine {
                     stack_frame.push_f32(result);
 
                     stack_frame.incr_pc();
-                    println!("FMUL -> {a} * {b} = {result}");
+                    trace!("FMUL -> {a} * {b} = {result}");
                 }
                 DMUL => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -986,7 +989,7 @@ impl Engine {
                     stack_frame.push_i64(result.to_bits() as i64);
 
                     stack_frame.incr_pc();
-                    println!("DMUL -> {a} * {b} = {result}");
+                    trace!("DMUL -> {a} * {b} = {result}");
                 }
                 IDIV => {
                     let b = stack_frame.pop();
@@ -995,7 +998,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IDIV -> {a} / {b} = {result}");
+                    trace!("IDIV -> {a} / {b} = {result}");
                 }
                 LDIV => {
                     let b = stack_frame.pop_i64();
@@ -1006,7 +1009,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LDIV -> {a} / {b} = {result}");
+                    trace!("LDIV -> {a} / {b} = {result}");
                 }
                 FDIV => {
                     let b = stack_frame.pop_f32();
@@ -1015,7 +1018,7 @@ impl Engine {
                     stack_frame.push_f32(result);
 
                     stack_frame.incr_pc();
-                    println!("FDIV -> {a} / {b} = {result}");
+                    trace!("FDIV -> {a} / {b} = {result}");
                 }
                 DDIV => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1026,7 +1029,7 @@ impl Engine {
                     stack_frame.push_i64(result.to_bits() as i64);
 
                     stack_frame.incr_pc();
-                    println!("DDIV -> {a} / {b} = {result}");
+                    trace!("DDIV -> {a} / {b} = {result}");
                 }
                 IREM => {
                     let b = stack_frame.pop();
@@ -1035,7 +1038,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IREM -> {a} % {b} = {result}");
+                    trace!("IREM -> {a} % {b} = {result}");
                 }
                 LREM => {
                     let b = stack_frame.pop_i64();
@@ -1046,7 +1049,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LREM -> {a} % {b} = {result}");
+                    trace!("LREM -> {a} % {b} = {result}");
                 }
                 DREM => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1057,7 +1060,7 @@ impl Engine {
                     stack_frame.push_i64(result.to_bits() as i64);
 
                     stack_frame.incr_pc();
-                    println!("DREM -> {a} % {b} = {result}");
+                    trace!("DREM -> {a} % {b} = {result}");
                 }
                 INEG => {
                     let value = stack_frame.pop();
@@ -1065,7 +1068,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("INEG -> {result}");
+                    trace!("INEG -> {result}");
                 }
                 LNEG => {
                     let value = stack_frame.pop_i64();
@@ -1073,7 +1076,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LNEG -> {result}");
+                    trace!("LNEG -> {result}");
                 }
                 ISHL => {
                     let b = stack_frame.pop();
@@ -1084,7 +1087,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("ISHL -> {a} << {b} = {result}");
+                    trace!("ISHL -> {a} << {b} = {result}");
                 }
                 LSHL => {
                     let b = stack_frame.pop() as u32;
@@ -1095,7 +1098,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LSHL -> {a} << {b} = {result}");
+                    trace!("LSHL -> {a} << {b} = {result}");
                 }
                 ISHR => {
                     // todo: recheck spec
@@ -1107,7 +1110,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("ISHR -> {a} >> {b} = {result}");
+                    trace!("ISHR -> {a} >> {b} = {result}");
                 }
                 LSHR => {
                     let b = stack_frame.pop() as u32;
@@ -1118,7 +1121,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LSHR -> {a} >> {b} = {result}");
+                    trace!("LSHR -> {a} >> {b} = {result}");
                 }
                 IUSHR => {
                     let b = stack_frame.pop() as u32;
@@ -1129,7 +1132,7 @@ impl Engine {
                     stack_frame.push(result as i32);
 
                     stack_frame.incr_pc();
-                    println!("IUSHR -> {a} >> {b} = {result}");
+                    trace!("IUSHR -> {a} >> {b} = {result}");
                 }
                 LUSHR => {
                     let b = stack_frame.pop() as u32;
@@ -1140,7 +1143,7 @@ impl Engine {
                     stack_frame.push_i64(result as i64);
 
                     stack_frame.incr_pc();
-                    println!("LUSHR -> {a} >> {b} = {result}");
+                    trace!("LUSHR -> {a} >> {b} = {result}");
                 }
                 IAND => {
                     let b = stack_frame.pop();
@@ -1150,7 +1153,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IAND -> {a} & {b} = {result}");
+                    trace!("IAND -> {a} & {b} = {result}");
                 }
                 LAND => {
                     let b = stack_frame.pop_i64();
@@ -1161,7 +1164,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LAND -> {a} & {b} = {result}");
+                    trace!("LAND -> {a} & {b} = {result}");
                 }
                 IOR => {
                     let b = stack_frame.pop();
@@ -1171,7 +1174,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IOR -> {a} | {b} = {result}");
+                    trace!("IOR -> {a} | {b} = {result}");
                 }
                 LOR => {
                     let b = stack_frame.pop_i64();
@@ -1182,7 +1185,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LOR -> {a} | {b} = {result}");
+                    trace!("LOR -> {a} | {b} = {result}");
                 }
                 IXOR => {
                     let b = stack_frame.pop();
@@ -1192,7 +1195,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("IXOR -> {a} & {b} = {result}");
+                    trace!("IXOR -> {a} & {b} = {result}");
                 }
                 LXOR => {
                     let b = stack_frame.pop_i64();
@@ -1203,7 +1206,7 @@ impl Engine {
                     stack_frame.push_i64(result);
 
                     stack_frame.incr_pc();
-                    println!("LXOR -> {a} & {b} = {result}");
+                    trace!("LXOR -> {a} & {b} = {result}");
                 }
                 IINC => {
                     stack_frame.incr_pc();
@@ -1217,7 +1220,7 @@ impl Engine {
                     stack_frame.set_local(index, new_val);
 
                     stack_frame.incr_pc();
-                    println!("IINC -> {current_val} + {const_val} = {new_val}");
+                    trace!("IINC -> {current_val} + {const_val} = {new_val}");
                 }
                 I2L => {
                     let value = stack_frame.pop() as i64;
@@ -1225,7 +1228,7 @@ impl Engine {
                     stack_frame.push_i64(value);
 
                     stack_frame.incr_pc();
-                    println!("I2L -> {value}L");
+                    trace!("I2L -> {value}L");
                 }
                 I2F => {
                     let value = stack_frame.pop() as f32;
@@ -1233,7 +1236,7 @@ impl Engine {
                     stack_frame.push_f32(value);
 
                     stack_frame.incr_pc();
-                    println!("I2F -> {value}F");
+                    trace!("I2F -> {value}F");
                 }
                 I2D => {
                     let value = stack_frame.pop() as f64;
@@ -1241,7 +1244,7 @@ impl Engine {
                     stack_frame.push_i64(value.to_bits() as i64);
 
                     stack_frame.incr_pc();
-                    println!("I2D -> {value}D");
+                    trace!("I2D -> {value}D");
                 }
                 L2I => {
                     let value = stack_frame.pop_i64() as i32;
@@ -1249,7 +1252,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("L2I -> {value}I");
+                    trace!("L2I -> {value}I");
                 }
                 L2F => {
                     let value = stack_frame.pop_i64() as f32;
@@ -1257,7 +1260,7 @@ impl Engine {
                     stack_frame.push_f32(value);
 
                     stack_frame.incr_pc();
-                    println!("L2F -> {value}F");
+                    trace!("L2F -> {value}F");
                 }
                 L2D => {
                     let value = stack_frame.pop_i64() as f64;
@@ -1265,7 +1268,7 @@ impl Engine {
                     stack_frame.push_f64(value);
 
                     stack_frame.incr_pc();
-                    println!("L2D -> {value}D");
+                    trace!("L2D -> {value}D");
                 }
                 F2I => {
                     let value = stack_frame.pop_f32() as i32;
@@ -1273,7 +1276,7 @@ impl Engine {
                     stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    println!("F2I -> {value}I");
+                    trace!("F2I -> {value}I");
                 }
                 F2L => {
                     let value = stack_frame.pop_f32();
@@ -1281,7 +1284,7 @@ impl Engine {
                     stack_frame.push_i64(value as i64);
 
                     stack_frame.incr_pc();
-                    println!("F2L -> {value}L");
+                    trace!("F2L -> {value}L");
                 }
                 F2D => {
                     let value = stack_frame.pop_f32() as f64;
@@ -1289,7 +1292,7 @@ impl Engine {
                     stack_frame.push_f64(value);
 
                     stack_frame.incr_pc();
-                    println!("F2D -> {value}D");
+                    trace!("F2D -> {value}D");
                 }
                 D2I => {
                     let value = stack_frame.pop_f64();
@@ -1297,7 +1300,7 @@ impl Engine {
                     stack_frame.push(value as i32);
 
                     stack_frame.incr_pc();
-                    println!("D2I -> {value}I");
+                    trace!("D2I -> {value}I");
                 }
                 D2L => {
                     let value = stack_frame.pop_f64();
@@ -1305,7 +1308,7 @@ impl Engine {
                     stack_frame.push_i64(value as i64);
 
                     stack_frame.incr_pc();
-                    println!("D2L -> {value}L");
+                    trace!("D2L -> {value}L");
                 }
                 I2B => {
                     let value = stack_frame.pop() as i8;
@@ -1313,7 +1316,7 @@ impl Engine {
                     stack_frame.push(value as i32);
 
                     stack_frame.incr_pc();
-                    println!("I2B -> {value}B");
+                    trace!("I2B -> {value}B");
                 }
                 I2C => {
                     let value = stack_frame.pop() as u16;
@@ -1321,7 +1324,7 @@ impl Engine {
                     stack_frame.push(value as i32);
 
                     stack_frame.incr_pc();
-                    println!("I2C -> {value}C");
+                    trace!("I2C -> {value}C");
                 }
                 I2S => {
                     let value = stack_frame.pop() as i16;
@@ -1329,7 +1332,7 @@ impl Engine {
                     stack_frame.push(value as i32);
 
                     stack_frame.incr_pc();
-                    println!("I2S -> {value}S");
+                    trace!("I2S -> {value}S");
                 }
                 LCMP => {
                     let b = stack_frame.pop_i64();
@@ -1344,7 +1347,7 @@ impl Engine {
                     }
 
                     stack_frame.incr_pc();
-                    println!("LCMP -> {a} ? {b}");
+                    trace!("LCMP -> {a} ? {b}");
                 }
                 FCMPL => {
                     let b = stack_frame.pop_f32();
@@ -1363,7 +1366,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("FCMPL -> {a} ? {b}");
+                    trace!("FCMPL -> {a} ? {b}");
                 }
                 FCMPG => {
                     let b = stack_frame.pop_f32();
@@ -1382,7 +1385,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("FCMPG -> {a} ? {b}");
+                    trace!("FCMPG -> {a} ? {b}");
                 }
                 DCMPL => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1401,7 +1404,7 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("DCMPL -> {a} ? {b}");
+                    trace!("DCMPL -> {a} ? {b}");
                 }
                 DCMPG => {
                     let b = f64::from_bits(stack_frame.pop_i64() as u64);
@@ -1420,43 +1423,43 @@ impl Engine {
                     stack_frame.push(result);
 
                     stack_frame.incr_pc();
-                    println!("DCMPG -> {a} ? {b}");
+                    trace!("DCMPG -> {a} ? {b}");
                 }
                 IFEQ => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value == 0 { offset } else { 3 });
-                    println!("IFEQ -> value={value}, offset={offset}");
+                    trace!("IFEQ -> value={value}, offset={offset}");
                 }
                 IFNE => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value != 0 { offset } else { 3 });
-                    println!("IFNE -> value={value}, offset={offset}");
+                    trace!("IFNE -> value={value}, offset={offset}");
                 }
                 IFLT => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value < 0 { offset } else { 3 });
-                    println!("IFLT -> value={value}, offset={offset}");
+                    trace!("IFLT -> value={value}, offset={offset}");
                 }
                 IFGE => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value >= 0 { offset } else { 3 });
-                    println!("IFGE -> value={value}, offset={offset}");
+                    trace!("IFGE -> value={value}, offset={offset}");
                 }
                 IFGT => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value > 0 { offset } else { 3 });
-                    println!("IFGT -> value={value}, offset={offset}");
+                    trace!("IFGT -> value={value}, offset={offset}");
                 }
                 IFLE => {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value <= 0 { offset } else { 3 });
-                    println!("IFLE -> value={value}, offset={offset}");
+                    trace!("IFLE -> value={value}, offset={offset}");
                 }
                 IF_ICMPEQ => {
                     Self::branch(|a: i32, b| a == b, stack_frame, "IF_ICMPEQ");
@@ -1485,7 +1488,7 @@ impl Engine {
                 GOTO => {
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(offset);
-                    println!("GOTO -> offset={offset}");
+                    trace!("GOTO -> offset={offset}");
                 }
                 LOOKUPSWITCH => {
                     let key = stack_frame.pop();
@@ -1513,7 +1516,7 @@ impl Engine {
                         stack_frame.advance_pc(default_offset + instruction_pc - current_pc);
                     }
 
-                    println!("LOOKUPSWITCH -> default_offset={default_offset}, npairs={npairs}");
+                    trace!("LOOKUPSWITCH -> default_offset={default_offset}, npairs={npairs}");
                 }
                 TABLESWITCH => {
                     let index = stack_frame.pop();
@@ -1534,7 +1537,7 @@ impl Engine {
                     let current_pc = stack_frame.pc() as i16;
                     stack_frame.advance_pc(offset + instruction_pc - current_pc);
 
-                    println!(
+                    trace!(
                         "TABLESWITCH -> default_offset={default_offset}, low={low}, high={high}"
                     );
                 }
@@ -1545,7 +1548,7 @@ impl Engine {
                         .last_mut()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(ret);
-                    println!("IRETURN -> ret={ret}");
+                    trace!("IRETURN -> ret={ret}");
                 }
                 LRETURN => {
                     let ret_high = stack_frame.pop();
@@ -1559,7 +1562,7 @@ impl Engine {
                     frame.push(ret_high);
 
                     let ret = i32toi64(ret_high, ret_low);
-                    println!("LRETURN -> ret={ret}");
+                    trace!("LRETURN -> ret={ret}");
                 }
                 FRETURN => {
                     let ret = stack_frame.pop();
@@ -1568,7 +1571,7 @@ impl Engine {
                         .last_mut()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(ret);
-                    println!("FRETURN -> ret={ret}");
+                    trace!("FRETURN -> ret={ret}");
                 }
                 DRETURN => {
                     let ret_high = stack_frame.pop();
@@ -1582,7 +1585,7 @@ impl Engine {
                     frame.push(ret_high);
 
                     let ret = i32toi64(ret_high, ret_low);
-                    println!("DRETURN -> ret={ret}");
+                    trace!("DRETURN -> ret={ret}");
                 }
                 ARETURN => {
                     let objref = stack_frame.pop();
@@ -1592,10 +1595,10 @@ impl Engine {
                         .last_mut()
                         .ok_or(Error::new_execution("Error getting stack last value"))?
                         .push(objref);
-                    println!("ARETURN -> objref={objref}");
+                    trace!("ARETURN -> objref={objref}");
                 }
                 RETURN => {
-                    println!("RETURN -> stack_frame.locals={:?}", stack_frame.locals);
+                    trace!("RETURN -> stack_frame.locals={:?}", stack_frame.locals);
                     last_value = Some(
                         stack_frames
                             .last()
@@ -1628,7 +1631,7 @@ impl Engine {
                         .rev()
                         .for_each(|x| stack_frame.push(*x));
 
-                    println!(
+                    trace!(
                         "GETSTATIC -> {class_name}.{field_name} is {:?}",
                         field.raw_value()
                     );
@@ -1661,7 +1664,7 @@ impl Engine {
 
                     field_ref.set_raw_value(value.clone());
 
-                    println!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
+                    trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
                     stack_frame.incr_pc();
                 }
                 GETFIELD => {
@@ -1689,7 +1692,7 @@ impl Engine {
                     value.iter().rev().for_each(|x| stack_frame.push(*x));
 
                     stack_frame.incr_pc();
-                    println!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type}, value={value:?}");
+                    trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type}, value={value:?}");
                 }
                 PUTFIELD => {
                     let fieldref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
@@ -1731,7 +1734,7 @@ impl Engine {
                         )
                     })?;
 
-                    println!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type} value={value:?}");
+                    trace!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type} value={value:?}");
                     stack_frame.incr_pc();
                 }
                 INVOKEVIRTUAL => {
@@ -1772,7 +1775,7 @@ impl Engine {
                     if virtual_method.is_native() {
                         let full_native_signature =
                             format!("{found_impl_type_class_name}:{full_signature}");
-                        println!(
+                        trace!(
                             "<Calling native virtual method> -> {full_native_signature} ({method_args:?})"
                         );
 
@@ -1789,7 +1792,7 @@ impl Engine {
 
                         stack_frames.push(next_frame);
                     }
-                    println!(
+                    trace!(
                         "INVOKEVIRTUAL -> {found_impl_type_class_name}.{method_name}({method_args:?})"
                     );
                 }
@@ -1826,7 +1829,7 @@ impl Engine {
 
                     if special_method.is_native() {
                         let full_native_signature = format!("{class_name}:{full_signature}");
-                        println!(
+                        trace!(
                             "<Calling native special method> -> {full_native_signature} ({method_args:?})"
                         );
 
@@ -1843,7 +1846,7 @@ impl Engine {
 
                         stack_frames.push(next_frame);
                     }
-                    println!("INVOKESPECIAL -> {class_name}.{method_name}({method_args:?})");
+                    trace!("INVOKESPECIAL -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKESTATIC => {
                     let methodref_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
@@ -1879,7 +1882,7 @@ impl Engine {
 
                     if static_method.is_native() {
                         let full_native_signature = format!("{class_name}:{full_signature}");
-                        println!(
+                        trace!(
                             "<Calling native method> -> {full_native_signature} ({method_args:?})"
                         );
 
@@ -1896,7 +1899,7 @@ impl Engine {
 
                         stack_frames.push(next_frame);
                     }
-                    println!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
+                    trace!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
                 }
                 INVOKEINTERFACE => {
                     let interfacemethodref_constpool_index =
@@ -1948,7 +1951,7 @@ impl Engine {
 
                     stack_frames.push(next_frame);
 
-                    println!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({method_args:?}) on instance {instance_name}");
+                    trace!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({method_args:?}) on instance {instance_name}");
                 }
                 NEW => {
                     let class_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
@@ -1974,7 +1977,7 @@ impl Engine {
                     });
                     stack_frame.push(instanceref);
 
-                    println!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
+                    trace!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
                     stack_frame.incr_pc();
                 }
                 NEWARRAY => {
@@ -2004,7 +2007,7 @@ impl Engine {
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
-                    println!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
+                    trace!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
                 }
                 ANEWARRAY => {
                     let length = stack_frame.pop();
@@ -2028,7 +2031,7 @@ impl Engine {
                     stack_frame.push(arrayref);
 
                     stack_frame.incr_pc();
-                    println!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
+                    trace!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
                 }
                 ARRAYLENGTH => {
                     let arrayref = stack_frame.pop();
@@ -2037,7 +2040,7 @@ impl Engine {
                     stack_frame.push(len);
 
                     stack_frame.incr_pc();
-                    println!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
+                    trace!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
                 }
                 CHECKCAST => {
                     let class_constpool_index = Self::extract_two_bytes(stack_frame) as u16;
@@ -2072,7 +2075,7 @@ impl Engine {
 
                     stack_frame.push(objectref);
 
-                    println!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+                    trace!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
                 }
                 INSTANCEOF => {
                     // todo: merge me with CHECKCAST
@@ -2104,19 +2107,19 @@ impl Engine {
 
                     stack_frame.push(objectref);
 
-                    println!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+                    trace!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
                 }
                 MONITORENTER => {
                     let objectref = stack_frame.pop();
                     // todo: implement me
                     stack_frame.incr_pc();
-                    println!("MONITORENTER -> objectref={objectref}");
+                    trace!("MONITORENTER -> objectref={objectref}");
                 }
                 MONITOREXIT => {
                     let objectref = stack_frame.pop();
                     // todo: implement me
                     stack_frame.incr_pc();
-                    println!("MONITOREXIT -> objectref={objectref}");
+                    trace!("MONITOREXIT -> objectref={objectref}");
                 }
                 WIDE => {
                     stack_frame.incr_pc();
@@ -2127,7 +2130,7 @@ impl Engine {
                             let value = stack_frame.get_local(index);
                             stack_frame.push(value);
                             stack_frame.incr_pc();
-                            println!("WIDE ILOAD -> index={index}, value={value}");
+                            trace!("WIDE ILOAD -> index={index}, value={value}");
                         }
                         LLOAD => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
@@ -2138,14 +2141,14 @@ impl Engine {
                             stack_frame.push(high);
 
                             stack_frame.incr_pc();
-                            println!("WIDE LLOAD -> index={index}, value={value}");
+                            trace!("WIDE LLOAD -> index={index}, value={value}");
                         }
                         FLOAD => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
                             let value = stack_frame.get_local(index);
                             stack_frame.push(value);
                             stack_frame.incr_pc();
-                            println!(
+                            trace!(
                                 "WIDE FLOAD -> index={index}, value={}",
                                 f32::from_bits(value as u32)
                             );
@@ -2158,7 +2161,7 @@ impl Engine {
                             stack_frame.push(high);
 
                             stack_frame.incr_pc();
-                            println!(
+                            trace!(
                                 "WIDE DLOAD -> index={index}, value={}",
                                 f64::from_bits(value as u64)
                             );
@@ -2168,14 +2171,14 @@ impl Engine {
                             let value = stack_frame.get_local(index);
                             stack_frame.push(value);
                             stack_frame.incr_pc();
-                            println!("WIDE ALOAD -> index={index}, value={value}");
+                            trace!("WIDE ALOAD -> index={index}, value={value}");
                         }
                         ISTORE => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
                             let value = stack_frame.pop();
                             stack_frame.set_local(index, value);
                             stack_frame.incr_pc();
-                            println!("WIDE ISTORE -> index={index}, value={value}");
+                            trace!("WIDE ISTORE -> index={index}, value={value}");
                         }
                         LSTORE => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
@@ -2187,14 +2190,14 @@ impl Engine {
 
                             stack_frame.incr_pc();
                             let value = i32toi64(high, low);
-                            println!("WIDE LSTORE -> index={index}, value={value}");
+                            trace!("WIDE LSTORE -> index={index}, value={value}");
                         }
                         FSTORE => {
                             let index = Self::extract_two_bytes(stack_frame) as usize;
                             let value = stack_frame.pop();
                             stack_frame.set_local(index, value);
                             stack_frame.incr_pc();
-                            println!(
+                            trace!(
                                 "WIDE FSTORE -> index={index}, value={}",
                                 f32::from_bits(value as u32)
                             );
@@ -2209,7 +2212,7 @@ impl Engine {
 
                             stack_frame.incr_pc();
                             let value = ((high as i64) << 32) | (low as i64);
-                            println!(
+                            trace!(
                                 "WIDE DSTORE -> index={index}, value={}",
                                 f64::from_bits(value as u64)
                             );
@@ -2219,7 +2222,7 @@ impl Engine {
                             let obj_ref = stack_frame.pop();
                             stack_frame.set_local(index, obj_ref);
                             stack_frame.incr_pc();
-                            println!("WIDE ASTORE -> index={index}, obj_ref={obj_ref}");
+                            trace!("WIDE ASTORE -> index={index}, obj_ref={obj_ref}");
                         }
                         IINC => {
                             let index = Self::extract_two_bytes(stack_frame) as u16 as usize;
@@ -2230,7 +2233,7 @@ impl Engine {
                             stack_frame.set_local(index, new_val);
 
                             stack_frame.incr_pc();
-                            println!("WIDE IINC -> {current_val} + {const_val} = {new_val}");
+                            trace!("WIDE IINC -> {current_val} + {const_val} = {new_val}");
                         }
                         _ => {
                             return Err(Error::new_execution(&format!(
@@ -2244,14 +2247,14 @@ impl Engine {
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value == 0 { offset } else { 3 });
-                    println!("IFNULL -> value={value}, offset={offset}");
+                    trace!("IFNULL -> value={value}, offset={offset}");
                 }
                 IFNONNULL => {
                     //todo: this one is opposite to IFNULL ops code
                     let value = stack_frame.pop();
                     let offset = Self::get_two_bytes_ahead(stack_frame);
                     stack_frame.advance_pc(if value != 0 { offset } else { 3 });
-                    println!("IFNONNULL -> value={value}, offset={offset}");
+                    trace!("IFNONNULL -> value={value}, offset={offset}");
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", stack_frame.get_bytecode_byte()}),
             }
@@ -2302,6 +2305,6 @@ impl Engine {
 
         stack_frame.advance_pc(if op(value1, value2) { offset } else { 3 });
 
-        println!("{op_code} -> value1={value1}, value2={value2}, offset={offset}");
+        trace!("{op_code} -> value1={value1}, value2={value2}, offset={offset}");
     }
 }
