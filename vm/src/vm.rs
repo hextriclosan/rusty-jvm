@@ -13,14 +13,15 @@ pub struct VM {}
 impl VM {
     const ENTRY_POINT: &'static str = "main:([Ljava/lang/String;)V";
 
-    pub fn new(std_dir: &str) -> crate::error::Result<Self> {
+    fn prelude() -> crate::error::Result<()> {
         Self::init_logger()?;
 
-        MethodArea::init(std_dir);
+        let std_dir = Self::get_std_dir()?;
+        MethodArea::init(&std_dir);
 
         Self::init()?;
 
-        Ok(Self {})
+        Ok(())
     }
 
     fn init_logger() -> crate::error::Result<()> {
@@ -142,7 +143,19 @@ impl VM {
         Ok(thread_instance_ref)
     }
 
-    pub fn run(&self, main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
+    fn get_std_dir() -> crate::error::Result<String> {
+        if let Ok(rusty_java_home) = std::env::var("RUSTY_JAVA_HOME") {
+            Ok(format!("{}/lib", rusty_java_home))
+        } else {
+            Err(Error::new_execution(
+                "RUSTY_JAVA_HOME environment variable is not set",
+            ))
+        }
+    }
+
+    pub fn run(main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
+        Self::prelude()?;
+
         let internal_name = &main_class_name.replace('.', "/");
         let java_class = with_method_area(|area| area.get(internal_name))?;
 
