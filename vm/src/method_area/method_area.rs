@@ -40,11 +40,10 @@ pub(crate) struct MethodArea {
 }
 
 impl MethodArea {
-    pub(crate) fn init(std_dir: &str) {
-        match METHOD_AREA.set(MethodArea::new(std_dir)) {
-            Ok(_) => (),
-            Err(_) => (), // treated as not error to be aligned with tests
-        }
+    pub(crate) fn init(std_dir: &str) -> crate::error::Result<()> {
+        METHOD_AREA
+            .set(MethodArea::new(std_dir))
+            .map_err(|_| Error::new_execution("MethodArea already initialized"))
     }
 
     fn new(std_dir: &str) -> Self {
