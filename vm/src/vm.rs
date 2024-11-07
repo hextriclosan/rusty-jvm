@@ -7,17 +7,37 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
-#[derive(Debug)]
 pub struct VM {}
 
 impl VM {
     const ENTRY_POINT: &'static str = "main:([Ljava/lang/String;)V";
+    const JAVA_HOME_ENV: &'static str = "RUSTY_JAVA_HOME";
+
+    pub fn run(main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
+        Self::prelude()?;
+
+        let internal_name = &main_class_name.replace('.', "/");
+        let java_class = with_method_area(|area| area.get(internal_name))?;
+
+        let java_method = java_class
+            .methods
+            .method_by_signature
+            .get(Self::ENTRY_POINT)
+            .ok_or(Error::new_execution(
+                format!("main method not found in {main_class_name}").as_str(),
+            ))?;
+
+        Engine::execute(
+            java_method.new_stack_frame()?,
+            &format!("invoke {}", Self::ENTRY_POINT),
+        )
+    }
 
     fn prelude() -> crate::error::Result<()> {
         Self::init_logger()?;
 
         let std_dir = Self::get_std_dir()?;
-        MethodArea::init(&std_dir);
+        MethodArea::init(&std_dir)?;
 
         Self::init()?;
 
@@ -40,6 +60,17 @@ impl VM {
         Ok(())
     }
 
+    fn get_std_dir() -> crate::error::Result<String> {
+        if let Ok(rusty_java_home) = std::env::var(Self::JAVA_HOME_ENV) {
+            Ok(format!("{}/lib", rusty_java_home))
+        } else {
+            Err(Error::new_execution(&format!(
+                "{} environment variable is not set",
+                Self::JAVA_HOME_ENV
+            )))
+        }
+    }
+
     fn init() -> crate::error::Result<()> {
         // explicit static initialization of java.lang.ref.Reference needed for creating JavaLangRefAccess instance
         // reading Reference.processPendingActive
@@ -55,28 +86,7 @@ impl VM {
         Ok(())
     }
 
-    fn invoke_void_void_static_method(
-        // refactor move me to utils
-        class_name: &str,
-        method_name: &str,
-    ) -> crate::error::Result<()> {
-        let java_class = with_method_area(|area| area.get(class_name))?;
-
-        let java_method = java_class
-            .methods
-            .method_by_signature
-            .get(method_name)
-            .ok_or(Error::new_execution(
-                format!("method {method_name} not found in {class_name}").as_str(),
-            ))?;
-
-        let _result = Engine::execute(
-            java_method.new_stack_frame()?,
-            &format!("invoke {class_name}.{method_name}"),
-        )?;
-        Ok(())
-    }
-
+    // refactor candidate A: generalized action should be moved out of VM
     fn read_static_field(class_name: &str, method_name: &str) -> crate::error::Result<Vec<i32>> {
         let field =
             with_method_area(|area| area.lookup_for_static_field(class_name, method_name))?;
@@ -143,33 +153,27 @@ impl VM {
         Ok(thread_instance_ref)
     }
 
-    fn get_std_dir() -> crate::error::Result<String> {
-        if let Ok(rusty_java_home) = std::env::var("RUSTY_JAVA_HOME") {
-            Ok(format!("{}/lib", rusty_java_home))
-        } else {
-            Err(Error::new_execution(
-                "RUSTY_JAVA_HOME environment variable is not set",
-            ))
-        }
-    }
-
-    pub fn run(main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
-        Self::prelude()?;
-
-        let internal_name = &main_class_name.replace('.', "/");
-        let java_class = with_method_area(|area| area.get(internal_name))?;
+    // refactor candidate A: generalized action should be moved out of VM
+    fn invoke_void_void_static_method(
+        // refactor move me to utils
+        class_name: &str,
+        method_name: &str,
+    ) -> crate::error::Result<()> {
+        let java_class = with_method_area(|area| area.get(class_name))?;
 
         let java_method = java_class
             .methods
             .method_by_signature
-            .get(Self::ENTRY_POINT)
+            .get(method_name)
             .ok_or(Error::new_execution(
-                format!("main method not found in {main_class_name}").as_str(),
+                format!("method {method_name} not found in {class_name}").as_str(),
             ))?;
 
         Engine::execute(
             java_method.new_stack_frame()?,
-            "invoke main:([Ljava/lang/String;)V",
-        )
+            &format!("invoke {class_name}.{method_name}"),
+        )?;
+
+        Ok(())
     }
 }
