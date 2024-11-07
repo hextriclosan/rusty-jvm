@@ -1,12 +1,9 @@
 mod utils;
 use utils::get_int;
-use utils::setup;
+use vm::vm::VM;
 
 #[test]
 fn should_write_read_instance_fields() {
-    let vm = setup();
-    let last_frame_value = vm
-        .run("samples.fields.instance.ints.InstanceFieldsUserInts")
-        .unwrap();
+    let last_frame_value = VM::run("samples.fields.instance.ints.InstanceFieldsUserInts").unwrap();
     assert_eq!(110022, get_int(last_frame_value))
 }

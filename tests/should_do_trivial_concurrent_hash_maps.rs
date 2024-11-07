@@ -1,12 +1,11 @@
 mod utils;
 use utils::get_int;
-use utils::setup;
+use vm::vm::VM;
 
 #[test]
 fn should_do_trivial_concurrent_hash_maps() {
-    let vm = setup();
-    let last_frame_value = vm
-        .run("samples.javabase.util.concurrent.hashmap.trivial.TrivialConcurrentHashMap")
-        .unwrap();
+    let last_frame_value =
+        VM::run("samples.javabase.util.concurrent.hashmap.trivial.TrivialConcurrentHashMap")
+            .unwrap();
     assert_eq!(97, get_int(last_frame_value))
 }

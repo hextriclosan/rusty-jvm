@@ -1,11 +1,13 @@
 use std::env;
-use vm::vm::VM;
 
 const PATH: &str = "tests/test_data";
 
-pub fn setup() -> VM {
+#[ctor::ctor]
+fn init() {
+    let repo_path = env::current_dir().expect("Failed to get current directory");
+    env::set_var("RUSTY_JAVA_HOME", &repo_path);
+
     env::set_current_dir(PATH).expect("Failed to change working directory");
-    VM::new("std").expect("Failed to create VM")
 }
 
 #[allow(dead_code)]
