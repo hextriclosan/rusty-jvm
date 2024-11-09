@@ -1,6 +1,16 @@
 pub(crate) mod engine;
 pub(crate) mod ldc_resolution_manager;
 pub(crate) mod opcode;
+mod ops_comparison_processor;
+mod ops_constant_processor;
+mod ops_control_processor;
+mod ops_conversion_processor;
+mod ops_extended_processor;
+mod ops_load_processor;
+mod ops_math_processor;
+mod ops_reference_processor;
+mod ops_stack_processor;
+mod ops_store_processor;
 pub(crate) mod reflection_class_loader;
 pub(crate) mod string_pool_helper;
 mod system_native_table;
