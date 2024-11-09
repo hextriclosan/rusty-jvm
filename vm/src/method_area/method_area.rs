@@ -206,7 +206,7 @@ impl MethodArea {
                 AttributesHelper::new(method_info.attributes())
                     .get_code()
                     .map(|(max_stack, max_locals, code)| {
-                        Some(CodeContext::new(max_stack, max_locals, code))
+                        Some(CodeContext::new(max_stack, max_locals, Arc::new(code)))
                     })
                     .ok_or_else(|| {
                         Error::new_execution(&format!(

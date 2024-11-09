@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::stack::stack_frame::StackFrame;
 use jdescriptor::MethodDescriptor;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) struct JavaMethod {
@@ -15,11 +16,11 @@ pub(crate) struct JavaMethod {
 pub(crate) struct CodeContext {
     max_stack: u16,
     max_locals: u16,
-    bytecode: Vec<u8>,
+    bytecode: Arc<Vec<u8>>,
 }
 
 impl CodeContext {
-    pub fn new(max_stack: u16, max_locals: u16, bytecode: Vec<u8>) -> Self {
+    pub fn new(max_stack: u16, max_locals: u16, bytecode: Arc<Vec<u8>>) -> Self {
         Self {
             max_stack,
             max_locals,
@@ -35,7 +36,7 @@ impl CodeContext {
         self.max_locals
     }
 
-    pub fn bytecode(&self) -> &Vec<u8> {
+    pub fn bytecode(&self) -> &Arc<Vec<u8>> {
         &self.bytecode
     }
 }
@@ -62,7 +63,7 @@ impl JavaMethod {
             Some(context) => Ok(StackFrame::new(
                 context.max_locals() as usize,
                 context.max_stack() as usize,
-                context.bytecode().to_owned(), //todo: use reference instead of coping
+                Arc::clone(context.bytecode()),
                 self.class_name.clone(),
             )),
             None => Err(Error::new_execution(&format!(

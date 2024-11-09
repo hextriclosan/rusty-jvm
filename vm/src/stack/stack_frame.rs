@@ -1,11 +1,12 @@
 use crate::helper::i32toi64;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub(crate) struct StackFrame {
     pc: usize,
     pub locals: Vec<i32>,
     operand_stack: Vec<i32>,
-    bytecode_ref: Vec<u8>,
+    bytecode_ref: Arc<Vec<u8>>,
     current_class_name: String,
 }
 
@@ -13,7 +14,7 @@ impl<'a> StackFrame {
     pub fn new(
         locals_size: usize,
         stack_size: usize,
-        bytecode_ref: Vec<u8>,
+        bytecode_ref: Arc<Vec<u8>>,
         current_class_name: String,
     ) -> Self {
         StackFrame {
