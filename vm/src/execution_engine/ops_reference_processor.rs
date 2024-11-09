@@ -509,13 +509,13 @@ pub(crate) fn process(
             trace!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }
         MONITORENTER => {
-            let objectref = stack_frame.pop();
+            let objectref: i32 = stack_frame.pop();
             // todo: implement me
             stack_frame.incr_pc();
             trace!("MONITORENTER -> objectref={objectref}");
         }
         MONITOREXIT => {
-            let objectref = stack_frame.pop();
+            let objectref: i32 = stack_frame.pop();
             // todo: implement me
             stack_frame.incr_pc();
             trace!("MONITOREXIT -> objectref={objectref}");
