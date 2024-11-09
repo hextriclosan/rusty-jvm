@@ -6,116 +6,116 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         I2L => {
-            let value = stack_frame.pop() as i64;
-
-            stack_frame.push_i64(value);
+            let value: i32 = stack_frame.pop();
+            let result = value as i64;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("I2L -> {value}L");
+            trace!("I2L -> {result}L");
         }
         I2F => {
-            let value = stack_frame.pop() as f32;
-
-            stack_frame.push_f32(value);
+            let value: i32 = stack_frame.pop();
+            let result = value as f32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("I2F -> {value}F");
+            trace!("I2F -> {result}F");
         }
         I2D => {
-            let value = stack_frame.pop() as f64;
-
-            stack_frame.push_i64(value.to_bits() as i64);
+            let value: i32 = stack_frame.pop();
+            let result = value as f64;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("I2D -> {value}D");
+            trace!("I2D -> {result}D");
         }
         L2I => {
-            let value = stack_frame.pop_i64() as i32;
-
-            stack_frame.push(value);
+            let value: i64 = stack_frame.pop();
+            let result = value as i32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("L2I -> {value}I");
+            trace!("L2I -> {result}I");
         }
         L2F => {
-            let value = stack_frame.pop_i64() as f32;
-
-            stack_frame.push_f32(value);
+            let value: i64 = stack_frame.pop();
+            let result = value as f32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("L2F -> {value}F");
+            trace!("L2F -> {result}F");
         }
         L2D => {
-            let value = stack_frame.pop_i64() as f64;
-
-            stack_frame.push_f64(value);
+            let value: i64 = stack_frame.pop();
+            let result = value as f64;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("L2D -> {value}D");
+            trace!("L2D -> {result}D");
         }
         F2I => {
-            let value = stack_frame.pop_f32() as i32;
-
-            stack_frame.push(value);
+            let value: f32 = stack_frame.pop();
+            let result = value as i32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("F2I -> {value}I");
+            trace!("F2I -> {result}I");
         }
         F2L => {
-            let value = stack_frame.pop_f32();
-
-            stack_frame.push_i64(value as i64);
+            let value: f32 = stack_frame.pop();
+            let result = value as i64;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("F2L -> {value}L");
+            trace!("F2L -> {result}L");
         }
         F2D => {
-            let value = stack_frame.pop_f32() as f64;
-
-            stack_frame.push_f64(value);
+            let value: f32 = stack_frame.pop();
+            let result = value as f64;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("F2D -> {value}D");
+            trace!("F2D -> {result}D");
         }
         D2I => {
-            let value = stack_frame.pop_f64();
-
-            stack_frame.push(value as i32);
+            let value: f64 = stack_frame.pop();
+            let result = value as i32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("D2I -> {value}I");
+            trace!("D2I -> {result}I");
         }
         D2L => {
-            let value = stack_frame.pop_f64();
-
-            stack_frame.push_i64(value as i64);
+            let value: f64 = stack_frame.pop();
+            let result = value as i64;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("D2L -> {value}L");
+            trace!("D2L -> {result}L");
         }
         I2B => {
-            let value = stack_frame.pop() as i8;
-
-            stack_frame.push(value as i32);
+            let value: i32 = stack_frame.pop();
+            let result = value as i8 as i32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("I2B -> {value}B");
+            trace!("I2B -> {result}B");
         }
         I2C => {
-            let value = stack_frame.pop() as u16;
-
-            stack_frame.push(value as i32);
+            let value: i32 = stack_frame.pop();
+            let result = value as u16 as i32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("I2C -> {value}C");
+            trace!("I2C -> {result}C");
         }
         I2S => {
-            let value = stack_frame.pop() as i16;
-
-            stack_frame.push(value as i32);
+            let value: i32 = stack_frame.pop();
+            let result = value as i16 as i32;
+            stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("I2S -> {value}S");
+            trace!("I2S -> {result}S");
         }
         _ => {
             return Err(crate::error::Error::new_execution(&format!(

@@ -130,14 +130,14 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         }
         IFNULL => {
             //todo: this one is opposite to IFNE ops code
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value == 0 { offset } else { 3 });
             trace!("IFNULL -> value={value}, offset={offset}");
         }
         IFNONNULL => {
             //todo: this one is opposite to IFNULL ops code
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value != 0 { offset } else { 3 });
             trace!("IFNONNULL -> value={value}, offset={offset}");

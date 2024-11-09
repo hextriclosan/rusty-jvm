@@ -6,8 +6,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         LCMP => {
-            let b = stack_frame.pop_i64();
-            let a = stack_frame.pop_i64();
+            let b: i64 = stack_frame.pop();
+            let a: i64 = stack_frame.pop();
 
             if a > b {
                 stack_frame.push(1);
@@ -21,8 +21,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("LCMP -> {a} ? {b}");
         }
         FCMPL => {
-            let b = stack_frame.pop_f32();
-            let a = stack_frame.pop_f32();
+            let b: f32 = stack_frame.pop();
+            let a: f32 = stack_frame.pop();
 
             let result = if a.is_nan() || b.is_nan() {
                 -1
@@ -40,8 +40,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("FCMPL -> {a} ? {b}");
         }
         FCMPG => {
-            let b = stack_frame.pop_f32();
-            let a = stack_frame.pop_f32();
+            let b: f32 = stack_frame.pop();
+            let a: f32 = stack_frame.pop();
 
             let result = if a.is_nan() || b.is_nan() {
                 1
@@ -59,8 +59,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("FCMPG -> {a} ? {b}");
         }
         DCMPL => {
-            let b = f64::from_bits(stack_frame.pop_i64() as u64);
-            let a = f64::from_bits(stack_frame.pop_i64() as u64);
+            let b: f64 = stack_frame.pop();
+            let a: f64 = stack_frame.pop();
 
             let result = if a.is_nan() || b.is_nan() {
                 -1
@@ -78,8 +78,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("DCMPL -> {a} ? {b}");
         }
         DCMPG => {
-            let b = f64::from_bits(stack_frame.pop_i64() as u64);
-            let a = f64::from_bits(stack_frame.pop_i64() as u64);
+            let b: f64 = stack_frame.pop();
+            let a: f64 = stack_frame.pop();
 
             let result = if a.is_nan() || b.is_nan() {
                 1
@@ -97,37 +97,37 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("DCMPG -> {a} ? {b}");
         }
         IFEQ => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value == 0 { offset } else { 3 });
             trace!("IFEQ -> value={value}, offset={offset}");
         }
         IFNE => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value != 0 { offset } else { 3 });
             trace!("IFNE -> value={value}, offset={offset}");
         }
         IFLT => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value < 0 { offset } else { 3 });
             trace!("IFLT -> value={value}, offset={offset}");
         }
         IFGE => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value >= 0 { offset } else { 3 });
             trace!("IFGE -> value={value}, offset={offset}");
         }
         IFGT => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value > 0 { offset } else { 3 });
             trace!("IFGT -> value={value}, offset={offset}");
         }
         IFLE => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(if value <= 0 { offset } else { 3 });
             trace!("IFLE -> value={value}, offset={offset}");

@@ -6,13 +6,13 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         POP => {
-            stack_frame.pop();
+            let _value: i32 = stack_frame.pop();
 
             stack_frame.incr_pc();
             trace!("POP");
         }
         DUP => {
-            let value = stack_frame.pop();
+            let value: i32 = stack_frame.pop();
             stack_frame.push(value);
             stack_frame.push(value);
 
@@ -20,8 +20,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("DUP -> value={value}");
         }
         DUP_X1 => {
-            let value1 = stack_frame.pop();
-            let value2 = stack_frame.pop();
+            let value1: i32 = stack_frame.pop();
+            let value2: i32 = stack_frame.pop();
             stack_frame.push(value1);
             stack_frame.push(value2);
             stack_frame.push(value1);
@@ -30,8 +30,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("DUP_X1 -> value1={value1}, value2={value2}, value1={value1}");
         }
         DUP2 => {
-            let value1 = stack_frame.pop();
-            let value2 = stack_frame.pop();
+            let value1: i32 = stack_frame.pop();
+            let value2: i32 = stack_frame.pop();
             stack_frame.push(value2);
             stack_frame.push(value1);
             stack_frame.push(value2);

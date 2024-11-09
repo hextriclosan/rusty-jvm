@@ -11,77 +11,77 @@ pub(crate) fn process(
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         ACONST_NULL => {
-            stack_frame.push(0);
+            stack_frame.push(0i32);
             stack_frame.incr_pc();
             trace!("ACONST_NULL");
         }
         ICONST_M1 => {
-            stack_frame.push(-1);
+            stack_frame.push(-1i32);
             stack_frame.incr_pc();
             trace!("ICONST_M1");
         }
         ICONST_0 => {
-            stack_frame.push(0);
+            stack_frame.push(0i32);
             stack_frame.incr_pc();
             trace!("ICONST_0");
         }
         ICONST_1 => {
-            stack_frame.push(1);
+            stack_frame.push(1i32);
             stack_frame.incr_pc();
             trace!("ICONST_1");
         }
         ICONST_2 => {
-            stack_frame.push(2);
+            stack_frame.push(2i32);
             stack_frame.incr_pc();
             trace!("ICONST_2");
         }
         ICONST_3 => {
-            stack_frame.push(3);
+            stack_frame.push(3i32);
             stack_frame.incr_pc();
             trace!("ICONST_3");
         }
         ICONST_4 => {
-            stack_frame.push(4);
+            stack_frame.push(4i32);
             stack_frame.incr_pc();
             trace!("ICONST_4");
         }
         ICONST_5 => {
-            stack_frame.push(5);
+            stack_frame.push(5i32);
             stack_frame.incr_pc();
             trace!("ICONST_5");
         }
         LCONST_0 => {
-            stack_frame.push_i64(0i64);
+            stack_frame.push(0i64);
             stack_frame.incr_pc();
             trace!("LCONST_0");
         }
         LCONST_1 => {
-            stack_frame.push_i64(1i64);
+            stack_frame.push(1i64);
             stack_frame.incr_pc();
             trace!("LCONST_1");
         }
         FCONST_0 => {
-            stack_frame.push_f32(0.0);
+            stack_frame.push(0.0f32);
             stack_frame.incr_pc();
             trace!("FCONST_0");
         }
         FCONST_1 => {
-            stack_frame.push_f32(1.0);
+            stack_frame.push(1.0f32);
             stack_frame.incr_pc();
             trace!("FCONST_1");
         }
         FCONST_2 => {
-            stack_frame.push_f32(2.0);
+            stack_frame.push(2.0f32);
             stack_frame.incr_pc();
             trace!("FCONST_2");
         }
         DCONST_0 => {
-            stack_frame.push_f64(0.0);
+            stack_frame.push(0.0f64);
             stack_frame.incr_pc();
             trace!("DCONST_0");
         }
         DCONST_1 => {
-            stack_frame.push_f64(1.0);
+            stack_frame.push(1.0f64);
             stack_frame.incr_pc();
             trace!("DCONST_1");
         }
@@ -132,7 +132,7 @@ pub(crate) fn process(
                 method_area.resolve_ldc2_w(&current_class_name, cpoolindex)
             })?;
 
-            stack_frame.push_i64(value);
+            stack_frame.push(value);
 
             stack_frame.incr_pc();
             trace!(

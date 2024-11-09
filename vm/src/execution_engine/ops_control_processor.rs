@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
-use crate::helper::i32toi64;
 use crate::stack::stack_frame::StackFrame;
 use tracing::trace;
 
@@ -16,7 +15,7 @@ pub(crate) fn process(
             trace!("GOTO -> offset={offset}");
         }
         LOOKUPSWITCH => {
-            let key = stack_frame.pop();
+            let key: i32 = stack_frame.pop();
             let instruction_pc = stack_frame.pc() as i16;
             stack_frame.adjust_pc_to_4();
 
@@ -44,7 +43,7 @@ pub(crate) fn process(
             trace!("LOOKUPSWITCH -> default_offset={default_offset}, npairs={npairs}");
         }
         TABLESWITCH => {
-            let index = stack_frame.pop();
+            let index: i32 = stack_frame.pop();
             let instruction_pc = stack_frame.pc() as i16;
             stack_frame.adjust_pc_to_4();
 
@@ -65,7 +64,7 @@ pub(crate) fn process(
             trace!("TABLESWITCH -> default_offset={default_offset}, low={low}, high={high}");
         }
         IRETURN => {
-            let ret = stack_frame.pop();
+            let ret: i32 = stack_frame.pop();
             stack_frames.pop();
             let _frame = stack_frames
                 .last_mut()
@@ -74,22 +73,18 @@ pub(crate) fn process(
             trace!("IRETURN -> ret={ret}");
         }
         LRETURN => {
-            let ret_high = stack_frame.pop();
-            let ret_low = stack_frame.pop();
+            let ret: i64 = stack_frame.pop();
 
             stack_frames.pop();
             let frame = stack_frames
                 .last_mut()
                 .ok_or(Error::new_execution("Error getting stack last value"))?;
 
-            frame.push(ret_low);
-            frame.push(ret_high);
-
-            let ret = i32toi64(ret_high, ret_low);
+            frame.push(ret);
             trace!("LRETURN -> ret={ret}");
         }
         FRETURN => {
-            let ret = stack_frame.pop();
+            let ret: f32 = stack_frame.pop();
             stack_frames.pop();
             stack_frames
                 .last_mut()
@@ -98,21 +93,19 @@ pub(crate) fn process(
             trace!("FRETURN -> ret={ret}");
         }
         DRETURN => {
-            let ret_high = stack_frame.pop();
-            let ret_low = stack_frame.pop();
+            let ret: f64 = stack_frame.pop();
+
             stack_frames.pop();
             let frame = stack_frames
                 .last_mut()
                 .ok_or(Error::new_execution("Error getting stack last value"))?;
 
-            frame.push(ret_low);
-            frame.push(ret_high);
+            frame.push(ret);
 
-            let ret = i32toi64(ret_high, ret_low);
             trace!("DRETURN -> ret={ret}");
         }
         ARETURN => {
-            let objref = stack_frame.pop();
+            let objref: i32 = stack_frame.pop();
 
             stack_frames.pop();
             stack_frames
@@ -122,13 +115,13 @@ pub(crate) fn process(
             trace!("ARETURN -> objref={objref}");
         }
         RETURN => {
-            trace!("RETURN -> stack_frame.locals={:?}", stack_frame.locals);
+            trace!("RETURN -> stack_frame.locals={:?}", stack_frame.locals());
             let last_value = Some(
                 stack_frames
                     .last()
                     .ok_or(Error::new_execution("Error getting stack last value"))?
-                    .locals
-                    .clone(),
+                    .locals()
+                    .to_vec(),
             );
 
             stack_frames.pop();
