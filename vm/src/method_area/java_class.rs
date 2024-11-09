@@ -23,7 +23,7 @@ pub(crate) struct JavaClass {
     interfaces: HashSet<String>,
     access_flags: u16,
 
-    static_fields_initialized: AtomicBool, //todo: use lazy initialization with OnceCell instead
+    static_fields_initialized: AtomicBool,
 }
 
 #[derive(Debug)]
@@ -96,8 +96,11 @@ impl JavaClass {
     }
 
     pub fn static_field(&self, field_name: &str) -> crate::error::Result<Option<Arc<Field>>> {
-        if !self.static_fields_initialized.load(Ordering::SeqCst) {
-            self.static_fields_initialized.store(true, Ordering::SeqCst);
+        if self
+            .static_fields_initialized
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
             self.do_static_fields_initialization()?;
         }
 
