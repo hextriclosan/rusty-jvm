@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
-use crate::helper::i32toi64;
 use crate::stack::stack_frame::StackFrame;
 use tracing::trace;
 
@@ -13,99 +12,74 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             match opcode {
                 ILOAD => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let value = stack_frame.get_local(index);
+                    let value: i32 = stack_frame.get_local(index);
                     stack_frame.push(value);
                     stack_frame.incr_pc();
                     trace!("WIDE ILOAD -> index={index}, value={value}");
                 }
                 LLOAD => {
                     let index = stack_frame.extract_two_bytes() as usize;
-
-                    let (low, high, value) = stack_frame.get_two_bytes_from_local(index);
-
-                    stack_frame.push(low);
-                    stack_frame.push(high);
+                    let value: i64 = stack_frame.get_local(index);
+                    stack_frame.push(value);
 
                     stack_frame.incr_pc();
                     trace!("WIDE LLOAD -> index={index}, value={value}");
                 }
                 FLOAD => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let value = stack_frame.get_local(index);
+                    let value: f32 = stack_frame.get_local(index);
                     stack_frame.push(value);
                     stack_frame.incr_pc();
-                    trace!(
-                        "WIDE FLOAD -> index={index}, value={}",
-                        f32::from_bits(value as u32)
-                    );
+                    trace!("WIDE FLOAD -> index={index}, value={value}");
                 }
                 DLOAD => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let (low, high, value) = stack_frame.get_two_bytes_from_local(index);
-
-                    stack_frame.push(low);
-                    stack_frame.push(high);
+                    let value: f64 = stack_frame.get_local(index);
+                    stack_frame.push(value);
 
                     stack_frame.incr_pc();
-                    trace!(
-                        "WIDE DLOAD -> index={index}, value={}",
-                        f64::from_bits(value as u64)
-                    );
+                    trace!("WIDE DLOAD -> index={index}, value={value}");
                 }
                 ALOAD => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let value = stack_frame.get_local(index);
+                    let value: i32 = stack_frame.get_local(index);
                     stack_frame.push(value);
                     stack_frame.incr_pc();
                     trace!("WIDE ALOAD -> index={index}, value={value}");
                 }
                 ISTORE => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let value = stack_frame.pop();
+                    let value: i32 = stack_frame.pop();
                     stack_frame.set_local(index, value);
                     stack_frame.incr_pc();
                     trace!("WIDE ISTORE -> index={index}, value={value}");
                 }
                 LSTORE => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let high = stack_frame.pop();
-                    let low = stack_frame.pop();
-
-                    stack_frame.set_local(index, low);
-                    stack_frame.set_local(index + 1, high);
+                    let value: i64 = stack_frame.pop();
+                    stack_frame.set_local(index, value);
 
                     stack_frame.incr_pc();
-                    let value = i32toi64(high, low);
                     trace!("WIDE LSTORE -> index={index}, value={value}");
                 }
                 FSTORE => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let value = stack_frame.pop();
+                    let value: f32 = stack_frame.pop();
                     stack_frame.set_local(index, value);
                     stack_frame.incr_pc();
-                    trace!(
-                        "WIDE FSTORE -> index={index}, value={}",
-                        f32::from_bits(value as u32)
-                    );
+                    trace!("WIDE FSTORE -> index={index}, value={value}");
                 }
                 DSTORE => {
                     let index = stack_frame.extract_two_bytes() as usize;
-
-                    let high = stack_frame.pop();
-                    let low = stack_frame.pop();
-                    stack_frame.set_local(index, low);
-                    stack_frame.set_local(index + 1, high);
+                    let value: f64 = stack_frame.pop();
+                    stack_frame.set_local(index, value);
 
                     stack_frame.incr_pc();
-                    let value = ((high as i64) << 32) | (low as i64);
-                    trace!(
-                        "WIDE DSTORE -> index={index}, value={}",
-                        f64::from_bits(value as u64)
-                    );
+                    trace!("WIDE DSTORE -> index={index}, value={value}");
                 }
                 ASTORE => {
                     let index = stack_frame.extract_two_bytes() as usize;
-                    let obj_ref = stack_frame.pop();
+                    let obj_ref: i32 = stack_frame.pop();
                     stack_frame.set_local(index, obj_ref);
                     stack_frame.incr_pc();
                     trace!("WIDE ASTORE -> index={index}, obj_ref={obj_ref}");
@@ -114,7 +88,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
                     let index = stack_frame.extract_two_bytes() as u16 as usize;
                     let const_val = stack_frame.extract_two_bytes();
 
-                    let current_val = stack_frame.get_local(index);
+                    let current_val: i32 = stack_frame.get_local(index);
                     let new_val = current_val + const_val as i32;
                     stack_frame.set_local(index, new_val);
 
