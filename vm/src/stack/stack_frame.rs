@@ -1,4 +1,3 @@
-use crate::helper::i32toi64;
 use crate::stack::sack_value::StackValue;
 use std::sync::Arc;
 
@@ -106,20 +105,19 @@ impl StackFrame {
         self.operand_stack.pop().expect("Empty stack")
     }
 
-    pub fn set_local(&mut self, index: usize, val: i32) {
+    pub fn set_local<T: StackValue>(&mut self, index: usize, stack_value: T) {
+        stack_value.set(index, self);
+    }
+
+    pub fn get_local<T: StackValue>(&mut self, index: usize) -> T {
+        T::get(index, self)
+    }
+
+    pub fn set_local_raw(&mut self, index: usize, val: i32) {
         self.locals[index] = val;
     }
 
-    pub fn get_local(&self, index: usize) -> i32 {
+    pub fn get_local_raw(&self, index: usize) -> i32 {
         *self.locals.get(index).expect("No value at index")
-    }
-
-    pub fn get_two_bytes_from_local(&self, index: usize) -> (i32, i32, i64) {
-        let low = self.get_local(index);
-        let high = self.get_local(index + 1);
-
-        let value = i32toi64(high, low);
-
-        (low, high, value)
     }
 }

@@ -349,7 +349,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             stack_frame.incr_pc();
             let const_val = stack_frame.get_bytecode_byte() as i8;
 
-            let current_val = stack_frame.get_local(index);
+            let current_val: i32 = stack_frame.get_local(index);
             let new_val = current_val + const_val as i32;
             stack_frame.set_local(index, new_val);
 
