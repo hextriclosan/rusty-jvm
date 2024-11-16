@@ -1,4 +1,4 @@
-use crate::execution_engine::engine::Engine;
+use crate::execution_engine::executor::Executor;
 use crate::heap::java_instance::FieldNameType;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
@@ -8,13 +8,12 @@ use jdescriptor::TypeDescriptor;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tracing::trace;
 
 const INTERFACE: u16 = 0x00000200;
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
-    pub(crate) methods: Methods,
+    methods: Methods,
     static_fields: Fields,
     non_static_field_descriptors: FieldDescriptors,
     cpool_helper: CPoolHelper,
@@ -28,7 +27,7 @@ pub(crate) struct JavaClass {
 
 #[derive(Debug)]
 pub(crate) struct Methods {
-    pub(crate) method_by_signature: HashMap<String, Arc<JavaMethod>>,
+    method_by_signature: HashMap<String, Arc<JavaMethod>>,
 }
 
 #[derive(Debug)]
@@ -54,8 +53,6 @@ impl Fields {
 }
 
 impl JavaClass {
-    const STATIC_INIT_METHOD: &'static str = "<clinit>:()V";
-
     pub fn new(
         methods: Methods,
         static_fields: Fields,
@@ -101,7 +98,7 @@ impl JavaClass {
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .is_ok()
         {
-            self.do_static_fields_initialization()?;
+            Executor::do_static_fields_initialization(self)?;
         }
 
         Ok(self
@@ -109,33 +106,6 @@ impl JavaClass {
             .field_by_name
             .get(field_name)
             .map(|field| Arc::clone(field)))
-    }
-
-    fn do_static_fields_initialization(&self) -> crate::error::Result<()> {
-        //todo: protect me with recursive mutex
-
-        if let Some(static_init_method) = self
-            .methods
-            .method_by_signature
-            .get(Self::STATIC_INIT_METHOD)
-        {
-            trace!(
-                "<INVOKE> -> {}.{}",
-                self.this_class_name,
-                Self::STATIC_INIT_METHOD
-            );
-            Engine::execute(
-                static_init_method.new_stack_frame()?,
-                &format!("static initialization {}", self.this_class_name),
-            )?;
-            trace!(
-                "<RETURN> -> {}.{}",
-                self.this_class_name,
-                Self::STATIC_INIT_METHOD
-            );
-        }
-
-        Ok(())
     }
 
     pub fn instance_field_descriptor(
@@ -203,6 +173,26 @@ impl JavaClass {
             })?;
 
         Ok(field_name.clone())
+    }
+
+    fn get_method_internal(&self, full_signature: &str) -> Option<Arc<JavaMethod>> {
+        self.methods
+            .method_by_signature
+            .get(full_signature)
+            .map(|method| Arc::clone(method))
+    }
+
+    pub fn try_get_method(&self, full_signature: &str) -> Option<Arc<JavaMethod>> {
+        self.get_method_internal(full_signature)
+    }
+
+    pub fn get_method(&self, full_signature: &str) -> crate::error::Result<Arc<JavaMethod>> {
+        self.get_method_internal(full_signature).ok_or_else(|| {
+            crate::error::Error::new_native(&format!(
+                "Method {full_signature} not found in {}",
+                self.this_class_name
+            ))
+        })
     }
 }
 

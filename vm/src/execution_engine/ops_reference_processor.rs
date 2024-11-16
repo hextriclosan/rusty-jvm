@@ -226,11 +226,7 @@ pub(crate) fn process(
                 })?;
             let full_signature = format!("{}:{}", method_name, method_descriptor);
             let rc = with_method_area(|method_area| method_area.get(class_name.as_str()))?;
-            let special_method = rc
-                .methods
-                .method_by_signature
-                .get(&full_signature)
-                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature} invoking special")))?;
+            let special_method = rc.get_method(&full_signature)?;
             // ^^^ todo: implement lookup in parents
 
             let arg_num = special_method.get_method_descriptor().arguments_length();
@@ -280,12 +276,7 @@ pub(crate) fn process(
                 })?;
             let full_signature = format!("{}:{}", method_name, method_descriptor);
             let rc = with_method_area(|method_area| method_area.get(class_name.as_str()))?;
-            let static_method = rc
-                .methods
-                .method_by_signature
-                .get(&full_signature)
-                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting JavaMethod by class name {class_name} and full signature {full_signature} invoking static")))?;
-
+            let static_method = rc.get_method(&full_signature)?;
             // todo: according to requirements of JVMS Section 5.4
             // all static fields of the class should be initialized
             // at this point

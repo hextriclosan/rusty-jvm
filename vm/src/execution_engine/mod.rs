@@ -1,4 +1,5 @@
-pub(crate) mod engine;
+mod engine;
+pub(crate) mod executor;
 pub(crate) mod ldc_resolution_manager;
 pub(crate) mod opcode;
 mod ops_comparison_processor;

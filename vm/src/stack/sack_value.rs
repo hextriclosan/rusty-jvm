@@ -1,6 +1,38 @@
 use crate::helper::i32toi64;
 use crate::stack::stack_frame::StackFrame;
 
+#[derive(Clone)]
+pub enum StackValueKind {
+    I32(i32),
+    I64(i64),
+    F32(f32),
+    F64(f64),
+}
+
+impl From<i32> for StackValueKind {
+    fn from(value: i32) -> Self {
+        StackValueKind::I32(value)
+    }
+}
+
+impl From<i64> for StackValueKind {
+    fn from(value: i64) -> Self {
+        StackValueKind::I64(value)
+    }
+}
+
+impl From<f32> for StackValueKind {
+    fn from(value: f32) -> Self {
+        StackValueKind::F32(value)
+    }
+}
+
+impl From<f64> for StackValueKind {
+    fn from(value: f64) -> Self {
+        StackValueKind::F64(value)
+    }
+}
+
 pub trait StackValue {
     fn push_onto(&self, stack_frame: &mut StackFrame);
     fn pop_from(stack_frame: &mut StackFrame) -> Self;

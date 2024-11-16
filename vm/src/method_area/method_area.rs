@@ -305,7 +305,7 @@ impl MethodArea {
     ) -> Option<Arc<JavaMethod>> {
         let rc = self.get(class_name).ok()?;
 
-        if let Some(java_method) = rc.methods.method_by_signature.get(full_method_signature) {
+        if let Some(java_method) = rc.try_get_method(full_method_signature) {
             Some(Arc::clone(&java_method))
         } else {
             let parent_class_name = rc.parent().clone()?;
