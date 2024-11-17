@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::execution_engine::executor::Executor;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::method_area::method_area::{with_method_area, MethodArea};
+use crate::method_area::method_area::MethodArea;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -60,8 +60,7 @@ impl VM {
 
     fn init() -> crate::error::Result<()> {
         // explicit static initialization of java.lang.ref.Reference needed for creating JavaLangRefAccess instance
-        // reading Reference.processPendingActive
-        Self::read_static_field("java/lang/ref/Reference", "processPendingActive")?;
+        Executor::do_static_fields_initialization("java/lang/ref/Reference")?;
 
         // create primordial ThreadGroup and Thread
         let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
@@ -72,14 +71,5 @@ impl VM {
         Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
 
         Ok(())
-    }
-
-    // refactor candidate A: generalized action should be moved out of VM
-    fn read_static_field(class_name: &str, method_name: &str) -> crate::error::Result<Vec<i32>> {
-        let field =
-            with_method_area(|area| area.lookup_for_static_field(class_name, method_name))?;
-
-        let raw_value = field.raw_value();
-        Ok(raw_value)
     }
 }

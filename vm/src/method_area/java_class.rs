@@ -98,7 +98,7 @@ impl JavaClass {
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .is_ok()
         {
-            Executor::do_static_fields_initialization(self)?;
+            Executor::do_java_class_static_fields_initialization(self)?;
         }
 
         Ok(self

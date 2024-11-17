@@ -11,7 +11,14 @@ impl Executor {
     const STATIC_INIT_METHOD: &'static str = "<clinit>:()V";
     const INIT_METHOD: &'static str = "<init>:()V";
 
-    pub fn do_static_fields_initialization(java_class: &JavaClass) -> crate::error::Result<()> {
+    pub fn do_static_fields_initialization(java_class_name: &str) -> crate::error::Result<()> {
+        let java_class = with_method_area(|area| area.get(java_class_name))?;
+        Self::do_java_class_static_fields_initialization(&java_class)
+    }
+
+    pub fn do_java_class_static_fields_initialization(
+        java_class: &JavaClass,
+    ) -> crate::error::Result<()> {
         //todo: protect me with recursive mutex
         if let Some(static_init_method) = java_class.try_get_method(Self::STATIC_INIT_METHOD) {
             Engine::execute(
