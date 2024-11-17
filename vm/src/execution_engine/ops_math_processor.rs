@@ -8,7 +8,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         IADD => {
             let b: i32 = stack_frame.pop();
             let a: i32 = stack_frame.pop();
-            let result = a + b;
+            let result = a.wrapping_add(b);
             stack_frame.push(result);
 
             stack_frame.incr_pc();
@@ -48,7 +48,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         ISUB => {
             let b: i32 = stack_frame.pop();
             let a: i32 = stack_frame.pop();
-            let result = a - b;
+            let result = a.wrapping_sub(b);
             stack_frame.push(result);
 
             stack_frame.incr_pc();
@@ -58,7 +58,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             let b: i64 = stack_frame.pop();
             let a: i64 = stack_frame.pop();
 
-            let result = a - b;
+            let result = a.wrapping_sub(b);
 
             stack_frame.push(result);
 
@@ -128,7 +128,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         IDIV => {
             let b: i32 = stack_frame.pop();
             let a: i32 = stack_frame.pop();
-            let result = a / b; //todo add check for ArithmeticException here
+            let result = a.wrapping_div(b); //todo add check for ArithmeticException here
             stack_frame.push(result);
 
             stack_frame.incr_pc();
@@ -138,7 +138,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             let b: i64 = stack_frame.pop();
             let a: i64 = stack_frame.pop();
 
-            let result = a / b; //todo add check for ArithmeticException here
+            let result = a.wrapping_div(b); //todo add check for ArithmeticException here
 
             stack_frame.push(result);
 
@@ -168,7 +168,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         IREM => {
             let b: i32 = stack_frame.pop();
             let a: i32 = stack_frame.pop();
-            let result = a % b;
+            let result = a.wrapping_rem(b);
             stack_frame.push(result);
 
             stack_frame.incr_pc();
@@ -178,7 +178,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             let b: i64 = stack_frame.pop();
             let a: i64 = stack_frame.pop();
 
-            let result = a % b;
+            let result = a.wrapping_rem(b);
 
             stack_frame.push(result);
 
@@ -198,7 +198,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         }
         INEG => {
             let value: i32 = stack_frame.pop();
-            let result = -value;
+            let result = value.wrapping_neg();
             stack_frame.push(result);
 
             stack_frame.incr_pc();
@@ -206,7 +206,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         }
         LNEG => {
             let value: i64 = stack_frame.pop();
-            let result = -value;
+            let result = value.wrapping_neg();
             stack_frame.push(result);
 
             stack_frame.incr_pc();
@@ -266,7 +266,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("IUSHR -> {a} >> {b} = {result}");
+            trace!("IUSHR -> {a} >>> {b} = {result}");
         }
         LUSHR => {
             let b: i32 = stack_frame.pop();
@@ -277,7 +277,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             stack_frame.push(result);
 
             stack_frame.incr_pc();
-            trace!("LUSHR -> {a} >> {b} = {result}");
+            trace!("LUSHR -> {a} >>> {b} = {result}");
         }
         IAND => {
             let b: i32 = stack_frame.pop();
