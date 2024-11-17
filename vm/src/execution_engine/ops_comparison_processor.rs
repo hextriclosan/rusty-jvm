@@ -97,64 +97,46 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("DCMPG -> {a} ? {b}");
         }
         IFEQ => {
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value == 0 { offset } else { 3 });
-            trace!("IFEQ -> value={value}, offset={offset}");
+            branch1arg(|a| a == 0, stack_frame, "IFEQ");
         }
         IFNE => {
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value != 0 { offset } else { 3 });
-            trace!("IFNE -> value={value}, offset={offset}");
+            branch1arg(|a| a != 0, stack_frame, "IFNE");
         }
         IFLT => {
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value < 0 { offset } else { 3 });
-            trace!("IFLT -> value={value}, offset={offset}");
+            branch1arg(|a| a < 0, stack_frame, "IFLT");
         }
         IFGE => {
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value >= 0 { offset } else { 3 });
-            trace!("IFGE -> value={value}, offset={offset}");
+            branch1arg(|a| a >= 0, stack_frame, "IFGE");
         }
         IFGT => {
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value > 0 { offset } else { 3 });
-            trace!("IFGT -> value={value}, offset={offset}");
+            branch1arg(|a| a > 0, stack_frame, "IFGT");
         }
         IFLE => {
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value <= 0 { offset } else { 3 });
-            trace!("IFLE -> value={value}, offset={offset}");
+            branch1arg(|a| a <= 0, stack_frame, "IFLE");
         }
         IF_ICMPEQ => {
-            branch(|a: i32, b| a == b, stack_frame, "IF_ICMPEQ");
+            branch2args(|a, b| a == b, stack_frame, "IF_ICMPEQ");
         }
         IF_ICMPNE => {
-            branch(|a: i32, b| a != b, stack_frame, "IF_ICMPNE");
+            branch2args(|a, b| a != b, stack_frame, "IF_ICMPNE");
         }
         IF_ICMPLT => {
-            branch(|a: i32, b| a < b, stack_frame, "IF_ICMPLT");
+            branch2args(|a, b| a < b, stack_frame, "IF_ICMPLT");
         }
         IF_ICMPGE => {
-            branch(|a: i32, b| a >= b, stack_frame, "IF_ICMPGE");
+            branch2args(|a, b| a >= b, stack_frame, "IF_ICMPGE");
         }
         IF_ICMPGT => {
-            branch(|a: i32, b| a > b, stack_frame, "IF_ICMPGT");
+            branch2args(|a, b| a > b, stack_frame, "IF_ICMPGT");
         }
         IF_ICMPLE => {
-            branch(|a: i32, b| a <= b, stack_frame, "IF_ICMPLE");
+            branch2args(|a, b| a <= b, stack_frame, "IF_ICMPLE");
         }
         IF_ACMPEQ => {
-            branch(|a: i32, b| a == b, stack_frame, "IF_ACMPEQ");
+            branch2args(|a, b| a == b, stack_frame, "IF_ACMPEQ");
         }
         IF_ACMPNE => {
-            branch(|a: i32, b| a != b, stack_frame, "IF_ACMPNE");
+            branch2args(|a, b| a != b, stack_frame, "IF_ACMPNE");
         }
         _ => {
             return Err(crate::error::Error::new_execution(&format!(
@@ -167,16 +149,19 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     Ok(())
 }
 
-fn branch<T>(op: impl Fn(T, T) -> bool, stack_frame: &mut StackFrame, op_code: &str)
-where
-    T: PartialOrd + TryFrom<i32> + Copy + std::fmt::Display,
-{
-    let value2 = T::try_from(stack_frame.pop()).unwrap_or_else(|_| panic!("Invalid conversion"));
-    let value1 = T::try_from(stack_frame.pop()).unwrap_or_else(|_| panic!("Invalid conversion"));
-
+fn branch2args(op: impl Fn(i32, i32) -> bool, stack_frame: &mut StackFrame, op_code: &str) {
+    let value2 = stack_frame.pop();
+    let value1 = stack_frame.pop();
     let offset = stack_frame.get_two_bytes_ahead();
 
     stack_frame.advance_pc(if op(value1, value2) { offset } else { 3 });
-
     trace!("{op_code} -> value1={value1}, value2={value2}, offset={offset}");
+}
+
+fn branch1arg(op: impl Fn(i32) -> bool, stack_frame: &mut StackFrame, op_code: &str) {
+    let value = stack_frame.pop();
+    let offset = stack_frame.get_two_bytes_ahead();
+
+    stack_frame.advance_pc(if op(value) { offset } else { 3 });
+    trace!("{op_code} -> value={value}, offset={offset}");
 }
