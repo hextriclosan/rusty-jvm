@@ -7,8 +7,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         WIDE => {
-            stack_frame.incr_pc();
-            let opcode = stack_frame.get_bytecode_byte();
+            let opcode = stack_frame.extract_one_byte();
             match opcode {
                 ILOAD => {
                     let index = stack_frame.extract_two_bytes() as usize;

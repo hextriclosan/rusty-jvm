@@ -310,9 +310,7 @@ pub(crate) fn process(
         }
         INVOKEINTERFACE => {
             let interfacemethodref_constpool_index = stack_frame.extract_two_bytes() as u16;
-            stack_frame.incr_pc();
-
-            let arg_count = stack_frame.get_bytecode_byte() as usize;
+            let arg_count = stack_frame.extract_one_byte() as usize;
             stack_frame.incr_pc();
 
             let mut method_args = Vec::with_capacity(arg_count);
@@ -383,8 +381,7 @@ pub(crate) fn process(
             stack_frame.incr_pc();
         }
         NEWARRAY => {
-            stack_frame.incr_pc();
-            let atype = stack_frame.get_bytecode_byte();
+            let atype = stack_frame.extract_one_byte();
 
             let type_name = match atype {
                 4 => "[Z",

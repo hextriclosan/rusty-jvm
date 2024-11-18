@@ -49,24 +49,23 @@ impl StackFrame {
         ((branchbyte1 << 8) | branchbyte2) as i16
     }
 
+    pub fn extract_one_byte(&mut self) -> u8 {
+        self.incr_pc();
+        self.get_bytecode_byte()
+    }
+
     pub fn extract_two_bytes(&mut self) -> i16 {
-        self.incr_pc();
-        let high = self.get_bytecode_byte() as i16;
-        self.incr_pc();
-        let low = self.get_bytecode_byte() as i16;
+        let high = self.extract_one_byte() as i16;
+        let low = self.extract_one_byte() as i16;
 
         (high << 8) | (low)
     }
 
     pub fn extract_four_bytes(&mut self) -> i32 {
-        self.incr_pc();
-        let byte1 = self.get_bytecode_byte() as u32;
-        self.incr_pc();
-        let byte2 = self.get_bytecode_byte() as u32;
-        self.incr_pc();
-        let byte3 = self.get_bytecode_byte() as u32;
-        self.incr_pc();
-        let byte4 = self.get_bytecode_byte() as u32;
+        let byte1 = self.extract_one_byte() as u32;
+        let byte2 = self.extract_one_byte() as u32;
+        let byte3 = self.extract_one_byte() as u32;
+        let byte4 = self.extract_one_byte() as u32;
 
         ((byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4) as i32
     }

@@ -343,11 +343,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("LXOR -> {a} & {b} = {result}");
         }
         IINC => {
-            stack_frame.incr_pc();
-            let index = stack_frame.get_bytecode_byte() as usize;
-
-            stack_frame.incr_pc();
-            let const_val = stack_frame.get_bytecode_byte() as i8;
+            let index = stack_frame.extract_one_byte() as usize;
+            let const_val = stack_frame.extract_one_byte() as i8;
 
             let current_val: i32 = stack_frame.get_local(index);
             let new_val = current_val + const_val as i32;
