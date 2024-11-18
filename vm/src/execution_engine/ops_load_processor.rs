@@ -7,8 +7,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         ILOAD => {
-            stack_frame.incr_pc();
-            let pos = stack_frame.get_bytecode_byte() as usize;
+            let pos = stack_frame.extract_one_byte() as usize;
 
             let value: i32 = stack_frame.get_local(pos);
             stack_frame.push(value);
@@ -17,8 +16,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("ILOAD -> pos={pos}, value={value}");
         }
         LLOAD => {
-            stack_frame.incr_pc();
-            let pos = stack_frame.get_bytecode_byte() as usize;
+            let pos = stack_frame.extract_one_byte() as usize;
             let value: i64 = stack_frame.get_local(pos);
             stack_frame.push(value);
 
@@ -26,8 +24,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("LLOAD -> pos={pos}, value={value}");
         }
         FLOAD => {
-            stack_frame.incr_pc();
-            let pos = stack_frame.get_bytecode_byte() as usize;
+            let pos = stack_frame.extract_one_byte() as usize;
 
             let value: f32 = stack_frame.get_local(pos);
             stack_frame.push(value);
@@ -36,8 +33,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("FLOAD -> pos={pos}, value={value}");
         }
         DLOAD => {
-            stack_frame.incr_pc();
-            let pos = stack_frame.get_bytecode_byte() as usize;
+            let pos = stack_frame.extract_one_byte() as usize;
             let value: f64 = stack_frame.get_local(pos);
             stack_frame.push(value);
 
@@ -45,8 +41,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             trace!("DLOAD -> pos={pos}, value={value}");
         }
         ALOAD => {
-            stack_frame.incr_pc();
-            let index = stack_frame.get_bytecode_byte() as usize;
+            let index = stack_frame.extract_one_byte() as usize;
 
             let objectref: i32 = stack_frame.get_local(index);
             stack_frame.push(objectref);
