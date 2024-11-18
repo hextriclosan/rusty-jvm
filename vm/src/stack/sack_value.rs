@@ -1,4 +1,4 @@
-use crate::helper::i32toi64;
+use crate::helper::{i32toi64, i64_to_vec};
 use crate::stack::stack_frame::StackFrame;
 
 #[derive(Clone)]
@@ -41,6 +41,7 @@ pub trait StackValue {
     fn get(index: usize, stack_frame: &mut StackFrame) -> Self;
 
     fn from_vec(v: &[i32]) -> Self;
+    fn to_vec(&self) -> Vec<i32>;
 }
 
 impl StackValue for i32 {
@@ -62,6 +63,10 @@ impl StackValue for i32 {
 
     fn from_vec(v: &[i32]) -> Self {
         v[0]
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        vec![*self]
     }
 }
 
@@ -102,6 +107,10 @@ impl StackValue for i64 {
 
         i32toi64(high, low)
     }
+
+    fn to_vec(&self) -> Vec<i32> {
+        i64_to_vec(*self)
+    }
 }
 
 impl StackValue for f32 {
@@ -124,8 +133,12 @@ impl StackValue for f32 {
     }
 
     fn from_vec(v: &[i32]) -> Self {
-        let value: i32 = v[0];
+        let value: i32 = StackValue::from_vec(v);
         f32::from_bits(value as u32)
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        vec![self.to_bits() as i32]
     }
 }
 
@@ -149,9 +162,11 @@ impl StackValue for f64 {
     }
 
     fn from_vec(v: &[i32]) -> Self {
-        let low = v[1];
-        let high = v[0];
-        let value: i64 = i32toi64(high, low);
+        let value: i64 = StackValue::from_vec(v);
         f64::from_bits(value as u64)
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        StackValue::to_vec(&(self.to_bits() as i64))
     }
 }
