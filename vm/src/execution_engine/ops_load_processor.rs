@@ -1,293 +1,41 @@
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::with_heap_read_lock;
+use crate::stack::sack_value::StackValue;
 use crate::stack::stack_frame::StackFrame;
+use std::fmt::Display;
 use tracing::trace;
 
 pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::error::Result<()> {
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
-        ILOAD => {
-            let pos = stack_frame.extract_one_byte() as usize;
-
-            let value: i32 = stack_frame.get_local(pos);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("ILOAD -> pos={pos}, value={value}");
+        ILOAD => handle_pos_and_load::<i32>(stack_frame, "ILOAD "),
+        LLOAD => handle_pos_and_load::<i64>(stack_frame, "LLOAD "),
+        FLOAD => handle_pos_and_load::<f32>(stack_frame, "FLOAD "),
+        DLOAD => handle_pos_and_load::<f64>(stack_frame, "DLOAD "),
+        ALOAD => handle_pos_and_load::<i32>(stack_frame, "ALOAD "),
+        ILOAD_0 | ILOAD_1 | ILOAD_2 | ILOAD_3 => {
+            handle_load::<i32>(stack_frame, code - ILOAD_0, "ILOAD_")
         }
-        LLOAD => {
-            let pos = stack_frame.extract_one_byte() as usize;
-            let value: i64 = stack_frame.get_local(pos);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("LLOAD -> pos={pos}, value={value}");
+        LLOAD_0 | LLOAD_1 | LLOAD_2 | LLOAD_3 => {
+            handle_load::<i64>(stack_frame, code - LLOAD_0, "LLOAD_")
         }
-        FLOAD => {
-            let pos = stack_frame.extract_one_byte() as usize;
-
-            let value: f32 = stack_frame.get_local(pos);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("FLOAD -> pos={pos}, value={value}");
+        FLOAD_0 | FLOAD_1 | FLOAD_2 | FLOAD_3 => {
+            handle_load::<f32>(stack_frame, code - FLOAD_0, "FLOAD_")
         }
-        DLOAD => {
-            let pos = stack_frame.extract_one_byte() as usize;
-            let value: f64 = stack_frame.get_local(pos);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("DLOAD -> pos={pos}, value={value}");
+        DLOAD_0 | DLOAD_1 | DLOAD_2 | DLOAD_3 => {
+            handle_load::<f64>(stack_frame, code - DLOAD_0, "DLOAD_")
         }
-        ALOAD => {
-            let index = stack_frame.extract_one_byte() as usize;
-
-            let objectref: i32 = stack_frame.get_local(index);
-            stack_frame.push(objectref);
-
-            stack_frame.incr_pc();
-            trace!("ALOAD -> index={index}, objectref={objectref}");
+        ALOAD_0 | ALOAD_1 | ALOAD_2 | ALOAD_3 => {
+            handle_load::<i32>(stack_frame, code - ALOAD_0, "ALOAD_")
         }
-        ILOAD_0 => {
-            let value: i32 = stack_frame.get_local(0);
-            stack_frame.push(value);
-            stack_frame.incr_pc();
-            trace!("ILOAD_0 -> value={value}");
-        }
-        ILOAD_1 => {
-            let value: i32 = stack_frame.get_local(1);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("ILOAD_1 -> value={value}");
-        }
-        ILOAD_2 => {
-            let value: i32 = stack_frame.get_local(2);
-            stack_frame.push(value);
-            stack_frame.incr_pc();
-            trace!("ILOAD_2 -> value={value}");
-        }
-        ILOAD_3 => {
-            let value: i32 = stack_frame.get_local(3);
-            stack_frame.push(value);
-            stack_frame.incr_pc();
-            trace!("ILOAD_3 -> value={value}");
-        }
-        LLOAD_0 => {
-            let value: i64 = stack_frame.get_local(0);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("LLOAD_0 -> value={value}");
-        }
-        LLOAD_1 => {
-            let value: i64 = stack_frame.get_local(1);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("LLOAD_1 -> value={value}");
-        }
-        LLOAD_2 => {
-            let value: i64 = stack_frame.get_local(2);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("LLOAD_2 -> value={value}");
-        }
-        LLOAD_3 => {
-            let value: i64 = stack_frame.get_local(3);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("LLOAD_3 -> value={value}");
-        }
-        FLOAD_0 => {
-            let value: f32 = stack_frame.get_local(0);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("FLOAD_0 -> value={value}");
-        }
-        FLOAD_1 => {
-            let value: f32 = stack_frame.get_local(1);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("FLOAD_1 -> value={value}");
-        }
-        FLOAD_2 => {
-            let value: f32 = stack_frame.get_local(2);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("FLOAD_2 -> value={value}");
-        }
-        FLOAD_3 => {
-            let value: f32 = stack_frame.get_local(3);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("FLOAD_3 -> value={value}");
-        }
-        DLOAD_0 => {
-            let value: f64 = stack_frame.get_local(0);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("DLOAD_0 -> value={value:e}");
-        }
-        DLOAD_1 => {
-            let value: f64 = stack_frame.get_local(1);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("DLOAD_1 -> value={value:e}");
-        }
-        DLOAD_2 => {
-            let value: f64 = stack_frame.get_local(2);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("DLOAD_2 -> value={value:e}");
-        }
-        DLOAD_3 => {
-            let value: f64 = stack_frame.get_local(3);
-            stack_frame.push(value);
-
-            stack_frame.incr_pc();
-            trace!("DLOAD_3 -> value={value:e}");
-        }
-        ALOAD_0 => {
-            let reference: i32 = stack_frame.get_local(0);
-            stack_frame.push(reference);
-            stack_frame.incr_pc();
-            trace!("ALOAD_0 -> reference={reference}");
-        }
-        ALOAD_1 => {
-            let reference: i32 = stack_frame.get_local(1);
-            stack_frame.push(reference);
-            stack_frame.incr_pc();
-            trace!("ALOAD_1 -> reference={reference}");
-        }
-        ALOAD_2 => {
-            let reference: i32 = stack_frame.get_local(2);
-            stack_frame.push(reference);
-            stack_frame.incr_pc();
-            trace!("ALOAD_2 -> reference={reference}");
-        }
-        ALOAD_3 => {
-            let reference: i32 = stack_frame.get_local(3);
-            stack_frame.push(reference);
-            stack_frame.incr_pc();
-            trace!("ALOAD_3 -> reference={reference}");
-        }
-        IALOAD => {
-            let index = stack_frame.pop();
-            let arrayref: i32 = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            stack_frame.push(value[0]);
-            stack_frame.incr_pc();
-            trace!(
-                "IALOAD -> arrayref={arrayref}, index={index}, value={}",
-                value[0]
-            );
-        }
-        LALOAD => {
-            let index: i32 = stack_frame.pop();
-            let arrayref: i32 = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            let high = value[0];
-            let low = value[1];
-
-            stack_frame.push(low);
-            stack_frame.push(high);
-            stack_frame.incr_pc();
-            trace!("LALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
-        }
-        FALOAD => {
-            let index = stack_frame.pop();
-            let arrayref = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            stack_frame.push(value[0]);
-            stack_frame.incr_pc();
-            trace!(
-                "FALOAD -> arrayref={arrayref}, index={index}, value={}",
-                value[0]
-            );
-        }
-        DALOAD => {
-            let index = stack_frame.pop();
-            let arrayref = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            let high = value[0];
-            let low = value[1];
-
-            stack_frame.push(low);
-            stack_frame.push(high);
-            stack_frame.incr_pc();
-            trace!("DALOAD -> arrayref={arrayref}, index={index}, value={value:?}");
-        }
-        AALOAD => {
-            let index = stack_frame.pop();
-            let arrayref = stack_frame.pop();
-            let objref =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            stack_frame.push(objref[0]);
-            stack_frame.incr_pc();
-            trace!(
-                "AALOAD -> arrayref={arrayref}, index={index}, objref={}",
-                objref[0]
-            );
-        }
-        BALOAD => {
-            let index = stack_frame.pop();
-            let arrayref = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            stack_frame.push(value[0]);
-            stack_frame.incr_pc();
-            trace!(
-                "BALOAD -> arrayref={arrayref}, index={index}, value={}",
-                value[0]
-            );
-        }
-        CALOAD => {
-            let index = stack_frame.pop();
-            let arrayref = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            stack_frame.push(value[0]);
-            stack_frame.incr_pc();
-            trace!(
-                "CALOAD -> arrayref={arrayref}, index={index}, value={}",
-                value[0]
-            );
-        }
-        SALOAD => {
-            let index = stack_frame.pop();
-            let arrayref = stack_frame.pop();
-            let value =
-                with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
-
-            stack_frame.push(value[0]);
-            stack_frame.incr_pc();
-            trace!(
-                "SALOAD -> arrayref={arrayref}, index={index}, value={}",
-                value[0]
-            );
-        }
+        IALOAD => handle_array_load::<i32>(stack_frame, "IALOAD")?,
+        LALOAD => handle_array_load::<i64>(stack_frame, "LALOAD")?,
+        FALOAD => handle_array_load::<f32>(stack_frame, "FALOAD")?,
+        DALOAD => handle_array_load::<f64>(stack_frame, "DALOAD")?,
+        AALOAD => handle_array_load::<i32>(stack_frame, "AALOAD")?,
+        BALOAD => handle_array_load::<i32>(stack_frame, "BALOAD")?,
+        CALOAD => handle_array_load::<i32>(stack_frame, "CALOAD")?,
+        SALOAD => handle_array_load::<i32>(stack_frame, "SALOAD")?,
         _ => {
             return Err(crate::error::Error::new_execution(&format!(
                 "Unknown load opcode: {}",
@@ -295,6 +43,43 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
             )));
         }
     }
+
+    Ok(())
+}
+
+fn handle_pos_and_load<T: StackValue + Display + Copy>(
+    stack_frame: &mut StackFrame,
+    name_starts: &str,
+) {
+    let pos = stack_frame.extract_one_byte();
+    handle_load::<T>(stack_frame, pos, name_starts);
+}
+
+fn handle_load<T: StackValue + Display + Copy>(
+    stack_frame: &mut StackFrame,
+    pos: u8,
+    name_starts: &str,
+) {
+    let value: T = stack_frame.get_local(pos as usize);
+    stack_frame.push(value);
+
+    stack_frame.incr_pc();
+    trace!("{name_starts}{pos} -> value={value}");
+}
+
+fn handle_array_load<T: StackValue + Display + Copy>(
+    stack_frame: &mut StackFrame,
+    name_starts: &str,
+) -> crate::error::Result<()> {
+    let index = stack_frame.pop();
+    let arrayref: i32 = stack_frame.pop();
+    let raw_value = with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
+
+    let value: T = T::from_vec(&raw_value);
+
+    stack_frame.push(value);
+    stack_frame.incr_pc();
+    trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");
 
     Ok(())
 }

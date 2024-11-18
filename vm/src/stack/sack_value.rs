@@ -39,6 +39,8 @@ pub trait StackValue {
 
     fn set(&self, index: usize, stack_frame: &mut StackFrame);
     fn get(index: usize, stack_frame: &mut StackFrame) -> Self;
+
+    fn from_vec(v: &[i32]) -> Self;
 }
 
 impl StackValue for i32 {
@@ -56,6 +58,10 @@ impl StackValue for i32 {
 
     fn get(index: usize, stack_frame: &mut StackFrame) -> Self {
         stack_frame.get_local_raw(index)
+    }
+
+    fn from_vec(v: &[i32]) -> Self {
+        v[0]
     }
 }
 
@@ -89,6 +95,13 @@ impl StackValue for i64 {
 
         i32toi64(high, low)
     }
+
+    fn from_vec(v: &[i32]) -> Self {
+        let low = v[1];
+        let high = v[0];
+
+        i32toi64(high, low)
+    }
 }
 
 impl StackValue for f32 {
@@ -109,6 +122,11 @@ impl StackValue for f32 {
         let value: i32 = stack_frame.get_local(index);
         f32::from_bits(value as u32)
     }
+
+    fn from_vec(v: &[i32]) -> Self {
+        let value: i32 = v[0];
+        f32::from_bits(value as u32)
+    }
 }
 
 impl StackValue for f64 {
@@ -127,6 +145,13 @@ impl StackValue for f64 {
 
     fn get(index: usize, stack_frame: &mut StackFrame) -> Self {
         let value: i64 = stack_frame.get_local(index);
+        f64::from_bits(value as u64)
+    }
+
+    fn from_vec(v: &[i32]) -> Self {
+        let low = v[1];
+        let high = v[0];
+        let value: i64 = i32toi64(high, low);
         f64::from_bits(value as u64)
     }
 }
