@@ -1,4 +1,5 @@
 use crate::execution_engine::opcode::*;
+use crate::stack::sack_value::StackValue;
 use crate::stack::stack_frame::StackFrame;
 use tracing::trace;
 
@@ -6,95 +7,33 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         LCMP => {
-            let b: i64 = stack_frame.pop();
-            let a: i64 = stack_frame.pop();
-
-            if a > b {
-                stack_frame.push(1);
-            } else if a < b {
-                stack_frame.push(-1);
-            } else {
-                stack_frame.push(0);
-            }
-
-            stack_frame.incr_pc();
-            trace!("LCMP -> {a} ? {b}");
+            perform_comparison(
+                stack_frame,
+                |_: i64, _| None, // No special handling for LCMP
+                |a, b| Some(a.cmp(&b)),
+                0, // No NaN handling for integers
+                "LCMP",
+            );
         }
-        FCMPL => {
-            let b: f32 = stack_frame.pop();
-            let a: f32 = stack_frame.pop();
-
-            let result = if a.is_nan() || b.is_nan() {
-                -1
-            } else if a < b {
-                -1
-            } else if a > b {
-                1
-            } else {
-                0
-            };
-
-            stack_frame.push(result);
-
-            stack_frame.incr_pc();
-            trace!("FCMPL -> {a} ? {b}");
+        FCMPL | FCMPG => {
+            let nan_result = if code == FCMPL { -1 } else { 1 };
+            perform_comparison(
+                stack_frame,
+                |a: f32, b| handle_nan(a, b, nan_result),
+                |a, b| a.partial_cmp(&b),
+                nan_result,
+                if code == FCMPL { "FCMPL" } else { "FCMPG" },
+            );
         }
-        FCMPG => {
-            let b: f32 = stack_frame.pop();
-            let a: f32 = stack_frame.pop();
-
-            let result = if a.is_nan() || b.is_nan() {
-                1
-            } else if a < b {
-                -1
-            } else if a > b {
-                1
-            } else {
-                0
-            };
-
-            stack_frame.push(result);
-
-            stack_frame.incr_pc();
-            trace!("FCMPG -> {a} ? {b}");
-        }
-        DCMPL => {
-            let b: f64 = stack_frame.pop();
-            let a: f64 = stack_frame.pop();
-
-            let result = if a.is_nan() || b.is_nan() {
-                -1
-            } else if a < b {
-                -1
-            } else if a > b {
-                1
-            } else {
-                0
-            };
-
-            stack_frame.push(result);
-
-            stack_frame.incr_pc();
-            trace!("DCMPL -> {a} ? {b}");
-        }
-        DCMPG => {
-            let b: f64 = stack_frame.pop();
-            let a: f64 = stack_frame.pop();
-
-            let result = if a.is_nan() || b.is_nan() {
-                1
-            } else if a < b {
-                -1
-            } else if a > b {
-                1
-            } else {
-                0
-            };
-
-            stack_frame.push(result);
-
-            stack_frame.incr_pc();
-            trace!("DCMPG -> {a} ? {b}");
+        DCMPL | DCMPG => {
+            let nan_result = if code == DCMPL { -1 } else { 1 };
+            perform_comparison(
+                stack_frame,
+                |a: f64, b| handle_nan(a, b, nan_result),
+                |a, b| a.partial_cmp(&b),
+                nan_result,
+                if code == DCMPL { "DCMPL" } else { "DCMPG" },
+            );
         }
         IFEQ => {
             branch1arg(|a| a == 0, stack_frame, "IFEQ");
@@ -164,4 +103,43 @@ fn branch1arg(op: impl Fn(i32) -> bool, stack_frame: &mut StackFrame, op_code: &
 
     stack_frame.advance_pc(if op(value) { offset } else { 3 });
     trace!("{op_code} -> value={value}, offset={offset}");
+}
+
+fn perform_comparison<T: StackValue + std::fmt::Display + Copy, F, G>(
+    stack_frame: &mut StackFrame,
+    handle_special: F,
+    compare: G,
+    nan_result: i32,
+    name: &str,
+) where
+    F: Fn(T, T) -> Option<i32>,
+    G: Fn(T, T) -> Option<std::cmp::Ordering>,
+{
+    let b: T = stack_frame.pop();
+    let a: T = stack_frame.pop();
+
+    let result = handle_special(a, b)
+        .or_else(|| compare(a, b).map(|ord| ordering_to_i32(Some(ord))))
+        .unwrap_or(nan_result);
+
+    stack_frame.push(result);
+    stack_frame.incr_pc();
+    trace!("{name} -> {a} ? {b}");
+}
+
+fn ordering_to_i32(ordering: Option<std::cmp::Ordering>) -> i32 {
+    match ordering {
+        Some(std::cmp::Ordering::Less) => -1,
+        Some(std::cmp::Ordering::Equal) => 0,
+        Some(std::cmp::Ordering::Greater) => 1,
+        None => unreachable!(),
+    }
+}
+
+fn handle_nan<T: num_traits::float::Float>(a: T, b: T, nan_result: i32) -> Option<i32> {
+    if a.is_nan() || b.is_nan() {
+        Some(nan_result)
+    } else {
+        None
+    }
 }
