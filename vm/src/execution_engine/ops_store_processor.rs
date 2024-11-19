@@ -64,7 +64,7 @@ fn handle_store<T: StackValue + Display + Copy>(
     stack_frame.set_local(pos as usize, value);
 
     stack_frame.incr_pc();
-    trace!("{name_starts}.{pos} -> value={value}");
+    trace!("{name_starts}{pos} -> value={value}");
 }
 
 fn handle_array_store<T: StackValue + Display + Copy>(
