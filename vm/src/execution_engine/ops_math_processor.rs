@@ -60,17 +60,12 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         LOR => binary_operation(stack_frame, |a: i64, b: i64| a | b, "LOR"),
         IXOR => binary_operation(stack_frame, |a: i32, b: i32| a ^ b, "IXOR"),
         LXOR => binary_operation(stack_frame, |a: i64, b: i64| a ^ b, "LXOR"),
-        IINC => {
-            let index = stack_frame.extract_one_byte() as usize;
-            let const_val = stack_frame.extract_one_byte() as i8;
-
-            let current_val: i32 = stack_frame.get_local(index);
-            let new_val = current_val + const_val as i32;
-            stack_frame.set_local(index, new_val);
-
-            stack_frame.incr_pc();
-            trace!("IINC -> {current_val} + {const_val} = {new_val}");
-        }
+        IINC => increment(
+            stack_frame,
+            |sf| sf.extract_one_byte() as usize,
+            |sf| sf.extract_one_byte() as i8 as i32,
+            "IINC",
+        ),
         _ => {
             return Err(crate::error::Error::new_execution(&format!(
                 "Unknown math opcode: {}",
@@ -107,4 +102,24 @@ fn binary_operation<T1: StackValue + Copy + Display, T2: StackValue + Copy + Dis
 
     stack_frame.incr_pc();
     trace!("{name} -> ({a}, {b})->{result}");
+}
+
+pub(crate) fn increment<I, V>(
+    stack_frame: &mut StackFrame,
+    index_extractor: impl Fn(&mut StackFrame) -> I,
+    val_extractor: impl Fn(&mut StackFrame) -> V,
+    name: &str,
+) where
+    usize: From<I>,
+    i32: From<V>,
+{
+    let index = index_extractor(stack_frame).into();
+    let const_val = val_extractor(stack_frame).into();
+
+    let current_val: i32 = stack_frame.get_local(index);
+    let new_val = current_val.wrapping_add(const_val);
+    stack_frame.set_local(index, new_val);
+
+    stack_frame.incr_pc();
+    trace!("{name} -> {current_val} + {const_val} = {new_val}");
 }
