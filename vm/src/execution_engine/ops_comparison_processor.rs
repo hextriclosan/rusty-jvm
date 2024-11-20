@@ -97,7 +97,7 @@ fn branch2args(op: impl Fn(i32, i32) -> bool, stack_frame: &mut StackFrame, op_c
     trace!("{op_code} -> value1={value1}, value2={value2}, offset={offset}");
 }
 
-fn branch1arg(op: impl Fn(i32) -> bool, stack_frame: &mut StackFrame, op_code: &str) {
+pub(crate) fn branch1arg(op: impl Fn(i32) -> bool, stack_frame: &mut StackFrame, op_code: &str) {
     let value = stack_frame.pop();
     let offset = stack_frame.get_two_bytes_ahead();
 

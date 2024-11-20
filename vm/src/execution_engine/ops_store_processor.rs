@@ -14,19 +14,19 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         DSTORE => handle_pos_and_store::<f64>(stack_frame, "DSTORE "),
         ASTORE => handle_pos_and_store::<i32>(stack_frame, "ASTORE "),
         ISTORE_0 | ISTORE_1 | ISTORE_2 | ISTORE_3 => {
-            handle_store::<i32>(stack_frame, code - ISTORE_0, "ISTORE_")
+            handle_store::<i32, _>(stack_frame, code - ISTORE_0, "ISTORE_")
         }
         LSTORE_0 | LSTORE_1 | LSTORE_2 | LSTORE_3 => {
-            handle_store::<i64>(stack_frame, code - LSTORE_0, "LSTORE_")
+            handle_store::<i64, _>(stack_frame, code - LSTORE_0, "LSTORE_")
         }
         FSTORE_0 | FSTORE_1 | FSTORE_2 | FSTORE_3 => {
-            handle_store::<f32>(stack_frame, code - FSTORE_0, "FSTORE_")
+            handle_store::<f32, _>(stack_frame, code - FSTORE_0, "FSTORE_")
         }
         DSTORE_0 | DSTORE_1 | DSTORE_2 | DSTORE_3 => {
-            handle_store::<f64>(stack_frame, code - DSTORE_0, "DSTORE_")
+            handle_store::<f64, _>(stack_frame, code - DSTORE_0, "DSTORE_")
         }
         ASTORE_0 | ASTORE_1 | ASTORE_2 | ASTORE_3 => {
-            handle_store::<i32>(stack_frame, code - ASTORE_0, "ASTORE_")
+            handle_store::<i32, _>(stack_frame, code - ASTORE_0, "ASTORE_")
         }
         IASTORE => handle_array_store::<i32>(stack_frame, "IASTORE")?,
         LASTORE => handle_array_store::<i64>(stack_frame, "LASTORE")?,
@@ -52,16 +52,18 @@ fn handle_pos_and_store<T: StackValue + Display + Copy>(
     name_starts: &str,
 ) {
     let pos = stack_frame.extract_one_byte();
-    handle_store::<T>(stack_frame, pos, name_starts);
+    handle_store::<T, _>(stack_frame, pos, name_starts);
 }
 
-fn handle_store<T: StackValue + Display + Copy>(
+pub(crate) fn handle_store<T: StackValue + Display + Copy, POS: Display + Copy>(
     stack_frame: &mut StackFrame,
-    pos: u8,
+    pos: POS,
     name_starts: &str,
-) {
+) where
+    usize: From<POS>,
+{
     let value: T = stack_frame.pop();
-    stack_frame.set_local(pos as usize, value);
+    stack_frame.set_local(pos.into(), value);
 
     stack_frame.incr_pc();
     trace!("{name_starts}{pos} -> value={value}");

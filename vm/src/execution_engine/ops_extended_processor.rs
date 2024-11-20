@@ -1,7 +1,12 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
+use crate::execution_engine::ops_comparison_processor::branch1arg;
+use crate::execution_engine::ops_load_processor::handle_load;
+use crate::execution_engine::ops_math_processor::increment;
+use crate::execution_engine::ops_store_processor::handle_store;
+use crate::stack::sack_value::StackValue;
 use crate::stack::stack_frame::StackFrame;
-use tracing::trace;
+use std::fmt::Display;
 
 pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::error::Result<()> {
     let stack_frame = stack_frames.last_mut().unwrap();
@@ -9,91 +14,22 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         WIDE => {
             let opcode = stack_frame.extract_one_byte();
             match opcode {
-                ILOAD => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: i32 = stack_frame.get_local(index);
-                    stack_frame.push(value);
-                    stack_frame.incr_pc();
-                    trace!("WIDE ILOAD -> index={index}, value={value}");
-                }
-                LLOAD => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: i64 = stack_frame.get_local(index);
-                    stack_frame.push(value);
-
-                    stack_frame.incr_pc();
-                    trace!("WIDE LLOAD -> index={index}, value={value}");
-                }
-                FLOAD => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: f32 = stack_frame.get_local(index);
-                    stack_frame.push(value);
-                    stack_frame.incr_pc();
-                    trace!("WIDE FLOAD -> index={index}, value={value}");
-                }
-                DLOAD => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: f64 = stack_frame.get_local(index);
-                    stack_frame.push(value);
-
-                    stack_frame.incr_pc();
-                    trace!("WIDE DLOAD -> index={index}, value={value}");
-                }
-                ALOAD => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: i32 = stack_frame.get_local(index);
-                    stack_frame.push(value);
-                    stack_frame.incr_pc();
-                    trace!("WIDE ALOAD -> index={index}, value={value}");
-                }
-                ISTORE => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: i32 = stack_frame.pop();
-                    stack_frame.set_local(index, value);
-                    stack_frame.incr_pc();
-                    trace!("WIDE ISTORE -> index={index}, value={value}");
-                }
-                LSTORE => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: i64 = stack_frame.pop();
-                    stack_frame.set_local(index, value);
-
-                    stack_frame.incr_pc();
-                    trace!("WIDE LSTORE -> index={index}, value={value}");
-                }
-                FSTORE => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: f32 = stack_frame.pop();
-                    stack_frame.set_local(index, value);
-                    stack_frame.incr_pc();
-                    trace!("WIDE FSTORE -> index={index}, value={value}");
-                }
-                DSTORE => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let value: f64 = stack_frame.pop();
-                    stack_frame.set_local(index, value);
-
-                    stack_frame.incr_pc();
-                    trace!("WIDE DSTORE -> index={index}, value={value}");
-                }
-                ASTORE => {
-                    let index = stack_frame.extract_two_bytes() as usize;
-                    let obj_ref: i32 = stack_frame.pop();
-                    stack_frame.set_local(index, obj_ref);
-                    stack_frame.incr_pc();
-                    trace!("WIDE ASTORE -> index={index}, obj_ref={obj_ref}");
-                }
-                IINC => {
-                    let index = stack_frame.extract_two_bytes() as u16 as usize;
-                    let const_val = stack_frame.extract_two_bytes();
-
-                    let current_val: i32 = stack_frame.get_local(index);
-                    let new_val = current_val + const_val as i32;
-                    stack_frame.set_local(index, new_val);
-
-                    stack_frame.incr_pc();
-                    trace!("WIDE IINC -> {current_val} + {const_val} = {new_val}");
-                }
+                ILOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ILOAD "),
+                LLOAD => handle_pos_and_load::<i64>(stack_frame, "WIDE LLOAD "),
+                FLOAD => handle_pos_and_load::<f32>(stack_frame, "WIDE FLOAD "),
+                DLOAD => handle_pos_and_load::<f64>(stack_frame, "WIDE DLOAD "),
+                ALOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ALOAD "),
+                ISTORE => handle_pos_and_store::<i32>(stack_frame, "WIDE ISTORE "),
+                LSTORE => handle_pos_and_store::<i64>(stack_frame, "WIDE LSTORE "),
+                FSTORE => handle_pos_and_store::<f32>(stack_frame, "WIDE FSTORE "),
+                DSTORE => handle_pos_and_store::<f64>(stack_frame, "WIDE DSTORE "),
+                ASTORE => handle_pos_and_store::<i32>(stack_frame, "WIDE ASTORE "),
+                IINC => increment(
+                    stack_frame,
+                    |sf| sf.extract_two_bytes() as usize,
+                    |sf| sf.extract_two_bytes(),
+                    "WIDE IINC",
+                ),
                 _ => {
                     return Err(Error::new_execution(&format!(
                         "Error executing WIDE opcode {opcode}"
@@ -101,20 +37,8 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
                 }
             }
         }
-        IFNULL => {
-            //todo: this one is opposite to IFNE ops code
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value == 0 { offset } else { 3 });
-            trace!("IFNULL -> value={value}, offset={offset}");
-        }
-        IFNONNULL => {
-            //todo: this one is opposite to IFNULL ops code
-            let value: i32 = stack_frame.pop();
-            let offset = stack_frame.get_two_bytes_ahead();
-            stack_frame.advance_pc(if value != 0 { offset } else { 3 });
-            trace!("IFNONNULL -> value={value}, offset={offset}");
-        }
+        IFNULL => branch1arg(|a| a == 0, stack_frame, "IFNULL"),
+        IFNONNULL => branch1arg(|a| a != 0, stack_frame, "IFNONNULL"),
         _ => {
             return Err(Error::new_execution(&format!(
                 "Unknown extended opcode: {}",
@@ -124,4 +48,20 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
     }
 
     Ok(())
+}
+
+fn handle_pos_and_load<T: StackValue + Display + Copy>(
+    stack_frame: &mut StackFrame,
+    name_starts: &str,
+) {
+    let pos = stack_frame.extract_two_bytes();
+    handle_load::<T, _>(stack_frame, pos as usize, name_starts);
+}
+
+fn handle_pos_and_store<T: StackValue + Display + Copy>(
+    stack_frame: &mut StackFrame,
+    name_starts: &str,
+) {
+    let pos = stack_frame.extract_two_bytes();
+    handle_store::<T, _>(stack_frame, pos as usize, name_starts);
 }

@@ -14,19 +14,19 @@ pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::er
         DLOAD => handle_pos_and_load::<f64>(stack_frame, "DLOAD "),
         ALOAD => handle_pos_and_load::<i32>(stack_frame, "ALOAD "),
         ILOAD_0 | ILOAD_1 | ILOAD_2 | ILOAD_3 => {
-            handle_load::<i32>(stack_frame, code - ILOAD_0, "ILOAD_")
+            handle_load::<i32, _>(stack_frame, code - ILOAD_0, "ILOAD_")
         }
         LLOAD_0 | LLOAD_1 | LLOAD_2 | LLOAD_3 => {
-            handle_load::<i64>(stack_frame, code - LLOAD_0, "LLOAD_")
+            handle_load::<i64, _>(stack_frame, code - LLOAD_0, "LLOAD_")
         }
         FLOAD_0 | FLOAD_1 | FLOAD_2 | FLOAD_3 => {
-            handle_load::<f32>(stack_frame, code - FLOAD_0, "FLOAD_")
+            handle_load::<f32, _>(stack_frame, code - FLOAD_0, "FLOAD_")
         }
         DLOAD_0 | DLOAD_1 | DLOAD_2 | DLOAD_3 => {
-            handle_load::<f64>(stack_frame, code - DLOAD_0, "DLOAD_")
+            handle_load::<f64, _>(stack_frame, code - DLOAD_0, "DLOAD_")
         }
         ALOAD_0 | ALOAD_1 | ALOAD_2 | ALOAD_3 => {
-            handle_load::<i32>(stack_frame, code - ALOAD_0, "ALOAD_")
+            handle_load::<i32, _>(stack_frame, code - ALOAD_0, "ALOAD_")
         }
         IALOAD => handle_array_load::<i32>(stack_frame, "IALOAD")?,
         LALOAD => handle_array_load::<i64>(stack_frame, "LALOAD")?,
@@ -52,15 +52,17 @@ fn handle_pos_and_load<T: StackValue + Display + Copy>(
     name_starts: &str,
 ) {
     let pos = stack_frame.extract_one_byte();
-    handle_load::<T>(stack_frame, pos, name_starts);
+    handle_load::<T, _>(stack_frame, pos, name_starts);
 }
 
-fn handle_load<T: StackValue + Display + Copy>(
+pub(crate) fn handle_load<T: StackValue + Display + Copy, POS: Display + Copy>(
     stack_frame: &mut StackFrame,
-    pos: u8,
+    pos: POS,
     name_starts: &str,
-) {
-    let value: T = stack_frame.get_local(pos as usize);
+) where
+    usize: From<POS>,
+{
+    let value: T = stack_frame.get_local(pos.into());
     stack_frame.push(value);
 
     stack_frame.incr_pc();
