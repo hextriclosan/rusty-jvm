@@ -66,21 +66,11 @@ pub(crate) fn process(
 
             trace!("TABLESWITCH -> offset={offset}, from={from}, to={to}");
         }
-        IRETURN => {
-            perform_return::<i32>(stack_frames, "IRETURN")?;
-        }
-        LRETURN => {
-            perform_return::<i64>(stack_frames, "LRETURN")?;
-        }
-        FRETURN => {
-            perform_return::<f32>(stack_frames, "FRETURN")?;
-        }
-        DRETURN => {
-            perform_return::<f64>(stack_frames, "DRETURN")?;
-        }
-        ARETURN => {
-            perform_return::<i32>(stack_frames, "ARETURN")?;
-        }
+        IRETURN => perform_return::<i32>(stack_frames, "IRETURN")?,
+        LRETURN => perform_return::<i64>(stack_frames, "LRETURN")?,
+        FRETURN => perform_return::<f32>(stack_frames, "FRETURN")?,
+        DRETURN => perform_return::<f64>(stack_frames, "DRETURN")?,
+        ARETURN => perform_return::<i32>(stack_frames, "ARETURN")?,
         RETURN => {
             let stack_frame = last_frame(stack_frames)?;
             trace!("RETURN -> stack_frame.locals={:?}", stack_frame.locals());
