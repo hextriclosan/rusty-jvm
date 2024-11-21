@@ -16,18 +16,7 @@ pub(crate) fn process(
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         GETSTATIC => {
-            let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
-
-            let java_class = with_method_area(|method_area| method_area.get(current_class_name))?;
-            let cpool_helper = java_class.cpool_helper();
-
-            let (class_name, field_name, _) = cpool_helper
-                .get_full_field_info(fieldref_constpool_index)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting full field info by index {fieldref_constpool_index}"
-                    ))
-                })?;
+            let (class_name, field_name, _field_descriptor) = get_field_info(stack_frame, current_class_name)?;
 
             let field = with_method_area(|method_area| {
                 method_area.lookup_for_static_field(&class_name, &field_name)
@@ -39,25 +28,11 @@ pub(crate) fn process(
                 .rev()
                 .for_each(|x| stack_frame.push(*x));
 
-            trace!(
-                "GETSTATIC -> {class_name}.{field_name} is {:?}",
-                field.raw_value()
-            );
             stack_frame.incr_pc();
+            trace!("GETSTATIC -> {class_name}.{field_name} is {:?}", field.raw_value());
         }
         PUTSTATIC => {
-            let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
-
-            let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
-
-            let cpool_helper = rc.cpool_helper();
-            let (class_name, field_name, _) = cpool_helper
-                .get_full_field_info(fieldref_constpool_index)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting full field info by index {fieldref_constpool_index}"
-                    ))
-                })?;
+            let (class_name, field_name, _field_descriptor) = get_field_info(stack_frame, current_class_name)?;
 
             let (len, field_ref) = {
                 let field_ref = with_method_area(|method_area| {
@@ -74,26 +49,14 @@ pub(crate) fn process(
 
             field_ref.set_raw_value(value.clone());
 
-            trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
             stack_frame.incr_pc();
+            trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
         }
         GETFIELD => {
-            let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
-
-            let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
-            let cpool_helper = rc.cpool_helper();
-
-            let objectref = stack_frame.pop();
-            let (class_name, field_name, field_descriptor) = cpool_helper
-                .get_full_field_info(fieldref_constpool_index)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting full field info by index {fieldref_constpool_index}"
-                    ))
-                })?;
+            let (class_name, field_name, field_descriptor) = get_field_info(stack_frame, current_class_name)?;
             let field_name_type = format!("{field_name}:{field_descriptor}");
-
-            let value = with_heap_write_lock(|heap| {
+            let objectref = stack_frame.pop();
+            let value = with_heap_read_lock(|heap| {
                 heap.get_object_field_value(
                     objectref,
                     class_name.as_str(),
@@ -107,19 +70,7 @@ pub(crate) fn process(
             trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type}, value={value:?}");
         }
         PUTFIELD => {
-            let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
-
-            let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
-            let cpool_helper = rc.cpool_helper();
-
-            let (class_name, field_name, field_descriptor) = cpool_helper
-                .get_full_field_info(fieldref_constpool_index)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting full field info by index {fieldref_constpool_index}"
-                    ))
-                })?;
-
+            let (class_name, field_name, field_descriptor) = get_field_info(stack_frame, current_class_name)?;
             let field_name_type = format!("{field_name}:{field_descriptor}");
             let type_descriptor = with_method_area(|method_area| {
                 method_area
@@ -517,4 +468,20 @@ pub(crate) fn process(
     }
 
     Ok(())
+}
+
+fn get_field_info(stack_frame: &mut StackFrame, current_class_name: &str) -> crate::error::Result<(String, String, String)> {
+    let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
+
+    let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
+    let cpool_helper = rc.cpool_helper();
+
+    let (class_name, field_name, field_descriptor) = cpool_helper
+        .get_full_field_info(fieldref_constpool_index)
+        .ok_or_else(|| {
+            Error::new_constant_pool(&format!(
+                "Error getting full field info by index {fieldref_constpool_index}"
+            ))
+        })?;
+    Ok((class_name, field_name, field_descriptor))
 }
