@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
@@ -8,6 +9,7 @@ use crate::stack::stack_frame::StackFrame;
 use jdescriptor::get_length;
 use tracing::trace;
 use crate::method_area::cpool_helper::CPoolHelper;
+use crate::method_area::java_method::JavaMethod;
 
 pub(crate) fn process(
     code: u8,
@@ -130,23 +132,7 @@ pub(crate) fn process(
             })?;
 
             let class_name = java_method.class_name();
-            if java_method.is_native() {
-                let full_native_signature = format!("{class_name}:{full_signature}");
-                trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
-
-                let result = invoke_native_method(&full_native_signature, &method_args)?;
-
-                result.iter().rev().for_each(|x| frame(stack_frames).push(*x));
-            } else {
-                let mut next_frame = java_method.new_stack_frame()?;
-
-                method_args
-                    .iter()
-                    .enumerate()
-                    .for_each(|(index, val)| next_frame.set_local(index, *val));
-
-                stack_frames.push(next_frame);
-            }
+            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), class_name)?;
         }
         INVOKESPECIAL => {
             let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
@@ -164,23 +150,7 @@ pub(crate) fn process(
             //let reference = *method_args.last().unwrap();
             method_args.reverse();
 
-            if java_method.is_native() {
-                let full_native_signature = format!("{class_name}:{full_signature}");
-                trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
-
-                let result = invoke_native_method(&full_native_signature, &method_args)?;
-
-                result.iter().rev().for_each(|x| frame(stack_frames).push(*x));
-            } else {
-                let mut next_frame = java_method.new_stack_frame()?;
-
-                method_args
-                    .iter()
-                    .enumerate()
-                    .for_each(|(index, val)| next_frame.set_local(index, *val));
-
-                stack_frames.push(next_frame);
-            }
+            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
         }
         INVOKESTATIC => {
             let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
@@ -199,23 +169,7 @@ pub(crate) fn process(
                 .rev()
                 .collect();
 
-            if java_method.is_native() {
-                let full_native_signature = format!("{class_name}:{full_signature}");
-                trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
-
-                let result = invoke_native_method(&full_native_signature, &method_args)?;
-
-                result.iter().rev().for_each(|x| frame(stack_frames).push(*x));
-            } else {
-                let mut next_frame = java_method.new_stack_frame()?;
-
-                method_args
-                    .iter()
-                    .enumerate()
-                    .for_each(|(index, val)| next_frame.set_local(index, *val));
-
-                stack_frames.push(next_frame);
-            }
+            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
         }
         INVOKEINTERFACE => {
             let stack_frame = stack_frames.last_mut().unwrap();
@@ -428,6 +382,27 @@ pub(crate) fn process(
         }
     }
 
+    Ok(())
+}
+
+fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: String, method_args: &[i32], java_method: Arc<JavaMethod>, class_name: &str) -> Result<(), Error> {
+    if java_method.is_native() {
+        let full_native_signature = format!("{class_name}:{full_signature}");
+        trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
+
+        let result = invoke_native_method(&full_native_signature, &method_args)?;
+
+        result.iter().rev().for_each(|x| frame(stack_frames).push(*x));
+    } else {
+        let mut next_frame = java_method.new_stack_frame()?;
+
+        method_args
+            .iter()
+            .enumerate()
+            .for_each(|(index, val)| next_frame.set_local(index, *val));
+
+        stack_frames.push(next_frame);
+    }
     Ok(())
 }
 
