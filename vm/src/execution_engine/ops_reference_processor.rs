@@ -103,54 +103,50 @@ pub(crate) fn process(
             stack_frame.incr_pc();
         }
         INVOKEVIRTUAL => {
-            let methodref_constpool_index = stack_frame.extract_two_bytes() as u16;
+            let index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
 
             let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
             let cpool_helper = rc.cpool_helper();
-
-            let (reference_type_class_name, method_name, method_descriptor) = cpool_helper
-                .get_full_method_info(methodref_constpool_index)
+            let (class_name, method_name, method_descriptor) = cpool_helper
+                .get_full_method_info(index)
                 .ok_or_else(|| {
                     Error::new_constant_pool(&format!(
-                        "Error getting full method info by index {methodref_constpool_index}"
+                        "Error getting full method info by index {index}"
                     ))
                 })?;
             let full_signature = format!("{}:{}", method_name, method_descriptor);
 
-            let java_method = with_method_area(|method_area| method_area.lookup_for_implementation(&reference_type_class_name, &full_signature))
-                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {reference_type_class_name} and full signature {full_signature} getting java_method")))?;
-            let method_arg_num = java_method.get_method_descriptor().arguments_length();
-            let mut method_args = Vec::with_capacity(method_arg_num);
-            for _ in 0..method_arg_num {
+            let java_method = with_method_area(|method_area| method_area.lookup_for_implementation(&class_name, &full_signature))
+                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name} and full signature {full_signature} getting java_method")))?;
+            let arg_num = java_method.get_method_descriptor().arguments_length();
+            let arg_num = arg_num + 1;
+            let mut method_args = Vec::with_capacity(arg_num);
+            for _ in 0..arg_num {
                 let val = stack_frame.pop();
                 method_args.push(val);
             }
-            let reference = stack_frame.pop();
-            method_args.push(reference);
+            let reference = *method_args.last().unwrap();
             method_args.reverse();
 
             let instance_type_class_name =
                 with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
 
-            let virtual_method = with_method_area(|method_area| {
+            let java_method = with_method_area(|method_area| {
                 method_area.lookup_for_implementation(&instance_type_class_name, &full_signature)
                     .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} getting virtual_method")))
             })?;
 
-            let found_impl_type_class_name = virtual_method.class_name();
-            if virtual_method.is_native() {
-                let full_native_signature =
-                    format!("{found_impl_type_class_name}:{full_signature}");
-                trace!(
-                    "<Calling native virtual method> -> {full_native_signature} ({method_args:?})"
-                );
+            let class_name = java_method.class_name();
+            if java_method.is_native() {
+                let full_native_signature = format!("{class_name}:{full_signature}");
+                trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
                 let result = invoke_native_method(&full_native_signature, &method_args)?;
 
                 result.iter().rev().for_each(|x| stack_frame.push(*x));
             } else {
-                let mut next_frame = virtual_method.new_stack_frame()?;
+                let mut next_frame = java_method.new_stack_frame()?;
 
                 method_args
                     .iter()
@@ -159,48 +155,45 @@ pub(crate) fn process(
 
                 stack_frames.push(next_frame);
             }
-            trace!("INVOKEVIRTUAL -> {found_impl_type_class_name}.{method_name}({method_args:?})");
+            trace!("INVOKEVIRTUAL -> {class_name}.{method_name}({method_args:?})");
         }
         INVOKESPECIAL => {
-            let methodref_constpool_index = stack_frame.extract_two_bytes() as u16;
+            let index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
 
             let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
             let cpool_helper = rc.cpool_helper();
-
             let (class_name, method_name, method_descriptor) = cpool_helper
-                .get_full_method_info(methodref_constpool_index)
+                .get_full_method_info(index)
                 .ok_or_else(|| {
                     Error::new_constant_pool(&format!(
-                        "Error getting full method info by index {methodref_constpool_index}"
+                        "Error getting full method info by index {index}"
                     ))
                 })?;
             let full_signature = format!("{}:{}", method_name, method_descriptor);
+            
             let rc = with_method_area(|method_area| method_area.get(class_name.as_str()))?;
-            let special_method = rc.get_method(&full_signature)?;
-            // ^^^ todo: implement lookup in parents
+            let java_method = rc.get_method(&full_signature)?;
 
-            let arg_num = special_method.get_method_descriptor().arguments_length();
+            let arg_num = java_method.get_method_descriptor().arguments_length();
+            let arg_num = arg_num + 1;
             let mut method_args = Vec::with_capacity(arg_num);
             for _ in 0..arg_num {
                 let val = stack_frame.pop();
                 method_args.push(val);
             }
-            let reference = stack_frame.pop();
-            method_args.push(reference);
+            //let reference = *method_args.last().unwrap();
             method_args.reverse();
 
-            if special_method.is_native() {
+            if java_method.is_native() {
                 let full_native_signature = format!("{class_name}:{full_signature}");
-                trace!(
-                    "<Calling native special method> -> {full_native_signature} ({method_args:?})"
-                );
+                trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
                 let result = invoke_native_method(&full_native_signature, &method_args)?;
 
                 result.iter().rev().for_each(|x| stack_frame.push(*x));
             } else {
-                let mut next_frame = special_method.new_stack_frame()?;
+                let mut next_frame = java_method.new_stack_frame()?;
 
                 method_args
                     .iter()
@@ -212,27 +205,27 @@ pub(crate) fn process(
             trace!("INVOKESPECIAL -> {class_name}.{method_name}({method_args:?})");
         }
         INVOKESTATIC => {
-            let methodref_constpool_index = stack_frame.extract_two_bytes() as u16;
+            let index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
 
             let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
             let cpool_helper = rc.cpool_helper();
-
             let (class_name, method_name, method_descriptor) = cpool_helper
-                .get_full_method_info(methodref_constpool_index)
+                .get_full_method_info(index)
                 .ok_or_else(|| {
                     Error::new_constant_pool(&format!(
-                        "Error getting full method info by index {methodref_constpool_index}"
+                        "Error getting full method info by index {index}"
                     ))
                 })?;
             let full_signature = format!("{}:{}", method_name, method_descriptor);
+            
             let rc = with_method_area(|method_area| method_area.get(class_name.as_str()))?;
-            let static_method = rc.get_method(&full_signature)?;
+            let java_method = rc.get_method(&full_signature)?;
             // todo: according to requirements of JVMS Section 5.4
             // all static fields of the class should be initialized
             // at this point
 
-            let arg_num = static_method.get_method_descriptor().arguments_length();
+            let arg_num = java_method.get_method_descriptor().arguments_length();
             let method_args: Vec<i32> = (0..arg_num)
                 .map(|_| stack_frame.pop())
                 .collect::<Vec<_>>()
@@ -240,7 +233,7 @@ pub(crate) fn process(
                 .rev()
                 .collect();
 
-            if static_method.is_native() {
+            if java_method.is_native() {
                 let full_native_signature = format!("{class_name}:{full_signature}");
                 trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
@@ -248,7 +241,7 @@ pub(crate) fn process(
 
                 result.iter().rev().for_each(|x| stack_frame.push(*x));
             } else {
-                let mut next_frame = static_method.new_stack_frame()?;
+                let mut next_frame = java_method.new_stack_frame()?;
 
                 method_args
                     .iter()
@@ -260,43 +253,40 @@ pub(crate) fn process(
             trace!("INVOKESTATIC -> {class_name}.{method_name}({method_args:?})");
         }
         INVOKEINTERFACE => {
-            let interfacemethodref_constpool_index = stack_frame.extract_two_bytes() as u16;
-            let arg_count = stack_frame.extract_one_byte() as usize;
+            let index = stack_frame.extract_two_bytes() as u16;
+            let arg_num = stack_frame.extract_one_byte() as usize;
             stack_frame.incr_pc();
 
-            let mut method_args = Vec::with_capacity(arg_count);
-            for _ in 0..(arg_count - 1) {
+            let mut method_args = Vec::with_capacity(arg_num);
+            for _ in 0..arg_num {
                 let val = stack_frame.pop();
                 method_args.push(val);
             }
-            let reference = stack_frame.pop();
-            method_args.push(reference);
+            let reference = *method_args.last().unwrap();
             method_args.reverse();
 
             let zero = stack_frame.get_bytecode_byte();
             stack_frame.incr_pc();
             if zero != 0 {
                 return Err(Error::new_execution(&format!(
-                    "Error calling interface method by index {interfacemethodref_constpool_index}"
+                    "Error calling interface method by index {index}"
                 )));
             }
 
             let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
             let cpool_helper = rc.cpool_helper();
-
-            let (interface_class_name, method_name, method_descriptor) = cpool_helper
-                .get_full_interfacemethodref_info(interfacemethodref_constpool_index)
-                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full interfacemethodref info by index {interfacemethodref_constpool_index}")))?;
+            let (class_name, method_name, method_descriptor) = cpool_helper
+                .get_full_interfacemethodref_info(index)
+                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting full interfacemethodref info by index {index}")))?;
+            let full_signature = format!("{method_name}:{method_descriptor}");
 
             let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
-
-            let full_method_signature = format!("{method_name}:{method_descriptor}");
-            let interface_implementation_method = with_method_area(|method_area| {
-                method_area.lookup_for_implementation(&instance_name, &full_method_signature)
-                    .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {interface_class_name}.{method_name}{method_descriptor} in {instance_name}")))
+            let java_method = with_method_area(|method_area| {
+                method_area.lookup_for_implementation(&instance_name, &full_signature)
+                    .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {class_name}.{method_name}{method_descriptor} in {instance_name}")))
             })?;
 
-            let mut next_frame = interface_implementation_method.new_stack_frame()?;
+            let mut next_frame = java_method.new_stack_frame()?;
 
             method_args
                 .iter()
@@ -305,7 +295,7 @@ pub(crate) fn process(
 
             stack_frames.push(next_frame);
 
-            trace!("INVOKEINTERFACE -> {interface_class_name}.{method_name}{method_descriptor}({method_args:?}) on instance {instance_name}");
+            trace!("INVOKEINTERFACE -> {class_name}.{method_name}{method_descriptor}({method_args:?}) on instance {instance_name}");
         }
         NEW => {
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
