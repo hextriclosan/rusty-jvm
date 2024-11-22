@@ -1,5 +1,5 @@
 mod attributes_helper;
-mod cpool_helper;
+pub(crate) mod cpool_helper;
 pub(crate) mod field;
 pub(crate) mod instance_checker;
 pub(crate) mod java_class;
