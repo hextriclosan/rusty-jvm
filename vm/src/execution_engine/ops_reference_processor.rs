@@ -136,39 +136,12 @@ pub(crate) fn process(
         }
         INVOKESPECIAL => {
             let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
-
-            let rc = with_method_area(|method_area| method_area.get(class_name.as_str()))?;
-            let java_method = rc.get_method(&full_signature)?;
-
-            let arg_num = java_method.get_method_descriptor().arguments_length();
-            let arg_num = arg_num + 1;
-            let mut method_args = Vec::with_capacity(arg_num);
-            for _ in 0..arg_num {
-                let val = frame(stack_frames).pop();
-                method_args.push(val);
-            }
-            //let reference = *method_args.last().unwrap();
-            method_args.reverse();
-
+            let (java_method, method_args) = prepare_invoke_context(stack_frames, &class_name, &full_signature, true)?;
             invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
         }
         INVOKESTATIC => {
             let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
-
-            let rc = with_method_area(|method_area| method_area.get(class_name.as_str()))?;
-            let java_method = rc.get_method(&full_signature)?;
-            // todo: according to requirements of JVMS Section 5.4
-            // all static fields of the class should be initialized
-            // at this point
-
-            let arg_num = java_method.get_method_descriptor().arguments_length();
-            let method_args: Vec<i32> = (0..arg_num)
-                .map(|_| frame(stack_frames).pop())
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect();
-
+            let (java_method, method_args) = prepare_invoke_context(stack_frames, &class_name, &full_signature, false)?;
             invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
         }
         INVOKEINTERFACE => {
@@ -385,7 +358,24 @@ pub(crate) fn process(
     Ok(())
 }
 
-fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: String, method_args: &[i32], java_method: Arc<JavaMethod>, class_name: &str) -> Result<(), Error> {
+fn prepare_invoke_context(stack_frames: &mut Vec<StackFrame>, class_name: &str, full_signature: &str, use_self_ref: bool) -> crate::error::Result<(Arc<JavaMethod>, Vec<i32>)> {
+    let rc = with_method_area(|method_area| method_area.get(class_name))?;
+    let java_method = rc.get_method(full_signature)?;
+
+    let arg_num = java_method.get_method_descriptor().arguments_length();
+    let arg_num = arg_num + if use_self_ref {1} else {0};
+    let mut method_args = Vec::with_capacity(arg_num);
+    for _ in 0..arg_num {
+        let val = frame(stack_frames).pop();
+        method_args.push(val);
+    }
+    //let reference = *method_args.last().unwrap();
+    method_args.reverse();
+
+    Ok((java_method, method_args))
+}
+
+fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: String, method_args: &[i32], java_method: Arc<JavaMethod>, class_name: &str) -> crate::error::Result<()> {
     if java_method.is_native() {
         let full_native_signature = format!("{class_name}:{full_signature}");
         trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
@@ -410,7 +400,7 @@ fn get_class_name_and_signature<F>(
     stack_frames: &mut Vec<StackFrame>,
     current_class_name: &str,
     cpool_getter: F,
-) -> Result<(String, String), Error> 
+) -> crate::error::Result<(String, String)> 
 where F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>
 {
     let stack_frame = frame(stack_frames);
