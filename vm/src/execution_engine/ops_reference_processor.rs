@@ -125,21 +125,24 @@ pub(crate) fn process(
             })?;
 
             let class_name = java_method.class_name();
-            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), class_name)?;
+            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), class_name)?;
+            trace!("INVOKEVIRTUAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESPECIAL => {
             let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
             let rc = with_method_area(|method_area| method_area.get(&class_name))?;
             let java_method = rc.get_method(&full_signature)?;
             let method_args = prepare_invoke_context(stack_frames, Arc::clone(&java_method), true)?;
-            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESTATIC => {
             let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
             let rc = with_method_area(|method_area| method_area.get(&class_name))?;
             let java_method = rc.get_method(&full_signature)?;
             let  method_args = prepare_invoke_context(stack_frames, Arc::clone(&java_method), false)?;
-            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            trace!("INVOKESTATIC -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKEINTERFACE => {
             let index = frame(stack_frames).extract_two_bytes() as u16;
@@ -162,7 +165,8 @@ pub(crate) fn process(
                     .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {class_name}.{full_signature} in {instance_name}")))
             })?;
 
-            invoke(stack_frames, full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            trace!("INVOKEINTERFACE -> {class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
         }
         NEW => {
             let stack_frame = stack_frames.last_mut().unwrap();
@@ -335,14 +339,14 @@ pub(crate) fn process(
     Ok(())
 }
 
-fn prepare_invoke_context(stack_frames: &mut Vec<StackFrame>, java_method: Arc<JavaMethod>, use_self_ref: bool) -> crate::error::Result<Vec<i32>> {
+fn prepare_invoke_context(stack_frames: &mut [StackFrame], java_method: Arc<JavaMethod>, use_self_ref: bool) -> crate::error::Result<Vec<i32>> {
     let arg_num = java_method.get_method_descriptor().arguments_length();
     let arg_num = arg_num + if use_self_ref {1} else {0};
 
     get_args(stack_frames, arg_num)
 }
 
-fn get_args(stack_frames: &mut Vec<StackFrame>, arg_num: usize) -> crate::error::Result<Vec<i32>> {
+fn get_args(stack_frames: &mut [StackFrame], arg_num: usize) -> crate::error::Result<Vec<i32>> {
     let mut method_args = Vec::with_capacity(arg_num);
     for _ in 0..arg_num {
         let val = frame(stack_frames).pop();
@@ -353,7 +357,7 @@ fn get_args(stack_frames: &mut Vec<StackFrame>, arg_num: usize) -> crate::error:
     Ok(method_args)
 }
 
-fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: String, method_args: &[i32], java_method: Arc<JavaMethod>, class_name: &str) -> crate::error::Result<()> {
+fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: &str, method_args: &[i32], java_method: Arc<JavaMethod>, class_name: &str) -> crate::error::Result<()> {
     if java_method.is_native() {
         let full_native_signature = format!("{class_name}:{full_signature}");
         trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
@@ -375,7 +379,7 @@ fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: String, method_arg
 }
 
 fn get_class_name_and_signature<F>(
-    stack_frames: &mut Vec<StackFrame>,
+    stack_frames: &mut [StackFrame],
     current_class_name: &str,
     cpool_getter: F,
 ) -> crate::error::Result<(String, String)> 
@@ -404,7 +408,7 @@ where
     Ok((class_name, full_signature))
 }
 
-fn frame(stack_frames: &mut Vec<StackFrame>) -> &mut StackFrame {
+fn frame(stack_frames: &mut [StackFrame]) -> &mut StackFrame {
     stack_frames.last_mut().unwrap()
 }
 
