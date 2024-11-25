@@ -1,15 +1,15 @@
-use std::sync::Arc;
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::instance_checker::InstanceChecker;
+use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrame;
-use jdescriptor::get_length;
+use jdescriptor::{get_length, MethodDescriptor};
+use std::sync::Arc;
 use tracing::trace;
-use crate::method_area::cpool_helper::CPoolHelper;
-use crate::method_area::java_method::JavaMethod;
 
 pub(crate) fn process(
     code: u8,
@@ -19,7 +19,8 @@ pub(crate) fn process(
     match code {
         GETSTATIC => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, _field_descriptor) = get_field_info(stack_frame, current_class_name)?;
+            let (class_name, field_name, _field_descriptor) =
+                get_field_info(stack_frame, current_class_name)?;
 
             let field = with_method_area(|method_area| {
                 method_area.lookup_for_static_field(&class_name, &field_name)
@@ -32,11 +33,15 @@ pub(crate) fn process(
                 .for_each(|x| stack_frame.push(*x));
 
             stack_frame.incr_pc();
-            trace!("GETSTATIC -> {class_name}.{field_name} is {:?}", field.raw_value());
+            trace!(
+                "GETSTATIC -> {class_name}.{field_name} is {:?}",
+                field.raw_value()
+            );
         }
         PUTSTATIC => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, _field_descriptor) = get_field_info(stack_frame, current_class_name)?;
+            let (class_name, field_name, _field_descriptor) =
+                get_field_info(stack_frame, current_class_name)?;
 
             let (len, field_ref) = {
                 let field_ref = with_method_area(|method_area| {
@@ -58,7 +63,8 @@ pub(crate) fn process(
         }
         GETFIELD => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, field_descriptor) = get_field_info(stack_frame, current_class_name)?;
+            let (class_name, field_name, field_descriptor) =
+                get_field_info(stack_frame, current_class_name)?;
             let field_name_type = format!("{field_name}:{field_descriptor}");
             let objectref = stack_frame.pop();
             let value = with_heap_read_lock(|heap| {
@@ -76,7 +82,8 @@ pub(crate) fn process(
         }
         PUTFIELD => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, field_descriptor) = get_field_info(stack_frame, current_class_name)?;
+            let (class_name, field_name, field_descriptor) =
+                get_field_info(stack_frame, current_class_name)?;
             let field_name_type = format!("{field_name}:{field_descriptor}");
             let type_descriptor = with_method_area(|method_area| {
                 method_area
@@ -109,12 +116,13 @@ pub(crate) fn process(
             stack_frame.incr_pc();
         }
         INVOKEVIRTUAL => {
-            let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
-
-            let java_method = with_method_area(|method_area| method_area.lookup_for_implementation(&class_name, &full_signature))
-                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name} and full signature {full_signature} getting java_method")))?;
-            let  method_args = prepare_invoke_context(stack_frames, Arc::clone(&java_method), true)?;
-
+            let (_, full_signature, method_signature) = get_class_name_and_signature(
+                stack_frames,
+                current_class_name,
+                CPoolHelper::get_full_method_info,
+            )?;
+            let method_descriptor = method_signature.parse()?;
+            let method_args = prepare_invoke_context(stack_frames, &method_descriptor, true)?;
             let reference = *method_args.first().unwrap();
             let instance_type_class_name =
                 with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
@@ -125,23 +133,51 @@ pub(crate) fn process(
             })?;
 
             let class_name = java_method.class_name();
-            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), class_name)?;
+            invoke(
+                stack_frames,
+                &full_signature,
+                &method_args,
+                Arc::clone(&java_method),
+                class_name,
+            )?;
             trace!("INVOKEVIRTUAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESPECIAL => {
-            let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
+            let (class_name, full_signature, _) = get_class_name_and_signature(
+                stack_frames,
+                current_class_name,
+                CPoolHelper::get_full_method_info,
+            )?;
             let rc = with_method_area(|method_area| method_area.get(&class_name))?;
             let java_method = rc.get_method(&full_signature)?;
-            let method_args = prepare_invoke_context(stack_frames, Arc::clone(&java_method), true)?;
-            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            let method_args =
+                prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), true)?;
+            invoke(
+                stack_frames,
+                &full_signature,
+                &method_args,
+                Arc::clone(&java_method),
+                &class_name,
+            )?;
             trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESTATIC => {
-            let (class_name, full_signature) = get_class_name_and_signature(stack_frames, current_class_name, CPoolHelper::get_full_method_info)?;
+            let (class_name, full_signature, _) = get_class_name_and_signature(
+                stack_frames,
+                current_class_name,
+                CPoolHelper::get_full_method_info,
+            )?;
             let rc = with_method_area(|method_area| method_area.get(&class_name))?;
             let java_method = rc.get_method(&full_signature)?;
-            let  method_args = prepare_invoke_context(stack_frames, Arc::clone(&java_method), false)?;
-            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            let method_args =
+                prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), false)?;
+            invoke(
+                stack_frames,
+                &full_signature,
+                &method_args,
+                Arc::clone(&java_method),
+                &class_name,
+            )?;
             trace!("INVOKESTATIC -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKEINTERFACE => {
@@ -157,7 +193,11 @@ pub(crate) fn process(
                 )));
             }
 
-            let (class_name, full_signature) = get_class_name_and_signature_by_index(current_class_name, CPoolHelper::get_full_interfacemethodref_info, index)?;
+            let (class_name, full_signature, _) = get_class_name_and_signature_by_index(
+                current_class_name,
+                CPoolHelper::get_full_interfacemethodref_info,
+                index,
+            )?;
             let reference = *method_args.first().unwrap();
             let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
             let java_method = with_method_area(|method_area| {
@@ -165,7 +205,13 @@ pub(crate) fn process(
                     .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {class_name}.{full_signature} in {instance_name}")))
             })?;
 
-            invoke(stack_frames, &full_signature, &method_args, Arc::clone(&java_method), &class_name)?;
+            invoke(
+                stack_frames,
+                &full_signature,
+                &method_args,
+                Arc::clone(&java_method),
+                &class_name,
+            )?;
             trace!("INVOKEINTERFACE -> {class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
         }
         NEW => {
@@ -339,9 +385,13 @@ pub(crate) fn process(
     Ok(())
 }
 
-fn prepare_invoke_context(stack_frames: &mut [StackFrame], java_method: Arc<JavaMethod>, use_self_ref: bool) -> crate::error::Result<Vec<i32>> {
-    let arg_num = java_method.get_method_descriptor().arguments_length();
-    let arg_num = arg_num + if use_self_ref {1} else {0};
+fn prepare_invoke_context(
+    stack_frames: &mut [StackFrame],
+    method_descriptor: &MethodDescriptor,
+    use_self_ref: bool,
+) -> crate::error::Result<Vec<i32>> {
+    let arg_num = method_descriptor.arguments_length();
+    let arg_num = arg_num + if use_self_ref { 1 } else { 0 };
 
     get_args(stack_frames, arg_num)
 }
@@ -357,14 +407,23 @@ fn get_args(stack_frames: &mut [StackFrame], arg_num: usize) -> crate::error::Re
     Ok(method_args)
 }
 
-fn invoke(stack_frames: &mut Vec<StackFrame>, full_signature: &str, method_args: &[i32], java_method: Arc<JavaMethod>, class_name: &str) -> crate::error::Result<()> {
+fn invoke(
+    stack_frames: &mut Vec<StackFrame>,
+    full_signature: &str,
+    method_args: &[i32],
+    java_method: Arc<JavaMethod>,
+    class_name: &str,
+) -> crate::error::Result<()> {
     if java_method.is_native() {
         let full_native_signature = format!("{class_name}:{full_signature}");
         trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
         let result = invoke_native_method(&full_native_signature, &method_args)?;
 
-        result.iter().rev().for_each(|x| frame(stack_frames).push(*x));
+        result
+            .iter()
+            .rev()
+            .for_each(|x| frame(stack_frames).push(*x));
     } else {
         let mut next_frame = java_method.new_stack_frame()?;
 
@@ -382,8 +441,9 @@ fn get_class_name_and_signature<F>(
     stack_frames: &mut [StackFrame],
     current_class_name: &str,
     cpool_getter: F,
-) -> crate::error::Result<(String, String)> 
-where F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>
+) -> crate::error::Result<(String, String, String)>
+where
+    F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>,
 {
     let stack_frame = frame(stack_frames);
     let index = stack_frame.extract_two_bytes() as u16;
@@ -392,27 +452,32 @@ where F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>
     get_class_name_and_signature_by_index(current_class_name, cpool_getter, index)
 }
 
-fn get_class_name_and_signature_by_index<F>(current_class_name: &str, cpool_getter: F, index: u16) -> crate::error::Result<(String, String)>
+fn get_class_name_and_signature_by_index<F>(
+    current_class_name: &str,
+    cpool_getter: F,
+    index: u16,
+) -> crate::error::Result<(String, String, String)>
 where
-    F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>
+    F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>,
 {
     let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
     let cpool_helper = rc.cpool_helper();
     let (class_name, method_name, method_descriptor) = cpool_getter(cpool_helper, index)
         .ok_or_else(|| {
-            Error::new_constant_pool(&format!(
-                "Error getting full method info by index {index}"
-            ))
+            Error::new_constant_pool(&format!("Error getting full method info by index {index}"))
         })?;
     let full_signature = format!("{}:{}", method_name, method_descriptor);
-    Ok((class_name, full_signature))
+    Ok((class_name, full_signature, method_descriptor))
 }
 
 fn frame(stack_frames: &mut [StackFrame]) -> &mut StackFrame {
     stack_frames.last_mut().unwrap()
 }
 
-fn get_field_info(stack_frame: &mut StackFrame, current_class_name: &str) -> crate::error::Result<(String, String, String)> {
+fn get_field_info(
+    stack_frame: &mut StackFrame,
+    current_class_name: &str,
+) -> crate::error::Result<(String, String, String)> {
     let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
 
     let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
