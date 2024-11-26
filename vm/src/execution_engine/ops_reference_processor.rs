@@ -143,15 +143,19 @@ pub(crate) fn process(
             trace!("INVOKEVIRTUAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESPECIAL => {
-            let (class_name, full_signature, _) = get_class_name_and_signature(
-                stack_frames,
-                current_class_name,
-                CPoolHelper::get_full_method_info,
-            )?;
-            let rc = with_method_area(|method_area| method_area.get(&class_name))?;
-            let java_method = rc.get_method(&full_signature)?;
+            let (class_name_to_start_lookup_from, full_signature, _) =
+                get_class_name_and_signature(
+                    stack_frames,
+                    current_class_name,
+                    CPoolHelper::get_full_method_info,
+                )?;
+            let java_method = with_method_area(|method_area| {
+                method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
+                                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokespecial")))
+            })?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), true)?;
+            let class_name = java_method.class_name();
             invoke(
                 stack_frames,
                 &full_signature,
