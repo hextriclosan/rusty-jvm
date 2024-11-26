@@ -61,6 +61,7 @@ impl VM {
     fn init() -> crate::error::Result<()> {
         // explicit static initialization of java.lang.ref.Reference needed for creating JavaLangRefAccess instance
         Executor::do_static_fields_initialization("java/lang/ref/Reference")?;
+        Executor::do_static_fields_initialization("java/lang/ref/Cleaner")?;
 
         // create primordial ThreadGroup and Thread
         let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
