@@ -68,6 +68,9 @@ public class UnsafeUsage {
         int bit18 = updated ? 0 : 1;
         int bit19 = examinees[1] == three ? 1 : 0;
 
+        unsafe.putReferenceVolatile(one, stringFieldOffset, "FIELD4_PUT_REFERENCE_VOLATILE");
+        int bit20 = "FIELD4_PUT_REFERENCE_VOLATILE".equals(one.field4) ? 1 : 0;
+
         int result = 0;
         result = setBit(result, 0, bit0);
         result = setBit(result, 1, bit1);
@@ -89,6 +92,7 @@ public class UnsafeUsage {
         result = setBit(result, 17, bit17);
         result = setBit(result, 18, bit18);
         result = setBit(result, 19, bit19);
+        result = setBit(result, 20, bit20);
     }
 
     private static int setBit(int num, int position, int value) {

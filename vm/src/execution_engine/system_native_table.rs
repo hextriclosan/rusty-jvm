@@ -3,6 +3,10 @@ use crate::helper::i64_to_vec;
 use crate::system_native::class::{
     get_modifiers_wrp, get_primitive_class_wrp, is_array_wrp, is_primitive_wrp,
 };
+use crate::system_native::file_descriptor::file_descriptor_close0_wrp;
+use crate::system_native::file_output_stream::{
+    file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
+};
 use crate::system_native::object::{clone_wrp, get_class_wrp};
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
@@ -10,7 +14,7 @@ use crate::system_native::system_props_raw::{platform_properties_wrp, vm_propert
 use crate::system_native::thread::current_thread_wrp;
 use crate::system_native::unsafe_::{
     compare_and_set_int_wrp, compare_and_set_long_wrp, get_long_volatile_wrp,
-    get_reference_volatile_wrp, object_field_offset_1_wrp,
+    get_reference_volatile_wrp, object_field_offset_1_wrp, put_reference_volatile_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -116,6 +120,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:getReference:(Ljava/lang/Object;J)Ljava/lang/Object;",
+        get_reference_volatile_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putReferenceVolatile:(Ljava/lang/Object;JLjava/lang/Object;)V",
+        put_reference_volatile_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
         intern_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
@@ -174,6 +186,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         return_argument_stub(&vec![1])
     });
     table.insert(
+        "java/io/FileDescriptor:close0:()V",
+        file_descriptor_close0_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",
         void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
@@ -224,6 +240,26 @@ static SYSTEM_NATIVE_TABLE: Lazy<
         |_args: &[i32]| {
             return_argument_stub(&vec![0]) // null
         }
+    );
+    table.insert(
+        "java/io/FileOutputStream:open0:(Ljava/lang/String;Z)V",
+        file_output_stream_open0_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/io/FileOutputStream:initIDs:()V",
+        void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/io/FileOutputStream:write:(IZ)V",
+        file_output_stream_write_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/io/FileOutputStream:writeBytes:([BIIZ)V",
+        file_output_stream_write_bytes_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
+    );
+    table.insert(
+        "java/lang/ref/Reference:clear0:()V",
+        void_stub as fn(&[i32]) -> crate::error::Result<Vec<i32>>,
     );
 
     table

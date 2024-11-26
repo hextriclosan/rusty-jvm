@@ -163,3 +163,24 @@ fn compare_and_set_long(
 
     Ok(updated)
 }
+
+pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let ref_value = args[4];
+
+    put_reference_volatile(obj_ref, offset, ref_value)?;
+    Ok(vec![])
+}
+fn put_reference_volatile(obj_ref: i32, offset: i64, ref_value: i32) -> crate::error::Result<()> {
+    with_heap_write_lock(|heap| {
+        let class_name = heap.get_instance_name(obj_ref)?;
+        let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+
+        heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
+            .expect("error setting field value");
+        Ok(())
+    })
+}

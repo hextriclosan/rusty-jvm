@@ -1,4 +1,6 @@
 pub(crate) mod class;
+pub(crate) mod file_descriptor;
+pub(crate) mod file_output_stream;
 pub(crate) mod object;
 pub(crate) mod string;
 pub(crate) mod system;
