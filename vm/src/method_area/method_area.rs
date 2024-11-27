@@ -308,10 +308,50 @@ impl MethodArea {
         if let Some(java_method) = rc.try_get_method(full_method_signature) {
             Some(Arc::clone(&java_method))
         } else {
-            let parent_class_name = rc.parent().clone()?;
-
-            self.lookup_for_implementation(&parent_class_name, full_method_signature)
+            let parent_class_name = rc.parent().as_ref()?;
+            self.lookup_for_implementation(parent_class_name, full_method_signature)
         }
+    }
+
+    pub fn lookup_for_implementation_interface(
+        &self,
+        class_name: &str,
+        full_method_signature: &str,
+    ) -> Option<Arc<JavaMethod>> {
+        let rc = self.get(class_name).ok()?;
+        if let Some(java_method) =
+            // lookup in interfaces for default methods
+            self.lookup_in_interface_hierarchy(rc.interfaces(), full_method_signature)
+        {
+            return Some(java_method);
+        }
+
+        // if not found in interfaces of current class, lookup in parent class
+        let parent_class_name = rc.parent().as_ref()?;
+        self.lookup_for_implementation_interface(parent_class_name, full_method_signature)
+    }
+
+    fn lookup_in_interface_hierarchy(
+        &self,
+        interfaces: &HashSet<String>,
+        full_method_signature: &str,
+    ) -> Option<Arc<JavaMethod>> {
+        for interface_name in interfaces.iter() {
+            if let Some(interface_class) = self.get(interface_name).ok() {
+                if let Some(java_method) = interface_class.try_get_method(full_method_signature) {
+                    return Some(java_method);
+                }
+
+                if let Some(java_method) = self.lookup_in_interface_hierarchy(
+                    interface_class.interfaces(),
+                    full_method_signature,
+                ) {
+                    return Some(java_method);
+                }
+            }
+        }
+
+        None
     }
 
     pub fn lookup_for_field_descriptor(
