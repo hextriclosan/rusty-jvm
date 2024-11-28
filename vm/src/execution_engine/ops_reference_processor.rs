@@ -213,9 +213,17 @@ pub(crate) fn process(
             let reference = *method_args.first().unwrap();
             let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
             let java_method = with_method_area(|method_area| {
-                method_area.lookup_for_implementation(&instance_name, &full_signature)
-                    .ok_or_else(|| Error::new_constant_pool(&format!("Error getting implementaion of {class_name}.{full_signature} in {instance_name}")))
-            })?;
+                method_area
+                    .lookup_for_implementation(&instance_name, &full_signature) // first looking for method in parent and above classes
+                    .or_else(|| { // if not found, looking for default method implementation in interfaces
+                        method_area.lookup_for_implementation_interface(
+                            &instance_name,
+                            &full_signature,
+                        )
+                    })
+            }).ok_or_else(|| Error::new_constant_pool(&format!(
+                "Error getting instance type JavaMethod by class name {instance_name} and full signature {full_signature} getting interface implementation"
+            )))?;
 
             invoke(
                 stack_frames,
