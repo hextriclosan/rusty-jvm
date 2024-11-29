@@ -1,7 +1,10 @@
+use crate::error::Error;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::{i32toi64, i64_to_vec};
+use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::string::get_utf8_string_by_ref;
+use std::sync::Arc;
 
 pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
@@ -16,12 +19,13 @@ pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Ve
 }
 fn object_field_offset_1(class_ref: i32, string_ref: i32) -> crate::error::Result<i64> {
     let field_name = get_utf8_string_by_ref(string_ref)?;
-    let jc = with_method_area(|area| {
+    let (class_name, jc) = with_method_area(|area| {
         let class_name = area.get_from_reflection_table(class_ref)?;
-        area.get(class_name.as_str())
+        let jc = area.get(class_name.as_str())?;
+        Ok::<(String, Arc<JavaClass>), Error>((class_name, jc))
     })?;
 
-    let offset = jc.get_field_offset(&field_name)?;
+    let offset = jc.get_field_offset(&format!("{class_name}.{field_name}"))?;
 
     Ok(offset)
 }
@@ -58,7 +62,7 @@ fn compare_and_set_int(
         })
     } else {
         let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-        let field_name = jc.get_field_name_by_offset(offset)?;
+        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
         with_heap_write_lock(|heap| {
             let result = heap
                 .get_object_field_value(obj_ref, &class_name, &field_name)
@@ -91,7 +95,7 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32
         with_heap_read_lock(|heap| heap.get_array_value(obj_ref, offset as i32).cloned())?
     } else {
         let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-        let field_name = jc.get_field_name_by_offset(offset)?;
+        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
         with_heap_read_lock(|heap| heap.get_object_field_value(obj_ref, &class_name, &field_name))?
     };
 
@@ -140,7 +144,7 @@ fn compare_and_set_long(
 
     let jc = with_method_area(|area| area.get(class_name.as_str()))?;
 
-    let field_name = jc.get_field_name_by_offset(offset)?;
+    let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
     let updated = with_heap_write_lock(|heap| {
         let bytes = heap
