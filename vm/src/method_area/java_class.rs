@@ -1,10 +1,12 @@
 use crate::execution_engine::executor::Executor;
-use crate::heap::java_instance::FieldNameType;
+use crate::heap::java_instance::{ClassName, FieldNameType};
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
+use crate::method_area::method_area::with_method_area;
 use indexmap::IndexMap;
 use jdescriptor::TypeDescriptor;
+use once_cell::sync::OnceCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -23,6 +25,8 @@ pub(crate) struct JavaClass {
     access_flags: u16,
 
     static_fields_initialized: AtomicBool,
+
+    instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
 }
 
 #[derive(Debug)]
@@ -73,6 +77,7 @@ impl JavaClass {
             interfaces,
             access_flags,
             static_fields_initialized: AtomicBool::new(false),
+            instance_fields_hierarchy: OnceCell::new(),
         }
     }
 
@@ -193,6 +198,22 @@ impl JavaClass {
                 self.this_class_name
             ))
         })
+    }
+
+    pub fn instance_fields_hierarchy(
+        &self,
+    ) -> crate::error::Result<&IndexMap<ClassName, IndexMap<FieldNameType, Field>>> {
+        Ok(&self.instance_fields_hierarchy.get_or_init(|| {
+            let mut instance_fields_hierarchy = IndexMap::new();
+            with_method_area(|area| {
+                area.lookup_and_fill_instance_fields_hierarchy(
+                    &self.this_class_name,
+                    &mut instance_fields_hierarchy,
+                )
+            });
+
+            instance_fields_hierarchy
+        }))
     }
 }
 
