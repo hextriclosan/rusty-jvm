@@ -374,19 +374,14 @@ impl MethodArea {
         &self,
         class_name: &str,
     ) -> crate::error::Result<JavaInstance> {
-        let mut instance_fields_hierarchy = IndexMap::new();
-        self.lookup_and_fill_instance_fields_hierarchy(
-            class_name,
-            &mut instance_fields_hierarchy,
-        )?;
-
+        let jc = with_method_area(|area| area.get(class_name))?;
         Ok(JavaInstance::new(
             class_name.to_string(),
-            instance_fields_hierarchy,
+            jc.instance_fields_hierarchy()?.clone(),
         ))
     }
 
-    fn lookup_and_fill_instance_fields_hierarchy(
+    pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
         &self,
         class_name: &str,
         instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, Field>>,

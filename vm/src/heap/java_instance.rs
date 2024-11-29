@@ -81,7 +81,7 @@ pub(crate) enum HeapValue {
     Arr(Array),
 }
 
-impl<'a> JavaInstance {
+impl JavaInstance {
     pub fn new(
         instance_name: String,
         fields: IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
