@@ -1,10 +1,11 @@
+use crate::error::Error;
 use crate::execution_engine::executor::Executor;
 use crate::heap::java_instance::{ClassName, FieldNameType};
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
 use std::collections::{HashMap, HashSet};
@@ -12,6 +13,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 const INTERFACE: u16 = 0x00000200;
+type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
 #[derive(Debug)]
 pub(crate) struct JavaClass {
@@ -27,6 +29,7 @@ pub(crate) struct JavaClass {
     static_fields_initialized: AtomicBool,
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
+    fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
 }
 
 #[derive(Debug)]
@@ -78,6 +81,7 @@ impl JavaClass {
             access_flags,
             static_fields_initialized: AtomicBool::new(false),
             instance_fields_hierarchy: OnceCell::new(),
+            fields_offset_mapping: OnceCell::new(),
         }
     }
 
@@ -138,46 +142,35 @@ impl JavaClass {
         self.access_flags
     }
 
-    pub fn get_field_offset(&self, field_name: &str) -> crate::error::Result<i64> {
-        let key = self
-            .non_static_field_descriptors
-            .descriptor_by_name
-            .iter()
-            .find_map(|(key, _)| {
-                let first = key.split(':').next().map(|n| n.to_string())?;
-                if first == field_name {
-                    Some(key)
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                crate::error::Error::new_native(&format!("Field {field_name} not found"))
-            })?;
-
+    pub fn get_field_offset(&self, fully_qualified_field_name: &str) -> crate::error::Result<i64> {
         let offset = self
-            .non_static_field_descriptors
-            .descriptor_by_name
-            .get_index_of(key)
+            .fields_offset_mapping()
+            .get_index_of(fully_qualified_field_name)
             .ok_or_else(|| {
-                crate::error::Error::new_native(&format!(
-                    "Failed to get index by key {field_name}"
+                Error::new_execution(&format!(
+                    "Failed to get offset by name {fully_qualified_field_name}"
                 ))
             })?;
-
         Ok(offset as i64)
     }
 
-    pub fn get_field_name_by_offset(&self, offset: i64) -> crate::error::Result<String> {
-        let (field_name, _) = self
-            .non_static_field_descriptors
-            .descriptor_by_name
+    pub fn get_field_name_by_offset(&self, offset: i64) -> crate::error::Result<(String, String)> {
+        let result = self
+            .fields_offset_mapping()
             .get_index(offset as usize)
             .ok_or_else(|| {
-                crate::error::Error::new_native(&format!("Failed to get entry by index {offset}"))
+                Error::new_execution(&format!("Failed to get field name by offset {offset}"))
             })?;
 
-        Ok(field_name.clone())
+        let mut parts = result.split('.');
+        let class_name = parts.next().ok_or_else(|| {
+            Error::new_execution(&format!("Failed to get class name by offset {offset}"))
+        })?;
+        let field_name = parts.next().ok_or_else(|| {
+            Error::new_execution(&format!("Failed to get field name by offset {offset}"))
+        })?;
+
+        Ok((class_name.to_string(), field_name.to_string()))
     }
 
     fn get_method_internal(&self, full_signature: &str) -> Option<Arc<JavaMethod>> {
@@ -193,7 +186,7 @@ impl JavaClass {
 
     pub fn get_method(&self, full_signature: &str) -> crate::error::Result<Arc<JavaMethod>> {
         self.get_method_internal(full_signature).ok_or_else(|| {
-            crate::error::Error::new_native(&format!(
+            Error::new_native(&format!(
                 "Method {full_signature} not found in {}",
                 self.this_class_name
             ))
@@ -202,8 +195,8 @@ impl JavaClass {
 
     pub fn instance_fields_hierarchy(
         &self,
-    ) -> crate::error::Result<&IndexMap<ClassName, IndexMap<FieldNameType, Field>>> {
-        Ok(&self.instance_fields_hierarchy.get_or_init(|| {
+    ) -> &IndexMap<ClassName, IndexMap<FieldNameType, Field>> {
+        &self.instance_fields_hierarchy.get_or_init(|| {
             let mut instance_fields_hierarchy = IndexMap::new();
             with_method_area(|area| {
                 area.lookup_and_fill_instance_fields_hierarchy(
@@ -214,7 +207,22 @@ impl JavaClass {
             .expect("error getting instance fields hierarchy");
 
             instance_fields_hierarchy
-        }))
+        })
+    }
+
+    fn fields_offset_mapping(&self) -> &IndexSet<FullyQualifiedFieldName> {
+        &self.fields_offset_mapping.get_or_init(|| {
+            let mut fields_offset_mapping = IndexSet::new();
+            let hierarchy = self.instance_fields_hierarchy();
+
+            hierarchy.iter().for_each(|(class_name, fields)| {
+                fields.iter().for_each(|(field_name, _)| {
+                    fields_offset_mapping.insert(format!("{class_name}.{field_name}"));
+                });
+            });
+
+            fields_offset_mapping
+        })
     }
 }
 

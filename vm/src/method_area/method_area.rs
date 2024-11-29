@@ -376,7 +376,7 @@ impl MethodArea {
         let jc = with_method_area(|area| area.get(class_name))?;
         Ok(JavaInstance::new(
             class_name.to_string(),
-            jc.instance_fields_hierarchy()?.clone(),
+            jc.instance_fields_hierarchy().clone(),
         ))
     }
 
