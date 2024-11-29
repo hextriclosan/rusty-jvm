@@ -2,7 +2,6 @@ use crate::error::Error;
 use crate::method_area::field::Field;
 use indexmap::IndexMap;
 use serde::Serialize;
-use std::collections::HashMap;
 
 pub type ClassName = String;
 pub type FieldNameType = String;
@@ -10,7 +9,7 @@ pub type FieldNameType = String;
 #[derive(Debug, Serialize, Clone)]
 pub(crate) struct JavaInstance {
     instance_name: String,
-    fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,
+    fields: IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -85,7 +84,7 @@ pub(crate) enum HeapValue {
 impl<'a> JavaInstance {
     pub fn new(
         instance_name: String,
-        fields: IndexMap<ClassName, HashMap<FieldNameType, Field>>,
+        fields: IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
     ) -> Self {
         Self {
             instance_name,
@@ -129,7 +128,8 @@ impl<'a> JavaInstance {
             Some(start_index) => self
                 .fields
                 .iter()
-                .skip(start_index)
+                .take(start_index + 1)
+                .rev()
                 .find_map(|(_, map)| map.get(field_name_type)),
             None => None,
         }
@@ -144,7 +144,8 @@ impl<'a> JavaInstance {
             Some(start_index) => self
                 .fields
                 .iter_mut()
-                .skip(start_index)
+                .take(start_index + 1)
+                .rev()
                 .find_map(|(_, map)| map.get_mut(field_name_type)),
             None => None,
         }
