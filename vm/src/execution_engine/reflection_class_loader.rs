@@ -87,7 +87,7 @@ impl ReflectionClassLoader {
     ) -> crate::error::Result<i32> {
         let mut reflection_instance = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields("java/lang/Class")
-        });
+        })?;
         reflection_instance.set_field_value(
             "java/lang/Class",
             "componentType:Ljava/lang/Class;",

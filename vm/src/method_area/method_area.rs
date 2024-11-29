@@ -370,27 +370,36 @@ impl MethodArea {
         }
     }
 
-    pub fn create_instance_with_default_fields(&self, class_name: &str) -> JavaInstance {
+    pub fn create_instance_with_default_fields(
+        &self,
+        class_name: &str,
+    ) -> crate::error::Result<JavaInstance> {
         let mut instance_fields_hierarchy = IndexMap::new();
-        self.lookup_and_fill_instance_fields_hierarchy(class_name, &mut instance_fields_hierarchy);
-        JavaInstance::new(class_name.to_string(), instance_fields_hierarchy)
+        self.lookup_and_fill_instance_fields_hierarchy(
+            class_name,
+            &mut instance_fields_hierarchy,
+        )?;
+
+        Ok(JavaInstance::new(
+            class_name.to_string(),
+            instance_fields_hierarchy,
+        ))
     }
 
     fn lookup_and_fill_instance_fields_hierarchy(
         &self,
         class_name: &str,
-        instance_fields_hierarchy: &mut IndexMap<ClassName, HashMap<FieldNameType, Field>>,
-    ) -> Option<JavaMethod> {
-        let rc = self.get(class_name).ok()?;
+        instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
+    ) -> crate::error::Result<()> {
+        let rc = self.get(class_name)?;
+        if let Some(parent_class_name) = rc.parent().as_ref() {
+            self.lookup_and_fill_instance_fields_hierarchy(parent_class_name, instance_fields_hierarchy)?;
+        };
+
         let instance_fields = rc.default_value_instance_fields();
         instance_fields_hierarchy.insert(class_name.to_string(), instance_fields);
 
-        let parent_class_name = rc.parent().clone()?;
-
-        self.lookup_and_fill_instance_fields_hierarchy(
-            &parent_class_name,
-            instance_fields_hierarchy,
-        )
+        Ok(())
     }
 
     pub(crate) fn put_to_reflection_table(&self, reflection_ref: i32, java_class_name: &str) {

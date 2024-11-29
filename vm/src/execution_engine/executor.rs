@@ -45,7 +45,7 @@ impl Executor {
     pub fn invoke_default_constructor(class_name: &str) -> crate::error::Result<i32> {
         let instance_with_default_fields = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields(class_name)
-        });
+        })?;
 
         let instance_ref =
             with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
@@ -61,7 +61,7 @@ impl Executor {
     ) -> crate::error::Result<i32> {
         let instance_with_default_fields = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields(&class_name)
-        });
+        })?;
 
         let instance_ref =
             with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
@@ -77,7 +77,7 @@ impl Executor {
     pub fn create_primordial_thread(args: &[StackValueKind]) -> crate::error::Result<i32> {
         let instance_with_default_fields = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields("java/lang/Thread")
-        });
+        })?;
 
         let thread_obj_ref =
             with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));

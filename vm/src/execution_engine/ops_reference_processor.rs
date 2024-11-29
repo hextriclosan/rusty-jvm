@@ -250,7 +250,7 @@ pub(crate) fn process(
                 })?;
             let instance_with_default_fields = with_method_area(|method_area| {
                 method_area.create_instance_with_default_fields(&class_to_invoke_new_for)
-            });
+            })?;
 
             let instanceref =
                 with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));

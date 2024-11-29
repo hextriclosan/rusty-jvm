@@ -117,7 +117,7 @@ impl JavaClass {
             .get(instance_field_name_type)
     }
 
-    pub fn default_value_instance_fields(&self) -> HashMap<FieldNameType, Field> {
+    pub fn default_value_instance_fields(&self) -> IndexMap<FieldNameType, Field> {
         self.non_static_field_descriptors
             .descriptor_by_name
             .iter()
