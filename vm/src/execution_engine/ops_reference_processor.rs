@@ -19,8 +19,7 @@ pub(crate) fn process(
     match code {
         GETSTATIC => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, _field_descriptor) =
-                get_field_info(stack_frame, current_class_name)?;
+            let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
             let field = with_method_area(|method_area| {
                 method_area.lookup_for_static_field(&class_name, &field_name)
@@ -40,8 +39,7 @@ pub(crate) fn process(
         }
         PUTSTATIC => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, _field_descriptor) =
-                get_field_info(stack_frame, current_class_name)?;
+            let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
             let (len, field_ref) = {
                 let field_ref = with_method_area(|method_area| {
@@ -63,34 +61,26 @@ pub(crate) fn process(
         }
         GETFIELD => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, field_descriptor) =
-                get_field_info(stack_frame, current_class_name)?;
-            let field_name_type = format!("{field_name}:{field_descriptor}");
+            let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
             let objectref = stack_frame.pop();
             let value = with_heap_read_lock(|heap| {
-                heap.get_object_field_value(
-                    objectref,
-                    class_name.as_str(),
-                    field_name_type.as_str(),
-                )
+                heap.get_object_field_value(objectref, class_name.as_str(), field_name.as_str())
             })?;
 
             value.iter().rev().for_each(|x| stack_frame.push(*x));
 
             stack_frame.incr_pc();
-            trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type}, value={value:?}");
+            trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
         }
         PUTFIELD => {
             let stack_frame = stack_frames.last_mut().unwrap();
-            let (class_name, field_name, field_descriptor) =
-                get_field_info(stack_frame, current_class_name)?;
-            let field_name_type = format!("{field_name}:{field_descriptor}");
+            let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
             let type_descriptor = with_method_area(|method_area| {
                 method_area
-                    .lookup_for_field_descriptor(&class_name, &field_name_type)
+                    .lookup_for_field_descriptor(&class_name, &field_name)
                     .ok_or_else(|| {
                         Error::new_constant_pool(&format!(
-                            "Error getting type descriptor for {class_name}.{field_name_type}"
+                            "Error getting type descriptor for {class_name}.{field_name}"
                         ))
                     })
             })?;
@@ -107,12 +97,12 @@ pub(crate) fn process(
                 heap.set_object_field_value(
                     objectref,
                     class_name.as_str(),
-                    field_name_type.as_str(),
+                    field_name.as_str(),
                     value.clone(),
                 )
             })?;
 
-            trace!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name_type={field_name_type} value={value:?}");
+            trace!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value:?}");
             stack_frame.incr_pc();
         }
         INVOKEVIRTUAL => {
@@ -497,18 +487,18 @@ fn frame(stack_frames: &mut [StackFrame]) -> &mut StackFrame {
 fn get_field_info(
     stack_frame: &mut StackFrame,
     current_class_name: &str,
-) -> crate::error::Result<(String, String, String)> {
+) -> crate::error::Result<(String, String)> {
     let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
 
     let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
     let cpool_helper = rc.cpool_helper();
 
-    let (class_name, field_name, field_descriptor) = cpool_helper
+    let (class_name, field_name) = cpool_helper
         .get_full_field_info(fieldref_constpool_index)
         .ok_or_else(|| {
             Error::new_constant_pool(&format!(
                 "Error getting full field info by index {fieldref_constpool_index}"
             ))
         })?;
-    Ok((class_name, field_name, field_descriptor))
+    Ok((class_name, field_name))
 }

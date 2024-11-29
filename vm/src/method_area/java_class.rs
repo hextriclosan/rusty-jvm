@@ -210,7 +210,8 @@ impl JavaClass {
                     &self.this_class_name,
                     &mut instance_fields_hierarchy,
                 )
-            }).expect("error getting instance fields hierarchy");
+            })
+            .expect("error getting instance fields hierarchy");
 
             instance_fields_hierarchy
         }))

@@ -132,7 +132,7 @@ impl CPoolHelper {
         }
     }
 
-    pub fn get_full_field_info(&self, index: u16) -> Option<(String, String, String)> {
+    pub fn get_full_field_info(&self, index: u16) -> Option<(String, String)> {
         let (class_index, name_and_type_index) = match self.get(CPoolType::Fieldref, index)? {
             ConstantPool::Fieldref {
                 class_index,
@@ -142,9 +142,9 @@ impl CPoolHelper {
         }?;
 
         let class_name = self.get_class_name(*class_index)?;
-        let (field_name, field_descriptor) = self.get_name_and_type(*name_and_type_index)?;
+        let (field_name, _) = self.get_name_and_type(*name_and_type_index)?;
 
-        Some((class_name, field_name, field_descriptor))
+        Some((class_name, field_name))
     }
 
     pub fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)> {
@@ -431,11 +431,7 @@ mod tests {
 
         let actual = resolver.get_full_field_info(3);
         assert_eq!(
-            Some((
-                "TheClass".to_string(),
-                "theField".to_string(),
-                "I".to_string()
-            )),
+            Some(("TheClass".to_string(), "theField".to_string(),)),
             actual
         );
     }

@@ -267,8 +267,7 @@ impl MethodArea {
             if field_info.access_flags().contains(FieldFlags::ACC_STATIC) {
                 static_field_by_name.insert(field_name, Arc::new(Field::new(descriptor)));
             } else {
-                let field_name_key = format!("{field_name}:{field_descriptor}");
-                non_static_field_descriptors.insert(field_name_key, descriptor);
+                non_static_field_descriptors.insert(field_name, descriptor);
             }
         }
 
@@ -357,16 +356,16 @@ impl MethodArea {
     pub fn lookup_for_field_descriptor(
         &self,
         class_name: &str,
-        field_name_type: &str,
+        field_name: &str,
     ) -> Option<TypeDescriptor> {
         let rc = self.get(class_name).ok()?;
 
-        if let Some(type_descriptor) = rc.instance_field_descriptor(field_name_type) {
+        if let Some(type_descriptor) = rc.instance_field_descriptor(field_name) {
             Some(type_descriptor.clone())
         } else {
             let parent_class_name = rc.parent().clone()?;
 
-            self.lookup_for_field_descriptor(&parent_class_name, field_name_type)
+            self.lookup_for_field_descriptor(&parent_class_name, field_name)
         }
     }
 
