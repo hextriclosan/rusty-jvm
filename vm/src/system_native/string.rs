@@ -2,8 +2,8 @@ use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_read_lock;
 
 const STRING_CLASS_NAME: &str = "java/lang/String";
-const VALUE_FIELD: &str = "value:[B";
-const CODER_FIELD: &str = "coder:B";
+const VALUE_FIELD: &str = "value";
+const CODER_FIELD: &str = "coder";
 
 pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> crate::error::Result<String> {
     let array_ref = with_heap_read_lock(|heap| {

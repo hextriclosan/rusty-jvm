@@ -90,7 +90,7 @@ impl ReflectionClassLoader {
         })?;
         reflection_instance.set_field_value(
             "java/lang/Class",
-            "componentType:Ljava/lang/Class;",
+            "componentType",
             vec![component_type_ref],
         )?;
 
