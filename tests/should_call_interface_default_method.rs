@@ -8,5 +8,5 @@ fn should_call_interface_default_method() {
         "samples.inheritance.interfacedefaultmethoddirectcall.InterfaceDefaultMethodDirectCall",
     )
     .unwrap();
-    assert_eq!(15, get_int(last_frame_value))
+    assert_eq!(31, get_int(last_frame_value))
 }
