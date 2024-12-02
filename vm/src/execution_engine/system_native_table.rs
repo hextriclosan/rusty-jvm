@@ -9,10 +9,12 @@ use crate::system_native::file_descriptor::file_descriptor_close0_wrp;
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
-use crate::system_native::object::{clone_wrp, get_class_wrp};
+use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::system_native::reflecton::reflection_get_caller_class_wrp;
 use crate::system_native::string::intern_wrp;
-use crate::system_native::system::{arraycopy_wrp, current_time_millis_wrp};
+use crate::system_native::system::{
+    arraycopy_wrp, current_time_millis_wrp, system_identity_hashcode_wrp,
+};
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
 use crate::system_native::unsafe_::{
@@ -41,6 +43,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(clone_wrp),
     );
     table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
+    table.insert("java/lang/Object:hashCode:()I", Basic(object_hashcode_wrp));
     table.insert(
         "java/lang/System:currentTimeMillis:()J",
         Basic(current_time_millis_wrp),
@@ -61,6 +64,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/System:setErr0:(Ljava/io/PrintStream;)V",
         Basic(void_stub),
+    );
+    table.insert(
+        "java/lang/System:identityHashCode:(Ljava/lang/Object;)I",
+        Basic(system_identity_hashcode_wrp),
     );
     table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp));
     table.insert(
