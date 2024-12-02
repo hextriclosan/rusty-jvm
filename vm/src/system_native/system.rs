@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::heap::heap::with_heap_write_lock;
+use crate::system_native::object::identity_hashcode;
 
 pub(crate) fn current_time_millis_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let millis = current_time_millis()?;
@@ -58,4 +59,11 @@ pub(crate) fn arraycopy(
 
         Ok(())
     })
+}
+
+pub(crate) fn system_identity_hashcode_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let obj_ref = args[0];
+    let hashcode = identity_hashcode(obj_ref)?;
+
+    Ok(vec![hashcode])
 }

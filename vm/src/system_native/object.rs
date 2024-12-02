@@ -1,5 +1,7 @@
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::method_area::with_method_area;
+use murmur3::murmur3_32;
+use std::io::Cursor;
 
 pub(crate) fn get_class_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let obj_ref = args[0];
@@ -26,4 +28,20 @@ fn clone(obj_ref: i32) -> crate::error::Result<i32> {
     let cloned_obj_ref = with_heap_write_lock(|heap| heap.clone_instance(obj_ref))?[0];
 
     Ok(cloned_obj_ref)
+}
+
+pub(crate) fn object_hashcode_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let obj_ref = args[0];
+    let hashcode = identity_hashcode(obj_ref)?;
+
+    Ok(vec![hashcode])
+}
+pub(crate) fn identity_hashcode(obj_ref: i32) -> crate::error::Result<i32> {
+    if obj_ref == 0 {
+        return Ok(0);
+    }
+
+    let mut cursor = Cursor::new(obj_ref.to_le_bytes());
+    let hashcode = murmur3_32(&mut cursor, 0)?;
+    Ok(hashcode as i32)
 }
