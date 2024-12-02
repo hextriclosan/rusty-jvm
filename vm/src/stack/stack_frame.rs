@@ -10,6 +10,8 @@ pub(crate) struct StackFrame {
     current_class_name: String,
 }
 
+pub type StackFrames = Vec<StackFrame>;
+
 impl StackFrame {
     pub fn new(
         locals_size: usize,

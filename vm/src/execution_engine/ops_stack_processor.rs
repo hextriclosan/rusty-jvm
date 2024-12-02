@@ -1,8 +1,8 @@
 use crate::execution_engine::opcode::*;
-use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_frame::StackFrames;
 use tracing::trace;
 
-pub(crate) fn process(code: u8, stack_frames: &mut Vec<StackFrame>) -> crate::error::Result<()> {
+pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
     let stack_frame = stack_frames.last_mut().unwrap();
     match code {
         POP => {

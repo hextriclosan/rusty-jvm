@@ -1,13 +1,13 @@
 use crate::error::Error;
 use crate::execution_engine::opcode::*;
 use crate::stack::sack_value::StackValue;
-use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
 use tracing::trace;
 
 pub(crate) fn process(
     code: u8,
-    stack_frames: &mut Vec<StackFrame>,
+    stack_frames: &mut StackFrames,
 ) -> crate::error::Result<Option<Vec<i32>>> {
     match code {
         GOTO => {
@@ -97,14 +97,14 @@ pub(crate) fn process(
     Ok(None)
 }
 
-fn last_frame(stack_frames: &mut Vec<StackFrame>) -> crate::error::Result<&mut StackFrame> {
+fn last_frame(stack_frames: &mut StackFrames) -> crate::error::Result<&mut StackFrame> {
     stack_frames
         .last_mut()
         .ok_or(Error::new_execution("Error getting stack last frame"))
 }
 
 fn perform_return<T: StackValue + Copy + Display>(
-    stack_frames: &mut Vec<StackFrame>,
+    stack_frames: &mut StackFrames,
     name: &str,
 ) -> crate::error::Result<()> {
     let stack_frame = last_frame(stack_frames)?;
