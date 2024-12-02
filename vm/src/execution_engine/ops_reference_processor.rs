@@ -195,7 +195,7 @@ pub(crate) fn process(
                 )));
             }
 
-            let (class_name, full_signature, _) = get_class_name_and_signature_by_index(
+            let (_, full_signature, _) = get_class_name_and_signature_by_index(
                 current_class_name,
                 CPoolHelper::get_full_interfacemethodref_info,
                 index,
@@ -215,14 +215,15 @@ pub(crate) fn process(
                 "Error getting instance type JavaMethod by class name {instance_name} and full signature {full_signature} getting interface implementation"
             )))?;
 
+            let exact_class_name = java_method.class_name();
             invoke(
                 stack_frames,
                 &full_signature,
                 &method_args,
                 Arc::clone(&java_method),
-                &class_name,
+                exact_class_name,
             )?;
-            trace!("INVOKEINTERFACE -> {class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
+            trace!("INVOKEINTERFACE -> {exact_class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
         }
         NEW => {
             let stack_frame = stack_frames.last_mut().unwrap();
