@@ -105,3 +105,12 @@ fn is_array(reference: i32) -> bool {
         name.starts_with('[')
     })
 }
+
+pub(crate) fn is_interface_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let interface = is_interface(args[0])?;
+
+    Ok(vec![interface as i32])
+}
+fn is_interface(reference: i32) -> crate::error::Result<bool> {
+    Ok((get_modifiers(reference)? as u16 & INTERFACE) != 0)
+}
