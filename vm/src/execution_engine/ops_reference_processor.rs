@@ -6,7 +6,7 @@ use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
-use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_frame::{StackFrame, StackFrames};
 use jdescriptor::{get_length, MethodDescriptor};
 use std::sync::Arc;
 use tracing::trace;
@@ -14,7 +14,7 @@ use tracing::trace;
 pub(crate) fn process(
     code: u8,
     current_class_name: &str,
-    stack_frames: &mut Vec<StackFrame>,
+    stack_frames: &mut StackFrames,
 ) -> crate::error::Result<()> {
     match code {
         GETSTATIC => {
@@ -418,7 +418,7 @@ fn get_args(stack_frames: &mut [StackFrame], arg_num: usize) -> crate::error::Re
 }
 
 fn invoke(
-    stack_frames: &mut Vec<StackFrame>,
+    stack_frames: &mut StackFrames,
     full_signature: &str,
     method_args: &[i32],
     java_method: Arc<JavaMethod>,
@@ -428,7 +428,7 @@ fn invoke(
         let full_native_signature = format!("{class_name}:{full_signature}");
         trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
-        let result = invoke_native_method(&full_native_signature, &method_args)?;
+        let result = invoke_native_method(&full_native_signature, &method_args, stack_frames)?;
 
         result
             .iter()
