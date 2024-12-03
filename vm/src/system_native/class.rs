@@ -1,5 +1,7 @@
 use crate::error::Error;
+use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::method_area::method_area::with_method_area;
+use crate::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
 use crate::system_native::string::get_utf8_string_by_ref;
 /*
  * Access modifier flag constants from tables 4.1, 4.4, 4.5, and 4.7 of
@@ -56,22 +58,9 @@ fn get_primitive_class(string_ref: i32) -> crate::error::Result<i32> {
     Ok(reflection_ref)
 }
 fn map_primitive_class(primitive_type: &str) -> crate::error::Result<&str> {
-    let matched = match primitive_type {
-        "boolean" => "Z",
-        "byte" => "B",
-        "char" => "C",
-        "short" => "S",
-        "int" => "I",
-        "long" => "J",
-        "float" => "F",
-        "double" => "D",
-        "void" => "V",
-        _ => {
-            return Err(Error::new_execution(&format!(
-                "Unsupported primitive type: {primitive_type}"
-            )))
-        }
-    };
+    let matched = PRIMITIVE_CODE_BY_TYPE.get(primitive_type).ok_or_else(|| {
+        Error::new_execution(&format!("Unsupported primitive type: {primitive_type}"))
+    })?;
 
     Ok(matched)
 }
@@ -82,13 +71,11 @@ pub(crate) fn is_primitive_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     Ok(vec![primitive as i32])
 }
 fn is_primitive(reference: i32) -> bool {
-    const PRIMITIVE_TYPES: &[&str] = &["Z", "B", "C", "S", "I", "J", "F", "D", "V"];
-
     with_method_area(|method_area| {
         let name = method_area
             .get_from_reflection_table(reference)
             .expect("error getting method area");
-        PRIMITIVE_TYPES.contains(&name.as_str())
+        PRIMITIVE_TYPE_BY_CODE.contains_key(&name.as_str())
     })
 }
 
@@ -113,4 +100,22 @@ pub(crate) fn is_interface_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
 }
 fn is_interface(reference: i32) -> crate::error::Result<bool> {
     Ok((get_modifiers(reference)? as u16 & INTERFACE) != 0)
+}
+
+pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let string_ref = init_class_name(class_ref)?;
+
+    Ok(vec![string_ref])
+}
+fn init_class_name(class_ref: i32) -> crate::error::Result<i32> {
+    let class_name = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(class_ref)?;
+        let result = method_area.get(&class_name)?;
+        let string = result.external_name().to_string();
+        Ok::<String, Error>(string)
+    })?;
+
+    let string_ref = StringPoolHelper::get_string(class_name)?;
+    Ok(string_ref)
 }

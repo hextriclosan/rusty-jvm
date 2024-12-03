@@ -6,6 +6,7 @@ use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_class::{FieldDescriptors, Fields, JavaClass, Methods};
 use crate::method_area::java_method::{CodeContext, JavaMethod};
+use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use indexmap::IndexMap;
 use jclass::class_file::{parse, ClassFile};
 use jclass::fields::{FieldFlags, FieldInfo};
@@ -169,7 +170,7 @@ impl MethodArea {
                 static_fields,
                 non_static_field_descriptors,
                 cpool_helper,
-                class_name,
+                &class_name,
                 super_class_name,
                 interface_names,
                 access_flags,
@@ -411,8 +412,7 @@ impl MethodArea {
         reflection_ref: i32,
     ) -> crate::error::Result<String> {
         self.javaclass_by_reflectionref
-            .read()
-            .expect("error getting read lock")
+            .read()?
             .get(&reflection_ref)
             .and_then(|class_name| Some(class_name.clone()))
             .ok_or_else(|| {
@@ -423,8 +423,8 @@ impl MethodArea {
     }
 
     fn generate_synthetic_classes() -> HashMap<String, Arc<JavaClass>> {
-        ["I", "J", "F", "D", "B", "C", "S", "Z", "V"]
-            .into_iter()
+        PRIMITIVE_TYPE_BY_CODE
+            .keys()
             .map(|class_name| {
                 (
                     class_name.to_string(),
@@ -443,7 +443,7 @@ impl MethodArea {
             Fields::new(HashMap::new()),
             FieldDescriptors::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
-            class_name.to_string(),
+            class_name,
             None,
             HashSet::new(),
             PUBLIC | FINAL | ABSTRACT,
@@ -459,7 +459,7 @@ impl MethodArea {
             Fields::new(HashMap::new()),
             FieldDescriptors::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
-            array_class_name.to_string(),
+            array_class_name,
             Some("java/lang/Object".to_string()),
             HashSet::new(),
             PUBLIC | FINAL | ABSTRACT,
@@ -497,8 +497,7 @@ impl MethodArea {
             Err(_) => {
                 let arc = Self::generate_synthetic_array_class(array_class_name);
                 self.loaded_classes
-                    .write()
-                    .expect("error getting write lock")
+                    .write()?
                     .insert(array_class_name.to_string(), arc);
                 Ok(())
             }
