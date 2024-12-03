@@ -86,11 +86,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Class:initClassName:()Ljava/lang/String;",
-        Basic(class_init_class_name_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>),
+        Basic(class_init_class_name_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:arrayBaseOffset0:(Ljava/lang/Class;)I",
@@ -159,7 +159,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/CDS:initializeFromArchive:(Ljava/lang/Class;)V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
     table.insert(
@@ -172,15 +172,15 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/util/SystemProps$Raw:platformProperties:()[Ljava/lang/String;",
-        Basic(platform_properties_wrp as BasicNativeMethod),
+        Basic(platform_properties_wrp),
     );
     table.insert(
         "jdk/internal/util/SystemProps$Raw:vmProperties:()[Ljava/lang/String;",
-        Basic(vm_properties_wrp as BasicNativeMethod),
+        Basic(vm_properties_wrp),
     );
     table.insert(
         "java/io/FileDescriptor:initIDs:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "java/io/FileDescriptor:getHandle:(I)J",
@@ -195,11 +195,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/io/FileDescriptor:close0:()V",
-        Basic(file_descriptor_close0_wrp as BasicNativeMethod),
+        Basic(file_descriptor_close0_wrp),
     );
     table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "jdk/internal/misc/Signal:findSignal0:(Ljava/lang/String;)I",
@@ -217,11 +217,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
-        Basic(current_thread_wrp as BasicNativeMethod),
+        Basic(current_thread_wrp),
     );
     table.insert(
         "java/lang/Thread:registerNatives:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
@@ -231,11 +231,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Thread:setPriority0:(I)V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "java/lang/Thread:start0:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
@@ -251,23 +251,23 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     ));
     table.insert(
         "java/io/FileOutputStream:open0:(Ljava/lang/String;Z)V",
-        Basic(file_output_stream_open0_wrp as BasicNativeMethod),
+        Basic(file_output_stream_open0_wrp),
     );
     table.insert(
         "java/io/FileOutputStream:initIDs:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "java/io/FileOutputStream:write:(IZ)V",
-        Basic(file_output_stream_write_wrp as BasicNativeMethod),
+        Basic(file_output_stream_write_wrp),
     );
     table.insert(
         "java/io/FileOutputStream:writeBytes:([BIIZ)V",
-        Basic(file_output_stream_write_bytes_wrp as BasicNativeMethod),
+        Basic(file_output_stream_write_bytes_wrp),
     );
     table.insert(
         "java/lang/ref/Reference:clear0:()V",
-        Basic(void_stub as BasicNativeMethod),
+        Basic(void_stub),
     );
     table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
