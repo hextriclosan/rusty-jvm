@@ -3,8 +3,8 @@ use crate::execution_engine::system_native_table::NativeMethod::{Basic, WithStac
 use crate::helper::i64_to_vec;
 use crate::stack::stack_frame::StackFrames;
 use crate::system_native::class::{
-    class_init_class_name_wrp, get_modifiers_wrp, get_primitive_class_wrp, is_array_wrp,
-    is_interface_wrp, is_primitive_wrp,
+    class_init_class_name_wrp, for_name0_wrp, get_modifiers_wrp, get_primitive_class_wrp,
+    is_array_wrp, is_interface_wrp, is_primitive_wrp,
 };
 use crate::system_native::file_descriptor::file_descriptor_close0_wrp;
 use crate::system_native::file_output_stream::{
@@ -82,6 +82,8 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp));
     table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp));
     table.insert("java/lang/Class:isInterface:()Z", Basic(is_interface_wrp));
+    table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", Basic(for_name0_wrp));
+    table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Class:initClassName:()Ljava/lang/String;",
         Basic(class_init_class_name_wrp as fn(&[i32]) -> crate::error::Result<Vec<i32>>),
@@ -270,6 +272,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
         WithStackFrames(reflection_get_caller_class_wrp),
+    );
+    table.insert(
+        "java/security/AccessController:ensureMaterializedForStackWalk:(Ljava/lang/Object;)V",
+        Basic(void_stub),
     );
 
     table

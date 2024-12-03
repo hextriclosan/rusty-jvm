@@ -119,3 +119,26 @@ fn init_class_name(class_ref: i32) -> crate::error::Result<i32> {
     let string_ref = StringPoolHelper::get_string(class_name)?;
     Ok(string_ref)
 }
+
+pub(crate) fn for_name0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let name_ref = args[0];
+    let initialize = args[1] != 0;
+    let loader_ref = args[2];
+    let caller_ref = args[3];
+
+    let class_ref = for_name0(name_ref, initialize, loader_ref, caller_ref)?;
+    Ok(vec![class_ref])
+}
+fn for_name0(
+    name_ref: i32,
+    _initialize: bool,
+    _loader_ref: i32,
+    _caller_ref: i32,
+) -> crate::error::Result<i32> {
+    let name = get_utf8_string_by_ref(name_ref)?;
+    let internal_name = name.replace('.', "/");
+    let reflection_ref =
+        with_method_area(|method_area| method_area.load_reflection_class(&internal_name))?;
+
+    Ok(reflection_ref)
+}
