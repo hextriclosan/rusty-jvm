@@ -5,6 +5,7 @@ use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
+use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
@@ -22,6 +23,7 @@ pub(crate) struct JavaClass {
     non_static_field_descriptors: FieldDescriptors,
     cpool_helper: CPoolHelper,
     this_class_name: String,
+    external_name: String,
     parent: Option<String>,
     interfaces: HashSet<String>,
     access_flags: u16,
@@ -65,17 +67,23 @@ impl JavaClass {
         static_fields: Fields,
         non_static_field_descriptors: FieldDescriptors,
         cpool_helper: CPoolHelper,
-        this_class_name: String,
+        this_class_name: &str,
         parent: Option<String>,
         interfaces: HashSet<String>,
         access_flags: u16,
     ) -> Self {
+        let external_name = PRIMITIVE_TYPE_BY_CODE
+            .get(this_class_name)
+            .map(|name| name.to_string())
+            .unwrap_or_else(|| this_class_name.replace("/", "."));
+
         Self {
             methods,
             static_fields,
             non_static_field_descriptors,
             cpool_helper,
-            this_class_name,
+            this_class_name: this_class_name.to_string(),
+            external_name,
             parent,
             interfaces,
             access_flags,
@@ -223,6 +231,10 @@ impl JavaClass {
 
             fields_offset_mapping
         })
+    }
+
+    pub fn external_name(&self) -> &str {
+        &self.external_name
     }
 }
 

@@ -2,6 +2,7 @@ use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
 use std::string::{FromUtf16Error, FromUtf8Error};
+use std::sync::PoisonError;
 use std::time::SystemTimeError;
 use std::{io, result};
 
@@ -83,6 +84,12 @@ impl From<String> for Error {
 impl From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Self {
         Error::new_execution(&format!("serde_json::Error: {error}"))
+    }
+}
+
+impl<T> From<PoisonError<T>> for Error {
+    fn from(error: PoisonError<T>) -> Self {
+        Error::new_execution(&format!("PoisonError: {error}"))
     }
 }
 
