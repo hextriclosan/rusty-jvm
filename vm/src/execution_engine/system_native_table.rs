@@ -178,10 +178,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "jdk/internal/util/SystemProps$Raw:vmProperties:()[Ljava/lang/String;",
         Basic(vm_properties_wrp),
     );
-    table.insert(
-        "java/io/FileDescriptor:initIDs:()V",
-        Basic(void_stub),
-    );
+    table.insert("java/io/FileDescriptor:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/FileDescriptor:getHandle:(I)J",
         Basic(|args: &[i32]| return_argument_stub(&vec![0, args[0]])),
@@ -219,24 +216,15 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
         Basic(current_thread_wrp),
     );
-    table.insert(
-        "java/lang/Thread:registerNatives:()V",
-        Basic(void_stub),
-    );
+    table.insert("java/lang/Thread:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
         Basic(|_args: &[i32]| {
             return_argument_stub(&vec![0, 1]) // it's always 1L, for spawning new threads real one should be incremented
         }),
     );
-    table.insert(
-        "java/lang/Thread:setPriority0:(I)V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "java/lang/Thread:start0:()V",
-        Basic(void_stub),
-    );
+    table.insert("java/lang/Thread:setPriority0:(I)V", Basic(void_stub));
+    table.insert("java/lang/Thread:start0:()V", Basic(void_stub));
     table.insert(
         "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
         Basic(|_args: &[i32]| {
@@ -253,10 +241,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/FileOutputStream:open0:(Ljava/lang/String;Z)V",
         Basic(file_output_stream_open0_wrp),
     );
-    table.insert(
-        "java/io/FileOutputStream:initIDs:()V",
-        Basic(void_stub),
-    );
+    table.insert("java/io/FileOutputStream:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/FileOutputStream:write:(IZ)V",
         Basic(file_output_stream_write_wrp),
@@ -265,10 +250,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/FileOutputStream:writeBytes:([BIIZ)V",
         Basic(file_output_stream_write_bytes_wrp),
     );
-    table.insert(
-        "java/lang/ref/Reference:clear0:()V",
-        Basic(void_stub),
-    );
+    table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
     table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
         WithStackFrames(reflection_get_caller_class_wrp),
