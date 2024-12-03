@@ -57,7 +57,12 @@ fn get_platform_properties() -> Vec<&'static str> {
         "https.proxyHost_VALUE",
         "https.proxyPort_VALUE",
         "java.io.tmpdir_VALUE",
-        "line.separator_VALUE",
+        // todo https://github.com/hextriclosan/rusty-jvm/issues/128
+        if cfg!(target_os = "windows") {
+            "\r\n"
+        } else {
+            "\n"
+        }, // "line.separator"
         "os.arch_VALUE",
         "os.name_VALUE",
         "os.version_VALUE",
