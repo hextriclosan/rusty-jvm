@@ -1,4 +1,5 @@
 use std::env;
+use assert_cmd::Command;
 
 const PATH: &str = "tests/test_data";
 
@@ -48,4 +49,18 @@ pub fn get_double(locals_opt: Option<Vec<i32>>) -> f64 {
     let low_i64 = low as u64;
 
     f64::from_bits(high_i64 | low_i64)
+}
+
+#[allow(dead_code)]
+pub fn assert_success(entry: &str, expected: &str) {
+    let _repo_path = env::current_dir().expect("Failed to get current directory");
+
+    Command::cargo_bin("rusty-jvm")
+        .expect("Failed to locate rusty-jvm binary")
+        //.env("RUSTY_JAVA_HOME", repo_path) todo: uncomment me after getting rid of ctor
+        //.current_dir(PATH)
+        .arg(entry)
+        .assert()
+        .success()
+        .stdout(expected.to_string());
 }

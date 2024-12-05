@@ -12,3 +12,4 @@ vm = {path = "vm"}
 
 [dev-dependencies]
 ctor = "0.2.8"
+assert_cmd = "2.0.16"
