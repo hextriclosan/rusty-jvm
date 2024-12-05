@@ -19,6 +19,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    println!("\nresult={:?}", result.map_or_else(|| vec![], |v| v));
+    println!("{:?}", result.map_or_else(|| vec![], |v| v));
     Ok(())
 }
