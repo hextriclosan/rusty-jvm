@@ -18,6 +18,7 @@ public class InheritanceInstanceField {
                         + child.getGrandParentOnlyField(); // 102 from modified GrandParent (nor Child neither Parent have it)
 
         int result = sum1 + sum2; // sum must be 128
+        System.out.println(result);
     }
 }
 

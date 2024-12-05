@@ -6,6 +6,7 @@ public class ArithmeticOverflow {
         int longsResult = longsOverflow();
 
         boolean result = intsResult == 511 && longsResult == 511;
+        System.out.println(result ? 1 : 0);
     }
 
     private static int intsOverflow() {

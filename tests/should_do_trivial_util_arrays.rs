@@ -1,10 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_do_trivial_util_arrays() {
-    let last_frame_value =
-        VM::run("samples.javabase.util.arrays.trivial.TrivialUtilArrays").unwrap();
-    assert_eq!(9, get_int(last_frame_value))
+    assert_success(
+        "samples.javabase.util.arrays.trivial.TrivialUtilArrays",
+        "9\n",
+    );
 }

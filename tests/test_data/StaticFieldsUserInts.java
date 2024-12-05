@@ -8,6 +8,7 @@ public class StaticFieldsUserInts {
         StaticFields.add(first, second);
         StaticFields.mul(first, second);
         int result = StaticFields.getResultSub() + StaticFields.getResultAdd() + StaticFields.getResultMul();
+        System.out.println(result);
     }
 }
 

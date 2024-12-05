@@ -4,6 +4,7 @@ public class UseGrandParentMethodViaSuperExample {
     public static void main(String[] args) {
         Child child = new Child();
         int result = child.invoke();
+        System.out.println(result);
     }
 }
 

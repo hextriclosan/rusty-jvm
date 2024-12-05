@@ -4,6 +4,7 @@ public class AbstractClass {
     public static void main(String[] args) {
         Mercedes vehicle = new Mercedes(10, 100, 17);
         int fullPower = vehicle.fullPower();
+        System.out.println(fullPower);
     }
 }
 

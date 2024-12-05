@@ -1,10 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_write_read_static_fields() {
-    let last_frame_value =
-        VM::run("samples.fields.staticinitialization.ints.StaticFieldsUserInts").unwrap();
-    assert_eq!(110022, get_int(last_frame_value))
+    assert_success(
+        "samples.fields.staticinitialization.ints.StaticFieldsUserInts",
+        "110022\n",
+    );
 }

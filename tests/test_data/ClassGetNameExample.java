@@ -16,5 +16,6 @@ public class ClassGetNameExample {
                 "[[[[[[[I".equals(intArrayName)*/
                 ? 1
                 : 0;
+        System.out.println(result);
     }
 }

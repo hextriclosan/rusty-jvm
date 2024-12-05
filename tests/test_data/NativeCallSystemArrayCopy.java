@@ -12,6 +12,7 @@ public class NativeCallSystemArrayCopy {
         result = setBit(result, 1, bit1);
         result = setBit(result, 2, bit2);
         result = setBit(result, 3, bit3);
+        System.out.println(result);
     }
 
     private static int intArr() {

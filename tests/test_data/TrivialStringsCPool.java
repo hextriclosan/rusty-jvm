@@ -6,5 +6,6 @@ public class TrivialStringsCPool {
         String search = new String("flexible");
 
         int index = text.indexOf(search);
+        System.out.println(index);
     }
 }

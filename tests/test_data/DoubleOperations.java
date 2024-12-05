@@ -24,5 +24,6 @@ public class DoubleOperations {
         double result = sum/1e100 + diff/1e100 + product + quotient + remainder + underflow +
                 (overflow == Double.POSITIVE_INFINITY ? 1e278 : 0) +
                 (Double.isNaN(nan) ? 1e278 : 0);
+        System.out.println(result);
     }
 }

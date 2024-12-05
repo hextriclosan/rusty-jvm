@@ -1,12 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_do_inherited_implementations_interfaces() {
-    let last_frame_value = VM::run(
+    assert_success(
         "samples.inheritance.interfaces.inheritedimplementation.InheritedImplementationInterface",
-    )
-    .unwrap();
-    assert_eq!(-200, get_int(last_frame_value))
+        "-200\n",
+    );
 }

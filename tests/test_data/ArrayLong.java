@@ -4,6 +4,7 @@ public class ArrayLong {
 
     public static void main(String[] args) {
         long result = calculate();
+        System.out.println(result);
     }
 
     private static long calculate() {

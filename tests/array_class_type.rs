@@ -1,9 +1,7 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_create_array_class_type() {
-    let last_frame_value = VM::run("samples.reflection.trivial.ArrayClass").unwrap();
-    assert_eq!(262143, get_int(last_frame_value))
+    assert_success("samples.reflection.trivial.ArrayClass", "262143\n");
 }

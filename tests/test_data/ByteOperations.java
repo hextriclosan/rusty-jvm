@@ -84,6 +84,7 @@ public class ByteOperations {
             result = setBit(result, i, bits[i]);
         }
         int finalResult = result;
+        System.out.println(finalResult);
     }
 
     private static int setBit(int num, int position, int value) {

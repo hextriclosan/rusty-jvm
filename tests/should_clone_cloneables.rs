@@ -1,9 +1,7 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_clone_cloneables() {
-    let last_frame_value = VM::run("samples.javacore.cloneable.trivial.CloneExample").unwrap();
-    assert_eq!(511, get_int(last_frame_value))
+    assert_success("samples.javacore.cloneable.trivial.CloneExample", "511\n");
 }

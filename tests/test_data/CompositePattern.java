@@ -24,6 +24,7 @@ public class CompositePattern {
         outerComposite.addUnit(innerComposite);
 
         int result = outerComposite.attack();
+        System.out.println(result);
     }
 }
 

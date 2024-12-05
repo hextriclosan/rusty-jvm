@@ -3,6 +3,7 @@ package samples.fields.staticinitialization.chain;
 public class StaticInitializationChain {
     public static void main(String[] args) {
         int result = DependsOnDependable.valueB;
+        System.out.println(result);
     }
 }
 

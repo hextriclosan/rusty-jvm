@@ -8,6 +8,7 @@ public class TrivialTreeMap {
         int sumOfIntegerMap = getSumOfIntegerMap();
         String sorted = getSortedFromStringMap();
         int result = sumOfIntegerMap == 84 && "150330".equals(sorted) ? 1 : 0;
+        System.out.println(result);
     }
 
     private static int getSumOfIntegerMap() {

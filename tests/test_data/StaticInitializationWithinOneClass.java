@@ -11,5 +11,6 @@ public class StaticInitializationWithinOneClass {
     public static void main(String[] args) {
         staticField = 100;
         int result = staticField;
+        System.out.println(result);
     }
 }

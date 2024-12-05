@@ -1,9 +1,7 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_do_trivial_strings() {
-    let last_frame_value = VM::run("samples.javacore.strings.trivial.TrivialStrings").unwrap();
-    assert_eq!(8, get_int(last_frame_value))
+    assert_success("samples.javacore.strings.trivial.TrivialStrings", "8\n");
 }

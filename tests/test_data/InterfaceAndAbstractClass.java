@@ -12,6 +12,7 @@ public class InterfaceAndAbstractClass {
         int switchableResult = move(switchable) + pullOver(switchable);
 
         int overallResult = mercedesResult + vehicleResult + switchableResult;
+        System.out.println(overallResult);
     }
 
     private static int move(Switchable switchable) {

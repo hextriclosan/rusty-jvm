@@ -8,6 +8,7 @@ public class Array3D {
         };
 
         int result = sum(array);
+        System.out.println(result);
     }
 
     private static int sum(int[][][] array3d) {

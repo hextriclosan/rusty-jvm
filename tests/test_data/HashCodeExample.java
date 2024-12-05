@@ -34,6 +34,7 @@ public class HashCodeExample {
         result = setBit(result, 5, bit5);
         result = setBit(result, 6, bit6);
         result = setBit(result, 7, bit7);
+        System.out.println(result);
     }
 
     private static int setBit(int num, int position, int value) {

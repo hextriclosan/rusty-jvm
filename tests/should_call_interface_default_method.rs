@@ -1,12 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_call_interface_default_method() {
-    let last_frame_value = VM::run(
+    assert_success(
         "samples.inheritance.interfacedefaultmethoddirectcall.InterfaceDefaultMethodDirectCall",
-    )
-    .unwrap();
-    assert_eq!(31, get_int(last_frame_value))
+        "31\n",
+    );
 }

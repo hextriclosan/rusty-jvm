@@ -16,5 +16,6 @@ public class TrivialCast {
         var stringArray = (String[]) o3;
 
         int result = 1337;
+        System.out.println(result);
     }
 }

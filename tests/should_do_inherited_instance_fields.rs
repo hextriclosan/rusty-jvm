@@ -1,10 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_do_inherited_instance_fields() {
-    let last_frame_value =
-        VM::run("samples.inheritance.instancefield.InheritanceInstanceField").unwrap();
-    assert_eq!(128, get_int(last_frame_value))
+    assert_success(
+        "samples.inheritance.instancefield.InheritanceInstanceField",
+        "128\n",
+    );
 }

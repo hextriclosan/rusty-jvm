@@ -7,6 +7,7 @@ public class AbstractClassWithoutInterfaceImplementation {
         Unmapper customUnmapper = !defaultFlag ? new DefaultUnmapper() : new CustomUnmapper();
 
         int result = (defaultUnmapper.isSync() ? 0 : 1) + (customUnmapper.isSync() ? 1 : 0);
+        System.out.println(result);
     }
 
 }

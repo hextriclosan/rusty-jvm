@@ -19,5 +19,6 @@ public class SwitchExample {
         };
 
         int result = lookupswitch + tableswitch;
+        System.out.println(result);
     }
 }
