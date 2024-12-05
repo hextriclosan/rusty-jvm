@@ -18,6 +18,7 @@ public class PropertiesTrivial {
         sum += Integer.parseInt(properties.getProperty("public.property2"));
 
         int result = sum;
+        System.out.println(result);
     }
 
     private static Properties createProperties(Map<String, String> initialProps) {

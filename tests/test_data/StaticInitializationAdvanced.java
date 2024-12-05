@@ -12,6 +12,7 @@ public class StaticInitializationAdvanced {
         int classEAsSumOfCAndD = ClassE.staticField;
 
         int result = classCWithHelperNonStaticGetter + classDWithHelperStaticGetter * classCIsModified / classEAsSumOfCAndD;
+        System.out.println(result);
     }
 }
 

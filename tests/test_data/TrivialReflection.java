@@ -12,6 +12,7 @@ public class TrivialReflection {
         int modifiers4 = clazz4.getModifiers();
 
         int result = modifiers1 + modifiers2 + modifiers3 + modifiers4;
+        System.out.println(result);
     }
 }
 

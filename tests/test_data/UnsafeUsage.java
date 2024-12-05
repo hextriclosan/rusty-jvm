@@ -93,6 +93,7 @@ public class UnsafeUsage {
         result = setBit(result, 18, bit18);
         result = setBit(result, 19, bit19);
         result = setBit(result, 20, bit20);
+        System.out.println(result);
     }
 
     private static int setBit(int num, int position, int value) {

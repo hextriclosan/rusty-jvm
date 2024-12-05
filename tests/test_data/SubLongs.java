@@ -11,5 +11,6 @@ public class SubLongs {
 
     public static void main(String[] args) {
         long result = second - first;
+        System.out.println(result);
     }
 }

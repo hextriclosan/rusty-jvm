@@ -8,6 +8,7 @@ public class ReflectionGetCallerClassExample {
         Class<?> caller = new Caller().invokeNested();
 
         int result = caller == ReflectionGetCallerClassExample.class ? 1 : 0;
+        System.out.println(result);
     }
 }
 

@@ -3,6 +3,7 @@ package samples.javacore.doubles.trivial;
 public class LongToDoubleAndBack {
     public static void main(String[] args) {
         int result = convert();
+        System.out.println(result);
     }
 
     private static int convert() {

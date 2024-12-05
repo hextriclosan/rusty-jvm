@@ -8,5 +8,6 @@ public class TrivialStrings {
         String search = new String(searchArray);
 
         int index = text.indexOf(search);
+        System.out.println(index);
     }
 }

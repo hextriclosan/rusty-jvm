@@ -3,6 +3,7 @@ package samples.javacore.wide.instructions.trivial;
 public class WideInstructionsExample {
     public static void main(String[] args) {
         int result = getResult();
+        System.out.println(result);
     }
 
     static int getResult() {

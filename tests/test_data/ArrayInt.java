@@ -32,6 +32,7 @@ public class ArrayInt {
         shiftLeft(combinedArray, 11);
 
         int result = combinedArray[0] + secondLargest;
+        System.out.println(result);
     }
 
     // Method to combine two arrays into one dynamically

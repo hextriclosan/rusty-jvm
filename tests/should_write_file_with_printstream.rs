@@ -1,11 +1,12 @@
 mod utils;
 use std::fs;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_write_file_with_print_stream() {
-    let file_path = "../tmp/print_stream_test.txt";
-    VM::run("samples.io.printstreamexample.PrintStreamExample").unwrap();
+    let file_path = "tests/tmp/print_stream_test.txt";
+
+    assert_success("samples.io.printstreamexample.PrintStreamExample", "");
 
     assert!(fs::metadata(file_path).is_ok(), "File does not exist");
     let content = fs::read_to_string(file_path).expect("Failed to read file");

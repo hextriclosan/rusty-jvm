@@ -16,7 +16,7 @@ public class ExtremeStackLong {
         //System.out.println("combinedRecursionResult=" + combinedRecursionResult);
 
         long result = nestedResult + loopResult + combinedRecursionResult;
-        //System.out.println("result=" + result);
+        System.out.println(result);
     }
 
     // Method with nested operations and method calls

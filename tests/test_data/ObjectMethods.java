@@ -15,6 +15,7 @@ public class ObjectMethods implements Interface {
                 && thirdClass == ObjectMethods.class
                 ? 1
                 : 0;
+        System.out.println(result);
     }
 }
 

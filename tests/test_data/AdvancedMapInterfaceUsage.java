@@ -11,6 +11,7 @@ public class AdvancedMapInterfaceUsage {
         int hashMapResult = testMap(new HashMap<>());
         int treeMapResult = testMap(new TreeMap<>());
         int result = hashMapResult == expected && treeMapResult == expected ? 1 : 0;
+        System.out.println(result);
     }
 
     public static int testMap(Map<String, String> map) {

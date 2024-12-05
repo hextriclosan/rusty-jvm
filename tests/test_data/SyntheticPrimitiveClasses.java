@@ -23,5 +23,6 @@ public class SyntheticPrimitiveClasses {
         int modifiersVoid = voidClass.getModifiers();
 
         int modifiersSum = modifiersInt + modifiersDouble + modifiersBoolean + modifiersChar + modifiersByte + modifiersShort + modifiersLong + modifiersFloat + modifiersVoid;
+        System.out.println(modifiersSum);
     }
 }

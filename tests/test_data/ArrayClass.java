@@ -21,7 +21,7 @@ public class ArrayClass {
         int bit9 = classInt.isArray() ? 0 : 1;
         int bit10 = classInt == int.class ? 1 : 0;
         int bit11 = classInt.getComponentType() == null ? 1 : 0;
-        
+
         var classStringArray = String[].class;
         int bit12 = classStringArray.isPrimitive() ? 0 : 1;
         int bit13 = classStringArray.isArray() ? 1 : 0;
@@ -50,6 +50,7 @@ public class ArrayClass {
         result = setBit(result, 15, bit15);
         result = setBit(result, 16, bit16);
         result = setBit(result, 17, bit17);
+        System.out.println(result);
     }
 
     private static int setBit(int num, int position, int value) {

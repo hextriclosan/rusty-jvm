@@ -12,6 +12,7 @@ public class InstanceFieldsUserInts {
         instances[2].mul(first, second);
 
         int result = (one != instances[1] ? instances[0].getResultSub() : 0) + instances[1].getResultAdd() + instances[2].getResultMul();
+        System.out.println(result);
     }
 }
 

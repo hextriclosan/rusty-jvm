@@ -7,6 +7,7 @@ public class InheritedImplementationInterface {
         int one = 100;
         int two = 300;
         int result = subtraction.sub(one, two);
+        System.out.println(result);
     }
 }
 

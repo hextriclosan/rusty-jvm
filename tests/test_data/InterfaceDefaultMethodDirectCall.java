@@ -10,6 +10,7 @@ public class InterfaceDefaultMethodDirectCall {
         int valueDefaultPlusFromImpl = someClass.getValueDefaultPlusFromImpl();
         int result = valueDirectCall | valueOverriddenInImpl | valueInBaseClass | valueFromExtendedInterface
                 | valueDefaultPlusFromImpl;
+        System.out.println(result);
     }
 }
 

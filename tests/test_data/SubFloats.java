@@ -5,5 +5,6 @@ public class SubFloats {
         float first = 1.1f;
         int second = 1000;
         float result = first - second;
+        System.out.println(result);
     }
 }

@@ -8,6 +8,7 @@ public class TrivialHashMap {
         int sumOfIntegerMap = getSumOfIntegerMap();
         int sumOfStringMap = getSumOfStringMap();
         int result = sumOfIntegerMap == 84 && sumOfStringMap == 84 ? 1 : 0;
+        System.out.println(result);
     }
 
     private static int getSumOfIntegerMap() {

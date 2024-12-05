@@ -1,12 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_use_grandparent_method_via_super() {
-    let last_frame_value = VM::run(
+    assert_success(
         "samples.inheritance.usegrandparentmethodviasuper.UseGrandParentMethodViaSuperExample",
-    )
-    .unwrap();
-    assert_eq!(1337, get_int(last_frame_value))
+        "1337\n",
+    );
 }

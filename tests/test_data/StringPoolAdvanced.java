@@ -40,6 +40,7 @@ public class StringPoolAdvanced {
         result = setBit(result, 4, bit4);
         result = setBit(result, 5, bit5);
         result = setBit(result, 6, bit6);
+        System.out.println(result);
     }
 
     private static int setBit(int num, int position, int value) {

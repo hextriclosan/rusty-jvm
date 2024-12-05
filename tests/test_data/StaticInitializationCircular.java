@@ -5,6 +5,7 @@ public class StaticInitializationCircular {
         int classA = ClassACircular.staticField;
         int classB = ClassBCircular.staticField;
         int result = classA + classB;
+        System.out.println(result);
     }
 }
 

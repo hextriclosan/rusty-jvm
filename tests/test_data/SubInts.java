@@ -5,6 +5,6 @@ public class SubInts {
         int first = 1;
         int second = 1000;
         int result = first - second;
+        System.out.println(result);
     }
 }
-    

@@ -26,6 +26,7 @@ public class StaticInitializationArray {
         }
 
         int result = STATIC_FINAL_FIELD + staticField1 + staticField2 + arraySum;
+        System.out.println(result);
     }
 
     // Another static block (executed in order of appearance)

@@ -1,9 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_calculate_hashcodes() {
-    let last_frame_value = VM::run("samples.javacore.hashcodes.trivial.HashCodeExample").unwrap();
-    assert_eq!(255, get_int(last_frame_value))
+    assert_success(
+        "samples.javacore.hashcodes.trivial.HashCodeExample",
+        "255\n",
+    );
 }

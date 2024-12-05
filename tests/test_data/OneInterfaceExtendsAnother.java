@@ -7,6 +7,7 @@ public class OneInterfaceExtendsAnother {
         int one = 100;
         int two = 300;
         long result = subtraction.sub(one, two) + subtraction.subLong(one, two);
+        System.out.println(result);
     }
 }
 

@@ -14,5 +14,6 @@ public class ClassIsInterfaceExample {
         int result = runnableIsInterface && !hashMapIsInterface && !abstractMapIsInterface && !elementTypeIsInterface
                 ? 1
                 : 0;
+        System.out.println(result);
     }
 }

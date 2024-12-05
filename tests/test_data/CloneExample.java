@@ -45,6 +45,7 @@ public class CloneExample {
 //         result = setBit(result, 9, bit9);
 //         result = setBit(result, 10, bit10);
 //         result = setBit(result, 11, bit11);
+        System.out.println(result);
     }
 
     private static int setBit(int num, int position, int value) {

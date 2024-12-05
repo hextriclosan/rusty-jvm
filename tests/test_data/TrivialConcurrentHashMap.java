@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TrivialConcurrentHashMap {
     public static void main(String[] args) {
         int result = calc();
+        System.out.println(result);
     }
 
     private static int calc() {

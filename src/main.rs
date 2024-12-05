@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_one::<String>("main_class")
         .expect("Missing entry point");
 
-    let result = match VM::run(entry_point) {
+    let _result = match VM::run(entry_point) {
         Ok(output) => output,
         Err(err) => {
             eprintln!("VM execution failed: {}", err);
@@ -19,6 +19,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    println!("{:?}", result.map_or_else(|| vec![], |v| v));
     Ok(())
 }

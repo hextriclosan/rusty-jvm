@@ -1,10 +1,10 @@
 mod utils;
-use utils::get_int;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_do_composite_pattern() {
-    let last_frame_value =
-        VM::run("samples.inheritance.interfaces.compositepattern.CompositePattern").unwrap();
-    assert_eq!(700, get_int(last_frame_value))
+    assert_success(
+        "samples.inheritance.interfaces.compositepattern.CompositePattern",
+        "700\n",
+    );
 }

@@ -51,6 +51,8 @@ public class ToStringAndBack {
         result = setBit(result, 6, bit6);
         result = setBit(result, 7, bit7);
 //         result = setBit(result, 8, bit8);
+
+        System.out.println(result);
     }
 
     private static boolean convertBoolean(boolean value) {

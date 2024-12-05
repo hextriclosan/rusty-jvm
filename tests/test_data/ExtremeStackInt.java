@@ -16,7 +16,7 @@ public class ExtremeStackInt {
         //System.out.println("combinedRecursionResult=" + combinedRecursionResult);
 
         int result = nestedResult + loopResult + combinedRecursionResult; // 528
-        //System.out.println("result=" + result);
+        System.out.println(result);
     }
 
     // Method with nested operations and method calls

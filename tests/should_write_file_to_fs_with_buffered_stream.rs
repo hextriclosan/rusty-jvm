@@ -1,12 +1,15 @@
 mod utils;
 use std::fs;
-use vm::vm::VM;
+use utils::assert_success;
 
 #[test]
 fn should_write_file_to_fs_with_buffered_stream() {
-    let file_path = "../tmp/buffered_output.txt";
-    VM::run("samples.io.bufferedoutputstreamchunkingexample.BufferedOutputStreamChunkingExample")
-        .unwrap();
+    let file_path = "tests/tmp/buffered_output.txt";
+
+    assert_success(
+        "samples.io.bufferedoutputstreamchunkingexample.BufferedOutputStreamChunkingExample",
+        "",
+    );
 
     assert!(fs::metadata(file_path).is_ok(), "File does not exist");
     let content = fs::read_to_string(file_path).expect("Failed to read file");

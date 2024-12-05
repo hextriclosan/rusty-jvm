@@ -5,6 +5,7 @@ package samples.javacore.strings.concat.trivial;
 public class StringConcatInline {
     public static void main(String[] args) {
         int result = concat();
+        System.out.println(result);
     }
 
     private static int concat() {
