@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::heap::heap::with_heap_write_lock;
+use crate::method_area::method_area::with_method_area;
 use crate::system_native::object::identity_hashcode;
 
 pub(crate) fn current_time_millis_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -66,4 +67,22 @@ pub(crate) fn system_identity_hashcode_wrp(args: &[i32]) -> crate::error::Result
     let hashcode = identity_hashcode(obj_ref)?;
 
     Ok(vec![hashcode])
+}
+
+pub(crate) fn set_out0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let print_stream_ref = args[0];
+    set_out0(print_stream_ref)?;
+
+    Ok(vec![])
+}
+fn set_out0(print_stream_ref: i32) -> crate::error::Result<()> {
+    let field_ref = {
+        let field_ref = with_method_area(|method_area| {
+            method_area.lookup_for_static_field("java/lang/System", "out")
+        })?;
+        field_ref
+    };
+
+    field_ref.set_raw_value(vec![print_stream_ref]);
+    Ok(())
 }
