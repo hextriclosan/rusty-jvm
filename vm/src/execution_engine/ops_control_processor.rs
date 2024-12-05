@@ -5,10 +5,7 @@ use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
 use tracing::trace;
 
-pub(crate) fn process(
-    code: u8,
-    stack_frames: &mut StackFrames,
-) -> crate::error::Result<Option<Vec<i32>>> {
+pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
     match code {
         GOTO => {
             let stack_frame = last_frame(stack_frames)?;
@@ -72,19 +69,8 @@ pub(crate) fn process(
         DRETURN => perform_return::<f64>(stack_frames, "DRETURN")?,
         ARETURN => perform_return::<i32>(stack_frames, "ARETURN")?,
         RETURN => {
-            let stack_frame = last_frame(stack_frames)?;
-            trace!("RETURN -> stack_frame.locals={:?}", stack_frame.locals());
-            let last_value = Some(
-                stack_frames
-                    .last()
-                    .ok_or(Error::new_execution("Error getting stack last value"))?
-                    .locals()
-                    .to_vec(),
-            );
-
             stack_frames.pop();
-
-            return Ok(last_value);
+            trace!("RETURN");
         }
         _ => {
             return Err(Error::new_execution(&format!(
@@ -94,7 +80,7 @@ pub(crate) fn process(
         }
     }
 
-    Ok(None)
+    Ok(())
 }
 
 fn last_frame(stack_frames: &mut StackFrames) -> crate::error::Result<&mut StackFrame> {

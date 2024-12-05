@@ -32,10 +32,6 @@ impl StackFrame {
         self.pc
     }
 
-    pub fn locals(&self) -> &[i32] {
-        &self.locals
-    }
-
     pub fn current_class_name(&self) -> &str {
         &self.current_class_name
     }
