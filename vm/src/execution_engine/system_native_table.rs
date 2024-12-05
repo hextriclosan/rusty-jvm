@@ -14,7 +14,7 @@ use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp
 use crate::system_native::reflecton::reflection_get_caller_class_wrp;
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{
-    arraycopy_wrp, current_time_millis_wrp, system_identity_hashcode_wrp,
+    arraycopy_wrp, current_time_millis_wrp, set_out0_wrp, system_identity_hashcode_wrp,
 };
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
@@ -60,7 +60,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/System:setOut0:(Ljava/io/PrintStream;)V",
-        Basic(void_stub),
+        Basic(set_out0_wrp),
     );
     table.insert(
         "java/lang/System:setErr0:(Ljava/io/PrintStream;)V",
