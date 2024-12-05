@@ -11,13 +11,11 @@ pub struct VM {}
 impl VM {
     const JAVA_HOME_ENV: &'static str = "RUSTY_JAVA_HOME";
 
-    pub fn run(main_class_name: &str) -> crate::error::Result<Option<Vec<i32>>> {
+    pub fn run(main_class_name: &str) -> crate::error::Result<()> {
         Self::prelude()?;
 
         let internal_name = &main_class_name.replace('.', "/");
-        let result =
-            Executor::invoke_static_method(internal_name, "main:([Ljava/lang/String;)V", &[])?;
-        Ok(Some(result))
+        Executor::invoke_static_method(internal_name, "main:([Ljava/lang/String;)V", &[])
     }
 
     fn prelude() -> crate::error::Result<()> {

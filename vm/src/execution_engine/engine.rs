@@ -16,12 +16,10 @@ impl Engine {
     pub(crate) fn execute(
         initial_stack_frame: StackFrame,
         reason: &str,
-    ) -> crate::error::Result<Option<Vec<i32>>> {
+    ) -> crate::error::Result<()> {
         trace!("@@@ Entering execute: {reason}");
 
         let mut stack_frames = vec![initial_stack_frame];
-        let mut last_value: Option<Vec<i32>> = None;
-
         while !stack_frames.is_empty() {
             let (class, code) = {
                 let frame = stack_frames
@@ -58,7 +56,7 @@ impl Engine {
                     ops_comparison_processor::process(code, &mut stack_frames)?;
                 }
                 167u8..=177u8 => {
-                    last_value = ops_control_processor::process(code, &mut stack_frames)?;
+                    ops_control_processor::process(code, &mut stack_frames)?;
                 }
                 178u8..=195u8 => {
                     ops_reference_processor::process(code, &class, &mut stack_frames)?;
@@ -70,6 +68,6 @@ impl Engine {
             }
         }
 
-        Ok(last_value)
+        Ok(())
     }
 }

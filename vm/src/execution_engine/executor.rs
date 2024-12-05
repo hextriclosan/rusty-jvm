@@ -34,12 +34,8 @@ impl Executor {
         class_name: &str,
         method_name: &str,
         args: &[StackValueKind],
-    ) -> crate::error::Result<Vec<i32>> {
-        let result = Self::exec(class_name, method_name, args)?;
-        match result {
-            Some(value) => Ok(value),
-            None => Ok(vec![]),
-        }
+    ) -> crate::error::Result<()> {
+        Self::exec(class_name, method_name, args)
     }
 
     pub fn invoke_default_constructor(class_name: &str) -> crate::error::Result<i32> {
@@ -99,7 +95,7 @@ impl Executor {
         class_name: &str,
         method_name: &str,
         args: &[StackValueKind],
-    ) -> crate::error::Result<Option<Vec<i32>>> {
+    ) -> crate::error::Result<()> {
         let java_class = with_method_area(|area| area.get(class_name))?;
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
