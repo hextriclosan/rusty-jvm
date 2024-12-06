@@ -560,6 +560,7 @@ dependencies = [
  "serde_json",
  "tracing",
  "tracing-subscriber",
+ "winapi",
 ]
 
 [[package]]

@@ -6,7 +6,7 @@ use crate::system_native::class::{
     class_init_class_name_wrp, for_name0_wrp, get_modifiers_wrp, get_primitive_class_wrp,
     is_array_wrp, is_interface_wrp, is_primitive_wrp,
 };
-use crate::system_native::file_descriptor::file_descriptor_close0_wrp;
+use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
@@ -181,7 +181,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/io/FileDescriptor:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/FileDescriptor:getHandle:(I)J",
-        Basic(|args: &[i32]| return_argument_stub(&vec![0, args[0]])),
+        Basic(get_handle_wrp),
     );
     table.insert(
         "java/io/FileDescriptor:getAppend:(I)Z",
