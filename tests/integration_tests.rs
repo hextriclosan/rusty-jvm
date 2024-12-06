@@ -235,7 +235,7 @@ fn should_do_native_call_on_system_array_copy() {
     );
 }
 
-use crate::utils::get_output;
+use crate::utils::{assert_file, get_output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[test]
@@ -462,62 +462,39 @@ fn should_use_grandparent_method_via_super() {
     );
 }
 
-use std::fs;
-
 #[test]
 fn should_write_file_to_fs() {
-    let file_path = "tests/tmp/test.txt";
-
-    assert_success(
+    assert_file(
         "samples.io.fileoutputstreamexample.FileOutputStreamExample",
-        "",
-    );
-
-    assert!(fs::metadata(file_path).is_ok(), "File does not exist");
-    let content = fs::read_to_string(file_path).expect("Failed to read file");
-    assert_eq!(content, "CAFEBABE", "File content does not match");
-    fs::remove_file(file_path).expect("Failed to delete file");
+        "tests/tmp/test.txt",
+        "CAFEBABE",
+    )
 }
 
 #[test]
 fn should_write_file_to_fs_with_buffered_stream() {
-    let file_path = "tests/tmp/buffered_output.txt";
-
-    assert_success(
+    assert_file(
         "samples.io.bufferedoutputstreamchunkingexample.BufferedOutputStreamChunkingExample",
-        "",
-    );
-
-    assert!(fs::metadata(file_path).is_ok(), "File does not exist");
-    let content = fs::read_to_string(file_path).expect("Failed to read file");
-    assert_eq!(
-        content, "This is a test for BufferedOutputStream chunking.",
-        "File content does not match"
-    );
-    fs::remove_file(file_path).expect("Failed to delete file");
+        "tests/tmp/buffered_output.txt",
+        "This is a test for BufferedOutputStream chunking.",
+    )
 }
 
 #[test]
 fn should_write_file_with_print_stream() {
-    let file_path = "tests/tmp/print_stream_test.txt";
-
-    assert_success("samples.io.printstreamexample.PrintStreamExample", "");
-
-    assert!(fs::metadata(file_path).is_ok(), "File does not exist");
-    let content = fs::read_to_string(file_path).expect("Failed to read file");
-    assert_eq!(
-        content,
-        r#"Hello, PrintStream!
+    let expected_file_content = r#"Hello, PrintStream!
 First Line
 Second Line
 Third Line
 Hello as raw bytes
 This is written immediately. This follows after flush.
 This is an example of chaining PrintStreams.
-"#,
-        "File content does not match"
+"#;
+    assert_file(
+        "samples.io.printstreamexample.PrintStreamExample",
+        "tests/tmp/print_stream_test.txt",
+        expected_file_content,
     );
-    fs::remove_file(file_path).expect("Failed to delete file");
 }
 
 #[test]
