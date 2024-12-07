@@ -7,7 +7,7 @@ edition = "2021"
 members = ["jclass", "jdescriptor", "vm"]
 
 [dependencies]
-clap = "4.5.16"
+clap = "4.5.23"
 vm = {path = "vm"}
 
 [dev-dependencies]
