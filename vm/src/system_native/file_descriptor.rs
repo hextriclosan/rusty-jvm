@@ -1,6 +1,6 @@
 use crate::helper::i64_to_vec;
 
-use crate::system_native::PlatformFile;
+use crate::system_native::platform_file::PlatformFile;
 
 pub(crate) fn file_descriptor_close0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let fd_ref = args[0];

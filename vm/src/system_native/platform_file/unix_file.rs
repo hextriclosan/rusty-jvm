@@ -46,7 +46,7 @@ impl PlatformFile {
             Ok::<i32, Error>(fd)
         })?;
 
-        let file = ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(fd) }); // ManuallyDrop prevents `file` from being dropped
+        let file = ManuallyDrop::new(unsafe { File::from_raw_fd(fd) }); // ManuallyDrop prevents `file` from being dropped
         Ok(file)
     }
 }

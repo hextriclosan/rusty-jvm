@@ -38,16 +38,14 @@ impl PlatformFile {
     }
 
     fn get_std_handle(handle: DWORD) -> crate::error::Result<i64> {
-        unsafe {
-            let handle = GetStdHandle(handle);
-            if handle.is_null() {
-                return Err(Error::new_execution(&format!(
-                    "Failed to get handle by {handle:?}"
-                )));
-            }
-
-            Ok(handle as isize as i64)
+        let std_handle = unsafe { GetStdHandle(handle) };
+        if std_handle.is_null() {
+            return Err(Error::new_execution(&format!(
+                "Failed to get std_handle by {handle:?}"
+            )));
         }
+
+        Ok(std_handle as isize as i64)
     }
 
     pub fn set_raw_id(output_stream_ref: i32, file: File) -> std::io::Result<()> {

@@ -1,6 +1,6 @@
 use crate::heap::heap::with_heap_read_lock;
+use crate::system_native::platform_file::PlatformFile;
 use crate::system_native::string::get_utf8_string_by_ref;
-use crate::system_native::PlatformFile;
 use std::fs::OpenOptions;
 use std::io::Write;
 
