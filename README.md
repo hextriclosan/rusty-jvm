@@ -1,7 +1,7 @@
 # rusty-jvm
 ![License](https://img.shields.io/github/license/hextriclosan/rusty-jvm)
 ![Build Status](https://github.com/hextriclosan/rusty-jvm/actions/workflows/ci.yml/badge.svg)
-![Platform Support](https://img.shields.io/badge/platform-linux%20%7C%20macOS%20%7C%20windows-lightgrey)
+![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-blue)
 
 ## Introduction
 This project is an attempt to implement JVM in Rust.
