@@ -49,36 +49,30 @@ fn compare_and_set_int(
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     let updated = if class_name.starts_with("[") {
         with_heap_write_lock(|heap| {
-            let result = heap
-                .get_array_value(obj_ref, offset as i32)
-                .expect("error getting array value")[0];
+            let result = heap.get_array_value(obj_ref, offset as i32)?[0];
             if result == expected {
-                heap.set_array_value(obj_ref, offset as i32, vec![x])
-                    .expect("error setting field value");
-                true
+                heap.set_array_value(obj_ref, offset as i32, vec![x])?;
+                Ok::<bool, Error>(true)
             } else {
-                false
+                Ok(false)
             }
         })
     } else {
         let jc = with_method_area(|area| area.get(class_name.as_str()))?;
         let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
         with_heap_write_lock(|heap| {
-            let result = heap
-                .get_object_field_value(obj_ref, &class_name, &field_name)
-                .expect("error getting field value")[0];
+            let result = heap.get_object_field_value(obj_ref, &class_name, &field_name)?[0];
 
             if result == expected {
-                heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])
-                    .expect("error setting field value");
-                true
+                heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])?;
+                Ok(true)
             } else {
-                false
+                Ok(false)
             }
         })
     };
 
-    Ok(updated)
+    updated
 }
 
 pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -147,19 +141,16 @@ fn compare_and_set_long(
     let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
     let updated = with_heap_write_lock(|heap| {
-        let bytes = heap
-            .get_object_field_value(obj_ref, &class_name, &field_name)
-            .expect("error getting field value");
+        let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name)?;
         let result = i32toi64(bytes[0], bytes[1]);
 
         if result == expected {
-            heap.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))
-                .expect("error setting field value");
-            true
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))?;
+            Ok::<bool, Error>(true)
         } else {
-            false
+            Ok(false)
         }
-    });
+    })?;
 
     Ok(updated)
 }
@@ -179,8 +170,7 @@ fn put_reference_volatile(obj_ref: i32, offset: i64, ref_value: i32) -> crate::e
         let jc = with_method_area(|area| area.get(class_name.as_str()))?;
         let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
-        heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
-            .expect("error setting field value");
+        heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])?;
         Ok(())
     })
 }

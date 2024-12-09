@@ -67,17 +67,13 @@ impl ReflectionClassLoader {
         class_name: &str,
         component_type_ref: i32,
     ) -> crate::error::Result<i32> {
-        let reflection_ref = self
-            .class_type_instance_by_name
-            .write()
-            .expect("error getting class type instance by name lock")
-            .entry(class_name.to_string())
-            .or_insert_with(|| {
-                Self::create_reflection_instance(class_name, component_type_ref)
-                    .expect("error creating reflection instance") //todo: get rid of expect
-            })
-            .clone();
+        let mut class_type_map = self.class_type_instance_by_name.write()?;
+        if let Some(&reflection_ref) = class_type_map.get(class_name) {
+            return Ok(reflection_ref);
+        }
 
+        let reflection_ref = Self::create_reflection_instance(class_name, component_type_ref)?;
+        class_type_map.insert(class_name.to_string(), reflection_ref);
         Ok(reflection_ref)
     }
 
@@ -99,7 +95,7 @@ impl ReflectionClassLoader {
 
         with_method_area(|method_area| {
             method_area.put_to_reflection_table(reflection_reference, this_class_name)
-        });
+        })?;
 
         Ok(reflection_reference)
     }

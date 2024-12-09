@@ -17,20 +17,15 @@ impl Field {
         }
     }
 
-    pub fn set_raw_value(&self, value: Vec<i32>) {
-        let mut guard = self
-            .value
-            .write()
-            .expect("error getting lock to set field value");
+    pub fn set_raw_value(&self, value: Vec<i32>) -> crate::error::Result<()> {
+        let mut guard = self.value.write()?;
         *guard = value;
+        Ok(())
     }
 
-    pub fn raw_value(&self) -> Vec<i32> {
-        let guard = self
-            .value
-            .read()
-            .expect("error getting lock to get field value");
-        guard.clone()
+    pub fn raw_value(&self) -> crate::error::Result<Vec<i32>> {
+        let guard = self.value.read()?;
+        Ok(guard.clone())
     }
 
     pub fn type_descriptor(&self) -> &TypeDescriptor {

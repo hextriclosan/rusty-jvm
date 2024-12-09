@@ -1,3 +1,4 @@
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::stack::sack_value::StackValue;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
@@ -5,7 +6,7 @@ use std::fmt::Display;
 use tracing::trace;
 
 pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
-    let stack_frame = stack_frames.last_mut().unwrap();
+    let stack_frame = last_frame_mut(stack_frames)?;
     match code {
         IADD => binary_operation(stack_frame, |a: i32, b| a.wrapping_add(b), "IADD"),
         LADD => binary_operation(stack_frame, |a: i64, b| a.wrapping_add(b), "LADD"),

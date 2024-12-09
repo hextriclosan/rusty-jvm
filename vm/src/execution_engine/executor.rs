@@ -77,7 +77,7 @@ impl Executor {
 
         let thread_obj_ref =
             with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
-        with_method_area(|area| area.set_system_thread_id(thread_obj_ref)); //save primordial thread id
+        with_method_area(|area| area.set_system_thread_id(thread_obj_ref))?; //save primordial thread id
 
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(thread_obj_ref.into());

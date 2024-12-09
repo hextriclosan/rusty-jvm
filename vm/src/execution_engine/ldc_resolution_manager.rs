@@ -30,8 +30,7 @@ impl LdcResolutionManager {
     ) -> crate::error::Result<i32> {
         if let Some(Some(value)) = self
             .cache
-            .read()
-            .expect("error getting cache lock")
+            .read()?
             .get(current_class_name)
             .map(|map| map.get(&cpoolindex))
         {
@@ -57,8 +56,7 @@ impl LdcResolutionManager {
         };
 
         self.cache
-            .write()
-            .expect("error getting cache write lock")
+            .write()?
             .entry(current_class_name.to_string())
             .or_insert_with(HashMap::new)
             .insert(cpoolindex, vec![result]);
@@ -77,8 +75,7 @@ impl LdcResolutionManager {
     ) -> crate::error::Result<i64> {
         if let Some(Some(value)) = self
             .cache
-            .read()
-            .expect("error getting cache lock")
+            .read()?
             .get(current_class_name)
             .map(|map| map.get(&cpoolindex))
         {
@@ -100,8 +97,7 @@ impl LdcResolutionManager {
         };
 
         self.cache
-            .write()
-            .expect("error getting cache write lock")
+            .write()?
             .entry(current_class_name.to_string())
             .or_insert_with(HashMap::new)
             .insert(cpoolindex, i64_to_vec(result));

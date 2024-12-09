@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
@@ -18,7 +19,7 @@ pub(crate) fn process(
 ) -> crate::error::Result<()> {
     match code {
         GETSTATIC => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
             let field = with_method_area(|method_area| {
@@ -26,7 +27,7 @@ pub(crate) fn process(
             })?;
 
             field
-                .raw_value()
+                .raw_value()?
                 .iter()
                 .rev()
                 .for_each(|x| stack_frame.push(*x));
@@ -38,7 +39,7 @@ pub(crate) fn process(
             );
         }
         PUTSTATIC => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
             let (len, field_ref) = {
@@ -54,13 +55,13 @@ pub(crate) fn process(
                 value.push(stack_frame.pop());
             }
 
-            field_ref.set_raw_value(value.clone());
+            field_ref.set_raw_value(value.clone())?;
 
             stack_frame.incr_pc();
             trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
         }
         GETFIELD => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
             let objectref = stack_frame.pop();
             let value = with_heap_read_lock(|heap| {
@@ -73,7 +74,7 @@ pub(crate) fn process(
             trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
         }
         PUTFIELD => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
             let type_descriptor = with_method_area(|method_area| {
                 method_area
@@ -113,9 +114,11 @@ pub(crate) fn process(
             )?;
             let method_descriptor = method_signature.parse()?;
             let method_args = prepare_invoke_context(stack_frames, &method_descriptor, true)?;
-            let reference = *method_args.first().unwrap();
+            let reference = method_args
+                .first()
+                .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
             let instance_type_class_name =
-                with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
+                with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
 
             let java_method = with_method_area(|method_area| {
                 method_area
@@ -183,12 +186,12 @@ pub(crate) fn process(
             trace!("INVOKESTATIC -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKEINTERFACE => {
-            let index = frame(stack_frames).extract_two_bytes() as u16;
-            let arg_num = frame(stack_frames).extract_one_byte() as usize;
+            let index = last_frame_mut(stack_frames)?.extract_two_bytes() as u16;
+            let arg_num = last_frame_mut(stack_frames)?.extract_one_byte() as usize;
             let method_args = get_args(stack_frames, arg_num)?;
 
-            let zero = frame(stack_frames).extract_one_byte();
-            frame(stack_frames).incr_pc();
+            let zero = last_frame_mut(stack_frames)?.extract_one_byte();
+            last_frame_mut(stack_frames)?.incr_pc();
             if zero != 0 {
                 return Err(Error::new_execution(&format!(
                     "Error calling interface method by index {index}"
@@ -200,8 +203,10 @@ pub(crate) fn process(
                 CPoolHelper::get_full_interfacemethodref_info,
                 index,
             )?;
-            let reference = *method_args.first().unwrap();
-            let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(reference))?;
+            let reference = method_args
+                .first()
+                .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
+            let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
             let java_method = with_method_area(|method_area| {
                 method_area
                     .lookup_for_implementation(&instance_name, &full_signature) // first looking for method in parent and above classes
@@ -226,7 +231,7 @@ pub(crate) fn process(
             trace!("INVOKEINTERFACE -> {exact_class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
         }
         NEW => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
 
             let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
@@ -251,7 +256,7 @@ pub(crate) fn process(
             stack_frame.incr_pc();
         }
         NEWARRAY => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let atype = stack_frame.extract_one_byte();
 
             let type_name = match atype {
@@ -272,14 +277,14 @@ pub(crate) fn process(
 
             let length = stack_frame.pop();
 
-            let arrayref = with_heap_write_lock(|heap| heap.create_array(type_name, length));
+            let arrayref = with_heap_write_lock(|heap| heap.create_array(type_name, length))?;
             stack_frame.push(arrayref);
 
             stack_frame.incr_pc();
             trace!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
         }
         ANEWARRAY => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let length = stack_frame.pop();
 
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
@@ -294,14 +299,15 @@ pub(crate) fn process(
                     ))
                 })?;
             let class_of_array = format!("[L{class_of_array};");
-            let arrayref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
+            let arrayref =
+                with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
             stack_frame.push(arrayref);
 
             stack_frame.incr_pc();
             trace!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
         }
         ARRAYLENGTH => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let arrayref = stack_frame.pop();
 
             let len = with_heap_read_lock(|heap| heap.get_array_len(arrayref))?;
@@ -311,7 +317,7 @@ pub(crate) fn process(
             trace!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
         }
         CHECKCAST => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
             let objectref = stack_frame.pop();
@@ -343,7 +349,7 @@ pub(crate) fn process(
             trace!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }
         INSTANCEOF => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             // todo: merge me with CHECKCAST
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
@@ -372,14 +378,14 @@ pub(crate) fn process(
             trace!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }
         MONITORENTER => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
             // todo: implement me
             stack_frame.incr_pc();
             trace!("MONITORENTER -> objectref={objectref}");
         }
         MONITOREXIT => {
-            let stack_frame = stack_frames.last_mut().unwrap();
+            let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
             // todo: implement me
             stack_frame.incr_pc();
@@ -410,7 +416,7 @@ fn prepare_invoke_context(
 fn get_args(stack_frames: &mut [StackFrame], arg_num: usize) -> crate::error::Result<Vec<i32>> {
     let mut method_args = Vec::with_capacity(arg_num);
     for _ in 0..arg_num {
-        let val = frame(stack_frames).pop();
+        let val = last_frame_mut(stack_frames)?.pop();
         method_args.push(val);
     }
     method_args.reverse();
@@ -430,11 +436,9 @@ fn invoke(
         trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
         let result = invoke_native_method(&full_native_signature, &method_args, stack_frames)?;
-
-        result
-            .iter()
-            .rev()
-            .for_each(|x| frame(stack_frames).push(*x));
+        for result_chunk in result.iter().rev() {
+            last_frame_mut(stack_frames)?.push(*result_chunk);
+        }
     } else {
         let mut next_frame = java_method.new_stack_frame()?;
 
@@ -456,7 +460,7 @@ fn get_class_name_and_signature<F>(
 where
     F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>,
 {
-    let stack_frame = frame(stack_frames);
+    let stack_frame = last_frame_mut(stack_frames)?;
     let index = stack_frame.extract_two_bytes() as u16;
     stack_frame.incr_pc();
 
@@ -479,10 +483,6 @@ where
         })?;
     let full_signature = format!("{}:{}", method_name, method_descriptor);
     Ok((class_name, full_signature, method_descriptor))
-}
-
-fn frame(stack_frames: &mut [StackFrame]) -> &mut StackFrame {
-    stack_frames.last_mut().unwrap()
 }
 
 fn get_field_info(

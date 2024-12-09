@@ -104,7 +104,7 @@ impl JavaInstance {
                 Error::new_execution(&format!(
                     "error setting value for instance field {class_name}.{field_name_type}"
                 ))
-            })
+            })?
     }
 
     pub fn get_field_value(
@@ -116,7 +116,7 @@ impl JavaInstance {
             .and_then(|v| Some(v.raw_value()))
             .ok_or(Error::new_execution(&format!(
                 "error getting instance field value {class_name}.{field_name_type}"
-            )))
+            )))?
     }
 
     fn lookup_for_field(

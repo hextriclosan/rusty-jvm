@@ -23,15 +23,14 @@ fn create_empty_array_of_strings(props: &[&str]) -> crate::error::Result<i32> {
     let class_of_array = "java/lang/String";
     let class_of_array = format!("[L{class_of_array};");
     let length = props.len() as i32;
-    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
+    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
 
-    props.iter().enumerate().for_each(|(index, prop)| {
-        let string_ref = StringPoolHelper::get_string(prop.to_string()).unwrap();
+    for (index, prop) in props.iter().enumerate() {
+        let string_ref = StringPoolHelper::get_string(prop.to_string())?;
         with_heap_write_lock(|heap| {
             heap.set_array_value(array_ref, index as i32, vec![string_ref])
-        })
-        .unwrap();
-    });
+        })?
+    }
 
     Ok(array_ref)
 }

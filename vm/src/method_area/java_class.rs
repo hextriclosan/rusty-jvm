@@ -152,7 +152,7 @@ impl JavaClass {
 
     pub fn get_field_offset(&self, fully_qualified_field_name: &str) -> crate::error::Result<i64> {
         let offset = self
-            .fields_offset_mapping()
+            .fields_offset_mapping()?
             .get_index_of(fully_qualified_field_name)
             .ok_or_else(|| {
                 Error::new_execution(&format!(
@@ -164,7 +164,7 @@ impl JavaClass {
 
     pub fn get_field_name_by_offset(&self, offset: i64) -> crate::error::Result<(String, String)> {
         let result = self
-            .fields_offset_mapping()
+            .fields_offset_mapping()?
             .get_index(offset as usize)
             .ok_or_else(|| {
                 Error::new_execution(&format!("Failed to get field name by offset {offset}"))
@@ -203,25 +203,24 @@ impl JavaClass {
 
     pub fn instance_fields_hierarchy(
         &self,
-    ) -> &IndexMap<ClassName, IndexMap<FieldNameType, Field>> {
-        &self.instance_fields_hierarchy.get_or_init(|| {
+    ) -> crate::error::Result<&IndexMap<ClassName, IndexMap<FieldNameType, Field>>> {
+        self.instance_fields_hierarchy.get_or_try_init(|| {
             let mut instance_fields_hierarchy = IndexMap::new();
             with_method_area(|area| {
                 area.lookup_and_fill_instance_fields_hierarchy(
                     &self.this_class_name,
                     &mut instance_fields_hierarchy,
                 )
-            })
-            .expect("error getting instance fields hierarchy");
+            })?;
 
-            instance_fields_hierarchy
+            Ok(instance_fields_hierarchy)
         })
     }
 
-    fn fields_offset_mapping(&self) -> &IndexSet<FullyQualifiedFieldName> {
-        &self.fields_offset_mapping.get_or_init(|| {
+    fn fields_offset_mapping(&self) -> crate::error::Result<&IndexSet<FullyQualifiedFieldName>> {
+        self.fields_offset_mapping.get_or_try_init(|| {
             let mut fields_offset_mapping = IndexSet::new();
-            let hierarchy = self.instance_fields_hierarchy();
+            let hierarchy = self.instance_fields_hierarchy()?;
 
             hierarchy.iter().for_each(|(class_name, fields)| {
                 fields.iter().for_each(|(field_name, _)| {
@@ -229,7 +228,7 @@ impl JavaClass {
                 });
             });
 
-            fields_offset_mapping
+            Ok(fields_offset_mapping)
         })
     }
 

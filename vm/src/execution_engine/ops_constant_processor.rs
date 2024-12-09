@@ -1,3 +1,4 @@
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::method_area::method_area::{with_method_area, MethodArea};
 use crate::stack::sack_value::StackValue;
@@ -10,7 +11,7 @@ pub(crate) fn process(
     current_class_name: &str,
     stack_frames: &mut StackFrames,
 ) -> crate::error::Result<()> {
-    let stack_frame = stack_frames.last_mut().unwrap();
+    let stack_frame = last_frame_mut(stack_frames)?;
     match code {
         ACONST_NULL => push_constant(stack_frame, 0i32, "ACONST_NULL"),
         ICONST_M1 => push_constant(stack_frame, -1i32, "ICONST_M1"),

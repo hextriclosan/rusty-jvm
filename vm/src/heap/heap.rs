@@ -102,16 +102,15 @@ impl Heap {
         )
     }
 
-    pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> i32 {
+    pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> crate::error::Result<i32> {
         let id = self.next_id();
 
         //ensure creation of ephemeral array class
-        with_method_area(|method_area| method_area.create_array_class_if_needed(type_name))
-            .expect("error creating array class");
+        with_method_area(|method_area| method_area.create_array_class_if_needed(type_name))?;
 
         self.data.insert(id, Arr(Array::new(type_name, len)));
 
-        id
+        Ok(id)
     }
 
     pub(crate) fn create_array_with_values(&mut self, type_name: &str, array: &[i32]) -> i32 {
@@ -197,7 +196,8 @@ impl Heap {
             Ok(vec![new_instance_ref])
         } else if let Some(Arr(array)) = self.data.get(&objectref) {
             let new_array = array.clone();
-            let new_array_ref = self.create_array(new_array.type_name(), new_array.get_length());
+            let new_array_ref =
+                self.create_array(new_array.type_name(), new_array.get_length())?;
             self.set_entire_array(new_array_ref, new_array)?;
             Ok(vec![new_array_ref])
         } else {

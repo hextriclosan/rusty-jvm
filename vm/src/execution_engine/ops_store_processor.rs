@@ -1,3 +1,4 @@
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::with_heap_write_lock;
 use crate::stack::sack_value::StackValue;
@@ -6,7 +7,7 @@ use std::fmt::Display;
 use tracing::trace;
 
 pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
-    let stack_frame = stack_frames.last_mut().unwrap();
+    let stack_frame = last_frame_mut(stack_frames)?;
     match code {
         ISTORE => handle_pos_and_store::<i32>(stack_frame, "ISTORE "),
         LSTORE => handle_pos_and_store::<i64>(stack_frame, "LSTORE "),
