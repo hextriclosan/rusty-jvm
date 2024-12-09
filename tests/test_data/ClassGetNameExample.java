@@ -7,15 +7,15 @@ public class ClassGetNameExample {
         String unicodeBlockName = Character.UnicodeBlock.class.getName();
         String byteName = byte.class.getName();
         String objectsArrayName = (new Object[3]).getClass().getName();
-        //String intArrayName = (new int[3][4][5][6][7][8][9]).getClass().getName(); //todo: https://github.com/hextriclosan/rusty-jvm/issues/125
+        var intArr = new int[3][4][5][6][7][8][9];
+        String intArrayName = intArr.getClass().getName();
+        String intSubArrayName = intArr[0].getClass().getName();
 
-        int result = "java.lang.String".equals(stringName) &&
-                "java.lang.Character$UnicodeBlock".equals(unicodeBlockName) &&
-                "byte".equals(byteName) &&
-                "[Ljava.lang.Object;".equals(objectsArrayName) /*&&
-                "[[[[[[[I".equals(intArrayName)*/
-                ? 1
-                : 0;
-        System.out.println(result);
+        System.out.println(stringName);
+        System.out.println(unicodeBlockName);
+        System.out.println(byteName);
+        System.out.println(objectsArrayName);
+        System.out.println(intArrayName);
+        System.out.println(intSubArrayName);
     }
 }
