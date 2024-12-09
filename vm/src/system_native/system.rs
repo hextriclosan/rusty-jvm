@@ -83,6 +83,5 @@ fn set_out0(print_stream_ref: i32) -> crate::error::Result<()> {
         field_ref
     };
 
-    field_ref.set_raw_value(vec![print_stream_ref]);
-    Ok(())
+    field_ref.set_raw_value(vec![print_stream_ref])
 }

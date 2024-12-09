@@ -1,9 +1,10 @@
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::stack::stack_frame::StackFrames;
 use tracing::trace;
 
 pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
-    let stack_frame = stack_frames.last_mut().unwrap();
+    let stack_frame = last_frame_mut(stack_frames)?;
     match code {
         POP => {
             let _value: i32 = stack_frame.pop();

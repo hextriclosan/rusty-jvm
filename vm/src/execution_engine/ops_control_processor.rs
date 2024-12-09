@@ -1,20 +1,21 @@
 use crate::error::Error;
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::stack::sack_value::StackValue;
-use crate::stack::stack_frame::{StackFrame, StackFrames};
+use crate::stack::stack_frame::StackFrames;
 use std::fmt::Display;
 use tracing::trace;
 
 pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
     match code {
         GOTO => {
-            let stack_frame = last_frame(stack_frames)?;
+            let stack_frame = last_frame_mut(stack_frames)?;
             let offset = stack_frame.get_two_bytes_ahead();
             stack_frame.advance_pc(offset);
             trace!("GOTO -> offset={offset}");
         }
         LOOKUPSWITCH => {
-            let stack_frame = last_frame(stack_frames)?;
+            let stack_frame = last_frame_mut(stack_frames)?;
             let key: i32 = stack_frame.pop();
             let instruction_pc = stack_frame.pc() as i16;
             stack_frame.adjust_pc_to_4();
@@ -41,7 +42,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
             trace!("LOOKUPSWITCH -> offset={offset}, npairs={npairs}");
         }
         TABLESWITCH => {
-            let stack_frame = last_frame(stack_frames)?;
+            let stack_frame = last_frame_mut(stack_frames)?;
             let key_index: i32 = stack_frame.pop();
             let instruction_pc = stack_frame.pc() as i16;
             stack_frame.adjust_pc_to_4();
@@ -83,17 +84,11 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
     Ok(())
 }
 
-fn last_frame(stack_frames: &mut StackFrames) -> crate::error::Result<&mut StackFrame> {
-    stack_frames
-        .last_mut()
-        .ok_or(Error::new_execution("Error getting stack last frame"))
-}
-
 fn perform_return<T: StackValue + Copy + Display>(
     stack_frames: &mut StackFrames,
     name: &str,
 ) -> crate::error::Result<()> {
-    let stack_frame = last_frame(stack_frames)?;
+    let stack_frame = last_frame_mut(stack_frames)?;
     let result: T = stack_frame.pop();
 
     stack_frames.pop();

@@ -30,14 +30,12 @@ pub(crate) fn get_modifiers_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> 
 }
 fn get_modifiers(reference: i32) -> crate::error::Result<i32> {
     let modifiers = with_method_area(|method_area| {
-        let name = method_area
-            .get_from_reflection_table(reference)
-            .expect("error getting method area");
-        let rc = method_area.get(&name).expect("error getting method area");
+        let name = method_area.get_from_reflection_table(reference)?;
+        let rc = method_area.get(&name)?;
         let access_flags = rc.access_flags();
 
-        access_flags & MODIFIERS
-    }) as i32;
+        Ok::<u16, Error>(access_flags & MODIFIERS)
+    })? as i32;
 
     Ok(modifiers)
 }
@@ -66,30 +64,26 @@ fn map_primitive_class(primitive_type: &str) -> crate::error::Result<&str> {
 }
 
 pub(crate) fn is_primitive_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
-    let primitive = is_primitive(args[0]);
+    let primitive = is_primitive(args[0])?;
 
     Ok(vec![primitive as i32])
 }
-fn is_primitive(reference: i32) -> bool {
+fn is_primitive(reference: i32) -> crate::error::Result<bool> {
     with_method_area(|method_area| {
-        let name = method_area
-            .get_from_reflection_table(reference)
-            .expect("error getting method area");
-        PRIMITIVE_TYPE_BY_CODE.contains_key(&name.as_str())
+        let name = method_area.get_from_reflection_table(reference)?;
+        Ok(PRIMITIVE_TYPE_BY_CODE.contains_key(&name.as_str()))
     })
 }
 
 pub(crate) fn is_array_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
-    let array = is_array(args[0]);
+    let array = is_array(args[0])?;
 
     Ok(vec![array as i32])
 }
-fn is_array(reference: i32) -> bool {
+fn is_array(reference: i32) -> crate::error::Result<bool> {
     with_method_area(|method_area| {
-        let name = method_area
-            .get_from_reflection_table(reference)
-            .expect("error getting method area");
-        name.starts_with('[')
+        let name = method_area.get_from_reflection_table(reference)?;
+        Ok(name.starts_with('['))
     })
 }
 

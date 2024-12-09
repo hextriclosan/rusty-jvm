@@ -63,10 +63,7 @@ fn write_bytes(
     _append: bool,
 ) -> crate::error::Result<()> {
     let mut file = PlatformFile::get_by_raw_id(obj_ref)?;
-    let array = with_heap_read_lock(|heap| {
-        heap.get_entire_array(bytes_ref)
-            .expect("error getting array value")
-    });
+    let array = with_heap_read_lock(|heap| heap.get_entire_array(bytes_ref))?;
     let raw = array.get_entire_value();
     let mut vec = Vec::with_capacity(raw.len());
     for i in off..off + len {

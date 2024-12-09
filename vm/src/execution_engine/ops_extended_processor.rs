@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::ops_comparison_processor::branch1arg;
 use crate::execution_engine::ops_load_processor::handle_load;
@@ -9,7 +10,7 @@ use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
 
 pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
-    let stack_frame = stack_frames.last_mut().unwrap();
+    let stack_frame = last_frame_mut(stack_frames)?;
     match code {
         WIDE => {
             let opcode = stack_frame.extract_one_byte();

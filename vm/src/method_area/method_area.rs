@@ -62,24 +62,16 @@ impl MethodArea {
         &self,
         fully_qualified_class_name: &str,
     ) -> crate::error::Result<Arc<JavaClass>> {
-        if let Some(java_class) = self
-            .loaded_classes
-            .read()
-            .expect("error getting read lock")
-            .get(fully_qualified_class_name)
-        {
+        if let Some(java_class) = self.loaded_classes.read()?.get(fully_qualified_class_name) {
             return Ok(Arc::clone(java_class));
         }
 
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;
-        self.loaded_classes
-            .write()
-            .expect("error getting write lock")
-            .insert(
-                fully_qualified_class_name.to_string(),
-                Arc::clone(&java_class),
-            );
+        self.loaded_classes.write()?.insert(
+            fully_qualified_class_name.to_string(),
+            Arc::clone(&java_class),
+        );
         trace!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok(java_class)
@@ -377,7 +369,7 @@ impl MethodArea {
         let jc = with_method_area(|area| area.get(class_name))?;
         Ok(JavaInstance::new(
             class_name.to_string(),
-            jc.instance_fields_hierarchy().clone(),
+            jc.instance_fields_hierarchy()?.clone(),
         ))
     }
 
@@ -400,11 +392,15 @@ impl MethodArea {
         Ok(())
     }
 
-    pub(crate) fn put_to_reflection_table(&self, reflection_ref: i32, java_class_name: &str) {
+    pub(crate) fn put_to_reflection_table(
+        &self,
+        reflection_ref: i32,
+        java_class_name: &str,
+    ) -> crate::error::Result<()> {
         self.javaclass_by_reflectionref
-            .write()
-            .expect("error writing to lookup table")
+            .write()?
             .insert(reflection_ref, java_class_name.to_string());
+        Ok(())
     }
 
     pub(crate) fn get_from_reflection_table(
@@ -506,16 +502,13 @@ impl MethodArea {
 
     pub fn system_thread_id(&self) -> crate::error::Result<i32> {
         self.system_thread_id
-            .read()
-            .expect("error getting read lock")
+            .read()?
             .ok_or_else(|| Error::new_execution("system_thread_id wasn't set"))
     }
 
-    pub fn set_system_thread_id(&self, thread_id: i32) {
-        let mut guard = self
-            .system_thread_id
-            .write()
-            .expect("error getting write lock");
+    pub fn set_system_thread_id(&self, thread_id: i32) -> crate::error::Result<()> {
+        let mut guard = self.system_thread_id.write()?;
         *guard = Some(thread_id);
+        Ok(())
     }
 }
