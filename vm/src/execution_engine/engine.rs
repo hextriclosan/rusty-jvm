@@ -62,7 +62,7 @@ impl Engine {
                     ops_reference_processor::process(code, &class, &mut stack_frames)?;
                 }
                 196u8..=201u8 => {
-                    ops_extended_processor::process(code, &mut stack_frames)?;
+                    ops_extended_processor::process(code, &class, &mut stack_frames)?;
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", code}),
             }

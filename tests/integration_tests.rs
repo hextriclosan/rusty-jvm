@@ -71,7 +71,7 @@ fn should_convert_to_string_and_back() {
 
 #[test]
 fn should_do_3d_arrays() {
-    assert_success("samples.arrays.array3d.Array3D", "780\n");
+    assert_success("samples.arrays.array3d.Array3D", "780\n360\n");
 }
 
 #[test]
@@ -442,7 +442,13 @@ fn should_print_to_stdout() {
 fn should_return_class_name() {
     assert_success(
         "samples.reflection.trivial.classgetname.ClassGetNameExample",
-        "1\n",
+        r#"java.lang.String
+java.lang.Character$UnicodeBlock
+byte
+[Ljava.lang.Object;
+[[[[[[[I
+[[[[[[I
+"#,
     );
 }
 
