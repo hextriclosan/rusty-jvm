@@ -3,6 +3,7 @@
 [![Build Status](https://github.com/hextriclosan/rusty-jvm/actions/workflows/rust.yml/badge.svg)](https://github.com/hextriclosan/rusty-jvm/actions)
 ![LoC](https://tokei.rs/b1/github/hextriclosan/rusty-jvm?type=Rust)
 ![License](https://img.shields.io/github/license/hextriclosan/rusty-jvm)
+[![codecov](https://codecov.io/gh/hextriclosan/rusty-jvm/branch/master/graph/badge.svg)](https://codecov.io/gh/hextriclosan/rusty-jvm)
 
 ## Introduction
 This project is an attempt to implement JVM in Rust.
