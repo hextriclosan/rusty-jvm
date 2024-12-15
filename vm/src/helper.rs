@@ -11,3 +11,11 @@ pub fn i64_to_vec(value: i64) -> Vec<i32> {
 
     vec![high, low]
 }
+
+pub fn vec_to_i64(value: &[i32]) -> i64 {
+    match value.len() {
+        1 => value[0] as i64,
+        2 => i32toi64(value[0], value[1]),
+        _ => panic!("Invalid value length: {}", value.len()),
+    }
+}

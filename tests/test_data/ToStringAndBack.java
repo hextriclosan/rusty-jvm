@@ -37,9 +37,9 @@ public class ToStringAndBack {
         double convertedDouble = convertDouble(valueDoubled);
         int bit7 = valueDoubled == convertedDouble ? 1 : 0;
 
-//         BigInteger valueBigInteger = new BigInteger("" + Long.MAX_VALUE);
-//         BigInteger convertedBigInteger = convertBigInteger(valueBigInteger);
-//         int bit8 = valueBigInteger.equals(convertedBigInteger) ? 1 : 0;
+        BigInteger valueBigInteger = new BigInteger("340282366920938463463374607431768211455"); //2^128 − 1
+        BigInteger convertedBigInteger = convertBigInteger(valueBigInteger);
+        int bit8 = valueBigInteger.equals(convertedBigInteger) ? 1 : 0;
 
         int result = 0;
         result = setBit(result, 0, bit0);
@@ -50,7 +50,7 @@ public class ToStringAndBack {
         result = setBit(result, 5, bit5);
         result = setBit(result, 6, bit6);
         result = setBit(result, 7, bit7);
-//         result = setBit(result, 8, bit8);
+        result = setBit(result, 8, bit8);
 
         System.out.println(result);
     }
@@ -96,7 +96,7 @@ public class ToStringAndBack {
     }
 
     private static BigInteger convertBigInteger(BigInteger valueBigInteger) {
-        String string = valueBigInteger.toString(); //todo: implement clone() for arrays
+        String string = valueBigInteger.toString();
         return new BigInteger(string);
     }
 

@@ -1,5 +1,3 @@
-use tracing::trace;
-use crate::method_area::method_area::with_method_area;
 use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
@@ -7,12 +5,18 @@ use crate::execution_engine::ops_comparison_processor::branch1arg;
 use crate::execution_engine::ops_load_processor::handle_load;
 use crate::execution_engine::ops_math_processor::increment;
 use crate::execution_engine::ops_store_processor::handle_store;
+use crate::heap::heap::with_heap_write_lock;
+use crate::method_area::method_area::with_method_area;
 use crate::stack::sack_value::StackValue;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
-use crate::heap::heap::with_heap_write_lock;
+use tracing::trace;
 
-pub(crate) fn process(code: u8, current_class_name: &str, stack_frames: &mut StackFrames) -> crate::error::Result<()> {
+pub(crate) fn process(
+    code: u8,
+    current_class_name: &str,
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<()> {
     let stack_frame = last_frame_mut(stack_frames)?;
     match code {
         WIDE => {
@@ -47,11 +51,13 @@ pub(crate) fn process(code: u8, current_class_name: &str, stack_frames: &mut Sta
 
             let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
             let cpool_helper = rc.cpool_helper();
-            let class_name = cpool_helper.get_class_name(class_index as u16).ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "Error getting class name by index {class_index}"
-                ))
-            })?;
+            let class_name = cpool_helper
+                .get_class_name(class_index as u16)
+                .ok_or_else(|| {
+                    Error::new_execution(&format!(
+                        "Error getting class name by index {class_index}"
+                    ))
+                })?;
 
             let dimentions = (0..dimension_number)
                 .map(|_| stack_frame.pop())
@@ -95,10 +101,15 @@ fn handle_pos_and_store<T: StackValue + Display + Copy>(
     handle_store::<T, _>(stack_frame, pos as usize, name_starts);
 }
 
-fn create_n_array(dimensions: &[i32], signature: &str, current_level: usize) -> crate::error::Result<i32> {
+fn create_n_array(
+    dimensions: &[i32],
+    signature: &str,
+    current_level: usize,
+) -> crate::error::Result<i32> {
     let current_length = dimensions[current_level];
     let current_signature = &signature[current_level..];
-    let arrayref = with_heap_write_lock(|heap| heap.create_array(current_signature, current_length))?;
+    let arrayref =
+        with_heap_write_lock(|heap| heap.create_array(current_signature, current_length))?;
 
     if current_level < dimensions.len() - 1 {
         for i in 0..current_length {

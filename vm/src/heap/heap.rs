@@ -144,9 +144,22 @@ impl Heap {
         &self,
         arrayref: i32,
         index: i32,
-    ) -> crate::error::Result<&Vec<i32>> {
+    ) -> crate::error::Result<Vec<i32>> {
         if let Some(Arr(arr)) = self.data.get(&arrayref) {
             arr.get_value(index)
+        } else {
+            Err(Error::new_execution("error getting array value from heap"))
+        }
+    }
+
+    pub(crate) fn get_array_value_by_raw_offset(
+        &self,
+        arrayref: i32,
+        offset: usize,
+        len: usize,
+    ) -> crate::error::Result<Vec<i32>> {
+        if let Some(Arr(arr)) = self.data.get(&arrayref) {
+            arr.get_value_by_raw_offset(offset, len)
         } else {
             Err(Error::new_execution("error getting array value from heap"))
         }
@@ -160,6 +173,19 @@ impl Heap {
     ) -> crate::error::Result<()> {
         if let Some(Arr(arr)) = self.data.get_mut(&arrayref) {
             arr.set_value(index, value)
+        } else {
+            Err(Error::new_execution("error setting array value"))
+        }
+    }
+
+    pub(crate) fn set_array_value_by_raw_offset(
+        &mut self,
+        arrayref: i32,
+        offset: usize,
+        value: Vec<i32>,
+    ) -> crate::error::Result<()> {
+        if let Some(Arr(arr)) = self.data.get_mut(&arrayref) {
+            arr.set_array_value_by_raw_offset(offset, value)
         } else {
             Err(Error::new_execution("error setting array value"))
         }

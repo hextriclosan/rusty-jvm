@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::helper::{i32toi64, i64_to_vec};
+use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::string::get_utf8_string_by_ref;
@@ -49,9 +49,9 @@ fn compare_and_set_int(
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     let updated = if class_name.starts_with("[") {
         with_heap_write_lock(|heap| {
-            let result = heap.get_array_value(obj_ref, offset as i32)?[0];
+            let result = heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?[0];
             if result == expected {
-                heap.set_array_value(obj_ref, offset as i32, vec![x])?;
+                heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![x])?;
                 Ok::<bool, Error>(true)
             } else {
                 Ok(false)
@@ -86,7 +86,9 @@ pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<V
 fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     let raw_value = if class_name.starts_with("[") {
-        with_heap_read_lock(|heap| heap.get_array_value(obj_ref, offset as i32).cloned())?
+        with_heap_read_lock(|heap| {
+            heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)
+        })?
     } else {
         let jc = with_method_area(|area| area.get(class_name.as_str()))?;
         let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
@@ -95,23 +97,109 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i32
 
     Ok(raw_value[0])
 }
-pub(crate) fn get_long_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+
+pub(crate) fn get_byte_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
 
-    let result = get_long_volatile(obj_ref, offset)?;
+    let byte = get_byte(obj_ref, offset)?;
+    Ok(vec![byte as i32])
+}
+pub(crate) fn get_byte(obj_ref: i32, offset: i64) -> crate::error::Result<i8> {
+    if obj_ref != 0 {
+        let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+        if class_name.starts_with("[") {
+            let result = with_heap_read_lock(|heap| {
+                heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 1)
+            })?;
+            Ok(result[0] as i8)
+        } else {
+            todo!("implement get_byte for class field");
+        }
+    } else {
+        todo!("implement get_byte for null object");
+    }
+}
+
+pub(crate) fn get_short_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+
+    let short = get_short(obj_ref, offset)?;
+    Ok(vec![short as i32])
+}
+pub(crate) fn get_short(obj_ref: i32, offset: i64) -> crate::error::Result<i16> {
+    if obj_ref != 0 {
+        let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+        if class_name.starts_with("[") {
+            let result = with_heap_read_lock(|heap| {
+                heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 2)
+            })?;
+            Ok(result[0] as i16)
+        } else {
+            todo!("implement get_short for class field");
+        }
+    } else {
+        todo!("implement get_short for null object");
+    }
+}
+
+pub(crate) fn get_int_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+
+    let int = get_int(obj_ref, offset)?;
+    Ok(vec![int])
+}
+pub(crate) fn get_int(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
+    if obj_ref != 0 {
+        let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+        if class_name.starts_with("[") {
+            let result = with_heap_read_lock(|heap| {
+                heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)
+            })?;
+            Ok(result[0])
+        } else {
+            todo!("implement get_int for class field");
+        }
+    } else {
+        todo!("implement get_int for null object");
+    }
+}
+
+pub(crate) fn get_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+
+    let result = get_long(obj_ref, offset)?;
 
     let high = ((result >> 32) & 0xFFFFFFFF) as i32;
     let low = (result & 0xFFFFFFFF) as i32;
 
     Ok(vec![high, low])
 }
-fn get_long_volatile(obj_ref: i32, offset: i64) -> crate::error::Result<i64> {
+fn get_long(obj_ref: i32, offset: i64) -> crate::error::Result<i64> {
     if obj_ref != 0 {
-        todo!("implement get_long_volatile for non null object");
+        let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+        if class_name.starts_with("[") {
+            with_heap_read_lock(|heap| {
+                let bytes = heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 8)?;
+                Ok(vec_to_i64(&bytes))
+            })
+        } else {
+            todo!("implement get_long for non null object")
+        }
+    } else {
+        Ok(offset) // not real implementation, just a placeholder for case when object is null
     }
-    Ok(offset) // not real implementation, just a placeholder for case when object is null
+}
+
+pub(crate) fn get_long_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    get_long_wrp(args) // todo! make me volatile
 }
 
 pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -172,5 +260,30 @@ fn put_reference_volatile(obj_ref: i32, offset: i64, ref_value: i32) -> crate::e
 
         heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])?;
         Ok(())
+    })
+}
+
+pub(crate) fn array_index_scale0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let class_ref = args[1];
+
+    let index_scale = array_index_scale0(class_ref)?;
+
+    Ok(vec![index_scale])
+}
+fn array_index_scale0(class_ref: i32) -> crate::error::Result<i32> {
+    with_method_area(|method_area| {
+        let type_name = method_area.get_from_reflection_table(class_ref)?;
+        Ok(match type_name.as_str() {
+            "[B" => 1,
+            "[C" => 2,
+            "[D" => 8,
+            "[F" => 4,
+            "[I" => 4,
+            "[J" => 8,
+            "[S" => 2,
+            "[Z" => 1,
+            _ => 4,
+        })
     })
 }
