@@ -38,6 +38,9 @@ jobs:
           && tar -xvf zig-linux-x86_64-0.13.0.tar.xz \
           && mv zig-linux-x86_64-0.13.0 /usr/local/zig
 
+          # Add Zig to the PATH so it can be accessed by the build process
+          ENV PATH="/usr/local/zig/zig-linux-x86_64-0.13.0:${PATH}"
+
           # Add PowerPC64 target
           RUN cargo install cargo-zigbuild
           RUN rustup target add powerpc64-unknown-linux-gnu
