@@ -10,28 +10,20 @@ jobs:
   big-endian-test:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Install Rust and target
-      - name: Install Rust
+      - name: Install Rust (Nightly)
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          target: mips-unknown-linux-gnu
+          toolchain: nightly
+          target: powerpc-unknown-linux-gnu
 
-      # Step 3: Install dependencies for QEMU
       - name: Install QEMU
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user
+        run: sudo apt-get install -y qemu-user
 
-      # Step 4: Build for Big-Endian target
       - name: Build for Big-Endian
-        run: cargo build --target=mips-unknown-linux-gnu
+        run: cargo build --target=powerpc-unknown-linux-gnu
 
-      # Step 5: Run tests with QEMU
-      - name: Run Tests on QEMU
-        run: |
-          qemu-mips target/mips-unknown-linux-gnu/debug/your_binary
+      - name: Run Tests with QEMU
+        run: qemu-ppc target/powerpc-unknown-linux-gnu/debug/your_binary
