@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::helper::{i32toi64, i64_to_vec};
+use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use std::fs::File;
 use std::mem::ManuallyDrop;
 use std::os::windows::io::{FromRawHandle, IntoRawHandle, RawHandle};
@@ -18,7 +18,7 @@ impl PlatformFile {
                 "java/io/FileDescriptor",
                 "handle",
             )?;
-            Ok::<i64, Error>(i32toi64(raw[0], raw[1]))
+            Ok::<i64, Error>(vec_to_i64(&raw))
         })?;
 
         eprintln!("close0: raw_fd={raw_fd}");
@@ -68,7 +68,7 @@ impl PlatformFile {
                 heap.get_object_field_value(obj_ref, "java/io/FileOutputStream", "fd")?[0];
             let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
 
-            Ok::<i64, Error>(i32toi64(raw[0], raw[1]))
+            Ok::<i64, Error>(vec_to_i64(&raw))
         })?;
 
         let file = ManuallyDrop::new(unsafe { File::from_raw_handle(handle as RawHandle) }); // ManuallyDrop prevents `file` from being dropped
