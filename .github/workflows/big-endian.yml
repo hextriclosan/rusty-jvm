@@ -34,6 +34,7 @@ jobs:
           ENV PATH="/root/.cargo/bin:${PATH}"
 
           # Add PowerPC64 target
+          RUN cargo install cargo-zigbuild
           RUN rustup target add powerpc64-unknown-linux-gnu
           EOF
 
@@ -44,7 +45,7 @@ jobs:
       - name: Build for PowerPC64
         run: |
           docker run --rm -v ${{ github.workspace }}:/project -w /project custom-rust-powerpc64 \
-          cargo build --target=powerpc64-unknown-linux-gnu
+          cargo zigbuild --target=powerpc64-unknown-linux-gnu
 
       # Step 4: Run tests (optional)
       - name: Run Tests (Optional)
