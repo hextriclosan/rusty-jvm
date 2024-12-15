@@ -66,7 +66,7 @@ fn should_convert_long_to_double_and_back() {
 
 #[test]
 fn should_convert_to_string_and_back() {
-    assert_success("samples.javacore.strings.trivial.ToStringAndBack", "255\n");
+    assert_success("samples.javacore.strings.trivial.ToStringAndBack", "511\n");
 }
 
 #[test]
@@ -524,5 +524,41 @@ fn should_write_read_static_fields() {
     assert_success(
         "samples.fields.staticinitialization.ints.StaticFieldsUserInts",
         "110022\n",
+    );
+}
+
+#[test]
+fn should_work_with_arrays_of_long_with_unsafe() {
+    assert_success(
+        "samples.jdkinternal.unsafe.getlongunaligned.UnsafeGetLongUnalignedExample",
+        r#"2892188478761536005
+3253889342951919370
+3615590207142302735
+3977291071332686100
+4338991935523069465
+4700692799713452830
+5062393663903836195
+5424094528094219560
+5785795392284602925
+"#,
+    );
+}
+
+#[test]
+fn should_initialize_arrays_with_default_values() {
+    assert_success(
+        "samples.arrays.defaultvalues.ArrayDefaultValues",
+        r#"Default value in int array: 0
+Default value in long array: 0
+Default value in byte array: 0
+Default value in short array: 0
+Default value in float array: 0.0
+Default value in double array: 0.0
+Default value in char array: 0
+Default value in boolean array: false
+Default value in String array: null
+Default value in 2D int array: 0
+Default value in 2D float array: 0.0
+"#,
     );
 }

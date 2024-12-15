@@ -19,8 +19,9 @@ use crate::system_native::system::{
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
 use crate::system_native::unsafe_::{
-    compare_and_set_int_wrp, compare_and_set_long_wrp, get_long_volatile_wrp,
-    get_reference_volatile_wrp, object_field_offset_1_wrp, put_reference_volatile_wrp,
+    array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp, get_byte_wrp,
+    get_int_wrp, get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
+    object_field_offset_1_wrp, put_reference_volatile_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -117,12 +118,28 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_reference_volatile_wrp),
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:getByte:(Ljava/lang/Object;J)B",
+        Basic(get_byte_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:getShort:(Ljava/lang/Object;J)S",
+        Basic(get_short_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:getInt:(Ljava/lang/Object;J)I",
+        Basic(get_int_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:getLong:(Ljava/lang/Object;J)J",
+        Basic(get_long_wrp),
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:getLongVolatile:(Ljava/lang/Object;J)J",
         Basic(get_long_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:arrayIndexScale0:(Ljava/lang/Class;)I",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![1])),
+        Basic(array_index_scale0_wrp),
     );
     table.insert("jdk/internal/misc/Unsafe:fullFence:()V", Basic(void_stub));
     table.insert(

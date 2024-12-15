@@ -76,7 +76,7 @@ fn handle_array_load<T: StackValue + Display + Copy>(
 ) -> crate::error::Result<()> {
     let index = stack_frame.pop();
     let arrayref: i32 = stack_frame.pop();
-    let raw_value = with_heap_read_lock(|heap| heap.get_array_value(arrayref, index).cloned())?;
+    let raw_value = with_heap_read_lock(|heap| heap.get_array_value(arrayref, index))?;
 
     let value: T = T::from_vec(&raw_value);
 
