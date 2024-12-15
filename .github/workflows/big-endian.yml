@@ -33,6 +33,11 @@ jobs:
           RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           ENV PATH="/root/.cargo/bin:${PATH}"
 
+          # Install Zig for cross-compilation support (x86_64 version is fine for this)
+          RUN curl -LO https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz \
+          && tar -xvf zig-linux-x86_64-0.13.0.tar.xz \
+          && mv zig-linux-x86_64-0.13.0 /usr/local/zig
+
           # Add PowerPC64 target
           RUN cargo install cargo-zigbuild
           RUN rustup target add powerpc64-unknown-linux-gnu
