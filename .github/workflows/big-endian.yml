@@ -7,19 +7,47 @@ on:
     branches: [ "main" ]
 
 jobs:
-  big-endian-test:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      # Step 1: Checkout the code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build with Docker
+      # Step 2: Build the custom Docker image for PowerPC64
+      - name: Build Docker Image
         run: |
-          docker run --rm -v ${{ github.workspace }}:/project -w /project messense/rust-musl-cross:powerpc64 cargo build --target=powerpc64-unknown-linux-gnu
+          cat <<EOF > Dockerfile
+          FROM debian:bullseye
 
-      - name: Install QEMU
-        run: sudo apt-get install -y qemu-user
+          # Install required tools
+          RUN apt-get update && apt-get install -y \
+              build-essential \
+              gcc-powerpc64-linux-gnu \
+              curl \
+              qemu-user \
+              && rm -rf /var/lib/apt/lists/*
 
-      - name: Run with QEMU
+          # Install Rust
+          RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          ENV PATH="/root/.cargo/bin:${PATH}"
+
+          # Add PowerPC64 target
+          RUN rustup target add powerpc64-unknown-linux-gnu
+          EOF
+
+          # Build the Docker image
+          docker build -t custom-rust-powerpc64 .
+
+      # Step 3: Run the build using the Docker image
+      - name: Build for PowerPC64
         run: |
-          qemu-ppc target/powerpc-unknown-linux-gnu/debug/your_binary
+          docker run --rm -v ${{ github.workspace }}:/project -w /project custom-rust-powerpc64 \
+          cargo build --target=powerpc64-unknown-linux-gnu
+
+      # Step 4: Run tests (optional)
+      - name: Run Tests (Optional)
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/project -w /project custom-rust-powerpc64 \
+          cargo test --target=powerpc64-unknown-linux-gnu
