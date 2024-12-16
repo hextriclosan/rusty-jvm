@@ -6,7 +6,7 @@ pub struct CPoolHelper {
     data: HashMap<CPoolType, HashMap<u16, ConstantPool>>,
 }
 
-#[derive(Eq, Hash, PartialEq, Debug)]
+#[derive(Eq, Hash, PartialEq, Debug, Clone, Copy)]
 pub enum CPoolType {
     Empty,
     Utf8,
@@ -68,6 +68,15 @@ impl CPoolHelper {
 
     pub fn get(&self, ctype: CPoolType, index: u16) -> Option<&ConstantPool> {
         self.data.get(&ctype)?.get(&index)
+    }
+
+    pub fn get_first(&self, ctypes: &[CPoolType], index: u16) -> Option<&ConstantPool> {
+        for &ctype in ctypes {
+            if let Some(constant_pool) = self.get(ctype, index) {
+                return Some(constant_pool);
+            }
+        }
+        None
     }
 
     pub fn get_class_name(&self, index: u16) -> Option<String> {
@@ -148,13 +157,24 @@ impl CPoolHelper {
     }
 
     pub fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)> {
-        let (class_index, name_and_type_index) = match self.get(CPoolType::Methodref, index)? {
-            ConstantPool::Methodref {
-                class_index,
-                name_and_type_index,
-            } => Some((class_index, name_and_type_index)),
-            _ => None,
-        }?;
+        let constant_pool = self.get_first(
+            &[CPoolType::Methodref, CPoolType::InterfaceMethodref],
+            index,
+        )?;
+
+        let (class_index, name_and_type_index) = if let ConstantPool::Methodref {
+            class_index,
+            name_and_type_index,
+        }
+        | ConstantPool::InterfaceMethodref {
+            class_index,
+            name_and_type_index,
+        } = constant_pool
+        {
+            (class_index, name_and_type_index)
+        } else {
+            return None;
+        };
 
         let class_name = self.get_class_name(*class_index)?;
         let (method_name, method_descriptor) = self.get_name_and_type(*name_and_type_index)?;

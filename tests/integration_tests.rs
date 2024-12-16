@@ -562,3 +562,11 @@ Default value in 2D float array: 0.0
 "#,
     );
 }
+
+#[test]
+fn should_support_returning_interface_from_static_method() {
+    assert_success(
+        "samples.inheritance.staticmethodreturnsinterface.StaticMethodReturnsInterface",
+        "[some string]\n",
+    );
+}

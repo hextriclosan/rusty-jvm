@@ -178,6 +178,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "jdk/internal/misc/CDS:initializeFromArchive:(Ljava/lang/Class;)V",
         Basic(void_stub),
     );
+    table.insert(
+        "jdk/internal/misc/CDS:getRandomSeedForDumping:()J",
+        Basic(|_args: &[i32]| return_argument_stub(&vec![1337, 42])), // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
+    );
     table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
     table.insert(
         "java/lang/Runtime:maxMemory:()J",
