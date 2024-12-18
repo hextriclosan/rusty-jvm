@@ -32,6 +32,7 @@ It features abstract classes, interfaces, and polymorphism to demonstrate the ca
 package game;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Demo {
@@ -86,9 +87,7 @@ class DarkTemplar extends AbstractUnit {
 class ControlGroup implements Unit {
     private final List<Unit> units = new ArrayList<>();
     public void addUnits(Unit... units) {
-        for (Unit unit : units) {
-            this.units.add(unit);
-        }
+        this.units.addAll(Arrays.asList(units));
     }
     @Override
     public int damage() {
