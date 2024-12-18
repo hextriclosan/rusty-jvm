@@ -4,6 +4,9 @@ pub(crate) struct InstanceChecker {}
 
 impl InstanceChecker {
     pub fn checkcast(class_cast_from: &str, class_cast_to: &str) -> crate::error::Result<bool> {
+        let (class_cast_from, class_cast_to) =
+            Self::try_unwrap_arrays(class_cast_from, class_cast_to);
+
         if let Some(base_of) = Self::is_base_of(class_cast_to, class_cast_from) {
             return Ok(base_of);
         }
@@ -13,6 +16,24 @@ impl InstanceChecker {
         }
 
         Ok(false)
+    }
+
+    fn try_unwrap_arrays<'a>(first: &'a str, second: &'a str) -> (&'a str, &'a str) {
+        fn unwrap_descriptor(descr: &str) -> &str {
+            if descr.starts_with('L') {
+                &descr[1..descr.len() - 1]
+            } else {
+                descr
+            }
+        }
+
+        if first.starts_with('[') && first.starts_with('[') {
+            Self::try_unwrap_arrays(&first[1..], &second[1..])
+        } else {
+            let first = unwrap_descriptor(first);
+            let second = unwrap_descriptor(second);
+            (first, second)
+        }
     }
 
     fn is_base_of(base: &str, child: &str) -> Option<bool> {

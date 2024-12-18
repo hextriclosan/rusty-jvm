@@ -570,3 +570,14 @@ fn should_support_returning_interface_from_static_method() {
         "[some string]\n",
     );
 }
+
+#[test]
+fn should_cast_arrays_when_possible() {
+    assert_success(
+        "samples.javacore.cast.arrays.ArrayCastExample",
+        r#"[Ljava.lang.String;
+[I
+HelloWorld!
+"#,
+    );
+}
