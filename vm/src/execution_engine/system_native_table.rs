@@ -4,7 +4,7 @@ use crate::helper::i64_to_vec;
 use crate::stack::stack_frame::StackFrames;
 use crate::system_native::class::{
     class_init_class_name_wrp, for_name0_wrp, get_modifiers_wrp, get_primitive_class_wrp,
-    is_array_wrp, is_interface_wrp, is_primitive_wrp,
+    is_array_wrp, is_interface_wrp, is_primitive_wrp, get_superclass_wrp,
 };
 use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::system_native::file_output_stream::{
