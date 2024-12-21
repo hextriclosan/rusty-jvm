@@ -70,7 +70,7 @@ impl MethodArea {
             let arc = Self::generate_synthetic_array_class(fully_qualified_class_name);
             self.loaded_classes
                 .write()?
-                .insert(fully_qualified_class_name.to_string(), arc.clone());
+                .insert(fully_qualified_class_name.to_string(), Arc::clone(&arc));
             return Ok(arc);
         }
 
