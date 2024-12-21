@@ -11,7 +11,7 @@ fn should_deal_with_abstract_class_without_interface_implementation() {
 
 #[test]
 fn should_create_array_class_type() {
-    assert_success("samples.reflection.trivial.ArrayClass", "262143\n");
+    assert_success("samples.reflection.trivial.ArrayClass", "16777215\n");
 }
 
 #[test]
