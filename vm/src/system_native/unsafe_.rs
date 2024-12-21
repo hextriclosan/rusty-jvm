@@ -180,10 +180,6 @@ pub(crate) fn get_int(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
     }
 }
 
-pub(crate) fn get_int_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
-    get_int_wrp(args) // todo! make me volatile
-}
-
 pub(crate) fn get_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
