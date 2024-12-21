@@ -1,6 +1,8 @@
 pub(crate) mod class;
+pub(crate) mod constant_pool;
 pub(crate) mod file_descriptor;
 pub(crate) mod file_output_stream;
+pub(crate) mod method_handle_natives;
 pub(crate) mod object;
 mod platform_file;
 pub(crate) mod reflecton;

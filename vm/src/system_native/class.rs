@@ -40,6 +40,30 @@ fn get_modifiers(reference: i32) -> crate::error::Result<i32> {
     Ok(modifiers)
 }
 
+pub(crate) fn get_superclass_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let current_clazz_ref = args[0];
+    let super_clazz_ref = get_superclass(current_clazz_ref)?;
+
+    Ok(vec![super_clazz_ref])
+}
+fn get_superclass(clazz_ref: i32) -> crate::error::Result<i32> {
+    let current_clazz_ref = with_method_area(|method_area| {
+        let name = method_area.get_from_reflection_table(clazz_ref)?;
+        let rc = method_area.get(&name)?;
+        let parent = if !rc.is_interface() {
+            rc.parent().clone()
+        } else {
+            None
+        };
+
+        let current_clazz_ref =
+            parent.map_or(Ok(0), |parent| method_area.load_reflection_class(&parent));
+        current_clazz_ref
+    })?;
+
+    Ok(current_clazz_ref)
+}
+
 pub(crate) fn get_primitive_class_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let string_ref = args[0];
     let class_ref = get_primitive_class(string_ref)?;

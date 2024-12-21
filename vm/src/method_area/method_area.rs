@@ -66,6 +66,14 @@ impl MethodArea {
             return Ok(Arc::clone(java_class));
         }
 
+        if fully_qualified_class_name.starts_with('[') {
+            let arc = Self::generate_synthetic_array_class(fully_qualified_class_name);
+            self.loaded_classes
+                .write()?
+                .insert(fully_qualified_class_name.to_string(), arc.clone());
+            return Ok(arc);
+        }
+
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;
         self.loaded_classes.write()?.insert(
@@ -482,22 +490,6 @@ impl MethodArea {
 
     pub(crate) fn load_reflection_class(&self, name: &str) -> crate::error::Result<i32> {
         self.ldc_resolution_manager.load_reflection_class(name)
-    }
-
-    pub(crate) fn create_array_class_if_needed(
-        &self,
-        array_class_name: &str,
-    ) -> crate::error::Result<()> {
-        match self.get(array_class_name) {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                let arc = Self::generate_synthetic_array_class(array_class_name);
-                self.loaded_classes
-                    .write()?
-                    .insert(array_class_name.to_string(), arc);
-                Ok(())
-            }
-        }
     }
 
     pub fn system_thread_id(&self) -> crate::error::Result<i32> {

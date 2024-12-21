@@ -1,7 +1,6 @@
 use crate::error::Error;
 use crate::heap::java_instance::HeapValue::{Arr, Object};
 use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
-use crate::method_area::method_area::with_method_area;
 use indexmap::IndexMap;
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -104,10 +103,6 @@ impl Heap {
 
     pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> crate::error::Result<i32> {
         let id = self.next_id();
-
-        //ensure creation of ephemeral array class
-        with_method_area(|method_area| method_area.create_array_class_if_needed(type_name))?;
-
         self.data.insert(id, Arr(Array::new(type_name, len)));
 
         Ok(id)

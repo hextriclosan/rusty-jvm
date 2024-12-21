@@ -73,6 +73,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp));
     table.insert(
+        "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
+        Basic(get_superclass_wrp),
+    );
+    table.insert(
         "java/lang/Class:getPrimitiveClass:(Ljava/lang/String;)Ljava/lang/Class;",
         Basic(get_primitive_class_wrp),
     );
