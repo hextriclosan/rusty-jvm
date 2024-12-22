@@ -11,7 +11,7 @@ fn should_deal_with_abstract_class_without_interface_implementation() {
 
 #[test]
 fn should_create_array_class_type() {
-    assert_success("samples.reflection.trivial.ArrayClass", "262143\n");
+    assert_success("samples.reflection.trivial.ArrayClass", "16777215\n");
 }
 
 #[test]
@@ -578,6 +578,29 @@ fn should_cast_arrays_when_possible() {
         r#"[Ljava.lang.String;
 [I
 HelloWorld!
+"#,
+    );
+}
+
+#[test]
+fn should_support_getting_supper_class() {
+    assert_success(
+        "samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample",
+        r#"Superclass of java.lang.String: class java.lang.Object
+Superclass of java.lang.Integer: class java.lang.Number
+Superclass of java.lang.Object: null
+Superclass of java.lang.Runnable: null
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$ExtendedRunnable: null
+Superclass of int: null
+Superclass of void: null
+Superclass of [Ljava.lang.String;: class java.lang.Object
+Superclass of [I: class java.lang.Object
+Superclass of [Ljava.lang.Runnable;: class java.lang.Object
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$1: class java.lang.Object
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$1LocalClass: class java.lang.Object
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$InnerClass: class java.lang.Object
+Superclass of java.util.concurrent.TimeUnit: class java.lang.Enum
+Superclass of java.util.HashMap: class java.util.AbstractMap
 "#,
     );
 }

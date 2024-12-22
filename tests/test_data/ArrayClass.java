@@ -31,6 +31,15 @@ public class ArrayClass {
         int bit16 = classString == String.class ? 1 : 0;
         int bit17 = classString.getComponentType() == null ? 1 : 0;
 
+        var classRunnableArray = Runnable[].class;
+        int bit18 = classRunnableArray.isPrimitive() ? 0 : 1;
+        int bit19 = classRunnableArray.isArray() ? 1 : 0;
+        Class<?> classRunnable = classRunnableArray.getComponentType();
+        int bit20 = classRunnable.isPrimitive() ? 0 : 1;
+        int bit21 = classRunnable.isArray() ? 0 : 1;
+        int bit22 = classRunnable == Runnable.class ? 1 : 0;
+        int bit23 = classRunnable.getComponentType() == null ? 1 : 0;
+
         int result = 0;
         result = setBit(result, 0, bit0);
         result = setBit(result, 1, bit1);
@@ -50,6 +59,12 @@ public class ArrayClass {
         result = setBit(result, 15, bit15);
         result = setBit(result, 16, bit16);
         result = setBit(result, 17, bit17);
+        result = setBit(result, 18, bit17);
+        result = setBit(result, 19, bit17);
+        result = setBit(result, 20, bit17);
+        result = setBit(result, 21, bit17);
+        result = setBit(result, 22, bit17);
+        result = setBit(result, 23, bit17);
         System.out.println(result);
     }
 
