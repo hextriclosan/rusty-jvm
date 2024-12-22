@@ -32,6 +32,7 @@ pub(crate) struct JavaClass {
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
+    declaring_class: Option<String>,
 }
 
 #[derive(Debug)]
@@ -71,6 +72,7 @@ impl JavaClass {
         parent: Option<String>,
         interfaces: IndexSet<String>,
         access_flags: u16,
+        declaring_class: Option<String>,
     ) -> Self {
         let external_name = PRIMITIVE_TYPE_BY_CODE
             .get(this_class_name)
@@ -90,6 +92,7 @@ impl JavaClass {
             static_fields_initialized: AtomicBool::new(false),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
+            declaring_class,
         }
     }
 
@@ -234,6 +237,10 @@ impl JavaClass {
 
     pub fn external_name(&self) -> &str {
         &self.external_name
+    }
+
+    pub fn declaring_class(&self) -> &Option<String> {
+        &self.declaring_class
     }
 }
 

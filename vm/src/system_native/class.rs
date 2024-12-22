@@ -194,3 +194,27 @@ fn get_interfaces0(class_ref: i32) -> crate::error::Result<i32> {
     });
     Ok(result_ref)
 }
+
+pub(crate) fn get_declaring_class0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let clazz_ref = args[0];
+    let declaring_class_ref = get_declaring_class0(clazz_ref)?;
+    Ok(vec![declaring_class_ref])
+}
+fn get_declaring_class0(clazz_ref: i32) -> crate::error::Result<i32> {
+    let declaring_class_ref = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(clazz_ref)?;
+        let jc = method_area.get(&class_name)?;
+        let declaring_class_ref = jc
+            .declaring_class()
+            .as_ref()
+            .map(|declaring_class| {
+                let declaring_class_ref = method_area.load_reflection_class(declaring_class);
+                declaring_class_ref
+            })
+            .unwrap_or(Ok(0));
+        
+        declaring_class_ref
+    });
+
+    declaring_class_ref
+}
