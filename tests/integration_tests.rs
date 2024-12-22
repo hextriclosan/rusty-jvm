@@ -604,3 +604,33 @@ Superclass of java.util.HashMap: class java.util.AbstractMap
 "#,
     );
 }
+
+#[test]
+fn should_check_if_class_is_enum() {
+    assert_success(
+        "samples.reflection.trivial.isenumexample.IsEnumExample",
+        r#"Is TimeUnit enum: true
+Is TimeUnit.MINUTES enum: true
+Is String enum: false
+Is TimeUnit[].class enum: false
+Is Runnable enum: false
+Is int enum: false
+Is void enum: false
+"#,
+    );
+}
+
+#[test]
+fn should_check_if_class_is_annotation() {
+    assert_success(
+        "samples.reflection.trivial.isannotationexample.IsAnnotationExample",
+        r#"@MyAnnotation is annotation: true
+String.class is annotation: false
+@InheritedAnnotation is annotation: true
+@MyAnnotation subclass is annotation: true
+@SourceAnnotation is annotation: true
+Annotation array is annotation: false
+int.class is annotation: false
+"#,
+    );
+}

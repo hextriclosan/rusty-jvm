@@ -19,9 +19,19 @@ const _NATIVE: u16 = 0x00000100;
 const INTERFACE: u16 = 0x00000200;
 const ABSTRACT: u16 = 0x00000400;
 const STRICT: u16 = 0x00000800;
+const ANNOTATION: u16 = 0x00002000;
+const ENUM: u16 = 0x00004000;
 
-const MODIFIERS: u16 =
-    PUBLIC | PROTECTED | PRIVATE | ABSTRACT | STATIC | FINAL | STRICT | INTERFACE;
+const MODIFIERS: u16 = PUBLIC
+    | PROTECTED
+    | PRIVATE
+    | ABSTRACT
+    | STATIC
+    | FINAL
+    | STRICT
+    | INTERFACE
+    | ENUM
+    | ANNOTATION;
 
 pub(crate) fn get_modifiers_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let modifiers = get_modifiers(args[0])?;
