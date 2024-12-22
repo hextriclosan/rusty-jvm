@@ -7,13 +7,13 @@ use crate::method_area::field::Field;
 use crate::method_area::java_class::{FieldDescriptors, Fields, JavaClass, Methods};
 use crate::method_area::java_method::{CodeContext, JavaMethod};
 use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jclass::class_file::{parse, ClassFile};
 use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -155,7 +155,7 @@ impl MethodArea {
                     Error::new_constant_pool(&format!("Error getting interface by index={index}"))
                 })
             })
-            .collect::<crate::error::Result<HashSet<String>>>()?;
+            .collect::<crate::error::Result<IndexSet<String>>>()?;
 
         let methods = Self::get_methods(&class_file.methods(), &cpool_helper, &class_name)?;
         let (non_static_field_descriptors, static_fields) =
@@ -333,7 +333,7 @@ impl MethodArea {
 
     fn lookup_in_interface_hierarchy(
         &self,
-        interfaces: &HashSet<String>,
+        interfaces: &IndexSet<String>,
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
         for interface_name in interfaces.iter() {
@@ -449,7 +449,7 @@ impl MethodArea {
             CPoolHelper::new(&Vec::new()),
             class_name,
             None,
-            HashSet::new(),
+            IndexSet::new(),
             PUBLIC | FINAL | ABSTRACT,
         ))
     }
@@ -465,7 +465,7 @@ impl MethodArea {
             CPoolHelper::new(&Vec::new()),
             array_class_name,
             Some("java/lang/Object".to_string()),
-            HashSet::new(),
+            IndexSet::from(["java/lang/Cloneable".to_string(), "java/io/Serializable".to_string()]),
             PUBLIC | FINAL | ABSTRACT,
         ))
     }

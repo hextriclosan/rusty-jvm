@@ -9,7 +9,7 @@ use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ pub(crate) struct JavaClass {
     this_class_name: String,
     external_name: String,
     parent: Option<String>,
-    interfaces: HashSet<String>,
+    interfaces: IndexSet<String>,
     access_flags: u16,
 
     static_fields_initialized: AtomicBool,
@@ -69,7 +69,7 @@ impl JavaClass {
         cpool_helper: CPoolHelper,
         this_class_name: &str,
         parent: Option<String>,
-        interfaces: HashSet<String>,
+        interfaces: IndexSet<String>,
         access_flags: u16,
     ) -> Self {
         let external_name = PRIMITIVE_TYPE_BY_CODE
@@ -101,7 +101,7 @@ impl JavaClass {
         &self.parent
     }
 
-    pub fn interfaces(&self) -> &HashSet<String> {
+    pub fn interfaces(&self) -> &IndexSet<String> {
         &self.interfaces
     }
 
