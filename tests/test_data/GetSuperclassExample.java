@@ -1,4 +1,4 @@
-package samples.reflection.trivial.classgetdeclaringclassexample;
+package samples.reflection.trivial.classgetsuperclassexample;
 
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +16,7 @@ public class GetSuperclassExample {
         printSuperclass(Runnable.class); // null
 
         // 4. Case: Interface extending another interface
-        printSuperclass(ExtendedRunnable.class);
+        printSuperclass(ExtendedRunnable.class); // null
 
         // 5. Case: Primitive types have no superclass
         printSuperclass(int.class); // null

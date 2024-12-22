@@ -585,20 +585,20 @@ HelloWorld!
 #[test]
 fn should_support_getting_supper_class() {
     assert_success(
-        "samples.reflection.trivial.classgetdeclaringclassexample.GetSuperclassExample",
+        "samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample",
         r#"Superclass of java.lang.String: class java.lang.Object
 Superclass of java.lang.Integer: class java.lang.Number
 Superclass of java.lang.Object: null
 Superclass of java.lang.Runnable: null
-Superclass of samples.reflection.trivial.classgetdeclaringclassexample.GetSuperclassExample$ExtendedRunnable: null
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$ExtendedRunnable: null
 Superclass of int: null
 Superclass of void: null
 Superclass of [Ljava.lang.String;: class java.lang.Object
 Superclass of [I: class java.lang.Object
 Superclass of [Ljava.lang.Runnable;: class java.lang.Object
-Superclass of samples.reflection.trivial.classgetdeclaringclassexample.GetSuperclassExample$1: class java.lang.Object
-Superclass of samples.reflection.trivial.classgetdeclaringclassexample.GetSuperclassExample$1LocalClass: class java.lang.Object
-Superclass of samples.reflection.trivial.classgetdeclaringclassexample.GetSuperclassExample$InnerClass: class java.lang.Object
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$1: class java.lang.Object
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$1LocalClass: class java.lang.Object
+Superclass of samples.reflection.trivial.classgetsuperclassexample.GetSuperclassExample$InnerClass: class java.lang.Object
 Superclass of java.util.concurrent.TimeUnit: class java.lang.Enum
 Superclass of java.util.HashMap: class java.util.AbstractMap
 "#,
