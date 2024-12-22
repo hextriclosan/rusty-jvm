@@ -1,4 +1,4 @@
-use jclass::attributes::Attribute;
+use jclass::attributes::{Attribute, InnerClassRecord};
 use std::collections::HashMap;
 
 pub struct AttributesHelper {
@@ -109,6 +109,14 @@ impl AttributesHelper {
             _ => None,
         }
     }
+
+    pub fn get_inner_class_records(&self) -> Option<Vec<InnerClassRecord>> {
+        match self.data.get(&AttributeType::InnerClasses)? {
+            Attribute::InnerClasses { classes } => Some(classes.clone()),
+            _ => None,
+        }
+    }
+
 }
 
 #[cfg(test)]

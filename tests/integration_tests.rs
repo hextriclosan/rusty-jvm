@@ -654,3 +654,23 @@ Interfaces implemented by int:
 "#,
     );
 }
+
+#[test]
+fn should_return_declaring_class() {
+    assert_success(
+        "samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample",
+        r#"double: null
+[Ljava.lang.String;: null
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample: null
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$TopLevel: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$SimpleNested$Inner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$SimpleNested
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$SimpleNested$StaticNested: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$SimpleNested
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$1: null
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$1LocalClass: null
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$1StaticMethodInner: null
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner$DeepInner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner$DeepInner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner
+"#,
+    );
+}

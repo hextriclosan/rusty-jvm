@@ -19,6 +19,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tracing::trace;
+use jclass::attributes::Attribute;
 
 static METHOD_AREA: OnceCell<MethodArea> = OnceCell::new();
 
@@ -163,6 +164,12 @@ impl MethodArea {
 
         let access_flags = class_file.access_flags().bits();
 
+        let declaring_class = Self::get_declaring_class(
+            &class_file.attributes(),
+            &cpool_helper,
+            class_name.as_str(),
+        );
+
         Ok((
             class_name.clone(),
             Arc::new(JavaClass::new(
@@ -174,6 +181,7 @@ impl MethodArea {
                 super_class_name,
                 interface_names,
                 access_flags,
+                declaring_class,
             )),
         ))
     }
@@ -451,6 +459,7 @@ impl MethodArea {
             None,
             IndexSet::new(),
             PUBLIC | FINAL | ABSTRACT,
+            None,
         ))
     }
 
@@ -467,6 +476,7 @@ impl MethodArea {
             Some("java/lang/Object".to_string()),
             IndexSet::from(["java/lang/Cloneable".to_string(), "java/io/Serializable".to_string()]),
             PUBLIC | FINAL | ABSTRACT,
+            None,
         ))
     }
 
@@ -502,5 +512,28 @@ impl MethodArea {
         let mut guard = self.system_thread_id.write()?;
         *guard = Some(thread_id);
         Ok(())
+    }
+
+    fn get_declaring_class(
+        attributes: &[Attribute],
+        cpool_helper: &CPoolHelper,
+        class_name: &str,
+    ) -> Option<String> {
+        let attribute_helper = AttributesHelper::new(attributes);
+        let inner_class_records = attribute_helper.get_inner_class_records()?;
+
+        inner_class_records.iter().find_map(|inner_class_record| {
+            let inner_class_info_index = inner_class_record.inner_class_info_index();
+            let inner_class_info = cpool_helper.get_class_name(inner_class_info_index)?;
+
+            if class_name == inner_class_info {
+                let outer_class_info_index = inner_class_record.outer_class_info_index();
+                let outer_class_info = cpool_helper.get_class_name(outer_class_info_index)?;
+
+                Some(outer_class_info)
+            } else {
+                None
+            }
+        })
     }
 }
