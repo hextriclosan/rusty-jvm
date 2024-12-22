@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::with_method_area;
 use crate::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
 use crate::system_native::string::get_utf8_string_by_ref;
@@ -169,4 +170,27 @@ fn for_name0(
         with_method_area(|method_area| method_area.load_reflection_class(&internal_name))?;
 
     Ok(reflection_ref)
+}
+pub(crate) fn get_interfaces0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let interfaces_ref = get_interfaces0(class_ref)?;
+    Ok(vec![interfaces_ref])
+}
+fn get_interfaces0(class_ref: i32) -> crate::error::Result<i32> {
+    let interface_refs = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(class_ref)?;
+        let jc = method_area.get(&class_name)?;
+        let interfaces = jc.interfaces();
+
+        let interface_refs = interfaces
+            .iter()
+            .map(|interface| method_area.load_reflection_class(interface))
+            .collect::<crate::error::Result<Vec<i32>>>();
+        interface_refs
+    })?;
+
+    let result_ref = with_heap_write_lock(|heap| {
+        heap.create_array_with_values("[Ljava/lang/Class;", &interface_refs)
+    });
+    Ok(result_ref)
 }

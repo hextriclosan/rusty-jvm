@@ -2,10 +2,7 @@ use crate::error::Error;
 use crate::execution_engine::system_native_table::NativeMethod::{Basic, WithStackFrames};
 use crate::helper::i64_to_vec;
 use crate::stack::stack_frame::StackFrames;
-use crate::system_native::class::{
-    class_init_class_name_wrp, for_name0_wrp, get_modifiers_wrp, get_primitive_class_wrp,
-    is_array_wrp, is_interface_wrp, is_primitive_wrp, get_superclass_wrp,
-};
+use crate::system_native::class::{class_init_class_name_wrp, for_name0_wrp, get_modifiers_wrp, get_primitive_class_wrp, is_array_wrp, is_interface_wrp, is_primitive_wrp, get_superclass_wrp, get_interfaces0_wrp};
 use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
@@ -92,6 +89,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Class:initClassName:()Ljava/lang/String;",
         Basic(class_init_class_name_wrp),
+    );
+    table.insert(
+        "java/lang/Class:getInterfaces0:()[Ljava/lang/Class;",
+        Basic(get_interfaces0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",

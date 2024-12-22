@@ -634,3 +634,23 @@ int.class is annotation: false
 "#,
     );
 }
+
+#[test]
+fn should_get_class_interfaces() {
+    assert_success(
+        "samples.reflection.trivial.getinterfacesexample.GetInterfacesExample",
+        r#"Interfaces implemented by java.util.Map:
+Interfaces implemented by samples.reflection.trivial.getinterfacesexample.GetInterfacesExample$ChildInterface:
+	java.util.Map
+	java.lang.Runnable
+Interfaces implemented by java.util.HashMap:
+	java.util.Map
+	java.lang.Cloneable
+	java.io.Serializable
+Interfaces implemented by [Ljava.lang.String;:
+	java.lang.Cloneable
+	java.io.Serializable
+Interfaces implemented by int:
+"#,
+    );
+}
