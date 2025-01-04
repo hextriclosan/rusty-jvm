@@ -674,3 +674,16 @@ samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExampl
 "#,
     );
 }
+
+#[test]
+fn should_operate_with_var_args() {
+    assert_success(
+        "samples.javacore.varargs.trivial.VarArgsExample",
+        r#"4
+1000000000000
+3.14
+[1337]
+{42=1}
+"#,
+    );
+}
