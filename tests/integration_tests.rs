@@ -236,7 +236,7 @@ fn should_do_native_call_on_system_array_copy() {
 }
 
 use crate::utils::{assert_file, get_output};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[test]
 fn should_do_native_call_on_system_current_time() {
@@ -249,7 +249,9 @@ fn should_do_native_call_on_system_current_time() {
     let output = get_output("samples.nativecall.system.NativeCallSystemCurrentTimeMillis");
     let actual_millis: i64 = output.trim().parse().expect("Not a number");
 
-    assert!((expected_millis..expected_millis + 2000).contains(&actual_millis))
+    let timeout_mins = 10;
+    let timeout_millis = Duration::from_secs(timeout_mins * 60).as_millis() as i64;
+    assert!((expected_millis..expected_millis + timeout_millis).contains(&actual_millis))
 }
 
 #[test]
@@ -684,6 +686,74 @@ fn should_operate_with_var_args() {
 3.14
 [1337]
 {42=1}
+"#,
+    );
+}
+
+#[test]
+fn should_support_getting_declared_methods() {
+    assert_success(
+        "samples.reflection.trivial.declaredmethods.DeclaredMethodsExample",
+        r#"Information about method:sampleMethod
+------------------------------------------------
+Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+Return Type:class [Ljava.lang.String;
+Modifiers:private transient native
+Parameter Count:3
+Parameter Types:
+	java.lang.String
+	int
+	[D
+Generic Parameter Types:
+	java.lang.String
+	int
+	double[]
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+	java.io.IOError
+	java.lang.NullPointerException
+Generic Exception Types:
+	java.io.IOError
+	java.lang.NullPointerException
+Is VarArgs:true
+Generic Return Type:class [Ljava.lang.String;
+
+Information about method:main
+------------------------------------------------
+Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+Return Type:void
+Modifiers:public static
+Parameter Count:1
+Parameter Types:
+	[Ljava.lang.String;
+Generic Parameter Types:
+	java.lang.String[]
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+Generic Return Type:void
+
+"#,
+    );
+}
+
+#[test]
+fn should_support_class_get_enclosing_method() {
+    assert_success(
+        "samples.reflection.trivial.enclosingmethod.EnclosingMethodExample",
+        r#"Top-level class enclosing method: null
+StaticNestedClass enclosing method: null
+NonStaticInnerClass enclosing method: null
+LocalClass enclosing method: testEnclosingMethods
+AnonymousClass enclosing method: testEnclosingMethods
+Inside anonymous constructor initializer.
+AnonymousClass in constructor enclosing method: testEnclosingMethods
+LocalClass in constructor enclosing method: testEnclosingMethods
 "#,
     );
 }

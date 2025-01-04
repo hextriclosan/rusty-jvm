@@ -1,9 +1,11 @@
 use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
+use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
 use crate::system_native::string::get_utf8_string_by_ref;
+use std::sync::Arc;
 /*
  * Access modifier flag constants from tables 4.1, 4.4, 4.5, and 4.7 of
  * The Java Virtual Machine Specification
@@ -140,8 +142,15 @@ pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> crate::error::Result<Ve
 fn init_class_name(class_ref: i32) -> crate::error::Result<i32> {
     let class_name = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        let result = method_area.get(&class_name)?;
-        let string = result.external_name().to_string();
+        let class_name = if class_name.starts_with('L') {
+            class_name[1..class_name.len() - 1].to_string()
+        } else {
+            class_name
+        };
+        let string = match method_area.get(&class_name) {
+            Ok(result) => result.external_name().to_string(),
+            Err(_) => class_name.clone(),
+        };
         Ok::<String, Error>(string)
     })?;
 
@@ -212,9 +221,92 @@ fn get_declaring_class0(clazz_ref: i32) -> crate::error::Result<i32> {
                 declaring_class_ref
             })
             .unwrap_or(Ok(0));
-        
+
         declaring_class_ref
     });
 
     declaring_class_ref
+}
+
+pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let methods_ref = get_declared_methods(class_ref)?;
+    Ok(vec![methods_ref])
+}
+fn get_declared_methods(class_ref: i32) -> crate::error::Result<i32> {
+    let java_methods = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(class_ref)?;
+        let jc = method_area.get(&class_name)?;
+        Ok::<Vec<Arc<JavaMethod>>, Error>(jc.get_methods())
+    })?;
+
+    let method_refs = java_methods
+        .iter()
+        .filter(|java_method| {
+            (java_method.name() != "<init>") && (java_method.name() != "<clinit>")
+        })
+        .map(|java_method| java_method.reflection_ref())
+        .collect::<crate::error::Result<Vec<_>>>()?;
+
+    let result_ref = with_heap_write_lock(|heap| {
+        heap.create_array_with_values("[Ljava/lang/reflect/Method;", &method_refs)
+    });
+    Ok(result_ref)
+}
+pub(crate) fn get_enclosing_method0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let enclosing_method_ref = get_enclosing_method0(class_ref)?;
+    Ok(vec![enclosing_method_ref])
+}
+fn get_enclosing_method0(class_ref: i32) -> crate::error::Result<i32> {
+    if let Some((class_name, name, descriptor)) = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(class_ref)?;
+        let jc = method_area.get(&class_name)?;
+        Ok::<Option<(String, String, String)>, Error>(jc.enclosing_method().clone())
+    })? {
+        let class_name_ref =
+            with_method_area(|method_area| method_area.load_reflection_class(&class_name))?;
+        let name_ref = StringPoolHelper::get_string(name)?;
+        let descriptor_ref = StringPoolHelper::get_string(descriptor)?;
+
+        let array_ref = with_heap_write_lock(|heap| {
+            heap.create_array_with_values(
+                "[Ljava/lang/reflect/Method;",
+                &[class_name_ref, name_ref, descriptor_ref],
+            )
+        });
+
+        Ok(array_ref) // new Object[] {class_name, name, descriptor}
+    } else {
+        Ok(0)
+    }
+}
+
+pub(crate) fn get_raw_annotations_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let raw_annotations_ref = get_raw_annotations(class_ref)?;
+
+    Ok(vec![raw_annotations_ref])
+}
+fn get_raw_annotations(reference: i32) -> crate::error::Result<i32> {
+    let annotations_raw = with_method_area(|method_area| {
+        let name = method_area.get_from_reflection_table(reference)?;
+        let rc = method_area.get(&name)?;
+        let annotations_raw = rc.annotations_raw().clone();
+        Ok::<Option<Vec<u8>>, Error>(annotations_raw)
+    })?;
+
+    let annotations_ref = annotations_raw
+        .map(|annotations_raw| {
+            let vec = annotations_raw
+                .iter()
+                .map(|x| *x as i32)
+                .collect::<Vec<_>>();
+            let annotations =
+                with_heap_write_lock(|heap| heap.create_array_with_values("[B", &vec));
+            annotations
+        })
+        .unwrap_or(0);
+
+    Ok(annotations_ref)
 }

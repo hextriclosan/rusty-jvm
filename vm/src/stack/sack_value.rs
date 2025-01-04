@@ -1,7 +1,7 @@
 use crate::helper::{i32toi64, i64_to_vec};
 use crate::stack::stack_frame::StackFrame;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum StackValueKind {
     I32(i32),
     I64(i64),

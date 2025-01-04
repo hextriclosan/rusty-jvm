@@ -9,7 +9,7 @@ use crate::attributes::StackMapFrame::{
 use crate::constant_pool::ConstantPool;
 use crate::constant_pool::ConstantPool::*;
 use crate::error::{Error, Result};
-use crate::extractors::{get_bitfield, get_bytes, get_int};
+use crate::extractors::{get_bitfield, get_bytes, get_int, read_byte_block};
 use bitflags::bitflags;
 use std::io::ErrorKind::InvalidData;
 
@@ -55,6 +55,7 @@ pub enum Attribute {
     },
     RuntimeVisibleAnnotations {
         annotations: Vec<Annotation>,
+        raw: Vec<u8>,
     },
     RuntimeInvisibleAnnotations {
         annotations: Vec<Annotation>,
@@ -63,6 +64,7 @@ pub enum Attribute {
     RuntimeInvisibleParameterAnnotations,
     AnnotationDefault {
         default_value: ElementValue,
+        raw: Vec<u8>,
     },
     StackMapTable {
         entries: Vec<StackMapFrame>,
@@ -512,7 +514,7 @@ fn get_attribute(
         }
     };
 
-    let _attribute_length: u32 = get_int(&data, &mut start_from)?;
+    let attribute_length: u32 = get_int(&data, &mut start_from)?;
 
     let attribute = match attribute_name.as_str() {
         "ConstantValue" => ConstantValue {
@@ -629,13 +631,14 @@ fn get_attribute(
             }
         }
         "RuntimeVisibleAnnotations" => {
+            let raw = read_byte_block(&data, *start_from, attribute_length as usize)?.to_vec();
             let num_annotations: u16 = get_int(&data, &mut start_from)?;
             let mut annotations = Vec::with_capacity(num_annotations as usize);
             for _ in 0..num_annotations {
                 annotations.push(get_annotation(&data, &mut start_from)?);
             }
 
-            RuntimeVisibleAnnotations { annotations }
+            RuntimeVisibleAnnotations { annotations, raw }
         }
         "RuntimeInvisibleAnnotations" => {
             let num_annotations: u16 = get_int(&data, &mut start_from)?;
@@ -646,9 +649,13 @@ fn get_attribute(
 
             RuntimeInvisibleAnnotations { annotations }
         }
-        "AnnotationDefault" => AnnotationDefault {
-            default_value: get_element_value(&data, &mut start_from)?,
-        },
+        "AnnotationDefault" => {
+            let raw = read_byte_block(&data, *start_from, attribute_length as usize)?.to_vec();
+            AnnotationDefault {
+                default_value: get_element_value(&data, &mut start_from)?,
+                raw,
+            }
+        }
         "StackMapTable" => {
             let number_of_entries: u16 = get_int(&data, &mut start_from)?;
             let mut entries = Vec::with_capacity(number_of_entries as usize);

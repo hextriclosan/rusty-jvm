@@ -479,7 +479,9 @@ where
     let cpool_helper = rc.cpool_helper();
     let (class_name, method_name, method_descriptor) = cpool_getter(cpool_helper, index)
         .ok_or_else(|| {
-            Error::new_constant_pool(&format!("Error getting full method info by index {index}"))
+            Error::new_constant_pool(&format!(
+                "Error getting full method info by index {index} in {current_class_name}"
+            ))
         })?;
     let full_signature = format!("{}:{}", method_name, method_descriptor);
     Ok((class_name, full_signature, method_descriptor))

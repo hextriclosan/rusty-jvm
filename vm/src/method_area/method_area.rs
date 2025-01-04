@@ -19,7 +19,6 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tracing::trace;
-use jclass::attributes::Attribute;
 
 static METHOD_AREA: OnceCell<MethodArea> = OnceCell::new();
 
@@ -164,11 +163,13 @@ impl MethodArea {
 
         let access_flags = class_file.access_flags().bits();
 
-        let declaring_class = Self::get_declaring_class(
-            &class_file.attributes(),
-            &cpool_helper,
-            class_name.as_str(),
-        );
+        let attributes_helper = AttributesHelper::new(class_file.attributes());
+        let declaring_class =
+            Self::get_declaring_class(&attributes_helper, &cpool_helper, class_name.as_str());
+
+        let annotations_raw = attributes_helper.get_annotations_raw();
+
+        let enclosing_method = Self::get_enclosing_method(&attributes_helper, &cpool_helper);
 
         Ok((
             class_name.clone(),
@@ -182,6 +183,8 @@ impl MethodArea {
                 interface_names,
                 access_flags,
                 declaring_class,
+                annotations_raw,
+                enclosing_method,
             )),
         ))
     }
@@ -191,7 +194,7 @@ impl MethodArea {
         helper: &CPoolHelper,
         class_name: &str,
     ) -> crate::error::Result<Methods> {
-        let mut method_by_signature = HashMap::new();
+        let mut method_by_signature = IndexMap::new();
 
         for method_info in class_file_methods.iter() {
             let name_index = method_info.name_index();
@@ -207,24 +210,29 @@ impl MethodArea {
             })?;
 
             let key = format!("{method_name}:{method_signature}");
+            let attributes_helper = AttributesHelper::new(method_info.attributes());
 
-            let code_context = if !method_info
-                .access_flags()
-                .intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE)
-            {
-                AttributesHelper::new(method_info.attributes())
-                    .get_code()
-                    .map(|(max_stack, max_locals, code)| {
-                        Some(CodeContext::new(max_stack, max_locals, Arc::new(code)))
-                    })
-                    .ok_or_else(|| {
-                        Error::new_execution(&format!(
-                            "Error getting code attribute for method {key}"
-                        ))
-                    })?
-            } else {
-                None
-            };
+            let access_flags = method_info.access_flags();
+            let code_context =
+                if !access_flags.intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE) {
+                    attributes_helper
+                        .get_code()
+                        .map(|(max_stack, max_locals, code)| {
+                            Some(CodeContext::new(max_stack, max_locals, Arc::new(code)))
+                        })
+                        .ok_or_else(|| {
+                            Error::new_execution(&format!(
+                                "Error getting code attribute for method {key}"
+                            ))
+                        })?
+                } else {
+                    None
+                };
+
+            let exception_indexes = attributes_helper.get_exception_indexes().unwrap_or(vec![]);
+
+            let annotation_default_raw = attributes_helper.get_annotation_default_raw();
+            let annotations_raw = attributes_helper.get_annotations_raw();
 
             let method_descriptor = method_signature.parse().map_err(|err| {
                 Error::new_execution(&format!(
@@ -232,7 +240,7 @@ impl MethodArea {
                 ))
             })?;
 
-            let native = method_info.access_flags().contains(MethodFlags::ACC_NATIVE);
+            let native = access_flags.contains(MethodFlags::ACC_NATIVE);
 
             method_by_signature.insert(
                 key.clone(),
@@ -242,6 +250,11 @@ impl MethodArea {
                     &key,
                     code_context,
                     native,
+                    exception_indexes,
+                    access_flags.bits() as i32,
+                    &method_name,
+                    annotation_default_raw,
+                    annotations_raw,
                 )),
             );
         }
@@ -451,7 +464,7 @@ impl MethodArea {
         const FINAL: u16 = 0x00000010;
         const ABSTRACT: u16 = 0x00000400;
         Arc::new(JavaClass::new(
-            Methods::new(HashMap::new()),
+            Methods::new(IndexMap::new()),
             Fields::new(HashMap::new()),
             FieldDescriptors::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
@@ -459,6 +472,8 @@ impl MethodArea {
             None,
             IndexSet::new(),
             PUBLIC | FINAL | ABSTRACT,
+            None,
+            None,
             None,
         ))
     }
@@ -468,14 +483,19 @@ impl MethodArea {
         const FINAL: u16 = 0x00000010;
         const ABSTRACT: u16 = 0x00000400;
         Arc::new(JavaClass::new(
-            Methods::new(HashMap::new()),
+            Methods::new(IndexMap::new()),
             Fields::new(HashMap::new()),
             FieldDescriptors::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
             array_class_name,
             Some("java/lang/Object".to_string()),
-            IndexSet::from(["java/lang/Cloneable".to_string(), "java/io/Serializable".to_string()]),
+            IndexSet::from([
+                "java/lang/Cloneable".to_string(),
+                "java/io/Serializable".to_string(),
+            ]),
             PUBLIC | FINAL | ABSTRACT,
+            None,
+            None,
             None,
         ))
     }
@@ -515,12 +535,11 @@ impl MethodArea {
     }
 
     fn get_declaring_class(
-        attributes: &[Attribute],
+        attributes_helper: &AttributesHelper,
         cpool_helper: &CPoolHelper,
         class_name: &str,
     ) -> Option<String> {
-        let attribute_helper = AttributesHelper::new(attributes);
-        let inner_class_records = attribute_helper.get_inner_class_records()?;
+        let inner_class_records = attributes_helper.get_inner_class_records()?;
 
         inner_class_records.iter().find_map(|inner_class_record| {
             let inner_class_info_index = inner_class_record.inner_class_info_index();
@@ -535,5 +554,17 @@ impl MethodArea {
                 None
             }
         })
+    }
+
+    fn get_enclosing_method(
+        attributes_helper: &AttributesHelper,
+        cpool_helper: &CPoolHelper,
+    ) -> Option<(String, String, String)> {
+        let (class_index, method_index) = attributes_helper.get_enclosing_method()?;
+
+        let class_name = cpool_helper.get_class_name(class_index)?;
+        let (name, descriptor) = cpool_helper.get_name_and_type(method_index)?;
+
+        Some((class_name, name, descriptor))
     }
 }
