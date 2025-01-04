@@ -190,7 +190,9 @@ impl Heap {
         if let Some(Arr(arr)) = self.data.get(&arrayref) {
             Ok(arr.get_length())
         } else {
-            Err(Error::new_execution("error getting array length"))
+            Err(Error::new_execution(&format!(
+                "error getting array length by ref={arrayref}"
+            )))
         }
     }
 

@@ -80,12 +80,12 @@ impl CPoolHelper {
     }
 
     pub fn get_class_name(&self, index: u16) -> Option<String> {
-        let name_index = match self.get(CPoolType::Class, index)? {
+        let name_index = match *self.get(CPoolType::Class, index)? {
             ConstantPool::Class { name_index } => name_index,
             _ => return None,
         };
 
-        self.get_utf8(*name_index)
+        self.get_utf8(name_index)
     }
 
     pub fn get_integer(&self, index: u16) -> Option<i32> {

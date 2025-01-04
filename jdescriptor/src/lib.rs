@@ -1,5 +1,6 @@
 use crate::TypeDescriptor::*;
 use serde::Serialize;
+use std::fmt;
 use std::fmt::Display;
 use std::str::Chars;
 use std::str::FromStr;
@@ -54,6 +55,27 @@ pub fn get_length(type_descriptor: &TypeDescriptor) -> usize {
         Void => panic!("field can't be a void type"),
         Array(_, _) => 1,
         Object(_) => 1,
+    }
+}
+
+impl Display for TypeDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Byte => write!(f, "B"),
+            Char => write!(f, "C"),
+            Double => write!(f, "D"),
+            Float => write!(f, "F"),
+            Int => write!(f, "I"),
+            Long => write!(f, "J"),
+            Short => write!(f, "S"),
+            Boolean => write!(f, "Z"),
+            Void => write!(f, "V"),
+            Array(base_type, dimensions) => {
+                write!(f, "{}", "[".repeat(*dimensions as usize))?;
+                write!(f, "{}", base_type)
+            }
+            Object(class_name) => write!(f, "L{};", class_name),
+        }
     }
 }
 
@@ -195,6 +217,10 @@ mod tests {
         assert_eq!(str::parse::<TypeDescriptor>("Z"), Ok(Boolean));
     }
     #[test]
+    fn should_create_string_from_boolean_type() {
+        assert_eq!(Boolean.to_string(), "Z");
+    }
+    #[test]
     fn should_parse_byte_type() {
         assert_eq!(str::parse::<TypeDescriptor>("B"), Ok(Byte));
     }
@@ -244,6 +270,10 @@ mod tests {
         );
     }
     #[test]
+    fn should_create_string_from_3d_array_type() {
+        assert_eq!(Array(Box::new(Int), 3).to_string(), "[[[I");
+    }
+    #[test]
     fn should_parse_255d_array_type() {
         let mut type_descriptor = String::new();
         type_descriptor.push_str("[".repeat(255usize).as_str());
@@ -260,7 +290,13 @@ mod tests {
             Ok(Object("java/lang/Object".to_string()))
         );
     }
-
+    #[test]
+    fn should_create_string_from_object_type() {
+        assert_eq!(
+            Object("java/lang/Object".to_string()).to_string(),
+            "Ljava/lang/Object;"
+        );
+    }
     #[test]
     fn should_parse_method_descriptor_with_primitives() {
         // int add(int a, int b)

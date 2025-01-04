@@ -36,24 +36,25 @@ where
 }
 
 pub fn get_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Result<&'a [u8]> {
-    slice
-        .get(*start_from..*start_from + size)
-        .ok_or_else(|| {
-            Error::new_io(
-                InvalidInput,
-                format!(
-                    "Index out of bounds: {} of {}",
-                    *start_from + size,
-                    slice.len()
-                )
-                .as_str(),
-            )
-        })
-        .map(|sub_slice| {
-            *start_from += size;
+    read_byte_block(slice, *start_from, size).map(|sub_slice| {
+        *start_from += size;
 
-            sub_slice
-        })
+        sub_slice
+    })
+}
+
+pub fn read_byte_block(slice: &[u8], start_from: usize, size: usize) -> Result<&[u8]> {
+    slice.get(start_from..start_from + size).ok_or_else(|| {
+        Error::new_io(
+            InvalidInput,
+            format!(
+                "Index out of bounds: {} of {}",
+                start_from + size,
+                slice.len()
+            )
+            .as_str(),
+        )
+    })
 }
 
 pub fn get_bitfield<T>(slice: &[u8], start_from: &mut usize) -> Result<T>

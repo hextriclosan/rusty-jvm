@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
+use crate::helper::{i64_to_vec, vec_to_i64};
 use std::fs::File;
 use std::mem::ManuallyDrop;
 use std::os::windows::io::{FromRawHandle, IntoRawHandle, RawHandle};

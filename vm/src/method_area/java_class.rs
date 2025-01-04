@@ -33,11 +33,13 @@ pub(crate) struct JavaClass {
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
     declaring_class: Option<String>,
+    annotations_raw: Option<Vec<u8>>,
+    enclosing_method: Option<(String, String, String)>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Methods {
-    method_by_signature: HashMap<String, Arc<JavaMethod>>,
+    method_by_signature: IndexMap<String, Arc<JavaMethod>>,
 }
 
 #[derive(Debug)]
@@ -73,6 +75,8 @@ impl JavaClass {
         interfaces: IndexSet<String>,
         access_flags: u16,
         declaring_class: Option<String>,
+        annotations_raw: Option<Vec<u8>>,
+        enclosing_method: Option<(String, String, String)>,
     ) -> Self {
         let external_name = PRIMITIVE_TYPE_BY_CODE
             .get(this_class_name)
@@ -93,6 +97,8 @@ impl JavaClass {
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
             declaring_class,
+            annotations_raw,
+            enclosing_method,
         }
     }
 
@@ -204,6 +210,14 @@ impl JavaClass {
         })
     }
 
+    pub fn get_methods(&self) -> Vec<Arc<JavaMethod>> {
+        self.methods
+            .method_by_signature
+            .iter()
+            .map(|(_, v)| Arc::clone(v))
+            .collect::<Vec<_>>()
+    }
+
     pub fn instance_fields_hierarchy(
         &self,
     ) -> crate::error::Result<&IndexMap<ClassName, IndexMap<FieldNameType, Field>>> {
@@ -242,10 +256,18 @@ impl JavaClass {
     pub fn declaring_class(&self) -> &Option<String> {
         &self.declaring_class
     }
+
+    pub fn enclosing_method(&self) -> &Option<(String, String, String)> {
+        &self.enclosing_method
+    }
+
+    pub fn annotations_raw(&self) -> &Option<Vec<u8>> {
+        &self.annotations_raw
+    }
 }
 
 impl Methods {
-    pub fn new(method_by_signature: HashMap<String, Arc<JavaMethod>>) -> Self {
+    pub fn new(method_by_signature: IndexMap<String, Arc<JavaMethod>>) -> Self {
         Self {
             method_by_signature,
         }

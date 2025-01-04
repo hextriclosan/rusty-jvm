@@ -117,6 +117,44 @@ impl AttributesHelper {
         }
     }
 
+    pub fn get_enclosing_method(&self) -> Option<(u16, u16)> {
+        match self.data.get(&AttributeType::EnclosingMethod)? {
+            Attribute::EnclosingMethod {
+                class_index,
+                method_index,
+            } => Some((*class_index, *method_index)),
+            _ => None,
+        }
+    }
+
+    pub fn get_exception_indexes(&self) -> Option<Vec<u16>> {
+        match self.data.get(&AttributeType::Exceptions)? {
+            Attribute::Exceptions {
+                exception_index_table,
+            } => Some(exception_index_table.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn get_annotation_default_raw(&self) -> Option<Vec<u8>> {
+        match self.data.get(&AttributeType::AnnotationDefault)? {
+            Attribute::AnnotationDefault {
+                default_value: _,
+                raw,
+            } => Some(raw.to_vec()),
+            _ => None,
+        }
+    }
+
+    pub fn get_annotations_raw(&self) -> Option<Vec<u8>> {
+        match self.data.get(&AttributeType::RuntimeVisibleAnnotations)? {
+            Attribute::RuntimeVisibleAnnotations {
+                annotations: _,
+                raw,
+            } => Some(raw.to_vec()),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]

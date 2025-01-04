@@ -612,6 +612,10 @@ fn should_load_and_parse_complex_runtime_visible_annotations() {
                         )],
                     ),
                 ],
+                raw: vec![
+                    0, 3, 0, 10, 0, 0, 0, 11, 0, 1, 0, 12, 101, 0, 13, 0, 14, 0, 15, 0, 1, 0, 12,
+                    91, 0, 1, 101, 0, 16, 0, 17,
+                ],
             },
         ],
     );
@@ -854,6 +858,7 @@ fn should_load_and_parse_annotation_default_annotation() {
                     tag: 's' as u8,
                     const_value_index: 10,
                 },
+                raw: vec![115, 0, 10],
             }],
         )],
         vec![
@@ -872,6 +877,7 @@ fn should_load_and_parse_annotation_default_annotation() {
                         },
                     )],
                 )],
+                raw: vec![0, 1, 0, 14, 0, 1, 0, 7, 101, 0, 15, 0, 16],
             },
         ],
     );
