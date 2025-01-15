@@ -115,6 +115,14 @@ impl JavaMethod {
             .copied()
     }
 
+    fn init_reflection_ref(&self) -> crate::error::Result<i32> {
+        if self.name == "<init>" {
+            self.construct_constructor()
+        } else {
+            self.construct_method()
+        }
+    }
+
     /// Invokes
     /// ```java
     /// Method(Class<?> declaringClass,
@@ -129,7 +137,7 @@ impl JavaMethod {
     ///     byte[] parameterAnnotations,
     ///     byte[] annotationDefault);
     /// ```
-    fn init_reflection_ref(&self) -> crate::error::Result<i32> {
+    fn construct_method(&self) -> crate::error::Result<i32> {
         let declaring_class_ref = clazz_ref(self.class_name())?;
 
         let mut name_signature_split = self.name_signature.split(':'); //fixme: crete separate field with name of get it from here
@@ -207,6 +215,92 @@ impl JavaMethod {
         let method_ref = Executor::invoke_args_constructor(
             "java/lang/reflect/Method",
             "<init>:(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B)V",
+            args,
+        )?;
+
+        Ok(method_ref)
+    }
+
+    /// Invokes
+    /// ```java
+    /// Constructor(Class<T> declaringClass,
+    ///     Class<?>[] parameterTypes,
+    ///     Class<?>[] checkedExceptions,
+    ///     int modifiers,
+    ///     int slot,
+    ///     String signature,
+    ///     byte[] annotations,
+    ///     byte[] parameterAnnotations);
+    /// ```
+    fn construct_constructor(&self) -> crate::error::Result<i32> {
+        let declaring_class_ref = clazz_ref(self.class_name())?;
+
+        let mut name_signature_split = self.name_signature.split(':'); //fixme: crete separate field with name of get it from here
+
+        let parameter_type_clazz_refs = self
+            .method_descriptor
+            .parameter_types()
+            .iter()
+            .map(|t| t.to_string())
+            .map(|t| clazz_ref(&t))
+            .collect::<crate::error::Result<Vec<_>>>()?;
+        let parameter_type_refs = with_heap_write_lock(|heap| {
+            heap.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs)
+        });
+
+        let jc = with_method_area(|area| area.get(&self.class_name))?;
+        let cpool_helper = jc.cpool_helper();
+        let exception_type_clazz_refs = self
+            .exception_indexes
+            .iter()
+            .map(|i| {
+                let exception_type = cpool_helper.get_class_name(*i).ok_or_else(|| {
+                    Error::new_execution(&format!("Invalid exception index: {}", i))
+                })?;
+                clazz_ref(&exception_type)
+            })
+            .collect::<crate::error::Result<Vec<_>>>()?;
+        let checked_exception_type_refs = with_heap_write_lock(|heap| {
+            heap.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs)
+        });
+
+        let modifiers = self.access_flags;
+
+        let slot = 0; // not used
+
+        let signature_ref =
+            StringPoolHelper::get_string(name_signature_split.next().unwrap().to_string())?;
+
+        let annotations = self
+            .annotations_raw
+            .clone()
+            .map(|annotations_raw| {
+                let vec = annotations_raw
+                    .iter()
+                    .map(|x| *x as i32)
+                    .collect::<Vec<_>>();
+                let annotations =
+                    with_heap_write_lock(|heap| heap.create_array_with_values("[B", &vec));
+                annotations
+            })
+            .unwrap_or(0);
+
+        let parameter_annotations = 0; // todo: implement me
+
+        let args = &[
+            declaring_class_ref.into(),
+            parameter_type_refs.into(),
+            checked_exception_type_refs.into(),
+            modifiers.into(),
+            slot.into(),
+            signature_ref.into(),
+            annotations.into(),
+            parameter_annotations.into(),
+        ];
+
+        let method_ref = Executor::invoke_args_constructor(
+            "java/lang/reflect/Constructor",
+            "<init>:(Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B)V",
             args,
         )?;
 

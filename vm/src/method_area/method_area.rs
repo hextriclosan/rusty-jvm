@@ -74,6 +74,12 @@ impl MethodArea {
             return Ok(arc);
         }
 
+        let fully_qualified_class_name = if fully_qualified_class_name.ends_with(";") {
+            &fully_qualified_class_name[1..fully_qualified_class_name.len() - 1]
+        } else {
+            fully_qualified_class_name
+        };
+
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;
         self.loaded_classes.write()?.insert(

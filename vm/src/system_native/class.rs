@@ -253,6 +253,31 @@ fn get_declared_methods(class_ref: i32) -> crate::error::Result<i32> {
     });
     Ok(result_ref)
 }
+
+pub(crate) fn get_declared_constructors0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let constructors_ref = get_declared_constructors(class_ref)?;
+    Ok(vec![constructors_ref])
+}
+fn get_declared_constructors(class_ref: i32) -> crate::error::Result<i32> {
+    let java_methods = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(class_ref)?;
+        let jc = method_area.get(&class_name)?;
+        Ok::<Vec<Arc<JavaMethod>>, Error>(jc.get_methods())
+    })?;
+
+    let method_refs = java_methods
+        .iter()
+        .filter(|java_method| java_method.name() == "<init>")
+        .map(|java_method| java_method.reflection_ref())
+        .collect::<crate::error::Result<Vec<_>>>()?;
+
+    let result_ref = with_heap_write_lock(|heap| {
+        heap.create_array_with_values("[Ljava/lang/reflect/Constructor;", &method_refs)
+    });
+    Ok(result_ref)
+}
+
 pub(crate) fn get_enclosing_method0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let class_ref = args[0];
     let enclosing_method_ref = get_enclosing_method0(class_ref)?;
