@@ -3,9 +3,10 @@ use crate::execution_engine::system_native_table::NativeMethod::{Basic, WithStac
 use crate::helper::i64_to_vec;
 use crate::stack::stack_frame::StackFrames;
 use crate::system_native::class::{
-    class_init_class_name_wrp, for_name0_wrp, get_declared_methods0_wrp, get_declaring_class0_wrp,
-    get_enclosing_method0_wrp, get_interfaces0_wrp, get_modifiers_wrp, get_primitive_class_wrp,
-    get_raw_annotations_wrp, get_superclass_wrp, is_array_wrp, is_interface_wrp, is_primitive_wrp,
+    class_init_class_name_wrp, for_name0_wrp, get_declared_constructors0_wrp,
+    get_declared_methods0_wrp, get_declaring_class0_wrp, get_enclosing_method0_wrp,
+    get_interfaces0_wrp, get_modifiers_wrp, get_primitive_class_wrp, get_raw_annotations_wrp,
+    get_superclass_wrp, is_array_wrp, is_interface_wrp, is_primitive_wrp,
 };
 use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::system_native::file_output_stream::{
@@ -106,6 +107,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Class:getDeclaredMethods0:(Z)[Ljava/lang/reflect/Method;",
         Basic(get_declared_methods0_wrp),
+    );
+    table.insert(
+        "java/lang/Class:getDeclaredConstructors0:(Z)[Ljava/lang/reflect/Constructor;",
+        Basic(get_declared_constructors0_wrp),
     );
     table.insert(
         "java/lang/Class:getRawAnnotations:()[B",

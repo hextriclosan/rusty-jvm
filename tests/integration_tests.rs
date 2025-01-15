@@ -743,6 +743,59 @@ Generic Return Type:void
 }
 
 #[test]
+fn should_support_getting_declared_constructors() {
+    assert_success(
+        "samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample",
+        r#"Basic Example Constructors:
+	----------------------------
+	Parameter types: []
+	Modifier: public
+	Throws: []
+	Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$BasicExample
+	Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$BasicExample
+	Parameter count: 0
+	----------------------------
+	Parameter types: [int]
+	Modifier: protected
+	Throws: []
+	Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$BasicExample
+	Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$BasicExample
+	Parameter count: 1
+	----------------------------
+	Parameter types: [class java.lang.String]
+	Modifier: private
+	Throws: []
+	Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$BasicExample
+	Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$BasicExample
+	Parameter count: 1
+Edge Case Example Constructors:
+	----------------------------
+	Parameter types: []
+	Modifier: 
+	Throws: []
+	Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$EdgeCaseExample
+	Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$EdgeCaseExample
+	Parameter count: 0
+	----------------------------
+	Parameter types: [class java.lang.String]
+	Modifier: public
+	Throws: [class java.lang.IllegalArgumentException]
+	Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$EdgeCaseExample
+	Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$EdgeCaseExample
+	Parameter count: 1
+Anonymous Class Constructors:
+	----------------------------
+	Parameter types: []
+	Modifier: 
+	Throws: []
+	Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
+	Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
+	Parameter count: 0
+"#,
+    );
+}
+
+#[test]
 fn should_support_class_get_enclosing_method() {
     assert_success(
         "samples.reflection.trivial.enclosingmethod.EnclosingMethodExample",
