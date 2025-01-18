@@ -311,6 +311,7 @@ impl JavaMethod {
         &self.name
     }
 
+    #[allow(dead_code)]
     pub fn access_flags(&self) -> i32 {
         self.access_flags
     }
