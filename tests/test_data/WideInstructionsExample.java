@@ -2,11 +2,10 @@ package samples.javacore.wide.instructions.trivial;
 
 public class WideInstructionsExample {
     public static void main(String[] args) {
-        int result = getResult();
-        System.out.println(result);
+        testWideInstructions();
     }
 
-    static int getResult() {
+    private static void testWideInstructions() {
         int padding0 = 0, padding1 = 0, padding2 = 0, padding3 = 0, padding4 = 0, padding5 = 0, padding6 = 0, padding7 = 0, padding8 = 0, padding9 = 0;
         int padding10 = 0, padding11 = 0, padding12 = 0, padding13 = 0, padding14 = 0, padding15 = 0, padding16 = 0, padding17 = 0, padding18 = 0, padding19 = 0;
         int padding20 = 0, padding21 = 0, padding22 = 0, padding23 = 0, padding24 = 0, padding25 = 0, padding26 = 0, padding27 = 0, padding28 = 0, padding29 = 0;
@@ -34,24 +33,24 @@ public class WideInstructionsExample {
         int padding240 = 0, padding241 = 0, padding242 = 0, padding243 = 0, padding244 = 0, padding245 = 0, padding246 = 0, padding247 = 0, padding248 = 0, padding249 = 0;
         int padding250 = 0, padding251 = 0, padding252 = 0, padding253 = 0, padding254 = 0, padding255 = 0;
 
-        int i256 = 0;
-        float f256 = 0.0f;
-        double d256 = 0.0;
-        long l256 = 0L;
-        Object a256 = new Object();
+        int i = 0;
+        float f = 0.0f;
+        double d = 0.0;
+        long l = 0L;
+        Object a = new Object();
 
-        i256 = 10;
-        f256 = 10.5f;
-        d256 = 20.5;
-        l256 = 10000000000L;
-        a256 = "Wide test";
+        i = 10;
+        f = 10.5f;
+        d = 20.5;
+        l = 10000000000L;
+        a = "Wide test";
 
-        i256 += 5; // iinc with WIDE for large increment or index
-        int localCopyInt = i256; // iload with WIDE
-        float localCopyFloat = f256; // fload with WIDE
-        double localCopyDouble = d256; // dload with WIDE
-        long localCopyLong = l256; // lload with WIDE
-        Object localCopyObject = a256; // aload with WIDE
+        i += 5; // iinc with WIDE for large increment or index
+        int localCopyInt = i; // iload with WIDE
+        float localCopyFloat = f; // fload with WIDE
+        double localCopyDouble = d; // dload with WIDE
+        long localCopyLong = l; // lload with WIDE
+        Object localCopyObject = a; // aload with WIDE
 
         // Using stores with WIDE (will be optimized by javac if not used)
         localCopyInt += 5;  // iload, iinc, and istore with WIDE
@@ -60,22 +59,10 @@ public class WideInstructionsExample {
         localCopyLong += 1000000L; // lload, lstore with WIDE
         localCopyObject = "Updated wide test"; // aload, astore with WIDE
 
-        int bit0 = localCopyInt == 20 ? 1 : 0;
-        int bit1 = localCopyFloat > 15.999f && localCopyFloat < 16.001f ? 1 : 0;
-        int bit2 = localCopyDouble > 30.999 && localCopyDouble < 31.001 ? 1 : 0;
-        int bit3 = localCopyLong == 10001000000L ? 1 : 0;
-        int bit4 = "Updated wide test".equals(localCopyObject) ? 1 : 0;
-
-        int result = 0;
-        result = setBit(result, 0, bit0);
-        result = setBit(result, 1, bit1);
-        result = setBit(result, 2, bit2);
-        result = setBit(result, 3, bit3);
-        result = setBit(result, 4, bit4);
-        return result;
-    }
-
-    private static int setBit(int num, int position, int value) {
-        return value == 0 ? num & ~(1 << position) : num | (1 << position);
+        System.out.println(localCopyInt);
+        System.out.println(localCopyFloat);
+        System.out.println(localCopyDouble);
+        System.out.println(localCopyLong);
+        System.out.println(localCopyObject);
     }
 }

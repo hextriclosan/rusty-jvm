@@ -416,7 +416,12 @@ fn should_do_unsafe_object_field_offset() {
 fn should_do_wide_instructions() {
     assert_success(
         "samples.javacore.wide.instructions.trivial.WideInstructionsExample",
-        "31\n",
+        r#"20
+16.0
+31.0
+10001000000
+Updated wide test
+"#,
     );
 }
 
