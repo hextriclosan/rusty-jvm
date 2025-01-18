@@ -23,7 +23,7 @@ Refer [integration tests](tests/test_data) for examples of supported Java featur
 Ensure you have the following:
 - A machine running Windows, macOS, or Linux.
 - Rust installed and configured.
-- The `RUSTY_JAVA_HOME` environment variable set to the root of this project.
+- The `RUSTY_JAVA_HOME` environment variable is set to the root of this project to locate Java standard library classes.
 
 #### Example Program
 This program calculates the total attack power of a group of units in a game. 
