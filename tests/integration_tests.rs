@@ -66,7 +66,18 @@ fn should_convert_long_to_double_and_back() {
 
 #[test]
 fn should_convert_to_string_and_back() {
-    assert_success("samples.javacore.strings.trivial.ToStringAndBack", "511\n");
+    assert_success("samples.javacore.strings.trivial.ToStringAndBack",
+    r#"true
+127
+31999
+ї
+1999999999
+999999999999
+3.14
+3.14
+340282366920938463463374607431768211455
+340282366920938463463374607431768211455.340282366920938463463374607431768211455
+"#);
 }
 
 #[test]
