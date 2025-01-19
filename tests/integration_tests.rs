@@ -269,7 +269,15 @@ fn should_do_native_call_on_system_current_time() {
 fn should_do_operations_with_doubles() {
     assert_success(
         "samples.arithmetics.operations.doubles.DoubleOperations",
-        "2.8547008547008547E278\n",
+        r#"1.7E308
+1.7E308
+0.0
+8.547008547008547E277
+1.338773289334918E30
+9.32579185520362E-74
+Infinity
+NaN
+"#,
     );
 }
 
