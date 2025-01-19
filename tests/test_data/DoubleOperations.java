@@ -21,9 +21,13 @@ public class DoubleOperations {
         double overflow = huge * huge;           // Overflow: exceeds max double
         double nan = 0.0 / 0.0;                  // NaN (Not a Number)
 
-        double result = sum/1e100 + diff/1e100 + product + quotient + remainder + underflow +
-                (overflow == Double.POSITIVE_INFINITY ? 1e278 : 0) +
-                (Double.isNaN(nan) ? 1e278 : 0);
-        System.out.println(result);
+        System.out.println(sum);
+        System.out.println(diff);
+        System.out.println(product);
+        System.out.println(quotient);
+        System.out.println(remainder);
+        System.out.println(underflow);
+        System.out.println(overflow);
+        System.out.println(nan);
     }
 }
