@@ -53,7 +53,16 @@ fn should_check_if_class_is_interface() {
 
 #[test]
 fn should_clone_cloneables() {
-    assert_success("samples.javacore.cloneable.trivial.CloneExample", "511\n");
+    assert_success("samples.javacore.cloneable.trivial.CloneExample",
+    r#"cloneable and anotherCloneable have different references but the same content
+cloneable is not affected by changes in anotherCloneable
+intArray and anotherIntArray have different references but the same content
+intArray is not affected by changes in anotherIntArray
+objArray and anotherObjArray have different references but the same content
+objArray is not affected by changes in anotherObjArray
+intMatrix and anotherIntMatrix have different references but the same content
+intMatrix is affected by changes in anotherIntMatrix
+"#);
 }
 
 #[test]
