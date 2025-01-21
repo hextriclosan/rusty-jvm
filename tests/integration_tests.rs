@@ -293,7 +293,14 @@ fn should_do_strings_concat_inline() {
 fn should_do_strings_cpool_advanced() {
     assert_success(
         "samples.javacore.strings.cpool.advanced.StringPoolAdvanced",
-        "127\n",
+        r#"str1 and str2 have the same reference
+str1 and str3 have different references
+str1 and str3 have the same content
+str1 and str5 have the same reference
+str1 and str4 have the same reference
+str1 and str6 have the same reference
+str1 and str7 have different references but the same content
+"#,
     );
 }
 
