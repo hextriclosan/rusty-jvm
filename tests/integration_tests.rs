@@ -11,7 +11,53 @@ fn should_deal_with_abstract_class_without_interface_implementation() {
 
 #[test]
 fn should_create_array_class_type() {
-    assert_success("samples.reflection.trivial.ArrayClass", "16777215\n");
+    assert_success("samples.reflection.trivial.ArrayClass",
+    r#"Analyzing class: [[[I
+----------------------------------------
+Class: class [[[I
+  isPrimitive: false
+  isArray: true
+Class: class [[I
+  isPrimitive: false
+  isArray: true
+Class: class [I
+  isPrimitive: false
+  isArray: true
+Class: int
+  isPrimitive: true
+  isArray: false
+End of analysis.
+========================================
+
+Analyzing class: [[Ljava.lang.String;
+----------------------------------------
+Class: class [[Ljava.lang.String;
+  isPrimitive: false
+  isArray: true
+Class: class [Ljava.lang.String;
+  isPrimitive: false
+  isArray: true
+Class: class java.lang.String
+  isPrimitive: false
+  isArray: false
+End of analysis.
+========================================
+
+Analyzing class: [[Ljava.lang.Runnable;
+----------------------------------------
+Class: class [[Ljava.lang.Runnable;
+  isPrimitive: false
+  isArray: true
+Class: class [Ljava.lang.Runnable;
+  isPrimitive: false
+  isArray: true
+Class: interface java.lang.Runnable
+  isPrimitive: false
+  isArray: false
+End of analysis.
+========================================
+
+"#);
 }
 
 #[test]
