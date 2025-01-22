@@ -543,8 +543,53 @@ Map is empty
 }
 
 #[test]
-fn should_perform_calculations_with_overflow() {
-    assert_success("samples.arithmetics.overflow.ArithmeticOverflow", "1\n");
+fn should_perform_integral_calculations_with_overflow() {
+    assert_success("samples.arithmetics.overflow.ArithmeticIntegralOverflow",
+    r#"class java.lang.Byte:
+add overflow: -128
+mul overflow: -2
+div overflow: -128
+neg overflow: -128
+rem overflow: 0
+shl overflow: -2
+shr overflow: -64
+ushl overflow: -64
+sub overflow: 127
+
+class java.lang.Short:
+add overflow: -32768
+mul overflow: -2
+div overflow: -32768
+neg overflow: -32768
+rem overflow: 0
+shl overflow: -2
+shr overflow: -16384
+ushl overflow: -16384
+sub overflow: 32767
+
+class java.lang.Integer:
+add overflow: -2147483648
+mul overflow: -2
+div overflow: -2147483648
+neg overflow: -2147483648
+rem overflow: 0
+shl overflow: -2
+shr overflow: -1073741824
+ushl overflow: 1073741824
+sub overflow: 2147483647
+
+class java.lang.Long:
+add overflow: -9223372036854775808
+mul overflow: -2
+div overflow: -9223372036854775808
+neg overflow: -9223372036854775808
+rem overflow: 0
+shl overflow: -2
+shr overflow: -4611686018427387904
+ushl overflow: 4611686018427387904
+sub overflow: 9223372036854775807
+
+"#);
 }
 
 #[test]
