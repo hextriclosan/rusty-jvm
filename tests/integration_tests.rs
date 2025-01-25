@@ -297,7 +297,12 @@ fn should_do_interface_and_abstract_class() {
 fn should_do_native_call_on_system_array_copy() {
     assert_success(
         "samples.nativecall.system.NativeCallSystemArrayCopy",
-        "15\n",
+        r#"intArr(): [1, 2, 20, 30, 40, 6]
+longArr(): [1, 2, 128849018920, 214748364860, 300647710800, 6]
+intArrOverlapping(): [10, 10, 20, 30, 40, 50]
+longArrOverlapping(): [42949672980, 42949672980, 128849018920, 214748364860, 300647710800, 386547056740]
+upcasting(): [10, 20, 30]
+"#,
     );
 }
 
