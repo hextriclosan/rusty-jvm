@@ -1,4 +1,5 @@
 // javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED  -d . UnsafeObjectFieldOffset.java
+// java --add-exports java.base/jdk.internal.misc=ALL-UNNAMED samples.jdkinternal.unsafe.objectfieldoffset.UnsafeObjectFieldOffset
 
 package samples.jdkinternal.unsafe.objectfieldoffset;
 
@@ -12,17 +13,21 @@ public class UnsafeObjectFieldOffset {
         boolean oneFieldThreeSet = one.compareAndSetFieldThree(2, 20);
         int oneFieldOne = one.getFieldOne();
         int oneFieldThree = one.getFieldThree();
-        int bit0 = oneFieldOneSet && oneFieldOne == 10 ? 1 : 0;
-        int bit1 = oneFieldThreeSet && oneFieldThree == 20 ? 1 : 0;
+        if (oneFieldOneSet && oneFieldOne == 10) {
+            System.out.println("int is compared and set successfully");
+        }
+        if (oneFieldThreeSet && oneFieldThree == 20) {
+            System.out.println("Another int is compared and set successfully");
+        }
 
         Two two = new Two(-1, -2, -3);
         int twoFieldOne = two.getFieldOne(); // -1
         int twoFieldTwo = two.getFieldTwo(); // -2
         int twoFieldThree = two.getFieldThree(); // -3
         int twoFieldThreeFromParent = two.getFieldThreeFromParent(); // -27
-        int bit2 = twoFieldOne == -1 && twoFieldTwo == -2 && twoFieldThree == -3 && twoFieldThreeFromParent == -27
-            ? 1
-            : 0;
+        if (twoFieldOne == -1 && twoFieldTwo == -2 && twoFieldThree == -3 && twoFieldThreeFromParent == -27) {
+            System.out.println("Fields are initialized correctly");
+        }
 
         boolean twoFieldOneSet = two.compareAndSetFieldOne(-1, -10);
         boolean twoFieldTwoSet = two.compareAndSetFieldTwo(-2, -20);
@@ -32,24 +37,12 @@ public class UnsafeObjectFieldOffset {
         int twoFieldTwoAfterSet = two.getFieldTwo(); // -20
         int twoFieldThreeAfterSet = two.getFieldThree(); // -30
         int twoFieldThreeFromParentAfterSet = two.getFieldThreeFromParent(); // -270
-        int bit3 = twoFieldOneSet && twoFieldOneAfterSet == -10 ? 1 : 0;
-        int bit4 = twoFieldTwoSet && twoFieldTwoAfterSet == -20 ? 1 : 0;
-        int bit5 = twoFieldThreeSet && twoFieldThreeAfterSet == -30 ? 1 : 0;
-        int bit6 = twoFieldThreeFromParentSet && twoFieldThreeFromParentAfterSet == -270 ? 1 : 0;
-
-        int result = 0;
-        result = setBit(result, 0, bit0);
-        result = setBit(result, 1, bit1);
-        result = setBit(result, 2, bit2);
-        result = setBit(result, 3, bit3);
-        result = setBit(result, 4, bit4);
-        result = setBit(result, 5, bit5);
-        result = setBit(result, 6, bit6);
-        System.out.println(result);
-    }
-
-    private static int setBit(int num, int position, int value) {
-        return value == 0 ? num & ~(1 << position) : num | (1 << position);
+        if (twoFieldOneSet && twoFieldOneAfterSet == -10 &&
+                twoFieldTwoSet && twoFieldTwoAfterSet == -20 &&
+                twoFieldThreeSet && twoFieldThreeAfterSet == -30 &&
+                twoFieldThreeFromParentSet && twoFieldThreeFromParentAfterSet == -270) {
+            System.out.println("Fields are compared and set successfully");
+        }
     }
 }
 
@@ -64,6 +57,7 @@ class One {
     int placeholder2; // possible offset 4
     int fieldOne;     // possible offset 8
     int fieldThree;   // possible offset 12
+
     public One(int fieldOne, int fieldThree) {
         this.fieldOne = fieldOne;
         this.fieldThree = fieldThree;
@@ -93,6 +87,7 @@ class Two extends One {
     int placeholder10; // possible offset 16
     int fieldTwo; // possible offset 20
     int fieldThree; // possible offset 24, shadows One.fieldThree
+
     public Two(int fieldOne, int fieldTwo, int fieldThree) {
         super(fieldOne, fieldThree * 9);
         this.fieldTwo = fieldTwo;

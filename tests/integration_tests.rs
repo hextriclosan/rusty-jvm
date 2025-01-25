@@ -478,7 +478,11 @@ fn should_do_trivial_util_arrays() {
 fn should_do_unsafe_object_field_offset() {
     assert_success(
         "samples.jdkinternal.unsafe.objectfieldoffset.UnsafeObjectFieldOffset",
-        "127\n",
+        r#"int is compared and set successfully
+Another int is compared and set successfully
+Fields are initialized correctly
+Fields are compared and set successfully
+"#,
     );
 }
 
