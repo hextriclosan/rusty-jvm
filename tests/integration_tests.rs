@@ -178,7 +178,29 @@ fn should_do_arrays_with_longs() {
 
 #[test]
 fn should_do_byte_operations() {
-    assert_success("samples.javacore.bytes.trivial.ByteOperations", "2097151\n");
+    assert_success("samples.javacore.bytes.trivial.ByteOperations",
+                   r#"b1: -10
+sum: 10
+b1 < b2: true
+b1++: -9
+b1--: -10
+b2++: 21
+b2--: 20
+bMax: 127
+bMin: -128
+overflow: -128
+underflow: 127
+narrowedValue: -126
+andResult: 1
+orResult: 7
+xorResult: 6
+notResult: -6
+shiftedLeft: 16
+shiftedRight: 4
+shiftedRightUnsigned: 4
+shiftedRightOfNegative: -4
+shiftedRightUnsignedOfNegative: 2147483644
+"#);
 }
 
 #[test]
