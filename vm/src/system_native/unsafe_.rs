@@ -163,11 +163,24 @@ pub(crate) fn get_int(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
             })?;
             Ok(result[0])
         } else {
-            todo!("implement get_int for class field");
+            let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+
+            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+
+            let result = with_heap_read_lock(|heap| {
+                let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name);
+                bytes
+            })?;
+            Ok(result[0])
         }
     } else {
         todo!("implement get_int for null object");
     }
+}
+pub(crate) fn get_int_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    get_int_wrp(args) // todo! make me volatile
 }
 
 pub(crate) fn get_long_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -191,7 +204,17 @@ fn get_long(obj_ref: i32, offset: i64) -> crate::error::Result<i64> {
                 Ok(vec_to_i64(&bytes))
             })
         } else {
-            todo!("implement get_long for non null object")
+            let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+
+            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+
+            let result = with_heap_read_lock(|heap| {
+                let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name);
+                bytes
+            })?;
+            Ok(vec_to_i64(&result))
         }
     } else {
         Ok(offset) // not real implementation, just a placeholder for case when object is null

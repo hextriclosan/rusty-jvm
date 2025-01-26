@@ -23,8 +23,9 @@ use crate::system_native::system_props_raw::{platform_properties_wrp, vm_propert
 use crate::system_native::thread::current_thread_wrp;
 use crate::system_native::unsafe_::{
     array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp, get_byte_wrp,
-    get_int_wrp, get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
-    object_field_offset_1_wrp, put_reference_volatile_wrp,
+    get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
+    get_reference_volatile_wrp, get_short_wrp, object_field_offset_1_wrp,
+    put_reference_volatile_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -159,6 +160,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:getInt:(Ljava/lang/Object;J)I",
         Basic(get_int_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:getIntVolatile:(Ljava/lang/Object;J)I",
+        Basic(get_int_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getLong:(Ljava/lang/Object;J)J",

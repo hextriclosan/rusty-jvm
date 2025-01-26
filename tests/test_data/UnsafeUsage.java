@@ -1,56 +1,82 @@
 // javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED  -d . UnsafeUsage.java
-
+// java --add-exports java.base/jdk.internal.misc=ALL-UNNAMED samples.jdkinternal.unsafe.trivial.UnsafeUsage
 package samples.jdkinternal.unsafe.trivial;
 
 import jdk.internal.misc.Unsafe;
+
+import java.util.Arrays;
 
 public class UnsafeUsage {
 
     public static void main(String[] args) {
         Unsafe unsafe = Unsafe.getUnsafe();
 
-        int isBigEndian = !unsafe.isBigEndian() ? 1 : 0;
+        int isBigEndian = unsafe.isBigEndian() ? 1 : 0;
+        System.out.print("isBigEndian: ");
+        System.out.println(isBigEndian);
+
         var bytes = (byte[]) unsafe.allocateUninitializedArray(byte.class, 3);
-        int bit0 = isBigEndian + bytes.length == 4 ? 1 : 0;
+        System.out.print("bytes: ");
+        System.out.println(Arrays.toString(bytes));
 
         String intFieldName = new String(new char[]{'f', 'i', 'e', 'l', 'd', '3'});
-        long fieldOffset = unsafe.objectFieldOffset(Examinee.class, intFieldName);
-        int bit1 = fieldOffset == 2 ? 1 : 0;
+        long intFieldOffset = unsafe.objectFieldOffset(Examinee.class, intFieldName);
 
         Examinee examinee = new Examinee();
-        boolean updated = unsafe.compareAndSetInt(examinee, fieldOffset, 30, 40);
-        int bit2 = updated ? 1 : 0;
-        int bit3 = examinee.field3 == 40 ? 1 : 0;
+        Object intFieldValue = unsafe.getIntVolatile(examinee, intFieldOffset);
+        System.out.print("examinee.field3 value got by offset is: ");
+        System.out.println(intFieldValue);
 
-        updated = unsafe.compareAndSetInt(examinee, fieldOffset, 30, 50);
-        int bit4 = updated ? 0 : 1;
-        int bit5 = examinee.field3 == 40 ? 1 : 0;
+        boolean updated = unsafe.compareAndSetInt(examinee, intFieldOffset, 30, 40);
+        if (updated) {
+            System.out.print("examinee.field3 updated by offset: ");
+            System.out.println(examinee.field3); // 40
+        }
+
+        updated = unsafe.compareAndSetInt(examinee, intFieldOffset, 30, 50);
+        if (!updated) {
+            System.out.print("examinee.field3 was not updated: ");
+            System.out.println(examinee.field3); // 40
+        }
 
         long stringFieldOffset = unsafe.objectFieldOffset(Examinee.class, "field4");
         Object stringFieldValue = unsafe.getReferenceVolatile(examinee, stringFieldOffset);
-        int bit6 = "FIELD4".equals(stringFieldValue) ? 1 : 0;
+        System.out.print("examinee.field4 value got by offset is: ");
+        System.out.println(stringFieldValue);
 
         updated = unsafe.compareAndSetReference(examinee, stringFieldOffset, "FIELD4", "FIELD4_UPDATED");
-        int bit7 = updated ? 1 : 0;
-        int bit8 = "FIELD4_UPDATED".equals(examinee.field4) ? 1 : 0;
+        if (updated) {
+            System.out.print("examinee.field4 updated by offset: ");
+            System.out.println(examinee.field4); // FIELD4_UPDATED
+        }
 
         updated = unsafe.compareAndSetReference(examinee, stringFieldOffset, "FIELD4", "FIELD4_UPDATED_EVEN_MORE");
-        int bit9 = updated ? 0 : 1;
-        int bit10 = "FIELD4_UPDATED".equals(examinee.field4) ? 1 : 0;
+        if (!updated) {
+            System.out.print("examinee.field4 was not updated: ");
+            System.out.println(examinee.field4); // FIELD4_UPDATED
+        }
 
         long longFieldOffset = unsafe.objectFieldOffset(Examinee.class, "field5");
+        long longFieldValue = unsafe.getLongVolatile(examinee, longFieldOffset);
+        System.out.print("examinee.field5 value got by offset is: ");
+        System.out.println(longFieldValue);
+
         updated = unsafe.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 128_849_018_920L);
-        int bit11 = updated ? 1 : 0;
-        int bit12 = examinee.field5 == 128_849_018_920L ? 1 : 0;
+        if (updated) {
+            System.out.print("examinee.field5 updated by offset: ");
+            System.out.println(examinee.field5); // 128_849_018_920L
+        }
 
         updated = unsafe.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 1L);
-        int bit13 = updated ? 0 : 1;
-        int bit14 = examinee.field5 == 128_849_018_920L ? 1 : 0;
+        if (!updated) {
+            System.out.print("examinee.field5 was not updated: ");
+            System.out.println(examinee.field5); // 128_849_018_920L
+        }
 
         Examinee one = new Examinee();
         Examinee two = new Examinee();
         Examinee three = new Examinee();
-        Examinee[] examinees = new Examinee[] {one, two, three};
+        Examinee[] examinees = new Examinee[]{one, two, three};
         int index = 1;
         int arrayBaseOffset = unsafe.arrayBaseOffset(Examinee[].class);
         int scale = unsafe.arrayIndexScale(Examinee[].class);
@@ -58,46 +84,26 @@ public class UnsafeUsage {
             throw new RuntimeException("array index scale not a power of two");
         }
         int arrayShift = 31 - Integer.numberOfLeadingZeros(scale);
-        long offset = ((long)index << arrayShift) + arrayBaseOffset;
-        Examinee item = (Examinee)unsafe.getReferenceAcquire(examinees, offset);
-        int bit15 = item == two ? 1 : 0;
+        long offset = ((long) index << arrayShift) + arrayBaseOffset;
+        Examinee item = (Examinee) unsafe.getReferenceAcquire(examinees, offset);
+        System.out.print("examinees[1] got by offset is `two`: ");
+        System.out.println(item == two);
+
         updated = unsafe.compareAndSetReference(examinees, offset, two, three);
-        int bit16 = updated ? 1 : 0;
-        int bit17 = examinees[1] == three ? 1 : 0;
+        if (updated) {
+            System.out.print("examinees[1] updated by offset and set to `three`: ");
+            System.out.println(examinees[1] == three);
+        }
+
         updated = unsafe.compareAndSetReference(examinees, offset, two, one);
-        int bit18 = updated ? 0 : 1;
-        int bit19 = examinees[1] == three ? 1 : 0;
+        if (!updated) {
+            System.out.print("examinees[1] was not updated and remains the same: ");
+            System.out.println(examinees[1] == three);
+        }
 
         unsafe.putReferenceVolatile(one, stringFieldOffset, "FIELD4_PUT_REFERENCE_VOLATILE");
-        int bit20 = "FIELD4_PUT_REFERENCE_VOLATILE".equals(one.field4) ? 1 : 0;
-
-        int result = 0;
-        result = setBit(result, 0, bit0);
-        result = setBit(result, 1, bit1);
-        result = setBit(result, 2, bit2);
-        result = setBit(result, 3, bit3);
-        result = setBit(result, 4, bit4);
-        result = setBit(result, 5, bit5);
-        result = setBit(result, 6, bit6);
-        result = setBit(result, 7, bit7);
-        result = setBit(result, 8, bit8);
-        result = setBit(result, 9, bit9);
-        result = setBit(result, 10, bit10);
-        result = setBit(result, 11, bit11);
-        result = setBit(result, 12, bit12);
-        result = setBit(result, 13, bit13);
-        result = setBit(result, 14, bit14);
-        result = setBit(result, 15, bit15);
-        result = setBit(result, 16, bit16);
-        result = setBit(result, 17, bit17);
-        result = setBit(result, 18, bit18);
-        result = setBit(result, 19, bit19);
-        result = setBit(result, 20, bit20);
-        System.out.println(result);
-    }
-
-    private static int setBit(int num, int position, int value) {
-        return value == 0 ? num & ~(1 << position) : num | (1 << position);
+        System.out.print("one.field4 updated by offset to: ");
+        System.out.println(one.field4); // FIELD4_PUT_REFERENCE_VOLATILE
     }
 }
 
