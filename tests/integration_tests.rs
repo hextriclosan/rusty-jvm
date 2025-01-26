@@ -72,7 +72,15 @@ fn empty_string_in_cpool() {
 fn should_calculate_hashcodes() {
     assert_success(
         "samples.javacore.hashcodes.trivial.HashCodeExample",
-        "255\n",
+        r#"customHashCode1: 310
+customHashCode2: 620
+customHashCode1 != identityHashCode1: true
+customHashCode2 != identityHashCode2: true
+objectHashCode1 != objectHashCode2: true
+objectHashCode1 == objectIdentityHashCode1: true
+objectHashCode2 == objectIdentityHashCode2: true
+hashCodeOfNull: 0
+"#,
     );
 }
 
