@@ -11,8 +11,9 @@ fn should_deal_with_abstract_class_without_interface_implementation() {
 
 #[test]
 fn should_create_array_class_type() {
-    assert_success("samples.reflection.trivial.ArrayClass",
-    r#"Analyzing class: [[[I
+    assert_success(
+        "samples.reflection.trivial.ArrayClass",
+        r#"Analyzing class: [[[I
 ----------------------------------------
 Class: class [[[I
   isPrimitive: false
@@ -57,7 +58,8 @@ Class: interface java.lang.Runnable
 End of analysis.
 ========================================
 
-"#);
+"#,
+    );
 }
 
 #[test]
@@ -107,8 +109,9 @@ fn should_check_if_class_is_interface() {
 
 #[test]
 fn should_clone_cloneables() {
-    assert_success("samples.javacore.cloneable.trivial.CloneExample",
-    r#"cloneable and anotherCloneable have different references but the same content
+    assert_success(
+        "samples.javacore.cloneable.trivial.CloneExample",
+        r#"cloneable and anotherCloneable have different references but the same content
 cloneable is not affected by changes in anotherCloneable
 intArray and anotherIntArray have different references but the same content
 intArray is not affected by changes in anotherIntArray
@@ -116,7 +119,8 @@ objArray and anotherObjArray have different references but the same content
 objArray is not affected by changes in anotherObjArray
 intMatrix and anotherIntMatrix have different references but the same content
 intMatrix is affected by changes in anotherIntMatrix
-"#);
+"#,
+    );
 }
 
 #[test]
@@ -129,8 +133,9 @@ fn should_convert_long_to_double_and_back() {
 
 #[test]
 fn should_convert_to_string_and_back() {
-    assert_success("samples.javacore.strings.trivial.ToStringAndBack",
-    r#"true
+    assert_success(
+        "samples.javacore.strings.trivial.ToStringAndBack",
+        r#"true
 127
 31999
 ї
@@ -140,7 +145,8 @@ fn should_convert_to_string_and_back() {
 3.14
 340282366920938463463374607431768211455
 340282366920938463463374607431768211455.340282366920938463463374607431768211455
-"#);
+"#,
+    );
 }
 
 #[test]
@@ -186,8 +192,9 @@ fn should_do_arrays_with_longs() {
 
 #[test]
 fn should_do_byte_operations() {
-    assert_success("samples.javacore.bytes.trivial.ByteOperations",
-                   r#"b1: -10
+    assert_success(
+        "samples.javacore.bytes.trivial.ByteOperations",
+        r#"b1: -10
 sum: 10
 b1 < b2: true
 b1++: -9
@@ -208,7 +215,8 @@ shiftedRight: 4
 shiftedRightUnsigned: 4
 shiftedRightOfNegative: -4
 shiftedRightUnsignedOfNegative: 2147483644
-"#);
+"#,
+    );
 }
 
 #[test]
@@ -497,7 +505,22 @@ fn should_do_trivial_treemaps() {
 fn should_do_trivial_unsafe_things() {
     assert_success(
         "samples.jdkinternal.unsafe.trivial.UnsafeUsage",
-        "2097151\n",
+        r#"isBigEndian: 0
+bytes: [0, 0, 0]
+examinee.field3 value got by offset is: 30
+examinee.field3 updated by offset: 40
+examinee.field3 was not updated: 40
+examinee.field4 value got by offset is: FIELD4
+examinee.field4 updated by offset: FIELD4_UPDATED
+examinee.field4 was not updated: FIELD4_UPDATED
+examinee.field5 value got by offset is: 42949672980
+examinee.field5 updated by offset: 128849018920
+examinee.field5 was not updated: 128849018920
+examinees[1] got by offset is `two`: true
+examinees[1] updated by offset and set to `three`: true
+examinees[1] was not updated and remains the same: true
+one.field4 updated by offset to: FIELD4_PUT_REFERENCE_VOLATILE
+"#,
     );
 }
 
@@ -583,8 +606,9 @@ Map is empty
 
 #[test]
 fn should_perform_integral_calculations_with_overflow() {
-    assert_success("samples.arithmetics.overflow.ArithmeticIntegralOverflow",
-    r#"class java.lang.Byte:
+    assert_success(
+        "samples.arithmetics.overflow.ArithmeticIntegralOverflow",
+        r#"class java.lang.Byte:
 add overflow: -128
 mul overflow: -2
 div overflow: -128
@@ -628,7 +652,8 @@ shr overflow: -4611686018427387904
 ushl overflow: 4611686018427387904
 sub overflow: 9223372036854775807
 
-"#);
+"#,
+    );
 }
 
 #[test]
