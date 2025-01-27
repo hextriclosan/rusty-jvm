@@ -833,9 +833,9 @@ fn should_check_if_class_is_enum() {
     assert_success(
         "samples.reflection.trivial.isenumexample.IsEnumExample",
         r#"Is TimeUnit enum: true
-Is TimeUnit.MINUTES enum: true
+Is TimeUnit enum: true
 Is String enum: false
-Is TimeUnit[].class enum: false
+Is TimeUnit[] enum: false
 Is Runnable enum: false
 Is int enum: false
 Is void enum: false
