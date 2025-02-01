@@ -216,6 +216,7 @@ impl JavaMethod {
             "java/lang/reflect/Method",
             "<init>:(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B)V",
             args,
+            None
         )?;
 
         Ok(method_ref)
@@ -302,6 +303,7 @@ impl JavaMethod {
             "java/lang/reflect/Constructor",
             "<init>:(Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B)V",
             args,
+            None
         )?;
 
         Ok(method_ref)
