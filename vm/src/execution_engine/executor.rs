@@ -35,7 +35,7 @@ impl Executor {
         method_name: &str,
         args: &[StackValueKind],
     ) -> crate::error::Result<()> {
-        Self::exec(class_name, method_name, args)
+        Self::exec(class_name, method_name, args, None)
     }
 
     pub fn invoke_default_constructor(class_name: &str) -> crate::error::Result<i32> {
@@ -45,7 +45,7 @@ impl Executor {
 
         let instance_ref =
             with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
-        Self::exec(class_name, Self::INIT_METHOD, &[instance_ref.into()])?;
+        Self::exec(class_name, Self::INIT_METHOD, &[instance_ref.into()], None)?;
 
         Ok(instance_ref)
     }
@@ -54,6 +54,7 @@ impl Executor {
         class_name: &str,
         full_signature: &str,
         args: &[StackValueKind],
+        detailed_reason: Option<&str>,
     ) -> crate::error::Result<i32> {
         let instance_with_default_fields = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields(&class_name)
@@ -65,7 +66,7 @@ impl Executor {
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(instance_ref.into());
         new_args.extend_from_slice(args);
-        Self::exec(class_name, full_signature, &new_args)?;
+        Self::exec(class_name, full_signature, &new_args, detailed_reason)?;
 
         Ok(instance_ref)
     }
@@ -86,6 +87,7 @@ impl Executor {
             "java/lang/Thread",
             "<init>:(Ljava/lang/ThreadGroup;Ljava/lang/String;)V",
             &new_args,
+            Some("primordial thread creation"),
         )?;
 
         Ok(thread_obj_ref)
@@ -95,12 +97,16 @@ impl Executor {
         class_name: &str,
         method_name: &str,
         args: &[StackValueKind],
+        detailed_reason: Option<&str>,
     ) -> crate::error::Result<()> {
         let java_class = with_method_area(|area| area.get(class_name))?;
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
         Self::set_stack_arguments(&mut stack_frame, args)?;
-        Engine::execute(stack_frame, &format!("invoke {class_name}.{method_name}"))
+        Engine::execute(
+            stack_frame,
+            &format!("invoke {class_name}.{method_name} {detailed_reason:?}"),
+        )
     }
 
     fn set_stack_arguments(
