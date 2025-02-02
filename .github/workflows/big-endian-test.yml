@@ -1,0 +1,25 @@
+name: Big Endian Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-on-s390x:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run tests in s390x container
+        run: |
+          docker run --rm -v "$(pwd)":/app s390x/ubuntu bash -c "
+            apt-get update &&
+            apt-get install -y build-essential curl &&
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+            . $HOME/.cargo/env &&
+            cd /app &&
+            cargo test
+          "
