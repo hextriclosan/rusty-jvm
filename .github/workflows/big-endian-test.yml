@@ -25,5 +25,5 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
             export PATH=\$HOME/.cargo/bin:\$PATH &&  # Fix: Explicitly add Cargo bin to PATH
             cd /app &&
-            cargo test
+            CARGO_TARGET_DIR=target/s390x cargo test
           "
