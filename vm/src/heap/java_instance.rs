@@ -75,7 +75,11 @@ impl Array {
         match size {
             1..=4 => {
                 let mut buf = [0u8; 4];
-                buf[0..size].copy_from_slice(&self.data[offset..offset + size]);
+                if cfg!(target_endian = "big") {
+                    buf[4 - size..4].copy_from_slice(&self.data[offset..offset + size]);
+                } else {
+                    buf[0..size].copy_from_slice(&self.data[offset..offset + size]);
+                }
                 let value = i32::from_ne_bytes(buf);
                 Ok(vec![value])
             }
@@ -106,7 +110,11 @@ impl Array {
         match size {
             1..=4 => {
                 let int_buf = value[0].to_ne_bytes();
-                self.data[offset..offset + size].copy_from_slice(&int_buf[0..size]);
+                if cfg!(target_endian = "big") {
+                    self.data[offset..offset + size].copy_from_slice(&int_buf[4 - size..4]);
+                } else {
+                    self.data[offset..offset + size].copy_from_slice(&int_buf[0..size]);
+                }
             }
             8 => {
                 let mut buf = [0u8; 8];
