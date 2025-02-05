@@ -13,16 +13,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/s390x
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-      - name: Run tests in s390x container
-        run: |
-          docker run --rm --platform linux/s390x -v "$(pwd)":/app s390x/ubuntu bash -c "
-            apt-get update &&
-            apt-get install -y build-essential curl &&
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
-            export PATH=\$HOME/.cargo/bin:\$PATH &&
-            cd /app &&
-            CARGO_TARGET_DIR=target/s390x cargo test
-          "
+      - name: Install Cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Run tests with Cross
+        run: cross test --target s390x-unknown-linux-gnu -- --test-threads=4
