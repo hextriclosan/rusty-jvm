@@ -19,7 +19,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target/s390x
+            target/s390x-unknown-linux-gnu
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
