@@ -37,7 +37,7 @@ pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> crate::error::Result<St
 
             let utf16 = array_content
                 .chunks_exact(2)
-                .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+                .map(|chunk| u16::from_ne_bytes([chunk[0], chunk[1]]))
                 .collect::<Vec<_>>();
 
             String::from_utf16(&utf16)?

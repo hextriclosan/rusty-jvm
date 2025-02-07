@@ -344,7 +344,7 @@ upcasting(): [10, 20, 30]
     );
 }
 
-use crate::utils::{assert_file, get_output};
+use crate::utils::{assert_file, get_output, is_bigendian};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[test]
@@ -505,7 +505,8 @@ fn should_do_trivial_treemaps() {
 fn should_do_trivial_unsafe_things() {
     assert_success(
         "samples.jdkinternal.unsafe.trivial.UnsafeUsage",
-        r#"isBigEndian: 0
+        &format!(
+            r#"isBigEndian: {}
 bytes: [0, 0, 0]
 examinee.field3 value got by offset is: 30
 examinee.field3 updated by offset: 40
@@ -521,6 +522,8 @@ examinees[1] updated by offset and set to `three`: true
 examinees[1] was not updated and remains the same: true
 one.field4 updated by offset to: FIELD4_PUT_REFERENCE_VOLATILE
 "#,
+            if is_bigendian() { 1 } else { 0 }
+        ),
     );
 }
 
@@ -754,16 +757,12 @@ fn should_write_read_static_fields() {
 fn should_work_with_arrays_of_long_with_unsafe() {
     assert_success(
         "samples.jdkinternal.unsafe.getlongunaligned.UnsafeGetLongUnalignedExample",
-        r#"2892188478761536005
-3253889342951919370
-3615590207142302735
-3977291071332686100
-4338991935523069465
-4700692799713452830
-5062393663903836195
-5424094528094219560
-5785795392284602925
-"#,
+        if is_bigendian() {
+            // getting long unaligned is not endianess agnostic
+            "2892188478761536005\n2530487614571152720\n2168786750380789835\n1807085886195649350\n1445385023347443265\n1083684502754443580\n722071599494282295\n382888733440751410\n5785795392284602925\n"
+        } else {
+            "2892188478761536005\n3253889342951919370\n3615590207142302735\n3977291071332686100\n4338991935523069465\n4700692799713452830\n5062393663903836195\n5424094528094219560\n5785795392284602925\n"
+        },
     );
 }
 

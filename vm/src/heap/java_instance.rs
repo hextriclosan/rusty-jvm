@@ -88,7 +88,11 @@ impl Array {
                 buf.copy_from_slice(&self.data[offset..offset + size]);
                 let high = i32::from_ne_bytes(buf[0..4].try_into().unwrap());
                 let low = i32::from_ne_bytes(buf[4..8].try_into().unwrap());
-                Ok(vec![low, high])
+                if cfg!(target_endian = "big") {
+                    Ok(vec![high, low])
+                } else {
+                    Ok(vec![low, high])
+                }
             }
             _ => Err(Error::new_execution(&format!("Invalid size: {size}"))),
         }
@@ -118,8 +122,13 @@ impl Array {
             }
             8 => {
                 let mut buf = [0u8; 8];
-                buf[0..4].copy_from_slice(&value[1].to_ne_bytes());
-                buf[4..8].copy_from_slice(&value[0].to_ne_bytes());
+                if cfg!(target_endian = "big") {
+                    buf[0..4].copy_from_slice(&value[0].to_ne_bytes());
+                    buf[4..8].copy_from_slice(&value[1].to_ne_bytes());
+                } else {
+                    buf[0..4].copy_from_slice(&value[1].to_ne_bytes());
+                    buf[4..8].copy_from_slice(&value[0].to_ne_bytes());
+                }
                 self.data[offset..offset + size].copy_from_slice(&buf);
             }
             _ => return Err(Error::new_execution(&format!("Invalid size: {size}"))),

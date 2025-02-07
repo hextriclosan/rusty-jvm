@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::execution_engine::executor::Executor;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::method_area::method_area::MethodArea;
+use crate::method_area::method_area::{with_method_area, MethodArea};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -61,6 +61,12 @@ impl VM {
         Executor::do_static_fields_initialization("java/lang/ref/Reference")?;
         Executor::do_static_fields_initialization("java/lang/ref/Cleaner")?;
         Executor::do_static_fields_initialization("java/lang/reflect/AccessibleObject")?;
+
+        Executor::do_static_fields_initialization("jdk/internal/misc/UnsafeConstants")?;
+        let lc = with_method_area(|area| area.get("jdk/internal/misc/UnsafeConstants"))?;
+        let big_endian = lc.static_field("BIG_ENDIAN")?.unwrap();
+        // todo move me to property provider
+        big_endian.set_raw_value(vec![if cfg!(target_endian = "big") { 1 } else { 0 }])?;
 
         // create primordial ThreadGroup and Thread
         let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
