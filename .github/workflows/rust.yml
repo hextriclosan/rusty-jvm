@@ -1,4 +1,4 @@
-name: Rust
+name: Continuous Integration
 
 on:
   push:
@@ -10,8 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -19,13 +18,30 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: rustfmt, clippy
           override: true
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+            cargo-
+
+      - name: Check Rust code
+        run: cargo check --verbose
 
       - name: Build
         run: cargo build --verbose
@@ -33,11 +49,44 @@ jobs:
       - name: Run tests
         run: cargo test --verbose
 
-      - run: cargo install cargo-tarpaulin
-      - run: cargo tarpaulin --out Xml
+      - name: Run coverage
+        run: cargo tarpaulin --out Xml
+
       - name: Upload coverage to Codecov
+        if: success()
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+  big-endian-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/s390x-unknown-linux-gnu
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+            cargo-
+
+      - name: Run tests on s390x (Big Endian)
+        uses: cross-rs/cross@v0.2.5
+        with:
+          target: s390x-unknown-linux-gnu
+          command: test
+          args: -- --test-threads=8
