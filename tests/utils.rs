@@ -3,6 +3,10 @@ use std::{env, fs};
 
 const PATH: &str = "tests/test_data";
 
+pub fn is_bigendian() -> bool {
+    cfg!(target_endian = "big")
+}
+
 #[allow(dead_code)]
 pub fn assert_success(entry: &str, expected: &str) {
     #[cfg(target_os = "windows")]
