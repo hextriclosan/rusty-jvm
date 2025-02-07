@@ -67,7 +67,6 @@ impl VM {
         let big_endian = lc.static_field("BIG_ENDIAN")?.unwrap();
         // todo move me to property provider
         big_endian.set_raw_value(vec![if cfg!(target_endian = "big") { 1 } else { 0 }])?;
-        let test_var = "test value";
 
         // create primordial ThreadGroup and Thread
         let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
