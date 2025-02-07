@@ -87,10 +87,8 @@ jobs:
             cargo-${{ runner.os }}-
             cargo-
 
-      - name: Set up Cross (for s390x)
-        uses: cross-rs/cross@v0.2.5
-        with:
-          version: stable
+      - name: Install cross
+        run: cargo install cross
 
       - name: Run tests on s390x (Big Endian)
         run: cross test --target s390x-unknown-linux-gnu -- --test-threads=8
