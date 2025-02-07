@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -62,3 +62,35 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+  test-on-s390x:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/s390x-unknown-linux-gnu
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+            cargo-
+
+      - name: Set up Cross (for s390x)
+        uses: cross-rs/cross@v0.2.5
+        with:
+          version: stable
+
+      - name: Run tests on s390x (Big Endian)
+        run: cross test --target s390x-unknown-linux-gnu -- --test-threads=8
