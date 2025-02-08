@@ -758,7 +758,7 @@ fn should_work_with_arrays_of_long_with_unsafe() {
     assert_success(
         "samples.jdkinternal.unsafe.getlongunaligned.UnsafeGetLongUnalignedExample",
         if is_bigendian() {
-            // getting long unaligned is not endianess agnostic
+            // getting long unaligned is not endianness agnostic
             "2892188478761536005\n2530487614571152720\n2168786750380789835\n1807085886195649350\n1445385023347443265\n1083684502754443580\n722071599494282295\n382888733440751410\n5785795392284602925\n"
         } else {
             "2892188478761536005\n3253889342951919370\n3615590207142302735\n3977291071332686100\n4338991935523069465\n4700692799713452830\n5062393663903836195\n5424094528094219560\n5785795392284602925\n"
@@ -1027,6 +1027,17 @@ AnonymousClass enclosing method: testEnclosingMethods
 Inside anonymous constructor initializer.
 AnonymousClass in constructor enclosing method: testEnclosingMethods
 LocalClass in constructor enclosing method: testEnclosingMethods
+"#,
+    );
+}
+
+#[test]
+fn should_return_system_properties() {
+    assert_success(
+        "samples.system.getpropertyexample.SystemGetPropertyExample",
+        r#"line.separator:
+
+sun.cpu.endian: little
 "#,
     );
 }

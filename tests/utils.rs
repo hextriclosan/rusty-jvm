@@ -54,5 +54,5 @@ fn get_command(entry: &str) -> Command {
 
 #[cfg(target_os = "windows")]
 fn to_windows(input: &str) -> String {
-    input.replace("\n", "\r\n")
+    input.replace("\r\n", "\n").replace("\n", "\r\n")
 }
