@@ -1035,9 +1035,9 @@ LocalClass in constructor enclosing method: testEnclosingMethods
 fn should_return_system_properties() {
     assert_success(
         "samples.system.getpropertyexample.SystemGetPropertyExample",
-        r#"line.separator: 
-
-sun.cpu.endian: little
-"#,
+        &format!(
+            "line.separator: \n\nsun.cpu.endian: {}\n",
+            if is_bigendian() { "big" } else { "little" }
+        ),
     );
 }
