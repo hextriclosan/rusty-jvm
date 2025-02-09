@@ -1,5 +1,7 @@
 use crate::error::Error;
 use crate::method_area::method_area::with_method_area;
+use crate::stack::sack_value::StackValue;
+use jdescriptor::TypeDescriptor;
 
 pub fn i32toi64(high: i32, low: i32) -> i64 {
     let high_converted = (high as i64) << 32;
@@ -28,4 +30,35 @@ pub fn clazz_ref(class_name: &str) -> crate::error::Result<i32> {
         let clazz_ref = area.load_reflection_class(class_name)?;
         Ok::<i32, Error>(clazz_ref)
     })
+}
+
+pub fn get_length(type_descriptor: &TypeDescriptor) -> crate::error::Result<i32> {
+    match type_descriptor {
+        TypeDescriptor::Byte
+        | TypeDescriptor::Char
+        | TypeDescriptor::Int
+        | TypeDescriptor::Short
+        | TypeDescriptor::Boolean
+        | TypeDescriptor::Float => Ok(1),
+        TypeDescriptor::Long | TypeDescriptor::Double => Ok(2),
+        TypeDescriptor::Void => Err(Error::new_execution("Void type doesn't have a length")),
+        TypeDescriptor::Array(_, _) => Ok(1),
+        TypeDescriptor::Object(_) => Ok(1),
+    }
+}
+
+pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
+    match type_descriptor {
+        TypeDescriptor::Byte
+        | TypeDescriptor::Char
+        | TypeDescriptor::Int
+        | TypeDescriptor::Short
+        | TypeDescriptor::Boolean => vec![0],
+        TypeDescriptor::Float => 0.0f32.to_vec(),
+        TypeDescriptor::Long => vec![0, 0],
+        TypeDescriptor::Double => 0.0f64.to_vec(),
+        TypeDescriptor::Array(_, _) => vec![0],
+        TypeDescriptor::Object(_) => vec![0],
+        TypeDescriptor::Void => panic!("Void type doesn't have a value"),
+    }
 }

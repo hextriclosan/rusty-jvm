@@ -1,4 +1,5 @@
-use jdescriptor::{default_value, TypeDescriptor};
+use crate::helper::default_value;
+use jdescriptor::TypeDescriptor;
 use serde::Serialize;
 use std::sync::RwLock;
 

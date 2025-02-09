@@ -36,28 +36,6 @@ pub struct MethodDescriptor {
     return_type: TypeDescriptor,
 }
 
-pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
-    match type_descriptor {
-        Byte | Char | Int | Short | Boolean => vec![0],
-        Long => vec![0, 0],
-        Float => from_f32(0.0),
-        Double => from_f64(0.0),
-        Void => panic!("field can't be a void type"),
-        Array(_, _) => vec![0],
-        Object(_) => vec![0],
-    }
-}
-
-pub fn get_length(type_descriptor: &TypeDescriptor) -> usize {
-    match type_descriptor {
-        Byte | Char | Int | Short | Boolean | Float => 1,
-        Long | Double => 2,
-        Void => panic!("field can't be a void type"),
-        Array(_, _) => 1,
-        Object(_) => 1,
-    }
-}
-
 impl Display for TypeDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -197,15 +175,6 @@ impl Display for DescriptorError {
         };
         write!(f, "{}", str)
     }
-}
-
-fn from_f32(value: f32) -> Vec<i32> {
-    vec![value.to_bits() as i32]
-}
-
-fn from_f64(value: f64) -> Vec<i32> {
-    let bits = value.to_bits();
-    vec![(bits >> 32) as i32, bits as i32]
 }
 
 #[cfg(test)]

@@ -3,12 +3,13 @@ use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::system_native_table::invoke_native_method;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::helper::get_length;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
-use jdescriptor::{get_length, MethodDescriptor};
+use jdescriptor::MethodDescriptor;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -46,11 +47,11 @@ pub(crate) fn process(
                 let field_ref = with_method_area(|method_area| {
                     method_area.lookup_for_static_field(&class_name, &field_name)
                 })?;
-                let len = get_length(field_ref.type_descriptor());
+                let len = get_length(field_ref.type_descriptor())?;
                 (len, field_ref)
             };
 
-            let mut value = Vec::with_capacity(len);
+            let mut value = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 value.push(stack_frame.pop());
             }
@@ -85,9 +86,9 @@ pub(crate) fn process(
                         ))
                     })
             })?;
-            let len = get_length(&type_descriptor);
+            let len = get_length(&type_descriptor)?;
 
-            let mut value = Vec::with_capacity(len);
+            let mut value = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 value.push(stack_frame.pop());
             }
