@@ -32,30 +32,7 @@ pub enum TypeDescriptor {
 #[derive(Debug, PartialEq)]
 pub struct MethodDescriptor {
     parameter_types: Vec<TypeDescriptor>,
-    arguments_length: usize,
     return_type: TypeDescriptor,
-}
-
-pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
-    match type_descriptor {
-        Byte | Char | Int | Short | Boolean => vec![0],
-        Long => vec![0, 0],
-        Float => from_f32(0.0),
-        Double => from_f64(0.0),
-        Void => panic!("field can't be a void type"),
-        Array(_, _) => vec![0],
-        Object(_) => vec![0],
-    }
-}
-
-pub fn get_length(type_descriptor: &TypeDescriptor) -> usize {
-    match type_descriptor {
-        Byte | Char | Int | Short | Boolean | Float => 1,
-        Long | Double => 2,
-        Void => panic!("field can't be a void type"),
-        Array(_, _) => 1,
-        Object(_) => 1,
-    }
 }
 
 impl Display for TypeDescriptor {
@@ -81,10 +58,8 @@ impl Display for TypeDescriptor {
 
 impl MethodDescriptor {
     pub fn new(parameter_types: Vec<TypeDescriptor>, return_type: TypeDescriptor) -> Self {
-        let arguments_length = calculate_arguments_length(&parameter_types);
         Self {
             parameter_types,
-            arguments_length,
             return_type,
         }
     }
@@ -93,23 +68,9 @@ impl MethodDescriptor {
         &self.parameter_types
     }
 
-    pub fn arguments_length(&self) -> usize {
-        self.arguments_length
-    }
-
     pub fn return_type(&self) -> &TypeDescriptor {
         &self.return_type
     }
-}
-
-fn calculate_arguments_length(parameter_types: &Vec<TypeDescriptor>) -> usize {
-    parameter_types
-        .iter()
-        .map(|t| match t {
-            Long | Double => 2,
-            _ => 1,
-        })
-        .sum()
 }
 
 impl FromStr for TypeDescriptor {
@@ -183,7 +144,7 @@ impl FromStr for MethodDescriptor {
 }
 
 impl Display for DescriptorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let str = match self {
             DescriptorError::UnexpectedEndOfInput => "Unexpected end of input".to_string(),
             DescriptorError::InvalidDescriptor => "Invalid descriptor".to_string(),
@@ -197,15 +158,6 @@ impl Display for DescriptorError {
         };
         write!(f, "{}", str)
     }
-}
-
-fn from_f32(value: f32) -> Vec<i32> {
-    vec![value.to_bits() as i32]
-}
-
-fn from_f64(value: f64) -> Vec<i32> {
-    let bits = value.to_bits();
-    vec![(bits >> 32) as i32, bits as i32]
 }
 
 #[cfg(test)]

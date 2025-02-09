@@ -1,4 +1,5 @@
-use jdescriptor::{default_value, TypeDescriptor};
+use crate::helper::default_value;
+use jdescriptor::TypeDescriptor;
 use serde::Serialize;
 use std::sync::RwLock;
 
@@ -9,12 +10,12 @@ pub(crate) struct Field {
 }
 
 impl Field {
-    pub fn new(type_descriptor: TypeDescriptor) -> Self {
-        let value = default_value(&type_descriptor);
-        Self {
+    pub fn new(type_descriptor: TypeDescriptor) -> crate::error::Result<Self> {
+        let value = default_value(&type_descriptor)?;
+        Ok(Self {
             type_descriptor,
             value: RwLock::new(value),
-        }
+        })
     }
 
     pub fn set_raw_value(&self, value: Vec<i32>) -> crate::error::Result<()> {
