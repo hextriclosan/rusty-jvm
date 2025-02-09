@@ -32,7 +32,6 @@ pub enum TypeDescriptor {
 #[derive(Debug, PartialEq)]
 pub struct MethodDescriptor {
     parameter_types: Vec<TypeDescriptor>,
-    arguments_length: usize,
     return_type: TypeDescriptor,
 }
 
@@ -59,10 +58,8 @@ impl Display for TypeDescriptor {
 
 impl MethodDescriptor {
     pub fn new(parameter_types: Vec<TypeDescriptor>, return_type: TypeDescriptor) -> Self {
-        let arguments_length = calculate_arguments_length(&parameter_types);
         Self {
             parameter_types,
-            arguments_length,
             return_type,
         }
     }
@@ -71,23 +68,9 @@ impl MethodDescriptor {
         &self.parameter_types
     }
 
-    pub fn arguments_length(&self) -> usize {
-        self.arguments_length
-    }
-
     pub fn return_type(&self) -> &TypeDescriptor {
         &self.return_type
     }
-}
-
-fn calculate_arguments_length(parameter_types: &Vec<TypeDescriptor>) -> usize {
-    parameter_types
-        .iter()
-        .map(|t| match t {
-            Long | Double => 2,
-            _ => 1,
-        })
-        .sum()
 }
 
 impl FromStr for TypeDescriptor {
@@ -161,7 +144,7 @@ impl FromStr for MethodDescriptor {
 }
 
 impl Display for DescriptorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let str = match self {
             DescriptorError::UnexpectedEndOfInput => "Unexpected end of input".to_string(),
             DescriptorError::InvalidDescriptor => "Invalid descriptor".to_string(),

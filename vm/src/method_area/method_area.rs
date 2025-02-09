@@ -293,7 +293,7 @@ impl MethodArea {
             })?;
 
             if field_info.access_flags().contains(FieldFlags::ACC_STATIC) {
-                static_field_by_name.insert(field_name, Arc::new(Field::new(descriptor)));
+                static_field_by_name.insert(field_name, Arc::new(Field::new(descriptor)?));
             } else {
                 non_static_field_descriptors.insert(field_name, descriptor);
             }
@@ -421,7 +421,7 @@ impl MethodArea {
             )?;
         };
 
-        let instance_fields = rc.default_value_instance_fields();
+        let instance_fields = rc.default_value_instance_fields()?;
         instance_fields_hierarchy.insert(class_name.to_string(), instance_fields);
 
         Ok(())

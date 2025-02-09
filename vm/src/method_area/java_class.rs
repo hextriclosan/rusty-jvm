@@ -143,11 +143,13 @@ impl JavaClass {
             .get(instance_field_name_type)
     }
 
-    pub fn default_value_instance_fields(&self) -> IndexMap<FieldNameType, Field> {
+    pub fn default_value_instance_fields(
+        &self,
+    ) -> crate::error::Result<IndexMap<FieldNameType, Field>> {
         self.non_static_field_descriptors
             .descriptor_by_name
             .iter()
-            .map(|(name, descriptor)| (name.clone(), Field::new(descriptor.to_owned())))
+            .map(|(name, descriptor)| Ok((name.clone(), Field::new(descriptor.to_owned())?)))
             .collect()
     }
 

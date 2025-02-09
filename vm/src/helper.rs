@@ -47,18 +47,22 @@ pub fn get_length(type_descriptor: &TypeDescriptor) -> crate::error::Result<i32>
     }
 }
 
-pub fn default_value(type_descriptor: &TypeDescriptor) -> Vec<i32> {
+pub fn default_value(type_descriptor: &TypeDescriptor) -> crate::error::Result<Vec<i32>> {
     match type_descriptor {
         TypeDescriptor::Byte
         | TypeDescriptor::Char
         | TypeDescriptor::Int
         | TypeDescriptor::Short
-        | TypeDescriptor::Boolean => vec![0],
-        TypeDescriptor::Float => 0.0f32.to_vec(),
-        TypeDescriptor::Long => vec![0, 0],
-        TypeDescriptor::Double => 0.0f64.to_vec(),
-        TypeDescriptor::Array(_, _) => vec![0],
-        TypeDescriptor::Object(_) => vec![0],
-        TypeDescriptor::Void => panic!("Void type doesn't have a value"),
+        | TypeDescriptor::Boolean => Ok(vec![0]),
+        TypeDescriptor::Float => Ok(0.0f32.to_vec()),
+        TypeDescriptor::Long => Ok(vec![0, 0]),
+        TypeDescriptor::Double => Ok(0.0f64.to_vec()),
+        TypeDescriptor::Array(_, _) => Ok(vec![0]),
+        TypeDescriptor::Object(_) => Ok(vec![0]),
+        TypeDescriptor::Void => Err(Error::new_execution("Void type doesn't have a value")),
     }
+}
+
+pub fn argument_length(args: &[TypeDescriptor]) -> crate::error::Result<i32> {
+    args.iter().map(get_length).sum()
 }
