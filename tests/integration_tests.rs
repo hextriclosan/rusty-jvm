@@ -531,7 +531,21 @@ one.field4 updated by offset to: FIELD4_PUT_REFERENCE_VOLATILE
 fn should_do_trivial_util_arrays() {
     assert_success(
         "samples.javabase.util.arrays.trivial.TrivialUtilArrays",
-        "9\n",
+        r#"Binary search result: 9
+Arrays are equal: false
+Arrays compare: 1
+Arrays compareUnsigned: -1
+Mismatched index: 9
+Hash code: 2117675315
+List: [1, 2, 3]
+String: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+Copied: [10, 20, 30, 40, 50]
+Copied of range: [60, 70, 80, 90, 100]
+Filled: [10, 42, 42, 42, 42, 42, 42, 42, 42, 100]
+Arrays are deep equals: true
+Deep hash code: 32833
+Deep string: [[1, 2], [3, 4]]
+"#,
     );
 }
 
