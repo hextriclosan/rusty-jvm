@@ -2,6 +2,12 @@
 name = "jdescriptor"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igor Rudenko <iostream64@gmail.com>"]
+description = "Java Bytecode Descriptor Parser for Rust"
+license = "MIT"
+repository = "https://github.com/hextriclosan/rusty-jvm"
+documentation = "https://docs.rs/jdescriptor"
+readme = "README.md"
 
 [dependencies]
 serde = { version = "1.0.217", features = ["derive"] }

@@ -1,5 +1,4 @@
 use crate::TypeDescriptor::*;
-use serde::Serialize;
 use std::fmt;
 use std::fmt::Display;
 use std::str::Chars;
@@ -14,7 +13,7 @@ enum DescriptorError {
     TooManyDimensions,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, serde::Serialize)]
 pub enum TypeDescriptor {
     Byte,
     Char,
@@ -29,7 +28,7 @@ pub enum TypeDescriptor {
     Object(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, serde::Serialize)]
 pub struct MethodDescriptor {
     parameter_types: Vec<TypeDescriptor>,
     return_type: TypeDescriptor,
@@ -57,7 +56,7 @@ impl Display for TypeDescriptor {
 }
 
 impl MethodDescriptor {
-    pub fn new(parameter_types: Vec<TypeDescriptor>, return_type: TypeDescriptor) -> Self {
+    fn new(parameter_types: Vec<TypeDescriptor>, return_type: TypeDescriptor) -> Self {
         Self {
             parameter_types,
             return_type,
