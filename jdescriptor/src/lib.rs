@@ -193,7 +193,7 @@ mod tests {
         assert_eq!(str::parse::<TypeDescriptor>("J"), Ok(Long));
     }
     #[test]
-    fn should_parse_flot_type() {
+    fn should_parse_float_type() {
         assert_eq!(str::parse::<TypeDescriptor>("F"), Ok(Float));
     }
     #[test]
