@@ -5,6 +5,7 @@ use std::string::{FromUtf16Error, FromUtf8Error};
 use std::sync::PoisonError;
 use std::time::SystemTimeError;
 use std::{io, result};
+use jdescriptor::DescriptorError;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -75,9 +76,9 @@ impl From<FromUtf16Error> for Error {
     }
 }
 
-impl From<String> for Error {
-    fn from(error: String) -> Self {
-        Error::new_execution(&format!("{error}"))
+impl From<DescriptorError> for Error {
+    fn from(error: DescriptorError) -> Self {
+        Error::new_execution(&format!("DescriptorError: {error}"))
     }
 }
 

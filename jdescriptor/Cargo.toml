@@ -5,9 +5,16 @@ edition = "2021"
 authors = ["Igor Rudenko <iostream64@gmail.com>"]
 description = "Java Bytecode Descriptor Parser for Rust"
 license = "MIT"
+homepage = "https://github.com/hextriclosan/rusty-jvm"
 repository = "https://github.com/hextriclosan/rusty-jvm"
 documentation = "https://docs.rs/jdescriptor"
 readme = "README.md"
+keywords = ["java", "bytecode", "descriptor", "parser", "jvm"]
+categories = ["parser-implementations", "parsing", "development-tools::ffi"]
 
 [dependencies]
 serde = { version = "1.0.217", features = ["derive"] }
+thiserror = "2.0.11"
+
+[dev-dependencies]
+rstest = "0.24.0"
