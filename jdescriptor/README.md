@@ -22,9 +22,9 @@ jdescriptor = "0.1.0"
 ✅ **Beyond Classfiles** – Useful for RPC, static analysis, IDE plugins, serialization, and more!<br>
 ✅ **Optimized for Performance** – Designed to handle large-scale descriptor processing efficiently.
 
-For more details about Java bytecode descriptors, check out the relevant sections in the [Java Virtual Machine Specification (JVMS)](https://docs.oracle.com/javase/specs/jvms/se23/html/index.html):
-- **Field Descriptors**: [Section 4.3.2](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.2)
-- **Method Descriptors**: [Section 4.3.3](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.3)
+For more details about Java bytecode descriptors, check out the relevant sections in the [Java Virtual Machine Specification (JVMS)][jvms-index]:
+- **Field Descriptors**: [Section 4.3.2][jvms-4.3.2]
+- **Method Descriptors**: [Section 4.3.3][jvms-4.3.3]
 
 
 ## Usage
@@ -32,15 +32,15 @@ For more details about Java bytecode descriptors, check out the relevant section
 ### Dealing with Type Descriptors
 ```rust
 let parsed: TypeDescriptor = "[[Ljava/lang/String;".parse().unwrap();
-println!("Rust representation: {:?}", parsed);
-println!("Java representation: {}", parsed);
+println!("Rust representation: {:?}", parsed); // Array(Object("java/lang/String"), 2)
+println!("Java representation: {}", parsed); // [[Ljava/lang/String;
 ```
 
 ### Dealing with Method Descriptors
 ```rust
 let parsed: MethodDescriptor = "(FIB)S".parse().unwrap();
-println!("Rust representation: {:?}", parsed);
-println!("Java representation: {}", parsed);
+println!("Rust structure: {:?}", parsed); // MethodDescriptor { parameter_types: [Float, Int, Byte], return_type: Short }
+println!("Java representation: {}", parsed); // (FIB)S
 ```
 
 ## Use Cases
@@ -63,3 +63,6 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 [docs-link]: https://docs.rs/jdescriptor
 [license-mit-image]: https://img.shields.io/badge/license-MIT-blue.svg
 [license-mit-link]: LICENSE
+[jvms-index]: https://docs.oracle.com/javase/specs/jvms/se23/html/
+[jvms-4.3.2]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.2
+[jvms-4.3.3]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.3
