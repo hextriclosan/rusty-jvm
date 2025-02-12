@@ -22,6 +22,11 @@ jdescriptor = "0.1.0"
 ✅ **Beyond Classfiles** – Useful for RPC, static analysis, IDE plugins, serialization, and more!<br>
 ✅ **Optimized for Performance** – Designed to handle large-scale descriptor processing efficiently.
 
+For more details about Java bytecode descriptors, check out the relevant sections in the [Java Virtual Machine Specification (JVMS)](https://docs.oracle.com/javase/specs/jvms/se23/html/index.html):
+- **Field Descriptors**: [Section 4.3.2](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.2)
+- **Method Descriptors**: [Section 4.3.3](https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.3)
+
+
 ## Usage
 
 ### Dealing with Type Descriptors
