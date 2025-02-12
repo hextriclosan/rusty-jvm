@@ -1,20 +1,61 @@
+/*!
+# `jdescriptor` - A Java Bytecode Descriptor Parser for Rust
+
+`jdescriptor` is a Rust library for parsing and formatting Java bytecode descriptors.
+It provides robust support for handling Java type and method descriptors while leveraging Rust’s strong type system and error-handling capabilities.
+
+## Features
+
+- **Comprehensive Descriptor Parsing**
+  - Supports Java type descriptors, including primitive types, object types, and arrays.
+  - Parses Java method descriptors, extracting parameter types and return types.
+
+- **String Representations**
+  - Implements `Display` for converting parsed descriptors back into Java-style string representations.
+
+- **Error Handling**
+  - Provides structured error types (`DescriptorError`) for clear and precise error reporting.
+
+- **Idiomatic Rust API**
+  - Implements `FromStr` for easy descriptor parsing using standard Rust conventions.
+
+- **Well-Tested**
+  - Includes extensive unit tests to ensure correctness and reliability.
+*/
+
 use crate::TypeDescriptor::*;
-use serde::Serialize;
 use std::fmt;
 use std::fmt::Display;
 use std::str::Chars;
 use std::str::FromStr;
+use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
-enum DescriptorError {
+/// Custom error types for descriptor parsing.
+#[derive(Debug, PartialEq, Error)]
+pub enum DescriptorError {
+    #[error("Invalid descriptor: {0}")]
+    InvalidFormat(&'static str),
+    #[error("Unexpected end of input.")]
     UnexpectedEndOfInput,
-    InvalidDescriptor,
-    UnrecognizedTypeDescriptor,
-    MissingSemicolonInClassNameDescriptor,
+    #[error("Array has too many dimensions.")]
     TooManyDimensions,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+/** Represents a Java type descriptor, which can be a primitive type, an array, or an object type.
+
+## Example Usage
+
+### Parsing a Type Descriptor
+
+```rust
+use jdescriptor::TypeDescriptor;
+use std::str::FromStr;
+
+let descriptor = TypeDescriptor::from_str("Ljava/lang/String;").unwrap();
+assert_eq!(descriptor.to_string(), "Ljava/lang/String;");
+```
+*/
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
 pub enum TypeDescriptor {
     Byte,
     Char,
@@ -29,12 +70,27 @@ pub enum TypeDescriptor {
     Object(String),
 }
 
-#[derive(Debug, PartialEq)]
+/** Represents a Java method descriptor consisting of parameter types and a return type.
+
+## Example Usage
+
+### Parsing a Method Descriptor
+
+```rust
+use jdescriptor::MethodDescriptor;
+use std::str::FromStr;
+
+let descriptor = MethodDescriptor::from_str("([[[Ljava/lang/String;)[[[I").unwrap();
+assert_eq!(descriptor.to_string(), "([[[Ljava/lang/String;)[[[I");
+```
+*/
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
 pub struct MethodDescriptor {
     parameter_types: Vec<TypeDescriptor>,
     return_type: TypeDescriptor,
 }
 
+/// Implements the `Display` trait for `TypeDescriptor` to convert it back to a string representation.
 impl Display for TypeDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -56,6 +112,18 @@ impl Display for TypeDescriptor {
     }
 }
 
+/// Implements the `Display` trait for `MethodDescriptor` to convert it back to a string representation.
+impl Display for MethodDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(")?;
+        for param in &self.parameter_types {
+            write!(f, "{}", param)?;
+        }
+        write!(f, "){}", self.return_type)
+    }
+}
+
+/// Implements the `Display` trait for `MethodDescriptor` to convert it back to a string representation.
 impl MethodDescriptor {
     pub fn new(parameter_types: Vec<TypeDescriptor>, return_type: TypeDescriptor) -> Self {
         Self {
@@ -64,25 +132,27 @@ impl MethodDescriptor {
         }
     }
 
+    /// Returns a reference to the parameter types.
     pub fn parameter_types(&self) -> &Vec<TypeDescriptor> {
         &self.parameter_types
     }
 
+    /// Returns a reference to the return type.
     pub fn return_type(&self) -> &TypeDescriptor {
         &self.return_type
     }
 }
 
+/// Implements the `Display` trait for `MethodDescriptor` to convert it back to a string representation.
 impl FromStr for TypeDescriptor {
-    type Err = String;
+    type Err = DescriptorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        get_next(&mut s.chars())
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Invalid descriptor".to_string())
+        get_next(&mut s.chars())?.ok_or(DescriptorError::InvalidFormat("Invalid descriptor"))
     }
 }
 
+/// Parses a type descriptor from a string representation.
 fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError> {
     let result = match chars.next().ok_or(DescriptorError::UnexpectedEndOfInput)? {
         'Z' => Some(Boolean),
@@ -102,7 +172,9 @@ fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError
                 }
                 class_name.push(c);
             }
-            return Err(DescriptorError::MissingSemicolonInClassNameDescriptor);
+            return Err(DescriptorError::InvalidFormat(
+                "Missing semicolon in class name descriptor.",
+            ));
         }
         '[' => {
             let mut dimensions = 1u8;
@@ -112,216 +184,112 @@ fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError
                     .checked_add(1)
                     .ok_or(DescriptorError::TooManyDimensions)?;
             }
-            let base_type = get_next(chars)?.ok_or(DescriptorError::InvalidDescriptor)?;
+            let base_type =
+                get_next(chars)?.ok_or(DescriptorError::InvalidFormat("Invalid descriptor."))?;
             Some(Array(Box::new(base_type), dimensions))
         }
         ')' => None,
-        _ => return Err(DescriptorError::UnrecognizedTypeDescriptor),
+        _ => {
+            return Err(DescriptorError::InvalidFormat(
+                "Unrecognized type descriptor.",
+            ))
+        }
     };
 
     Ok(result)
 }
 
+/// Parses a method descriptor from a string representation.
 impl FromStr for MethodDescriptor {
-    type Err = String;
+    type Err = DescriptorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
         if chars.next() != Some('(') {
-            return Err("Method descriptor must start with '('".to_string());
+            return Err(DescriptorError::InvalidFormat(
+                "Method descriptor must start with '('.",
+            ));
         }
 
         let mut parameter_types = Vec::new();
-        while let Some(descr) = get_next(&mut chars).map_err(|e| e.to_string())? {
+        while let Some(descr) = get_next(&mut chars)? {
             parameter_types.push(descr);
         }
 
-        let return_type = get_next(&mut chars)
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Missing return type".to_string())?;
+        let return_type =
+            get_next(&mut chars)?.ok_or(DescriptorError::InvalidFormat("Missing return type."))?;
         Ok(Self::new(parameter_types, return_type))
-    }
-}
-
-impl Display for DescriptorError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let str = match self {
-            DescriptorError::UnexpectedEndOfInput => "Unexpected end of input".to_string(),
-            DescriptorError::InvalidDescriptor => "Invalid descriptor".to_string(),
-            DescriptorError::UnrecognizedTypeDescriptor => {
-                "Unrecognized type descriptor".to_string()
-            }
-            DescriptorError::MissingSemicolonInClassNameDescriptor => {
-                "Missing ';' in class name descriptor".to_string()
-            }
-            DescriptorError::TooManyDimensions => "Array has too many dimensions".to_string(),
-        };
-        write!(f, "{}", str)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn should_parse_boolean_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("Z"), Ok(Boolean));
+    #[rstest]
+    #[case("Z", Boolean)]
+    #[case("B", Byte)]
+    #[case("C", Char)]
+    #[case("S", Short)]
+    #[case("I", Int)]
+    #[case("J", Long)]
+    #[case("F", Float)]
+    #[case("D", Double)]
+    #[case("V", Void)]
+    #[case("[I", Array(Box::new(Int), 1))]
+    #[case("[[I", Array(Box::new(Int), 2))]
+    #[case("[[[Ljava/lang/String;", Array(Box::new(Object("java/lang/String".to_string())), 3))]
+    #[case(&("[".repeat(255) + "I"), Array(Box::new(Int), 255))]
+    #[case("Ljava/lang/Object;", Object("java/lang/Object".to_string()))]
+    fn should_parse_and_then_convert_to_string_type_descriptor(
+        #[case] input: &str,
+        #[case] expected: TypeDescriptor,
+    ) {
+        let parsed = str::parse::<TypeDescriptor>(input).unwrap();
+        assert_eq!(parsed, expected);
+        assert_eq!(parsed.to_string(), input);
     }
-    #[test]
-    fn should_create_string_from_boolean_type() {
-        assert_eq!(Boolean.to_string(), "Z");
-    }
-    #[test]
-    fn should_parse_byte_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("B"), Ok(Byte));
-    }
-    #[test]
-    fn should_parse_char_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("C"), Ok(Char));
-    }
-    #[test]
-    fn should_parse_short_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("S"), Ok(Short));
-    }
-    #[test]
-    fn should_parse_int_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("I"), Ok(Int));
-    }
-    #[test]
-    fn should_parse_long_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("J"), Ok(Long));
-    }
-    #[test]
-    fn should_parse_flot_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("F"), Ok(Float));
-    }
-    #[test]
-    fn should_parse_double_type() {
-        assert_eq!(str::parse::<TypeDescriptor>("D"), Ok(Double));
-    }
-    #[test]
-    fn should_parse_1d_array_type() {
-        assert_eq!(
-            str::parse::<TypeDescriptor>("[I"),
-            Ok(Array(Box::new(Int), 1))
-        );
-    }
-    #[test]
-    fn should_parse_2d_array_type() {
-        assert_eq!(
-            str::parse::<TypeDescriptor>("[[I"),
-            Ok(Array(Box::new(Int), 2))
-        );
-    }
-    #[test]
-    fn should_parse_3d_array_type() {
-        assert_eq!(
-            str::parse::<TypeDescriptor>("[[[I"),
-            Ok(Array(Box::new(Int), 3))
-        );
-    }
-    #[test]
-    fn should_create_string_from_3d_array_type() {
-        assert_eq!(Array(Box::new(Int), 3).to_string(), "[[[I");
-    }
-    #[test]
-    fn should_parse_255d_array_type() {
-        let mut type_descriptor = String::new();
-        type_descriptor.push_str("[".repeat(255usize).as_str());
-        type_descriptor.push_str("I");
-        assert_eq!(
-            str::parse::<TypeDescriptor>(type_descriptor.as_str()),
-            Ok(Array(Box::new(Int), 255))
-        );
-    }
-    #[test]
-    fn should_parse_object_type() {
-        assert_eq!(
-            str::parse::<TypeDescriptor>("Ljava/lang/Object;"),
-            Ok(Object("java/lang/Object".to_string()))
-        );
-    }
-    #[test]
-    fn should_create_string_from_object_type() {
-        assert_eq!(
-            Object("java/lang/Object".to_string()).to_string(),
-            "Ljava/lang/Object;"
-        );
-    }
-    #[test]
-    fn should_parse_method_descriptor_with_primitives() {
-        // int add(int a, int b)
-        assert_eq!(
-            MethodDescriptor::from_str("(II)I"),
-            Ok(MethodDescriptor::new(vec![Int, Int], Int))
-        );
-    }
-    #[test]
-    fn should_parse_method_descriptor_with_string_array() {
-        // void main(String[] args)
-        assert_eq!(
-            MethodDescriptor::from_str("([Ljava/lang/String;)V"),
-            Ok(MethodDescriptor::new(
-                vec![Array(Box::new(Object("java/lang/String".to_string())), 1)],
-                Void
-            ))
-        );
-    }
-    #[test]
-    fn should_parse_method_descriptor_with_arrays_of_primitives() {
-        // int[] combineArrays(int[], int[])
-        assert_eq!(
-            MethodDescriptor::from_str("([I[I)[I"),
-            Ok(MethodDescriptor::new(
-                vec![Array(Box::new(Int), 1), Array(Box::new(Int), 1)],
-                Array(Box::new(Int), 1)
-            ))
-        );
-    }
-    #[test]
-    fn should_parse_method_descriptor_with_3d_arrays() {
-        // int[][][] process(String[][][] data)
-        assert_eq!(
-            MethodDescriptor::from_str("([[[Ljava/lang/String;)[[[I"),
-            Ok(MethodDescriptor::new(
-                vec![Array(Box::new(Object("java/lang/String".to_string())), 3)],
-                Array(Box::new(Int), 3)
-            ))
-        );
-    }
-    #[test]
-    fn should_parse_method_descriptor_with_nested_object_types() {
-        // boolean casTabAt(Node<K,V>[] tab, int i, Node<K,V> c, Node<K,V> v)
-        assert_eq!(MethodDescriptor::from_str("([Ljava/util/concurrent/ConcurrentHashMap$Node;ILjava/util/concurrent/ConcurrentHashMap$Node;Ljava/util/concurrent/ConcurrentHashMap$Node;)Z"),
-                   Ok(MethodDescriptor::new(vec![Array(Box::new(Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())), 1), Int, Object("java/util/concurrent/ConcurrentHashMap$Node".to_string()), Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())], Boolean)));
-    }
-    #[test]
-    fn should_parse_method_descriptor_with_complex_generics() {
-        // V merge(K, V, java.util.function.BiFunction<? super V, ? super V, ? extends V>)
-        assert_eq!(MethodDescriptor::from_str("(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/function/BiFunction;)Ljava/lang/Object;"),
-                   Ok(MethodDescriptor::new(vec![Object("java/lang/Object".to_string()), Object("java/lang/Object".to_string()), Object("java/util/function/BiFunction".to_string())], Object("java/lang/Object".to_string()))));
+
+    #[rstest]
+    #[case("(II)I", MethodDescriptor::new(vec![Int, Int], Int))] // int add(int a, int b)
+    #[case("([Ljava/lang/String;)V", MethodDescriptor::new(vec![Array(Box::new(Object("java/lang/String".to_string())), 1)], Void))] // void main(String[] args)
+    #[case("([I[I)[I", MethodDescriptor::new(vec![Array(Box::new(Int), 1), Array(Box::new(Int), 1)], Array(Box::new(Int), 1)))] // int[] combineArrays(int[], int[])
+    #[case("([[[Ljava/lang/String;)[[[I", MethodDescriptor::new(vec![Array(Box::new(Object("java/lang/String".to_string())), 3)], Array(Box::new(Int), 3)))] // int[][][] process(String[][][] data)
+    #[case("([Ljava/util/concurrent/ConcurrentHashMap$Node;ILjava/util/concurrent/ConcurrentHashMap$Node;Ljava/util/concurrent/ConcurrentHashMap$Node;)Z", MethodDescriptor::new(vec![Array(Box::new(Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())), 1), Int, Object("java/util/concurrent/ConcurrentHashMap$Node".to_string()), Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())], Boolean))] // boolean casTabAt(Node<K,V>[] tab, int i, Node<K,V> c, Node<K,V> v)
+    #[case("(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/function/BiFunction;)Ljava/lang/Object;", MethodDescriptor::new(vec![Object("java/lang/Object".to_string()), Object("java/lang/Object".to_string()), Object("java/util/function/BiFunction".to_string())], Object("java/lang/Object".to_string())))] // V merge(K, V, java.util.function.BiFunction<? super V, ? super V, ? extends V>)
+    fn should_parse_and_then_convert_to_string_method_descriptor(
+        #[case] input: &str,
+        #[case] expected: MethodDescriptor,
+    ) {
+        let parsed = str::parse::<MethodDescriptor>(input).unwrap();
+        assert_eq!(parsed, expected);
+        assert_eq!(parsed.to_string(), input);
     }
 
     #[test]
     fn should_return_error_for_unsupported_type() {
         assert_eq!(
             str::parse::<TypeDescriptor>("X"),
-            Err("Unrecognized type descriptor".to_string())
+            Err(DescriptorError::InvalidFormat(
+                "Unrecognized type descriptor."
+            ))
         );
     }
     #[test]
     fn should_return_error_for_array_without_type() {
         assert_eq!(
             str::parse::<TypeDescriptor>("["),
-            Err("Unexpected end of input".to_string())
+            Err(DescriptorError::UnexpectedEndOfInput)
         );
     }
     #[test]
     fn should_return_error_for_object_without_closing_symbol() {
         assert_eq!(
             str::parse::<TypeDescriptor>("Ljava/lang/String"),
-            Err("Missing ';' in class name descriptor".to_string())
+            Err(DescriptorError::InvalidFormat(
+                "Missing semicolon in class name descriptor."
+            ))
         );
     }
     #[test]
@@ -331,7 +299,7 @@ mod tests {
         type_descriptor.push_str("I");
         assert_eq!(
             str::parse::<TypeDescriptor>(type_descriptor.as_str()),
-            Err("Array has too many dimensions".to_string())
+            Err(DescriptorError::TooManyDimensions)
         );
     }
 }
