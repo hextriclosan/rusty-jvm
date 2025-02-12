@@ -1,10 +1,19 @@
 # Java Bytecode Descriptor Parser for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/jdescriptor.svg)](https://crates.io/crates/jdescriptor)
-[![Docs.rs](https://docs.rs/jdescriptor/badge.svg)](https://docs.rs/jdescriptor)
-[![License](https://img.shields.io/crates/l/jdescriptor.svg)](https://github.com/hextriclosan/rusty-jvm/blob/main/jdescriptor/LICENSE)
+[![Crate][crate-image]][crate-link]
+[![Docs][docs-image]][docs-link]
+[![MIT Licensed][license-mit-image]][license-mit-link]
 
-Effortlessly parse and manipulate Java bytecode descriptors in Rust! This crate provides a **lightweight, efficient, and easy-to-use** solution for working with Java class, field, and method descriptors.
+## Introduction
+
+Effortlessly parse and manipulate Java bytecode descriptors in Rust. 
+This crate provides a **lightweight, efficient, and easy-to-use** solution for working with Java class, field, and method descriptors.
+To use it, add the following lines to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+jdescriptor = "0.1.0"
+```
 
 ## Why Use This Crate?
 ✅ **Parse Java Method Signatures** – Extract return types, parameters, and more from JVM bytecode descriptors.<br>
@@ -13,27 +22,24 @@ Effortlessly parse and manipulate Java bytecode descriptors in Rust! This crate 
 ✅ **Beyond Classfiles** – Useful for RPC, static analysis, IDE plugins, serialization, and more!<br>
 ✅ **Optimized for Performance** – Designed to handle large-scale descriptor processing efficiently.
 
-## Installation
-To bring this crate into your repository, either add csv to your `Cargo.toml`, or run `cargo add jdescriptor`.
-
 ## Usage
 
-### Parsing Java Descriptors
+### Dealing with Type Descriptors
 ```rust
-let descriptor = "(Ljava/lang/String;I)V";
-let parsed = descriptor.parse().unwrap();
-println!("Parsed: {:?}", parsed);
+let parsed: TypeDescriptor = "[[Ljava/lang/String;".parse().unwrap();
+println!("Rust representation: {:?}", parsed);
+println!("Java representation: {}", parsed);
 ```
 
-### Extracting Return Type & Parameters
+### Dealing with Method Descriptors
 ```rust
-let method = Descriptor::from("(Ljava/lang/String;I)Ljava/util/List;");
-println!("Return type: {:?}", method.return_type);
-println!("Parameters: {:?}", method.parameters);
+let parsed: MethodDescriptor = "(FIB)S".parse().unwrap();
+println!("Rust representation: {:?}", parsed);
+println!("Java representation: {}", parsed);
 ```
 
 ## Use Cases
-- **Java Classfile Parsing** – Process `.class` files and analyze method signatures.
+- **Java Classfile Parsing** – Helper for parsing `.class` files and analyze type and method signatures.
 - **Interoperability** – Bridge Rust and Java, ensuring type correctness in JNI/FFI calls.
 - **Code Generation** – Generate Java bindings, stubs, and DSLs with validated signatures.
 - **Static Analysis** – Build security tools that detect unsafe Java method patterns.
@@ -44,3 +50,11 @@ Contributions are welcome! Feel free to open an issue or submit a pull request.
 
 ## License
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+
+[//]: # (links)
+[crate-image]: https://img.shields.io/crates/v/jdescriptor.svg
+[crate-link]: https://crates.io/crates/jdescriptor
+[docs-image]: https://docs.rs/jdescriptor/badge.svg
+[docs-link]: https://docs.rs/jdescriptor
+[license-mit-image]: https://img.shields.io/badge/license-MIT-blue.svg
+[license-mit-link]: LICENSE
