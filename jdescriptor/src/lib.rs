@@ -61,7 +61,7 @@ pub enum TypeDescriptor {
     Char,
     Double,
     Float,
-    Int,
+    Integer,
     Long,
     Short,
     Boolean,
@@ -98,7 +98,7 @@ impl Display for TypeDescriptor {
             Char => write!(f, "C"),
             Double => write!(f, "D"),
             Float => write!(f, "F"),
-            Int => write!(f, "I"),
+            Integer => write!(f, "I"),
             Long => write!(f, "J"),
             Short => write!(f, "S"),
             Boolean => write!(f, "Z"),
@@ -159,7 +159,7 @@ fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError
         'B' => Some(Byte),
         'C' => Some(Char),
         'S' => Some(Short),
-        'I' => Some(Int),
+        'I' => Some(Integer),
         'J' => Some(Long),
         'F' => Some(Float),
         'D' => Some(Double),
@@ -232,15 +232,15 @@ mod tests {
     #[case("B", Byte)]
     #[case("C", Char)]
     #[case("S", Short)]
-    #[case("I", Int)]
+    #[case("I", Integer)]
     #[case("J", Long)]
     #[case("F", Float)]
     #[case("D", Double)]
     #[case("V", Void)]
-    #[case("[I", Array(Box::new(Int), 1))]
-    #[case("[[I", Array(Box::new(Int), 2))]
+    #[case("[I", Array(Box::new(Integer), 1))]
+    #[case("[[I", Array(Box::new(Integer), 2))]
     #[case("[[[Ljava/lang/String;", Array(Box::new(Object("java/lang/String".to_string())), 3))]
-    #[case(&("[".repeat(255) + "I"), Array(Box::new(Int), 255))]
+    #[case(&("[".repeat(255) + "I"), Array(Box::new(Integer), 255))]
     #[case("Ljava/lang/Object;", Object("java/lang/Object".to_string()))]
     fn should_parse_and_then_convert_to_string_type_descriptor(
         #[case] input: &str,
@@ -252,11 +252,11 @@ mod tests {
     }
 
     #[rstest]
-    #[case("(II)I", MethodDescriptor::new(vec![Int, Int], Int))] // int add(int a, int b)
+    #[case("(II)I", MethodDescriptor::new(vec![Integer, Integer], Integer))] // int add(int a, int b)
     #[case("([Ljava/lang/String;)V", MethodDescriptor::new(vec![Array(Box::new(Object("java/lang/String".to_string())), 1)], Void))] // void main(String[] args)
-    #[case("([I[I)[I", MethodDescriptor::new(vec![Array(Box::new(Int), 1), Array(Box::new(Int), 1)], Array(Box::new(Int), 1)))] // int[] combineArrays(int[], int[])
-    #[case("([[[Ljava/lang/String;)[[[I", MethodDescriptor::new(vec![Array(Box::new(Object("java/lang/String".to_string())), 3)], Array(Box::new(Int), 3)))] // int[][][] process(String[][][] data)
-    #[case("([Ljava/util/concurrent/ConcurrentHashMap$Node;ILjava/util/concurrent/ConcurrentHashMap$Node;Ljava/util/concurrent/ConcurrentHashMap$Node;)Z", MethodDescriptor::new(vec![Array(Box::new(Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())), 1), Int, Object("java/util/concurrent/ConcurrentHashMap$Node".to_string()), Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())], Boolean))] // boolean casTabAt(Node<K,V>[] tab, int i, Node<K,V> c, Node<K,V> v)
+    #[case("([I[I)[I", MethodDescriptor::new(vec![Array(Box::new(Integer), 1), Array(Box::new(Integer), 1)], Array(Box::new(Integer), 1)))] // int[] combineArrays(int[], int[])
+    #[case("([[[Ljava/lang/String;)[[[I", MethodDescriptor::new(vec![Array(Box::new(Object("java/lang/String".to_string())), 3)], Array(Box::new(Integer), 3)))] // int[][][] process(String[][][] data)
+    #[case("([Ljava/util/concurrent/ConcurrentHashMap$Node;ILjava/util/concurrent/ConcurrentHashMap$Node;Ljava/util/concurrent/ConcurrentHashMap$Node;)Z", MethodDescriptor::new(vec![Array(Box::new(Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())), 1), Integer, Object("java/util/concurrent/ConcurrentHashMap$Node".to_string()), Object("java/util/concurrent/ConcurrentHashMap$Node".to_string())], Boolean))] // boolean casTabAt(Node<K,V>[] tab, int i, Node<K,V> c, Node<K,V> v)
     #[case("(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/function/BiFunction;)Ljava/lang/Object;", MethodDescriptor::new(vec![Object("java/lang/Object".to_string()), Object("java/lang/Object".to_string()), Object("java/util/function/BiFunction".to_string())], Object("java/lang/Object".to_string())))] // V merge(K, V, java.util.function.BiFunction<? super V, ? super V, ? extends V>)
     fn should_parse_and_then_convert_to_string_method_descriptor(
         #[case] input: &str,

@@ -12,7 +12,7 @@ To use it, add the following lines to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-jdescriptor = "0.1.0"
+jdescriptor = "0.2.0"
 ```
 
 ## Why Use This Crate?
@@ -39,7 +39,7 @@ println!("Java representation: {}", parsed); // [[Ljava/lang/String;
 ### Dealing with Method Descriptors
 ```rust
 let parsed: MethodDescriptor = "(FIB)S".parse().unwrap();
-println!("Rust structure: {:?}", parsed); // MethodDescriptor { parameter_types: [Float, Int, Byte], return_type: Short }
+println!("Rust structure: {:?}", parsed); // MethodDescriptor { parameter_types: [Float, Integer, Byte], return_type: Short }
 println!("Java representation: {}", parsed); // (FIB)S
 ```
 
