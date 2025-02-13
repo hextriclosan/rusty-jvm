@@ -36,14 +36,14 @@ pub fn get_length(type_descriptor: &TypeDescriptor) -> crate::error::Result<i32>
     match type_descriptor {
         TypeDescriptor::Byte
         | TypeDescriptor::Char
-        | TypeDescriptor::Int
+        | TypeDescriptor::Integer
         | TypeDescriptor::Short
         | TypeDescriptor::Boolean
-        | TypeDescriptor::Float => Ok(1),
+        | TypeDescriptor::Float
+        | TypeDescriptor::Array(_, _)
+        | TypeDescriptor::Object(_) => Ok(1),
         TypeDescriptor::Long | TypeDescriptor::Double => Ok(2),
         TypeDescriptor::Void => Err(Error::new_execution("Void type doesn't have a length")),
-        TypeDescriptor::Array(_, _) => Ok(1),
-        TypeDescriptor::Object(_) => Ok(1),
     }
 }
 
@@ -51,7 +51,7 @@ pub fn default_value(type_descriptor: &TypeDescriptor) -> crate::error::Result<V
     match type_descriptor {
         TypeDescriptor::Byte
         | TypeDescriptor::Char
-        | TypeDescriptor::Int
+        | TypeDescriptor::Integer
         | TypeDescriptor::Short
         | TypeDescriptor::Boolean => Ok(vec![0]),
         TypeDescriptor::Float => Ok(0.0f32.to_vec()),

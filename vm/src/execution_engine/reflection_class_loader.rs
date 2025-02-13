@@ -25,10 +25,8 @@ impl ReflectionClassLoader {
         let descriptor: TypeDescriptor = for_class.parse()?;
         match &descriptor {
             TypeDescriptor::Array(value, dimension) => {
-                let mut array_ref = self.get_or_create(
-                    &Self::get_str_representation(value)?,
-                    component_type_ref_empty,
-                )?;
+                let mut array_ref =
+                    self.get_or_create(&value.as_ref().to_string(), component_type_ref_empty)?;
 
                 for padding in (0..*dimension as usize).rev() {
                     array_ref = self.get_or_create(&for_class[padding..], array_ref)?;
@@ -38,28 +36,6 @@ impl ReflectionClassLoader {
             }
             _ => self.get_or_create(for_class, component_type_ref_empty),
         }
-    }
-
-    fn get_str_representation(descr: &Box<TypeDescriptor>) -> crate::error::Result<String> {
-        let result = match descr.as_ref() {
-            TypeDescriptor::Object(ref class_name) => class_name.clone(),
-            TypeDescriptor::Byte => "B".to_string(),
-            TypeDescriptor::Char => "C".to_string(),
-            TypeDescriptor::Double => "D".to_string(),
-            TypeDescriptor::Float => "F".to_string(),
-            TypeDescriptor::Int => "I".to_string(),
-            TypeDescriptor::Long => "J".to_string(),
-            TypeDescriptor::Short => "S".to_string(),
-            TypeDescriptor::Boolean => "Z".to_string(),
-            TypeDescriptor::Void => "V".to_string(),
-            TypeDescriptor::Array(_, _) => {
-                return Err(crate::error::Error::new_execution(
-                    "Array type descriptor should never be here",
-                ))
-            }
-        };
-
-        Ok(result)
     }
 
     fn get_or_create(
