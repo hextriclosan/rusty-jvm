@@ -259,6 +259,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jdescriptor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77e039cbb308257eb5eae721c2f42c8c58829c61e800581dc16959ca8f7cf5da"
+dependencies = [
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -715,7 +725,7 @@ version = "0.1.0"
 dependencies = [
  "indexmap",
  "jclass",
- "jdescriptor",
+ "jdescriptor 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "murmur3",
  "num-traits",
  "once_cell",
