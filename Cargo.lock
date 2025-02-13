@@ -251,7 +251,7 @@ dependencies = [
 
 [[package]]
 name = "jdescriptor"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rstest",
  "serde",
@@ -260,9 +260,9 @@ dependencies = [
 
 [[package]]
 name = "jdescriptor"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77e039cbb308257eb5eae721c2f42c8c58829c61e800581dc16959ca8f7cf5da"
+checksum = "2e2592b920e88ddb0779d2478f22cca979d1a6d70db78d0ea1de6567a323d124"
 dependencies = [
  "serde",
  "thiserror",
@@ -725,7 +725,7 @@ version = "0.1.0"
 dependencies = [
  "indexmap",
  "jclass",
- "jdescriptor 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "murmur3",
  "num-traits",
  "once_cell",

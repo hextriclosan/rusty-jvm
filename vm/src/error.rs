@@ -1,11 +1,11 @@
 use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
+use jdescriptor::DescriptorError;
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
 use std::string::{FromUtf16Error, FromUtf8Error};
 use std::sync::PoisonError;
 use std::time::SystemTimeError;
 use std::{io, result};
-use jdescriptor::DescriptorError;
 
 pub type Result<T> = result::Result<T, Error>;
 
