@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CRATES: ". jclass jdescriptor"
 
 jobs:
   build:
@@ -40,26 +41,34 @@ jobs:
             cargo-${{ runner.os }}-
             cargo-
 
-      - name: Check Rust code
-        run: cargo check --verbose
-
-      - name: Build
-        run: cargo build --verbose
-
-      - name: Run tests
-        run: cargo test --verbose
+      - name: Run checks, build, and test
+        shell: bash
+        run: |
+          for crate in $CRATES; do
+            cargo check --manifest-path $crate/Cargo.toml --verbose
+            cargo build --manifest-path $crate/Cargo.toml --verbose
+            cargo test --manifest-path $crate/Cargo.toml --verbose
+          done
 
       - name: Install Tarpaulin
+        shell: bash
         run: cargo install cargo-tarpaulin
 
       - name: Run coverage
-        run: cargo tarpaulin --out Xml
+        shell: bash
+        run: |
+          for crate in $CRATES; do
+            cargo tarpaulin --manifest-path $crate/Cargo.toml --out Xml --output-dir $crate
+          done
 
       - name: Upload coverage to Codecov
         if: success()
         uses: codecov/codecov-action@v5
         with:
-          files: ./coverage-${{ matrix.os }}.xml
+          files: |
+            ./*.xml
+            jclass/*.xml
+            jdescriptor/*.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
@@ -88,7 +97,12 @@ jobs:
             cargo-
 
       - name: Install cross
+        shell: bash
         run: cargo install cross
 
       - name: Run tests on s390x (Big Endian)
-        run: cross test --target s390x-unknown-linux-gnu -- --test-threads=8
+        shell: bash
+        run: |
+          for crate in $CRATES; do
+            cross test --manifest-path $crate/Cargo.toml --target s390x-unknown-linux-gnu -- --test-threads=8
+          done
