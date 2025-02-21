@@ -6,7 +6,8 @@ use crate::system_native::class::{
     class_init_class_name_wrp, for_name0_wrp, get_declared_constructors0_wrp,
     get_declared_methods0_wrp, get_declaring_class0_wrp, get_enclosing_method0_wrp,
     get_interfaces0_wrp, get_modifiers_wrp, get_primitive_class_wrp, get_raw_annotations_wrp,
-    get_superclass_wrp, is_array_wrp, is_interface_wrp, is_primitive_wrp,
+    get_simple_binary_name0_wrp, get_superclass_wrp, is_array_wrp, is_assignable_from_wrp,
+    is_interface_wrp, is_primitive_wrp,
 };
 use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::system_native::file_output_stream::{
@@ -120,6 +121,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Class:getEnclosingMethod0:()[Ljava/lang/Object;",
         Basic(get_enclosing_method0_wrp),
+    );
+    table.insert(
+        "java/lang/Class:getSimpleBinaryName0:()Ljava/lang/String;",
+        Basic(get_simple_binary_name0_wrp),
+    );
+    table.insert(
+        "java/lang/Class:isAssignableFrom:(Ljava/lang/Class;)Z",
+        Basic(is_assignable_from_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
