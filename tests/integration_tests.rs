@@ -1055,3 +1055,40 @@ fn should_return_system_properties() {
         ),
     );
 }
+
+#[test]
+fn should_check_instanceof() {
+    assert_success(
+        "samples.reflection.trivial.instanceofexample.InstanceOfExample",
+        r#"42 is instanceof Integer: true
+42 is instanceof Number: true
+3.14 is instanceof Double: true
+3.14 is instanceof Number: true
+3.14 is instanceof Float: false
+Hello is instanceof String: true
+Hello is instanceof Object: true
+[1] is instanceof Object: true
+[1, 2] is instanceof Object[]: false
+[1, 2, 3] is instanceof int[]: true
+[10, 20, 30] is instanceof Object: true
+[A, B] is instanceof Object[]: true
+[Meow!, Meow!] is instanceof Cat[]: true
+[Meow!, Meow!] is instanceof Animal[]: true
+[Meow!, Meow!] is instanceof Mammal[]: true
+[Meow!, Meow!] is instanceof AbstractMammal[]: true
+[Meow!, Woof!] is instanceof Cat[]: false
+[Meow!, Woof!] is instanceof Animal[]: true
+[Meow!, Woof!] is instanceof Mammal[]: false
+[Meow!, Woof!] is instanceof AbstractMammal[]: false
+[null] is instanceof List[]: true
+[] is instanceof List: true
+{} is instanceof Map: true
+{} is instanceof AbstractMap: true
+[] is instanceof Collection: true
+Meow! is instanceof Animal: true
+Chirp! is instanceof Animal: true
+Chirp! is instanceof Mammal: false
+Anonymous mammal says hi! is instanceof Animal: true
+"#,
+    );
+}
