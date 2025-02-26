@@ -1139,3 +1139,11 @@ Animal is assignable from : true
 "#,
     );
 }
+
+#[test]
+fn should_support_dup_x2_opcode() {
+    assert_success(
+        "samples.opcodes.dup_x2.DupX2GeneratedExample",
+        "1260.0\n",
+    );
+}
