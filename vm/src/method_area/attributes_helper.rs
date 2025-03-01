@@ -1,5 +1,6 @@
+use crate::method_area::cpool_helper::CPoolHelper;
 use jclass::attributes::{Attribute, InnerClassRecord};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct AttributesHelper {
     data: HashMap<AttributeType, Attribute>,
@@ -146,12 +147,23 @@ impl AttributesHelper {
         }
     }
 
-    pub fn get_annotations_raw(&self) -> Option<Vec<u8>> {
+    pub fn get_annotations(
+        &self,
+        cpool_helper: &CPoolHelper,
+    ) -> Option<(HashSet<String>, Vec<u8>)> {
         match self.data.get(&AttributeType::RuntimeVisibleAnnotations)? {
-            Attribute::RuntimeVisibleAnnotations {
-                annotations: _,
-                raw,
-            } => Some(raw.to_vec()),
+            Attribute::RuntimeVisibleAnnotations { annotations, raw } => {
+                let annotations_name = annotations
+                    .iter()
+                    .flat_map(|annotation| {
+                        let type_index = annotation.type_index();
+                        let type_name = cpool_helper.get_utf8(type_index);
+                        type_name
+                    })
+                    .collect();
+
+                Some((annotations_name, raw.to_vec()))
+            }
             _ => None,
         }
     }

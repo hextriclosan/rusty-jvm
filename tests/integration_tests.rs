@@ -1142,8 +1142,20 @@ Animal is assignable from : true
 
 #[test]
 fn should_support_dup_x2_opcode() {
+    assert_success("samples.opcodes.dup_x2.DupX2GeneratedExample", "1260.0\n");
+}
+
+#[test]
+fn should_work_with_method_handle() {
     assert_success(
-        "samples.opcodes.dup_x2.DupX2GeneratedExample",
-        "1260.0\n",
-    );
+        "samples.reflection.methodhandleexample.MethodHandleExample",
+        r#"MethodHandles Lookup: samples.reflection.methodhandleexample.MethodHandleExample
+------- findStatic (Math.pow) -------
+(double,double)double - MethodHandle(double,double)double: 8.0
+------- findVirtual (String.regionMatches) -------
+(boolean,int,String,int,int)boolean - MethodHandle(String,boolean,int,String,int,int)boolean: true
+------- findSpecial (SuperClass.superMethod) -------
+()String - MethodHandle(Child)String: Parent method invoked
+"#,
+    )
 }

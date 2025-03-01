@@ -143,6 +143,16 @@ impl JavaClass {
             .get(instance_field_name_type)
     }
 
+    pub fn put_instance_field_descriptor(
+        &mut self,
+        name: String,
+        type_descriptor: TypeDescriptor,
+    ) -> Option<TypeDescriptor> {
+        self.non_static_field_descriptors
+            .descriptor_by_name
+            .insert(name, type_descriptor)
+    }
+
     pub fn default_value_instance_fields(
         &self,
     ) -> crate::error::Result<IndexMap<FieldNameType, Field>> {
@@ -192,24 +202,44 @@ impl JavaClass {
         Ok((class_name.to_string(), field_name.to_string()))
     }
 
-    fn get_method_internal(&self, full_signature: &str) -> Option<Arc<JavaMethod>> {
+    pub fn get_method_full(&self, full_signature: &str) -> Option<(usize, Arc<JavaMethod>)> {
         self.methods
             .method_by_signature
-            .get(full_signature)
-            .map(|method| Arc::clone(method))
+            .get_full(full_signature)
+            .map(|(index, _key, method)| (index, Arc::clone(method)))
+            .or_else(|| {
+                // we have not found the method by full signature, let's treat it as polymorphic signature method and try to find it by method name only
+                self.methods
+                    .method_by_signature
+                    .get_full(full_signature.split(':').next()?)
+                    .map(|(index, _key, method)| (index, Arc::clone(method)))
+            })
     }
 
     pub fn try_get_method(&self, full_signature: &str) -> Option<Arc<JavaMethod>> {
-        self.get_method_internal(full_signature)
+        self.get_method_full(full_signature)
+            .and_then(|(_index, method)| Some(Arc::clone(&method)))
     }
 
     pub fn get_method(&self, full_signature: &str) -> crate::error::Result<Arc<JavaMethod>> {
-        self.get_method_internal(full_signature).ok_or_else(|| {
-            Error::new_native(&format!(
-                "Method {full_signature} not found in {}",
-                self.this_class_name
-            ))
-        })
+        self.get_method_full(full_signature)
+            .and_then(|(_index, method)| Some(Arc::clone(&method)))
+            .ok_or_else(|| {
+                Error::new_native(&format!(
+                    "Method {full_signature} not found in {}",
+                    self.this_class_name
+                ))
+            })
+    }
+
+    pub fn get_method_by_index(&self, method_index: i64) -> crate::error::Result<Arc<JavaMethod>> {
+        self.methods
+            .method_by_signature
+            .get_index(method_index as usize)
+            .and_then(|(_key, method)| Some(Arc::clone(&method)))
+            .ok_or_else(|| {
+                Error::new_execution(&format!("Failed to get method by index {method_index}"))
+            })
     }
 
     pub fn get_methods(&self) -> Vec<Arc<JavaMethod>> {
