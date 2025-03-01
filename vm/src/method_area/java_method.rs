@@ -7,6 +7,7 @@ use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrame;
 use jdescriptor::MethodDescriptor;
 use once_cell::sync::OnceCell;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -23,6 +24,7 @@ pub(crate) struct JavaMethod {
     name: String,
     _annotation_default_raw: Option<Vec<u8>>,
     annotations_raw: Option<Vec<u8>>,
+    runtime_visible_annotations: HashSet<String>,
 }
 
 #[derive(Debug)]
@@ -66,6 +68,7 @@ impl JavaMethod {
         name: &str,
         _annotation_default_raw: Option<Vec<u8>>,
         annotations_raw: Option<Vec<u8>>,
+        runtime_visible_annotations: HashSet<String>,
     ) -> Self {
         Self {
             method_descriptor,
@@ -79,6 +82,7 @@ impl JavaMethod {
             name: name.to_string(),
             _annotation_default_raw,
             annotations_raw,
+            runtime_visible_annotations,
         }
     }
 
@@ -313,8 +317,15 @@ impl JavaMethod {
         &self.name
     }
 
-    #[allow(dead_code)]
     pub fn access_flags(&self) -> i32 {
         self.access_flags
+    }
+
+    pub fn name_signature(&self) -> &str {
+        &self.name_signature
+    }
+
+    pub fn runtime_visible_annotations(&self) -> &HashSet<String> {
+        &self.runtime_visible_annotations
     }
 }

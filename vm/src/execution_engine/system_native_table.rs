@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::system_native_table::NativeMethod::WithMutStackFrames;
 use crate::execution_engine::system_native_table::NativeMethod::{Basic, WithStackFrames};
 use crate::helper::i64_to_vec;
 use crate::stack::stack_frame::StackFrames;
@@ -9,13 +10,19 @@ use crate::system_native::class::{
     get_simple_binary_name0_wrp, get_superclass_wrp, is_array_wrp, is_assignable_from_wrp,
     is_interface_wrp, is_primitive_wrp,
 };
+use crate::system_native::class_loader::define_class0_wrp;
 use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
+use crate::system_native::method_handle_natives::{
+    method_handle_invoke_exact_wrp, method_handle_natives_resolve_wrp,
+};
 use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::system_native::reflect_array::new_array_wrp;
-use crate::system_native::reflecton::reflection_get_caller_class_wrp;
+use crate::system_native::reflecton::{
+    reflection_get_caller_class_wrp, reflection_get_class_access_flags_wrp,
+};
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{
     arraycopy_wrp, current_time_millis_wrp, set_out0_wrp, system_identity_hashcode_wrp,
@@ -23,20 +30,23 @@ use crate::system_native::system::{
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
 use crate::system_native::unsafe_::{
-    array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp, get_byte_wrp,
-    get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
-    get_reference_volatile_wrp, get_short_wrp, object_field_offset_1_wrp,
-    put_reference_volatile_wrp,
+    array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp,
+    ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
+    get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
+    object_field_offset_1_wrp, put_reference_volatile_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 type BasicNativeMethod = fn(&[i32]) -> crate::error::Result<Vec<i32>>;
 type WithStackFramesNativeMethod = fn(&[i32], &StackFrames) -> crate::error::Result<Vec<i32>>;
+type WithMutStackFramesNativeMethod =
+    fn(&[i32], &mut StackFrames) -> crate::error::Result<Vec<i32>>;
 
 enum NativeMethod {
     Basic(BasicNativeMethod),
     WithStackFrames(WithStackFramesNativeMethod),
+    WithMutStackFrames(WithMutStackFramesNativeMethod),
 }
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
@@ -131,6 +141,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(is_assignable_from_wrp),
     );
     table.insert(
+        "java/lang/Class:isHidden:()Z",
+        Basic(|_args: &[i32]| return_argument_stub(&vec![0])), // we are treating all classes as non-hidden since we don't have a way to mark them as hidden (yet)
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
         Basic(void_stub),
     );
@@ -196,6 +210,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(put_reference_volatile_wrp),
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:ensureClassInitialized0:(Ljava/lang/Class;)V",
+        Basic(ensure_class_initialized0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:shouldBeInitialized0:(Ljava/lang/Class;)Z",
+        Basic(|_args: &[i32]| return_argument_stub(&vec![1])), // all classes are treated as non initialized for simplicity
+    );
+    table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
         Basic(intern_wrp),
     );
@@ -226,6 +248,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/CDS:getRandomSeedForDumping:()J",
         Basic(|_args: &[i32]| return_argument_stub(&vec![1337, 42])), // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
+    );
+    table.insert(
+        "jdk/internal/misc/CDS:getCDSConfigStatus:()I",
+        Basic(|_args: &[i32]| return_argument_stub(&vec![0])), // Class Data Sharing (CDS) is disabled
     );
     table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
     table.insert(
@@ -322,12 +348,32 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         WithStackFrames(reflection_get_caller_class_wrp),
     );
     table.insert(
+        "jdk/internal/reflect/Reflection:getClassAccessFlags:(Ljava/lang/Class;)I",
+        Basic(reflection_get_class_access_flags_wrp),
+    );
+    table.insert(
         "java/security/AccessController:ensureMaterializedForStackWalk:(Ljava/lang/Object;)V",
         Basic(void_stub),
     );
     table.insert(
         "java/lang/reflect/Array:newArray:(Ljava/lang/Class;I)Ljava/lang/Object;",
         Basic(new_array_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandleNatives:resolve:(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
+        Basic(method_handle_natives_resolve_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandleNatives:registerNatives:()V",
+        Basic(void_stub),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandle:invokeExact", // this is a normalized polymorphic signature
+        WithMutStackFrames(method_handle_invoke_exact_wrp),
+    );
+    table.insert(
+        "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
+        Basic(define_class0_wrp),
     );
 
     table
@@ -336,7 +382,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
 pub(crate) fn invoke_native_method(
     method_signature: &str,
     args: &[i32],
-    stack_frames: &StackFrames,
+    stack_frames: &mut StackFrames,
 ) -> crate::error::Result<Vec<i32>> {
     let native_method = SYSTEM_NATIVE_TABLE.get(method_signature).ok_or_else(|| {
         Error::new_native(&format!("Native method {method_signature} not found"))
@@ -345,6 +391,7 @@ pub(crate) fn invoke_native_method(
     match native_method {
         Basic(method) => method(args),
         WithStackFrames(method) => method(args, stack_frames),
+        WithMutStackFrames(method) => method(args, stack_frames),
     }
 }
 

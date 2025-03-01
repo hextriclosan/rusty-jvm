@@ -13,7 +13,7 @@ use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -89,6 +89,28 @@ impl MethodArea {
         trace!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok(java_class)
+    }
+
+    pub(crate) fn create_metaclass(
+        &self,
+        fully_qualified_class_name: &str,
+        bytecode: &[u8],
+    ) -> crate::error::Result<()> {
+        if let Some(_) = self.loaded_classes.read()?.get(fully_qualified_class_name) {
+            return Ok(());
+        }
+
+        let class_file =
+            parse(bytecode).map_err(|err| Error::new(ErrorKind::ClassFile(err.to_string())))?;
+
+        let (_, java_class) = self.to_java_class(class_file)?;
+        self.loaded_classes.write()?.insert(
+            fully_qualified_class_name.to_string(),
+            Arc::clone(&java_class),
+        );
+        trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
+
+        Ok(())
     }
 
     fn load_class_file(
@@ -173,7 +195,9 @@ impl MethodArea {
         let declaring_class =
             Self::get_declaring_class(&attributes_helper, &cpool_helper, class_name.as_str());
 
-        let annotations_raw = attributes_helper.get_annotations_raw();
+        let annotations_raw = attributes_helper
+            .get_annotations(&cpool_helper)
+            .and_then(|(_annotations, annotations_raw)| Some(annotations_raw));
 
         let enclosing_method = Self::get_enclosing_method(&attributes_helper, &cpool_helper);
 
@@ -215,7 +239,7 @@ impl MethodArea {
                 ))
             })?;
 
-            let key = format!("{method_name}:{method_signature}");
+            let full_signature = format!("{method_name}:{method_signature}");
             let attributes_helper = AttributesHelper::new(method_info.attributes());
 
             let access_flags = method_info.access_flags();
@@ -228,7 +252,7 @@ impl MethodArea {
                         })
                         .ok_or_else(|| {
                             Error::new_execution(&format!(
-                                "Error getting code attribute for method {key}"
+                                "Error getting code attribute for method {full_signature}"
                             ))
                         })?
                 } else {
@@ -238,7 +262,12 @@ impl MethodArea {
             let exception_indexes = attributes_helper.get_exception_indexes().unwrap_or(vec![]);
 
             let annotation_default_raw = attributes_helper.get_annotation_default_raw();
-            let annotations_raw = attributes_helper.get_annotations_raw();
+            let result = attributes_helper.get_annotations(&helper);
+
+            let (runtime_visible_annotations, annotations_raw) = match result {
+                Some((annotations, annotations_raw)) => (annotations, Some(annotations_raw)),
+                None => (HashSet::new(), None),
+            };
 
             let method_descriptor = method_signature.parse().map_err(|err| {
                 Error::new_execution(&format!(
@@ -248,12 +277,21 @@ impl MethodArea {
 
             let native = access_flags.contains(MethodFlags::ACC_NATIVE);
 
+            let key = if native
+                && runtime_visible_annotations
+                    .contains("Ljava/lang/invoke/MethodHandle$PolymorphicSignature;")
+            {
+                method_name.clone()
+            } else {
+                full_signature.clone()
+            };
+
             method_by_signature.insert(
-                key.clone(),
+                key,
                 Arc::new(JavaMethod::new(
                     method_descriptor,
                     class_name,
-                    &key,
+                    &full_signature,
                     code_context,
                     native,
                     exception_indexes,
@@ -261,6 +299,7 @@ impl MethodArea {
                     &method_name,
                     annotation_default_raw,
                     annotations_raw,
+                    runtime_visible_annotations,
                 )),
             );
         }

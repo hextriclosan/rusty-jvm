@@ -1,8 +1,10 @@
 use crate::error::Error;
 use crate::execution_engine::executor::Executor;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::{with_method_area, MethodArea};
 use crate::system_native::properties_provider::properties::is_bigendian;
+use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -68,6 +70,12 @@ impl VM {
         let big_endian = lc.static_field("BIG_ENDIAN")?.unwrap();
         big_endian.set_raw_value(vec![if is_bigendian() { 1 } else { 0 }])?;
 
+        Self::put_synthetic_instance_field(
+            "java/lang/invoke/ResolvedMethodName",
+            "vmtarget",
+            "J",
+        )?;
+
         // create primordial ThreadGroup and Thread
         let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
         let string_obj_ref = StringPoolHelper::get_string("system".to_string())?; // refactor candidate B: introduce and use here common string creator, not string pool one
@@ -77,5 +85,26 @@ impl VM {
         Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
 
         Ok(())
+    }
+
+    fn put_synthetic_instance_field(
+        class_name: &str,
+        field_name: &str,
+        type_descriptor: &str,
+    ) -> crate::error::Result<()> {
+        let lc = with_method_area(|area| area.get(class_name))?;
+        let raw_java_class = Arc::into_raw(lc) as *mut JavaClass;
+        let result = unsafe {
+            (*raw_java_class).put_instance_field_descriptor(
+                field_name.to_string(),
+                str::parse(type_descriptor)?,
+            )
+        };
+        match result {
+            Some(descr) => Err(Error::new_execution(&format!(
+                "field {field_name}:{descr} already exists in {class_name}"
+            ))),
+            None => Ok(()),
+        }
     }
 }
