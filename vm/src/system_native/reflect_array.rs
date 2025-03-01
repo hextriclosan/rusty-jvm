@@ -13,10 +13,10 @@ fn new_array(component_type_clazz_ref: i32, length: i32) -> crate::error::Result
     let class_name = with_method_area(|method_area| {
         method_area.get_from_reflection_table(component_type_clazz_ref)
     })?;
-    let class_name = if class_name.len() == 1 {
-        "[".to_string() + class_name.as_str()
+    let class_name = if class_name.starts_with("L") && class_name.ends_with(";") {
+        format!("[{class_name}")
     } else {
-        "[L".to_string() + class_name.as_str() + ";"
+        format!("[L{class_name};")
     };
 
     with_heap_write_lock(|heap| heap.create_array(&class_name, length))

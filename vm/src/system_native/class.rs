@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
+use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
@@ -334,4 +335,47 @@ fn get_raw_annotations(reference: i32) -> crate::error::Result<i32> {
         .unwrap_or(0);
 
     Ok(annotations_ref)
+}
+
+pub(crate) fn get_simple_binary_name0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let simple_binary_name_ref = get_simple_binary_name0(class_ref)?;
+    Ok(vec![simple_binary_name_ref])
+}
+fn get_simple_binary_name0(class_ref: i32) -> crate::error::Result<i32> {
+    let name = with_method_area(|method_area| {
+        let name = method_area.get_from_reflection_table(class_ref)?;
+        Ok::<String, Error>(name)
+    })?;
+
+    let string_ref = name
+        .rsplit_once('$')
+        .map(|(_, last_token)| last_token)
+        .filter(|s| s.parse::<u64>().is_err())
+        .map(|s| StringPoolHelper::get_string(s.to_owned()))
+        .unwrap_or(Ok(0));
+    string_ref
+}
+
+pub(crate) fn is_assignable_from_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let assignable_class_ref = args[0];
+    let assignee_class_ref = args[1];
+    let is_assignable = is_assignable_from(assignable_class_ref, assignee_class_ref)?;
+
+    Ok(vec![if is_assignable { 1 } else { 0 }])
+}
+fn is_assignable_from(
+    assignable_class_ref: i32,
+    assignee_class_ref: i32,
+) -> crate::error::Result<bool> {
+    let is_assignable = with_method_area(|method_area| {
+        let assignable_class_name = method_area.get_from_reflection_table(assignable_class_ref)?;
+        let assignee_class_name = method_area.get_from_reflection_table(assignee_class_ref)?;
+
+        let instance_of =
+            InstanceChecker::checkcast(&assignee_class_name, &assignable_class_name)?;
+        Ok::<bool, Error>(instance_of)
+    })?;
+
+    Ok(is_assignable)
 }

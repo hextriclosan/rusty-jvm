@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::executor::Executor;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::method_area::java_class::JavaClass;
@@ -308,5 +309,19 @@ fn array_index_scale0(class_ref: i32) -> crate::error::Result<i32> {
             "[Z" => 1,
             _ => 4,
         })
+    })
+}
+
+pub(crate) fn ensure_class_initialized0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let class_ref = args[1];
+
+    ensure_class_initialized0(class_ref)?;
+    Ok(vec![])
+}
+fn ensure_class_initialized0(class_ref: i32) -> crate::error::Result<()> {
+    with_method_area(|method_area| {
+        let type_name = method_area.get_from_reflection_table(class_ref)?;
+        Executor::do_static_fields_initialization(&type_name)
     })
 }

@@ -1055,3 +1055,107 @@ fn should_return_system_properties() {
         ),
     );
 }
+
+#[test]
+fn should_check_instanceof() {
+    assert_success(
+        "samples.reflection.trivial.instanceofexample.InstanceOfExample",
+        r#"42 is instanceof Integer: true
+42 is instanceof Number: true
+3.14 is instanceof Double: true
+3.14 is instanceof Number: true
+3.14 is instanceof Float: false
+Hello is instanceof String: true
+Hello is instanceof Object: true
+[1] is instanceof Object: true
+[1, 2] is instanceof Object[]: false
+[1, 2, 3] is instanceof int[]: true
+[10, 20, 30] is instanceof Object: true
+[A, B] is instanceof Object[]: true
+[Meow!, Meow!] is instanceof Cat[]: true
+[Meow!, Meow!] is instanceof Animal[]: true
+[Meow!, Meow!] is instanceof Mammal[]: true
+[Meow!, Meow!] is instanceof AbstractMammal[]: true
+[Meow!, Woof!] is instanceof Cat[]: false
+[Meow!, Woof!] is instanceof Animal[]: true
+[Meow!, Woof!] is instanceof Mammal[]: false
+[Meow!, Woof!] is instanceof AbstractMammal[]: false
+[null] is instanceof List[]: true
+[] is instanceof List: true
+{} is instanceof Map: true
+{} is instanceof AbstractMap: true
+[] is instanceof Collection: true
+Meow! is instanceof Animal: true
+Chirp! is instanceof Animal: true
+Chirp! is instanceof Mammal: false
+Anonymous mammal says hi! is instanceof Animal: true
+"#,
+    );
+}
+
+#[test]
+fn should_support_class_is_assignable_from_method() {
+    assert_success(
+        "samples.reflection.trivial.isassignablefromexample.IsAssignableFromExample",
+        r#"int is assignable from int: true
+Integer is assignable from int: false
+Number is assignable from Integer: true
+double is assignable from int: false
+double is assignable from float: false
+float is assignable from double: false
+double is assignable from Double: false
+Double is assignable from double: false
+Cat is assignable from Animal: false
+Bird is assignable from Animal: false
+Bird is assignable from Mammal: false
+Animal is assignable from Cat: true
+Animal is assignable from Bird: true
+Mammal is assignable from Bird: false
+Object is assignable from int[]: true
+Object is assignable from Integer[]: true
+Object[] is assignable from String[]: true
+Animal[] is assignable from Cat[]: true
+Cat[] is assignable from Animal[]: false
+Object[] is assignable from int[]: false
+List[] is assignable from ArrayList[]: true
+Object is assignable from Object: true
+Object is assignable from String: true
+String is assignable from Object: false
+String is assignable from String: true
+Integer is assignable from Integer: true
+Integer is assignable from Number: false
+Number is assignable from Integer: true
+Number is assignable from Number: true
+List is assignable from ArrayList: true
+ArrayList is assignable from List: false
+Map is assignable from HashMap: true
+AbstractMap is assignable from HashMap: true
+HashMap is assignable from AbstractMap: false
+Collection is assignable from HashSet: true
+HashSet is assignable from Collection: false
+Map is assignable from HashMap: true
+Animal is assignable from Dog: true
+Animal is assignable from : true
+"#,
+    );
+}
+
+#[test]
+fn should_support_dup_x2_opcode() {
+    assert_success("samples.opcodes.dup_x2.DupX2GeneratedExample", "1260.0\n");
+}
+
+#[test]
+fn should_work_with_method_handle() {
+    assert_success(
+        "samples.reflection.methodhandleexample.MethodHandleExample",
+        r#"MethodHandles Lookup: samples.reflection.methodhandleexample.MethodHandleExample
+------- findStatic (Math.pow) -------
+(double,double)double - MethodHandle(double,double)double: 8.0
+------- findVirtual (String.regionMatches) -------
+(boolean,int,String,int,int)boolean - MethodHandle(String,boolean,int,String,int,int)boolean: true
+------- findSpecial (SuperClass.superMethod) -------
+()String - MethodHandle(Child)String: Parent method invoked
+"#,
+    )
+}

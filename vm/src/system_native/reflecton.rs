@@ -17,3 +17,19 @@ fn get_caller_class(stack_frames: &StackFrames) -> crate::error::Result<i32> {
 
     Ok(reflection_ref)
 }
+
+pub(crate) fn reflection_get_class_access_flags_wrp(
+    args: &[i32],
+) -> crate::error::Result<Vec<i32>> {
+    let class_ref = args[0];
+    let flags = get_class_access_flags(class_ref)?;
+    Ok(vec![flags])
+}
+fn get_class_access_flags(class_ref: i32) -> crate::error::Result<i32> {
+    let class_name =
+        with_method_area(|method_area| method_area.get_from_reflection_table(class_ref))?;
+
+    let flags =
+        with_method_area(|method_area| Ok(method_area.get(&class_name)?.access_flags() as i32));
+    flags
+}

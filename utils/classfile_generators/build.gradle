@@ -1,0 +1,17 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.github.hextriclosan.rustyjvm'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://repository.ow2.org/nexus/content/repositories/snapshots"
+    }
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.8-SNAPSHOT'
+}
