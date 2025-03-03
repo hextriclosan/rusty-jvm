@@ -1154,8 +1154,12 @@ fn should_work_with_method_handle() {
 (double,double)double - MethodHandle(double,double)double: 8.0
 ------- findVirtual (String.regionMatches) -------
 (boolean,int,String,int,int)boolean - MethodHandle(String,boolean,int,String,int,int)boolean: true
-------- findSpecial (SuperClass.superMethod) -------
+------- findSpecial (Parent.testMethod) -------
 ()String - MethodHandle(Child)String: Parent method invoked
+------- findConstructor (ArrayList) -------
+()void - MethodHandle()ArrayList: [1337]
+------- findConstructor (StringBuilder(String)) -------
+(String)void - MethodHandle(String)StringBuilder: 1 + 1 = 2
 "#,
     )
 }
