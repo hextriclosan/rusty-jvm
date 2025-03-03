@@ -64,11 +64,17 @@ impl Heap {
         field_name_type: &str,
         value: Vec<i32>,
     ) -> crate::error::Result<()> {
+        if objectref == 0 {
+            return Err(Error::new_execution(&format!(
+                "error setting field value: {class_name} in null"
+            ))); // throw an appropriate exception here
+        }
+
         if let Some(Object(instance)) = self.data.get_mut(&objectref) {
             instance.set_field_value(class_name, field_name_type, value)?;
             Ok(())
         } else {
-            Err(Error::new_execution("error setting field value"))
+            Err(Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
         }
     }
 
@@ -78,11 +84,17 @@ impl Heap {
         class_name: &str,
         field_name_type: &str,
     ) -> crate::error::Result<Vec<i32>> {
+        if objectref == 0 {
+            return Err(Error::new_execution(&format!(
+                "error setting field value: {class_name} in null"
+            ))); // throw an appropriate exception here
+        }
+
         if let Some(Object(java_instance)) = self.data.get(&objectref) {
             java_instance.get_field_value(class_name, field_name_type)
         } else {
             Err(Error::new_execution(&format!(
-                "error getting field value {class_name}.{field_name_type}"
+                "error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}"
             )))
         }
     }
