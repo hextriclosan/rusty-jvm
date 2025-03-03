@@ -10,8 +10,8 @@ import java.util.ArrayList;
 /** MethodHandleExample demonstrates a full range of MethodHandles capabilities, including:
  * - findStatic – Static method invocation (Math.pow).
  * - findVirtual – Instance method invocation (String.toUpperCase).
- * - findSpecial – Invoking superclass methods (SuperClass.superMethod).
- * - findConstructor – Invoking constructors (StringBuilder).
+ * - findSpecial – Invoking superclass methods (Parent.testMethod).
+ * - findConstructor – Invoking constructors (ArrayList, StringBuilder(String)).
  * - findGetter / findSetter – Accessing instance fields.
  * - findStaticGetter / findStaticSetter – Accessing static fields.
  * - findVarHandle – Mutable instance field manipulation via VarHandle.
@@ -27,7 +27,8 @@ public class MethodHandleExample {
         demonstrateFindStatic(lookup);
         demonstrateFindVirtual(lookup);
         demonstrateFindSpecial(lookup);
-        //demonstrateFindConstructor(lookup); // AbstractList.modCount is null
+        demonstrateFindConstructorWithoutArgs(lookup);
+        demonstrateFindConstructorWithArgs(lookup);
         //demonstrateFindGetterSetter(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
         //demonstrateFindStaticGetterSetter(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
         //demonstrateFindVarHandle(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
@@ -54,20 +55,31 @@ public class MethodHandleExample {
     }
 
     private static void demonstrateFindSpecial(MethodHandles.Lookup lookup) throws Throwable {
-        System.out.println("------- findSpecial (SuperClass.superMethod) -------");
+        System.out.println("------- findSpecial (Parent.testMethod) -------");
         Child instance = new Child();
         MethodHandle parentMh = instance.getParentMethodHandle();
         String result = (String) parentMh.invokeExact(instance);
         sampleMethod(MethodType.methodType(String.class), parentMh, result);
     }
 
-    private static void demonstrateFindConstructor(MethodHandles.Lookup lookup) throws Throwable {
-        System.out.println("------- findConstructor (StringBuilder) -------");
+    private static void demonstrateFindConstructorWithoutArgs(MethodHandles.Lookup lookup) throws Throwable {
+        System.out.println("------- findConstructor (ArrayList) -------");
         MethodType constructorType = MethodType.methodType(void.class);
         MethodHandle constructor = lookup.findConstructor(ArrayList.class, constructorType);
-        var sb = (ArrayList<Integer>) constructor.invokeExact();
-        sb.add(1337);
-        sampleMethod(constructorType, constructor, sb);
+        ArrayList<Integer> list = (ArrayList<Integer>) constructor.invokeExact();
+        list.add(1337);
+        sampleMethod(constructorType, constructor, list);
+    }
+
+    private static void demonstrateFindConstructorWithArgs(MethodHandles.Lookup lookup) throws Throwable {
+        System.out.println("------- findConstructor (StringBuilder(String)) -------");
+        MethodType constructorType = MethodType.methodType(void.class, String.class);
+        MethodHandle constructor = lookup.findConstructor(StringBuilder.class, constructorType);
+        String initialValue = "1 + ";
+        StringBuilder stringBuilder = (StringBuilder) constructor.invokeExact(initialValue);
+        stringBuilder.append(1);
+        stringBuilder.append(" = 2");
+        sampleMethod(constructorType, constructor, stringBuilder);
     }
 
     private static void demonstrateFindGetterSetter(MethodHandles.Lookup lookup) throws Throwable {
