@@ -29,7 +29,7 @@ public class MethodHandleExample {
         demonstrateFindSpecial(lookup);
         demonstrateFindConstructorWithoutArgs(lookup);
         demonstrateFindConstructorWithArgs(lookup);
-        //demonstrateFindGetterSetter(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
+        demonstrateFindGetterSetter(lookup);
         //demonstrateFindStaticGetterSetter(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
         //demonstrateFindVarHandle(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
         //demonstrateFindStaticVarHandle(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype

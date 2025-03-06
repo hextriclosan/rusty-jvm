@@ -1160,6 +1160,8 @@ fn should_work_with_method_handle() {
 ()void - MethodHandle()ArrayList: [1337]
 ------- findConstructor (StringBuilder(String)) -------
 (String)void - MethodHandle(String)StringBuilder: 1 + 1 = 2
+------- findGetter / findSetter (SampleClass.value) -------
+(SampleClass)int - MethodHandle(SampleClass)int: 42
 "#,
     )
 }

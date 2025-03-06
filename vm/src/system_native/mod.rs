@@ -4,6 +4,7 @@ pub(crate) mod file_descriptor;
 pub(crate) mod file_output_stream;
 pub(crate) mod method_handle_natives;
 pub(crate) mod object;
+mod object_offset;
 mod platform_file;
 pub(crate) mod properties_provider;
 pub(crate) mod reflect_array;

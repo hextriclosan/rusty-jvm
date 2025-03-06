@@ -1,0 +1,138 @@
+use crate::error::Error;
+use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::method_area::method_area::with_method_area;
+use crate::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
+use crate::system_native::string::get_utf8_string_by_ref;
+use getset::{CopyGetters, Getters};
+use num_enum::TryFromPrimitive;
+
+const MEMBER_NAME: &'static str = "java/lang/invoke/MemberName";
+
+#[derive(Debug, Getters, CopyGetters)]
+pub struct MemberName {
+    #[get_copy = "pub"]
+    member_name_ref: i32,
+    #[get_copy = "pub"]
+    flags: i32,
+    #[get = "pub"]
+    class_name: String,
+    #[get = "pub"]
+    name: String,
+    #[get_copy = "pub"]
+    type_obj_ref: i32,
+    #[get_copy = "pub"]
+    reference_kind: ReferenceKind,
+    method: Option<ResolvedMethodName>,
+}
+
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
+pub enum ReferenceKind {
+    REF_getField = 1,
+    REF_getStatic = 2,
+    REF_putField = 3,
+    REF_putStatic = 4,
+    REF_invokeVirtual = 5,
+    REF_invokeStatic = 6,
+    REF_invokeSpecial = 7,
+    REF_newInvokeSpecial = 8,
+    REF_invokeInterface = 9,
+}
+
+impl MemberName {
+    pub fn new(member_name_ref: i32) -> crate::error::Result<Self> {
+        let (flags, class_ref, name_ref, type_obj_ref) = with_heap_read_lock(|heap| {
+            let flags = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "flags")?[0];
+            let class_ref = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "clazz")?[0];
+            let name_ref = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "name")?[0];
+            let type_obj_ref =
+                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "type")?[0];
+            Ok::<(i32, i32, i32, i32), Error>((flags, class_ref, name_ref, type_obj_ref))
+        })?;
+
+        let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
+        let name = get_utf8_string_by_ref(name_ref)?;
+        let reference_kind = get_reference_kind(flags)?;
+        let method = load_method(member_name_ref)?;
+
+        Ok(Self {
+            member_name_ref,
+            flags,
+            class_name,
+            name,
+            type_obj_ref,
+            reference_kind,
+            method,
+        })
+    }
+
+    pub fn method(&self) -> Option<&ResolvedMethodName> {
+        self.method.as_ref()
+    }
+
+    pub fn propagate_flags(&mut self, flags: i32) -> crate::error::Result<()> {
+        with_heap_write_lock(|heap| {
+            heap.set_object_field_value(self.member_name_ref, MEMBER_NAME, "flags", vec![flags])
+        })?;
+        self.flags = flags;
+        Ok(())
+    }
+
+    pub fn propagate_method(&mut self, method: ResolvedMethodName) -> crate::error::Result<()> {
+        self.method = Some(method);
+
+        if let Some(method) = &self.method {
+            method.propagate_all()?;
+        }
+
+        self.propagate_method_ref()?;
+        Ok(())
+    }
+
+    fn propagate_method_ref(&self) -> crate::error::Result<()> {
+        if let Some(method) = self.method.as_ref() {
+            with_heap_write_lock(|heap| {
+                heap.set_object_field_value(
+                    self.member_name_ref,
+                    MEMBER_NAME,
+                    "method",
+                    vec![method.resolved_method_name_ref()],
+                )
+            })?;
+        }
+        Ok(())
+    }
+}
+
+fn load_method(member_name_ref: i32) -> crate::error::Result<Option<ResolvedMethodName>> {
+    let resolved_method_name_ref = with_heap_read_lock(|heap| {
+        heap.get_object_field_value(member_name_ref, MEMBER_NAME, "method")
+    })?[0];
+
+    if resolved_method_name_ref == 0 {
+        return Ok(None);
+    }
+
+    let resolved_method_name = ResolvedMethodName::new_load_by_ref(resolved_method_name_ref)?;
+    Ok(Some(resolved_method_name))
+}
+
+/**
+ * Mimics MemberName.getReferenceKind():
+ *  public byte getReferenceKind() {
+ *      return (byte) ((flags >>> MN_REFERENCE_KIND_SHIFT) & MN_REFERENCE_KIND_MASK);
+ *  }
+ * todo: use more strict and safe way to get reference kind
+ */
+fn get_reference_kind(flags: i32) -> crate::error::Result<ReferenceKind> {
+    let kind_shift = 24u32;
+    let kind_mask = 0x0F000000u32 >> kind_shift;
+    let result = (flags as u32 >> kind_shift) & kind_mask;
+
+    ReferenceKind::try_from(result as u8).map_err(|e| {
+        Error::new_execution(&format!(
+            "error converting flags {flags} to ReferenceKind: {e}"
+        ))
+    })
+}
