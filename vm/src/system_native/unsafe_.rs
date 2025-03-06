@@ -2,10 +2,8 @@ use crate::error::Error;
 use crate::execution_engine::executor::Executor;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
-use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::with_method_area;
-use crate::system_native::string::get_utf8_string_by_ref;
-use std::sync::Arc;
+use crate::system_native::object_offset::offset_utils::object_field_offset_by_refs;
 
 pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
@@ -19,16 +17,7 @@ pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Ve
     Ok(vec![high, low])
 }
 fn object_field_offset_1(class_ref: i32, string_ref: i32) -> crate::error::Result<i64> {
-    let field_name = get_utf8_string_by_ref(string_ref)?;
-    let (class_name, jc) = with_method_area(|area| {
-        let class_name = area.get_from_reflection_table(class_ref)?;
-        let jc = area.get(class_name.as_str())?;
-        Ok::<(String, Arc<JavaClass>), Error>((class_name, jc))
-    })?;
-
-    let offset = jc.get_field_offset(&format!("{class_name}.{field_name}"))?;
-
-    Ok(offset)
+    object_field_offset_by_refs(class_ref, string_ref)
 }
 
 pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
