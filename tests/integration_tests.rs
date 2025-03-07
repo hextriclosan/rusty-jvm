@@ -1165,3 +1165,41 @@ fn should_work_with_method_handle() {
 "#,
     )
 }
+
+#[test]
+fn should_support_class_is_instance_method() {
+    assert_success(
+        "samples.reflection.trivial.classisinstanceexample.ClassIsInstanceExample",
+        r#"null is instance of Integer.class: false
+42 is instance of Integer.class: true
+42 is instance of Number.class: true
+3.14 is instance of Double.class: true
+3.14 is instance of Number.class: true
+3.14 is instance of Float.class: false
+Hello is instance of String.class: true
+Hello is instance of Object.class: true
+[1] is instance of Object.class: true
+[1, 2] is instance of Object[].class: false
+[1, 2, 3] is instance of int[].class: true
+[10, 20, 30] is instance of Object.class: true
+[A, B] is instance of Object[].class: true
+[Meow!, Meow!] is instance of Cat[].class: true
+[Meow!, Meow!] is instance of Animal[].class: true
+[Meow!, Meow!] is instance of Mammal[].class: true
+[Meow!, Meow!] is instance of AbstractMammal[].class: true
+[Meow!, Woof!] is instance of Cat[].class: false
+[Meow!, Woof!] is instance of Animal[].class: true
+[Meow!, Woof!] is instance of Mammal[].class: false
+[Meow!, Woof!] is instance of AbstractMammal[].class: false
+[null] is instance of List[].class: true
+[] is instance of List.class: true
+{} is instance of Map.class: true
+{} is instance of AbstractMap.class: true
+[] is instance of Collection.class: true
+Meow! is instance of Animal.class: true
+Chirp! is instance of Animal.class: true
+Chirp! is instance of Mammal.class: false
+Anonymous mammal says hi! is instance of Animal.class: true
+"#,
+    )
+}
