@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::heap::heap::with_heap_write_lock;
+use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
@@ -378,4 +378,24 @@ fn is_assignable_from(
     })?;
 
     Ok(is_assignable)
+}
+
+pub(crate) fn class_is_instance_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let this_class_ref = args[0];
+    let obj_ref_to_check = args[1];
+    let is_instance = class_is_instance(this_class_ref, obj_ref_to_check)?;
+
+    Ok(vec![if is_instance { 1 } else { 0 }])
+}
+fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> crate::error::Result<bool> {
+    if obj_ref_to_check == 0 {
+        return Ok(false);
+    }
+
+    let this_class_name =
+        with_method_area(|method_area| method_area.get_from_reflection_table(this_class_ref))?;
+    let class_name_to_check =
+        with_heap_read_lock(|heap| heap.get_instance_name(obj_ref_to_check))?;
+
+    InstanceChecker::checkcast(&class_name_to_check, &this_class_name)
 }
