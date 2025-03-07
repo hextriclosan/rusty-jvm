@@ -1060,7 +1060,8 @@ fn should_return_system_properties() {
 fn should_check_instanceof() {
     assert_success(
         "samples.reflection.trivial.instanceofexample.InstanceOfExample",
-        r#"42 is instanceof Integer: true
+        r#"null is instanceof Integer: false
+42 is instanceof Integer: true
 42 is instanceof Number: true
 3.14 is instanceof Double: true
 3.14 is instanceof Number: true
