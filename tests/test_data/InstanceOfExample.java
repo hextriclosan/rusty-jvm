@@ -12,6 +12,7 @@ import java.util.Map;
 public class InstanceOfExample {
 
     public static void main(String[] args) {
+        testInstance(null, Integer.class);
         testInstance(42, Integer.class);
         testInstance(42, Number.class);
         testInstance(3.14, Double.class);
