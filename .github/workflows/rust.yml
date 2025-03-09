@@ -80,6 +80,9 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Set up sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.8
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
