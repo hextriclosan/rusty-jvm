@@ -617,6 +617,19 @@ Replaced null value with 'DEFAULT'
 One key starts with 'n'
 Map is empty
 
+java.util.LinkedHashMap
+Map size is 3
+Map contains key 'two'
+Removed key 'three' with value '3'
+Value for key 'four' is '4'
+Sum of lengths of keys and values is 9
+Map contains key 'nullKey' with null value
+Merged key 'one' with value '10'
+Computed key 'two' with value '2'
+Replaced null value with 'DEFAULT'
+One key starts with 'n'
+Map is empty
+
 "#,
     );
 }
