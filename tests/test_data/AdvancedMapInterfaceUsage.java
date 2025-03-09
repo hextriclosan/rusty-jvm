@@ -2,6 +2,7 @@ package samples.javabase.util.mapinterface.usage;
 
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -9,6 +10,7 @@ public class AdvancedMapInterfaceUsage {
     public static void main(String[] args) {
         testMap(new HashMap<>());
         testMap(new TreeMap<>());
+        testMap(new LinkedHashMap<>());
     }
 
     public static void testMap(Map<String, String> map) {
