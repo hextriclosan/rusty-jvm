@@ -2,11 +2,14 @@ use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::invoker::invoke;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrames;
 use crate::system_native::method_handle_natives::member_name::{MemberName, ReferenceKind::*};
-use crate::system_native::method_handle_natives::offsets::get_field_offset;
+use crate::system_native::method_handle_natives::offsets::{
+    get_field_offset, get_static_field_offset,
+};
 use std::sync::Arc;
 
 const DIRECT_METHOD_HANDLE: &'static str = "java/lang/invoke/DirectMethodHandle";
@@ -36,6 +39,8 @@ pub fn invoke_exact(
         }
         REF_getField => invoke_exact_get_field(&member_name, method_args, stack_frames),
         REF_putField => invoke_exact_put_field(&member_name, method_args),
+        REF_getStatic => invoke_exact_get_static_field(&member_name, method_args, stack_frames),
+        REF_putStatic => invoke_exact_put_static_field(&member_name, method_args),
         _ => unimplemented!("reference_kind: {:?}", reference_kind),
     }
 }
@@ -115,6 +120,27 @@ fn invoke_exact_put_field(
     })
 }
 
+fn invoke_exact_get_static_field(
+    member_name: &MemberName,
+    method_args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<()> {
+    let (field, _args) = prepare_static_field(member_name, method_args)?;
+    let value = field.raw_value()?;
+    let last_frame = last_frame_mut(stack_frames)?;
+    value.iter().for_each(|val| last_frame.push(*val));
+
+    Ok(())
+}
+
+fn invoke_exact_put_static_field(
+    member_name: &MemberName,
+    method_args: &[i32],
+) -> crate::error::Result<()> {
+    let (field, args) = prepare_static_field(member_name, method_args)?;
+    field.set_raw_value(args)
+}
+
 fn prepare_field(
     member_name: &MemberName,
     method_args: &[i32],
@@ -128,4 +154,18 @@ fn prepare_field(
     let offset = get_field_offset(member_name_ref)?;
     let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
     Ok((instance_ref, class_name, field_name, args))
+}
+
+fn prepare_static_field(
+    member_name: &MemberName,
+    method_args: &[i32],
+) -> Result<(Arc<Field>, Vec<i32>), Error> {
+    let args = method_args.to_vec();
+    let class_name = member_name.class_name();
+
+    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+    let member_name_ref = member_name.member_name_ref();
+    let offset = get_static_field_offset(member_name_ref)?;
+    let field = jc.get_static_field_by_offset(offset)?;
+    Ok((field, args))
 }

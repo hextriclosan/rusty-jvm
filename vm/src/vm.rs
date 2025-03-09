@@ -74,6 +74,7 @@ impl VM {
             "java/lang/invoke/ResolvedMethodName",
             "vmtarget",
             "J",
+            0,
         )?;
 
         // create primordial ThreadGroup and Thread
@@ -91,6 +92,7 @@ impl VM {
         class_name: &str,
         field_name: &str,
         type_descriptor: &str,
+        flags: u16,
     ) -> crate::error::Result<()> {
         let lc = with_method_area(|area| area.get(class_name))?;
         let raw_java_class = Arc::into_raw(lc) as *mut JavaClass;
@@ -98,11 +100,13 @@ impl VM {
             (*raw_java_class).put_instance_field_descriptor(
                 field_name.to_string(),
                 str::parse(type_descriptor)?,
+                flags,
             )
         };
         match result {
-            Some(descr) => Err(Error::new_execution(&format!(
-                "field {field_name}:{descr} already exists in {class_name}"
+            Some(field_property) => Err(Error::new_execution(&format!(
+                "field {field_name}:{} already exists in {class_name}",
+                field_property.type_descriptor()
             ))),
             None => Ok(()),
         }

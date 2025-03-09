@@ -30,8 +30,8 @@ public class MethodHandleExample {
         demonstrateFindConstructorWithoutArgs(lookup);
         demonstrateFindConstructorWithArgs(lookup);
         demonstrateFindGetterSetter(lookup);
-        //demonstrateFindStaticGetterSetter(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
-        //demonstrateFindVarHandle(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
+        demonstrateFindStaticGetterSetter(lookup);
+        //demonstrateFindVarHandle(lookup); // Native Call Error: Native method java/lang/invoke/VarHandle:set not found
         //demonstrateFindStaticVarHandle(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
         //demonstrateBindTo(lookup); // Native method java/lang/Class:isInstance:(Ljava/lang/Object;)Z not found
     }

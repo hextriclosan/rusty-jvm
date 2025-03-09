@@ -1,3 +1,4 @@
+use crate::error::Error;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::method_handle_natives::member_name::{MemberName, ReferenceKind::*};
 use crate::system_native::method_handle_natives::method_type::MethodType;
@@ -15,7 +16,8 @@ pub fn resolve(
         REF_invokeVirtual | REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => {
             resolve_method(&mut member_name)
         }
-        REF_getField | REF_putField | REF_getStatic => Ok(member_name_ref),
+        REF_getField | REF_putField => Ok(member_name_ref),
+        REF_getStatic | REF_putStatic => resolve_static_field(&mut member_name),
         _ => unimplemented!("reference_kind: {:?}", reference_kind),
     }
 }
@@ -51,6 +53,25 @@ fn resolve_method(member_name: &mut MemberName) -> crate::error::Result<i32> {
     let resolved_method_name =
         ResolvedMethodName::new_create_instance(reflection_ref, method_index as i64)?;
     member_name.propagate_method(resolved_method_name)?;
+
+    Ok(member_name.member_name_ref())
+}
+
+fn resolve_static_field(member_name: &mut MemberName) -> crate::error::Result<i32> {
+    let class_name = member_name.class_name();
+    let static_field_name = member_name.name();
+
+    let jc = with_method_area(|area| area.get(class_name))?;
+    let static_filed = jc.static_field(static_field_name)?.ok_or_else(|| {
+        Error::new_execution(&format!(
+            "Static field not found: {class_name}:{static_field_name}"
+        ))
+    })?; // todo throw NoSuchFieldError if field not found
+
+    let current_flags = member_name.flags();
+    let flags_to_enrich_with = static_filed.flags() as i32;
+    let enriched_flags = current_flags | flags_to_enrich_with;
+    member_name.propagate_flags(enriched_flags)?;
 
     Ok(member_name.member_name_ref())
 }
