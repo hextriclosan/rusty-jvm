@@ -1,7 +1,11 @@
 use crate::helper::i64_to_vec;
+use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrames;
 use crate::system_native::method_handle_natives::invocation::invoke_exact;
-use crate::system_native::method_handle_natives::offsets::get_field_offset;
+use crate::system_native::method_handle_natives::member_name::MemberName;
+use crate::system_native::method_handle_natives::offsets::{
+    get_field_offset, get_static_field_offset,
+};
 use crate::system_native::method_handle_natives::resolution::resolve;
 
 pub(crate) fn method_handle_natives_resolve_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -34,4 +38,26 @@ pub(crate) fn method_handle_natives_object_field_offset_wrp(
     let member_name_ref = args[0];
     let offset = get_field_offset(member_name_ref)?;
     Ok(i64_to_vec(offset))
+}
+
+pub(crate) fn method_handle_natives_static_field_offset_wrp(
+    args: &[i32],
+) -> crate::error::Result<Vec<i32>> {
+    let member_name_ref = args[0];
+    let offset = get_static_field_offset(member_name_ref)?;
+    Ok(i64_to_vec(offset))
+}
+
+pub(crate) fn method_handle_natives_static_field_base_wrp(
+    args: &[i32],
+) -> crate::error::Result<Vec<i32>> {
+    let member_name_ref = args[0];
+    let base_ref = static_field_base(member_name_ref)?;
+    Ok(vec![base_ref])
+}
+fn static_field_base(member_name_ref: i32) -> crate::error::Result<i32> {
+    let member_name = MemberName::new(member_name_ref)?;
+    let class_name = member_name.class_name();
+    let class_ref = with_method_area(|area| area.load_reflection_class(class_name))?;
+    Ok(class_ref)
 }

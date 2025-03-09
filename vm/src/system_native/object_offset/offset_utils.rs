@@ -17,3 +17,11 @@ pub(crate) fn object_field_offset_by_names(
     let offset = jc.get_field_offset(&format!("{class_name}.{field_name}"))?;
     Ok(offset)
 }
+
+pub(crate) fn static_field_offset_by_names(
+    class_name: &str,
+    field_name: &str,
+) -> crate::error::Result<i64> {
+    let jc = with_method_area(|area| area.get(class_name))?;
+    jc.get_static_field_offset(field_name)
+}

@@ -4,7 +4,7 @@ use crate::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::method_area::attributes_helper::AttributesHelper;
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;
-use crate::method_area::java_class::{FieldDescriptors, Fields, JavaClass, Methods};
+use crate::method_area::java_class::{FieldProperties, FieldProperty, Fields, JavaClass, Methods};
 use crate::method_area::java_method::{CodeContext, JavaMethod};
 use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use indexmap::{IndexMap, IndexSet};
@@ -310,9 +310,9 @@ impl MethodArea {
     fn get_field_descriptors(
         field_infos: &[FieldInfo],
         cpool_helper: &CPoolHelper,
-    ) -> crate::error::Result<(FieldDescriptors, Fields)> {
-        let mut non_static_field_descriptors = IndexMap::new();
-        let mut static_field_by_name = HashMap::new();
+    ) -> crate::error::Result<(FieldProperties, Fields)> {
+        let mut non_static_field_properties = IndexMap::new();
+        let mut static_field_by_name = IndexMap::new();
         for field_info in field_infos.iter() {
             let name_index = field_info.name_index();
             let field_name = cpool_helper.get_utf8(name_index).ok_or_else(|| {
@@ -331,15 +331,18 @@ impl MethodArea {
                 ))
             })?;
 
-            if field_info.access_flags().contains(FieldFlags::ACC_STATIC) {
-                static_field_by_name.insert(field_name, Arc::new(Field::new(descriptor)?));
+            let flags = field_info.access_flags();
+            if flags.contains(FieldFlags::ACC_STATIC) {
+                static_field_by_name
+                    .insert(field_name, Arc::new(Field::new(descriptor, flags.bits())?));
             } else {
-                non_static_field_descriptors.insert(field_name, descriptor);
+                non_static_field_properties
+                    .insert(field_name, FieldProperty::new(descriptor, flags.bits()));
             }
         }
 
         Ok((
-            FieldDescriptors::new(non_static_field_descriptors),
+            FieldProperties::new(non_static_field_properties),
             Fields::new(static_field_by_name),
         ))
     }
@@ -510,8 +513,8 @@ impl MethodArea {
         const ABSTRACT: u16 = 0x00000400;
         Arc::new(JavaClass::new(
             Methods::new(IndexMap::new()),
-            Fields::new(HashMap::new()),
-            FieldDescriptors::new(IndexMap::new()),
+            Fields::new(IndexMap::new()),
+            FieldProperties::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
             class_name,
             None,
@@ -529,8 +532,8 @@ impl MethodArea {
         const ABSTRACT: u16 = 0x00000400;
         Arc::new(JavaClass::new(
             Methods::new(IndexMap::new()),
-            Fields::new(HashMap::new()),
-            FieldDescriptors::new(IndexMap::new()),
+            Fields::new(IndexMap::new()),
+            FieldProperties::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
             array_class_name,
             Some("java/lang/Object".to_string()),

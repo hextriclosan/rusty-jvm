@@ -6,10 +6,11 @@ use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
+use derive_new::new;
+use getset::Getters;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -20,7 +21,7 @@ type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 pub(crate) struct JavaClass {
     methods: Methods,
     static_fields: Fields,
-    non_static_field_descriptors: FieldDescriptors,
+    non_static_field_properties: FieldProperties,
     cpool_helper: CPoolHelper,
     this_class_name: String,
     external_name: String,
@@ -44,22 +45,29 @@ pub(crate) struct Methods {
 
 #[derive(Debug)]
 pub(crate) struct Fields {
-    pub(crate) field_by_name: HashMap<String, Arc<Field>>,
+    pub(crate) field_by_name: IndexMap<String, Arc<Field>>,
+}
+
+#[derive(Debug, new, Getters)]
+#[get = "pub"]
+pub(crate) struct FieldProperty {
+    type_descriptor: TypeDescriptor,
+    flags: u16,
 }
 
 #[derive(Debug)]
-pub(crate) struct FieldDescriptors {
-    pub(crate) descriptor_by_name: IndexMap<String, TypeDescriptor>,
+pub(crate) struct FieldProperties {
+    pub(crate) properties_by_name: IndexMap<String, FieldProperty>,
 }
 
-impl FieldDescriptors {
-    pub fn new(descriptor_by_name: IndexMap<String, TypeDescriptor>) -> Self {
-        Self { descriptor_by_name }
+impl FieldProperties {
+    pub fn new(properties_by_name: IndexMap<String, FieldProperty>) -> Self {
+        Self { properties_by_name }
     }
 }
 
 impl Fields {
-    pub fn new(field_by_name: HashMap<String, Arc<Field>>) -> Self {
+    pub fn new(field_by_name: IndexMap<String, Arc<Field>>) -> Self {
         Self { field_by_name }
     }
 }
@@ -68,7 +76,7 @@ impl JavaClass {
     pub fn new(
         methods: Methods,
         static_fields: Fields,
-        non_static_field_descriptors: FieldDescriptors,
+        non_static_field_properties: FieldProperties,
         cpool_helper: CPoolHelper,
         this_class_name: &str,
         parent: Option<String>,
@@ -86,7 +94,7 @@ impl JavaClass {
         Self {
             methods,
             static_fields,
-            non_static_field_descriptors,
+            non_static_field_properties,
             cpool_helper,
             this_class_name: this_class_name.to_string(),
             external_name,
@@ -138,28 +146,32 @@ impl JavaClass {
         &self,
         instance_field_name_type: &str,
     ) -> Option<&TypeDescriptor> {
-        self.non_static_field_descriptors
-            .descriptor_by_name
-            .get(instance_field_name_type)
+        let field_property = self
+            .non_static_field_properties
+            .properties_by_name
+            .get(instance_field_name_type)?;
+
+        Some(field_property.type_descriptor())
     }
 
     pub fn put_instance_field_descriptor(
         &mut self,
         name: String,
         type_descriptor: TypeDescriptor,
-    ) -> Option<TypeDescriptor> {
-        self.non_static_field_descriptors
-            .descriptor_by_name
-            .insert(name, type_descriptor)
+        flags: u16,
+    ) -> Option<FieldProperty> {
+        self.non_static_field_properties
+            .properties_by_name
+            .insert(name, FieldProperty::new(type_descriptor, flags))
     }
 
     pub fn default_value_instance_fields(
         &self,
     ) -> crate::error::Result<IndexMap<FieldNameType, Field>> {
-        self.non_static_field_descriptors
-            .descriptor_by_name
+        self.non_static_field_properties
+            .properties_by_name
             .iter()
-            .map(|(name, descriptor)| Ok((name.clone(), Field::new(descriptor.to_owned())?)))
+            .map(|(name, property)| Ok((name.clone(), Field::try_from(property)?)))
             .collect()
     }
 
@@ -181,6 +193,30 @@ impl JavaClass {
                 ))
             })?;
         Ok(offset as i64)
+    }
+
+    pub fn get_static_field_offset(&self, field_name: &str) -> crate::error::Result<i64> {
+        let offset = self
+            .static_fields
+            .field_by_name
+            .get_index_of(field_name)
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
+                    "Failed to get static field offset by name {field_name}"
+                ))
+            })?;
+        Ok(offset as i64)
+    }
+
+    pub fn get_static_field_by_offset(&self, offset: i64) -> crate::error::Result<Arc<Field>> {
+        let (_field_name, field) = self
+            .static_fields
+            .field_by_name
+            .get_index(offset as usize)
+            .ok_or_else(|| {
+                Error::new_execution(&format!("Failed to get static field by offset {offset}"))
+            })?;
+        Ok(Arc::clone(&field))
     }
 
     pub fn get_field_name_by_offset(&self, offset: i64) -> crate::error::Result<(String, String)> {

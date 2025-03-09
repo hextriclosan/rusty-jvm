@@ -17,7 +17,8 @@ use crate::system_native::file_output_stream::{
 };
 use crate::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_exact_wrp, method_handle_natives_object_field_offset_wrp,
-    method_handle_natives_resolve_wrp,
+    method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
+    method_handle_natives_static_field_offset_wrp,
 };
 use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::system_native::reflect_array::new_array_wrp;
@@ -375,6 +376,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/invoke/MethodHandleNatives:objectFieldOffset:(Ljava/lang/invoke/MemberName;)J",
         Basic(method_handle_natives_object_field_offset_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandleNatives:staticFieldOffset:(Ljava/lang/invoke/MemberName;)J",
+        Basic(method_handle_natives_static_field_offset_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandleNatives:staticFieldBase:(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
+        Basic(method_handle_natives_static_field_base_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandle:invokeExact", // this is a normalized polymorphic signature

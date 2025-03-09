@@ -16,6 +16,7 @@ num-traits = "0.2.19"
 num_enum = "0.7.3"
 murmur3 = "0.5.2"
 getset = "0.1.5"
+derive-new = "0.7.0"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef"] }

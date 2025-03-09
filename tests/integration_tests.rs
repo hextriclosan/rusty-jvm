@@ -1163,6 +1163,8 @@ fn should_work_with_method_handle() {
 (String)void - MethodHandle(String)StringBuilder: 1 + 1 = 2
 ------- findGetter / findSetter (SampleClass.value) -------
 (SampleClass)int - MethodHandle(SampleClass)int: 42
+------- findStaticGetter / findStaticSetter (staticValue) -------
+()int - MethodHandle()int: 500
 "#,
     )
 }
