@@ -29,6 +29,9 @@ jobs:
           components: rustfmt, clippy
           override: true
 
+      - name: Set up sccache
+        uses: mozilla-actions/sccache@v0.0.8
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
