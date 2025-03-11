@@ -1,5 +1,5 @@
 use crate::method_area::cpool_helper::CPoolHelper;
-use jclass::attributes::{Attribute, InnerClassRecord};
+use jclass::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
 use std::collections::{HashMap, HashSet};
 
 pub struct AttributesHelper {
@@ -99,15 +99,28 @@ impl AttributesHelper {
         }
     }
 
-    pub fn get_code(&self) -> Option<(u16, u16, Vec<u8>)> {
+    pub fn get_code(&self) -> Option<(u16, u16, Vec<u8>, Vec<LineNumberRecord>)> {
         match self.data.get(&AttributeType::Code)? {
             Attribute::Code {
                 max_stack,
                 max_locals,
                 code,
-                ..
-            } => Some((*max_stack, *max_locals, code.clone())),
+                exception_table: _,
+                attributes,
+            } => {
+                let attributes_helper = AttributesHelper::new(attributes);
+                let line_numbers = attributes_helper.get_line_number_table();
+
+                Some((*max_stack, *max_locals, code.clone(), line_numbers))
+            }
             _ => None,
+        }
+    }
+
+    fn get_line_number_table(&self) -> Vec<LineNumberRecord> {
+        match self.data.get(&AttributeType::LineNumberTable) {
+            Some(Attribute::LineNumberTable { line_number_table }) => line_number_table.clone(),
+            _ => vec![],
         }
     }
 
@@ -222,7 +235,9 @@ mod tests {
             max_locals: 4,
             code: vec![0x2a, 0xb7, 0x0, 0x1],
             exception_table: vec![],
-            attributes: vec![],
+            attributes: vec![LineNumberTable {
+                line_number_table: vec![LineNumberRecord::new(0, 4)],
+            }],
         };
         let method_parameters = MethodParameters {
             parameters: vec![MethodParameterRecord::new(
@@ -235,7 +250,12 @@ mod tests {
         let attributes_helper = AttributesHelper::new(&attributes);
 
         assert_eq!(
-            Some((2, 4, vec![0x2a, 0xb7, 0x0, 0x1])),
+            Some((
+                2,
+                4,
+                vec![0x2a, 0xb7, 0x0, 0x1],
+                vec![LineNumberRecord::new(0, 4)]
+            )),
             attributes_helper.get_code()
         );
     }

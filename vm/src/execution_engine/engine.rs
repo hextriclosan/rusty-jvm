@@ -21,16 +21,22 @@ impl Engine {
 
         let mut stack_frames = vec![initial_stack_frame];
         while !stack_frames.is_empty() {
-            let (class, code) = {
+            let (class, code, pc, line_numbers) = {
                 let frame = stack_frames
                     .last()
                     .ok_or(Error::new_execution("Error getting stack frame"))?;
                 (
                     frame.current_class_name().to_string(),
                     frame.get_bytecode_byte(),
+                    frame.pc(),
+                    frame.line_numbers(),
                 )
             };
-            let span = span!(Level::TRACE, "", class);
+            let line_num_postfix = line_numbers
+                .get(&(pc as u16))
+                .map(|line| format!(":{line}"))
+                .unwrap_or_else(|| "".to_string());
+            let span = span!(Level::TRACE, "", "{class}{line_num_postfix}");
             let _entered = span.enter();
 
             match code {

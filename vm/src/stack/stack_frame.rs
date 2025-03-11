@@ -1,4 +1,5 @@
 use crate::stack::sack_value::StackValue;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -8,6 +9,7 @@ pub(crate) struct StackFrame {
     operand_stack: Vec<i32>,
     bytecode_ref: Arc<Vec<u8>>,
     current_class_name: String,
+    line_numbers: Arc<HashMap<u16, u16>>,
 }
 
 pub type StackFrames = Vec<StackFrame>;
@@ -18,6 +20,7 @@ impl StackFrame {
         stack_size: usize,
         bytecode_ref: Arc<Vec<u8>>,
         current_class_name: String,
+        line_numbers: Arc<HashMap<u16, u16>>,
     ) -> Self {
         StackFrame {
             pc: 0,
@@ -25,6 +28,7 @@ impl StackFrame {
             operand_stack: Vec::with_capacity(stack_size),
             bytecode_ref,
             current_class_name,
+            line_numbers,
         }
     }
 
@@ -116,5 +120,9 @@ impl StackFrame {
 
     pub fn get_local_raw(&self, index: usize) -> i32 {
         *self.locals.get(index).expect("No value at index")
+    }
+
+    pub fn line_numbers(&self) -> &HashMap<u16, u16> {
+        &self.line_numbers
     }
 }
