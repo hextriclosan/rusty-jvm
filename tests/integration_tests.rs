@@ -1219,3 +1219,11 @@ Anonymous mammal says hi! is instance of Animal.class: true
 "#,
     )
 }
+
+#[test]
+fn should_support_unsafe_put_reference_volatile() {
+    assert_success(
+        "samples.jdkinternal.unsafe.putreferencevolatile.UnsafePutReferenceVolatileExample",
+        "[5000000000, 5000000001, 5000000002]\n",
+    );
+}
