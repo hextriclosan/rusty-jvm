@@ -76,7 +76,7 @@ jobs:
       - name: Cache Cross Docker Image
         uses: actions/cache@v4
         with:
-          path: ~/.cross
+          path: /var/lib/docker
           key: cross-image-${{ runner.os }}-s390x
           restore-keys: |
             cross-image-${{ runner.os }}-s390x
