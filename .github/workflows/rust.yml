@@ -19,11 +19,6 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
-      - name: List GitHub caches
-        run: gh cache list
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -33,6 +28,11 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
           override: true
+
+      - name: List GitHub caches
+        run: gh cache list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.8
