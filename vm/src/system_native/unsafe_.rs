@@ -266,13 +266,16 @@ pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<V
     Ok(vec![])
 }
 fn put_reference_volatile(obj_ref: i32, offset: i64, ref_value: i32) -> crate::error::Result<()> {
+    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     with_heap_write_lock(|heap| {
-        let class_name = heap.get_instance_name(obj_ref)?;
-        let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+        if class_name.starts_with("[") {
+            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![ref_value])
+        } else {
+            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
-        heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])?;
-        Ok(())
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
+        }
     })
 }
 
