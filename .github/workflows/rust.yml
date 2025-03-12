@@ -50,25 +50,17 @@ jobs:
             cargo test --manifest-path $crate/Cargo.toml --verbose
           done
 
-      - name: Install Tarpaulin
-        shell: bash
-        run: cargo install cargo-tarpaulin
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
 
-      - name: Run coverage
-        shell: bash
-        run: |
-          for crate in $CRATES; do
-            cargo tarpaulin --manifest-path $crate/Cargo.toml --out Xml --output-dir $crate
-          done
+      - name: Generate code coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         if: success()
         uses: codecov/codecov-action@v5
         with:
-          files: |
-            ./*.xml
-            jclass/*.xml
-            jdescriptor/*.xml
+          files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
