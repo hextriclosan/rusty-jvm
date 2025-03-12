@@ -45,8 +45,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-            ~/.cache/sccache  # Linux/macOS
-            C:\Users\runneradmin\AppData\Local\Mozilla\sccache  # Windows
+            ${{ env.SCCACHE_PATH }}
           key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             cargo-${{ runner.os }}-
