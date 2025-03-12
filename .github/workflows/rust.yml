@@ -50,8 +50,13 @@ jobs:
             cargo test --manifest-path $crate/Cargo.toml --verbose
           done
 
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
+#      - name: Install cargo-llvm-cov
+#        run: cargo install cargo-llvm-cov
+      - name: Install cargo-llvm-cov via cargo-binstall
+        run: |
+          cargo install --locked cargo-binstall
+          cargo binstall --no-confirm cargo-llvm-cov
+        shell: bash
 
       - name: Generate code coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
