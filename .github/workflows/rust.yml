@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           for crate in $CRATES; do
-            run: cargo llvm-cov --workspace --lcov --output-path $crate.lcov
+            cargo llvm-cov --workspace --lcov --output-path $crate.lcov
           done
 
 #      - name: Upload coverage to Codecov
