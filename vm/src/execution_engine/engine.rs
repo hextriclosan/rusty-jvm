@@ -32,11 +32,12 @@ impl Engine {
                     frame.line_numbers(),
                 )
             };
-            let line_num_postfix = line_numbers
-                .get(&(pc as u16))
-                .map(|line| format!(":{line}"))
-                .unwrap_or_else(|| "".to_string());
-            let span = span!(Level::TRACE, "", "{class}{line_num_postfix}");
+            let inctruction_line_num = line_numbers
+                .range(..=&(pc as u16))
+                .next_back()
+                .map(|(_pc, line)| *line)
+                .unwrap_or_default();
+            let span = span!(Level::TRACE, "", "{class}:{inctruction_line_num}");
             let _entered = span.enter();
 
             match code {
