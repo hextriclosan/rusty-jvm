@@ -7,7 +7,7 @@ use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrame;
 use jdescriptor::MethodDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -32,14 +32,21 @@ pub(crate) struct CodeContext {
     max_stack: u16,
     max_locals: u16,
     bytecode: Arc<Vec<u8>>,
+    line_numbers: Arc<BTreeMap<u16, u16>>,
 }
 
 impl CodeContext {
-    pub fn new(max_stack: u16, max_locals: u16, bytecode: Arc<Vec<u8>>) -> Self {
+    pub fn new(
+        max_stack: u16,
+        max_locals: u16,
+        bytecode: Arc<Vec<u8>>,
+        line_numbers: Arc<BTreeMap<u16, u16>>,
+    ) -> Self {
         Self {
             max_stack,
             max_locals,
             bytecode,
+            line_numbers,
         }
     }
 
@@ -53,6 +60,10 @@ impl CodeContext {
 
     pub fn bytecode(&self) -> &Arc<Vec<u8>> {
         &self.bytecode
+    }
+
+    pub fn line_numbers(&self) -> &Arc<BTreeMap<u16, u16>> {
+        &self.line_numbers
     }
 }
 
@@ -93,6 +104,7 @@ impl JavaMethod {
                 context.max_stack() as usize,
                 Arc::clone(context.bytecode()),
                 self.class_name.clone(),
+                Arc::clone(context.line_numbers()),
             )),
             None => Err(Error::new_execution(&format!(
                 "Code context is missing for {}.{}",

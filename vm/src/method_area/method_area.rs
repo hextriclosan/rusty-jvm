@@ -13,7 +13,7 @@ use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -247,8 +247,17 @@ impl MethodArea {
                 if !access_flags.intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE) {
                     attributes_helper
                         .get_code()
-                        .map(|(max_stack, max_locals, code)| {
-                            Some(CodeContext::new(max_stack, max_locals, Arc::new(code)))
+                        .map(|(max_stack, max_locals, code, line_numbers)| {
+                            let line_numbers = line_numbers
+                                .iter()
+                                .map(|record| (record.start_pc(), record.line_number()))
+                                .collect::<BTreeMap<_, _>>();
+                            Some(CodeContext::new(
+                                max_stack,
+                                max_locals,
+                                Arc::new(code),
+                                Arc::new(line_numbers),
+                            ))
                         })
                         .ok_or_else(|| {
                             Error::new_execution(&format!(
