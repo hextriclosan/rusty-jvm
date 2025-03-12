@@ -7,7 +7,7 @@ use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrame;
 use jdescriptor::MethodDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ pub(crate) struct CodeContext {
     max_stack: u16,
     max_locals: u16,
     bytecode: Arc<Vec<u8>>,
-    line_numbers: Arc<HashMap<u16, u16>>,
+    line_numbers: Arc<BTreeMap<u16, u16>>,
 }
 
 impl CodeContext {
@@ -40,7 +40,7 @@ impl CodeContext {
         max_stack: u16,
         max_locals: u16,
         bytecode: Arc<Vec<u8>>,
-        line_numbers: Arc<HashMap<u16, u16>>,
+        line_numbers: Arc<BTreeMap<u16, u16>>,
     ) -> Self {
         Self {
             max_stack,
@@ -62,7 +62,7 @@ impl CodeContext {
         &self.bytecode
     }
 
-    pub fn line_numbers(&self) -> &Arc<HashMap<u16, u16>> {
+    pub fn line_numbers(&self) -> &Arc<BTreeMap<u16, u16>> {
         &self.line_numbers
     }
 }

@@ -13,7 +13,7 @@ use jclass::fields::{FieldFlags, FieldInfo};
 use jclass::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -251,7 +251,7 @@ impl MethodArea {
                             let line_numbers = line_numbers
                                 .iter()
                                 .map(|record| (record.start_pc(), record.line_number()))
-                                .collect::<HashMap<_, _>>();
+                                .collect::<BTreeMap<_, _>>();
                             Some(CodeContext::new(
                                 max_stack,
                                 max_locals,
