@@ -29,6 +29,20 @@ jobs:
           components: rustfmt, clippy
           override: true
 
+      - name: List GitHub caches
+        run: gh cache list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.8
+
+      - name: Set env for sccache
+        shell: bash
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
@@ -36,6 +50,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
+            ${{ env.SCCACHE_PATH }}
           key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             cargo-${{ runner.os }}-
