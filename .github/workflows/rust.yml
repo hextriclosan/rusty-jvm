@@ -50,22 +50,11 @@ jobs:
             cargo test --manifest-path $crate/Cargo.toml --verbose
           done
 
-#      - name: Install cargo-llvm-cov
-#        run: cargo install cargo-llvm-cov
-      - name: Install cargo-llvm-cov via cargo-binstall
-        run: |
-          cargo install --locked cargo-binstall
-          cargo binstall --no-confirm cargo-llvm-cov
-        shell: bash
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
 
       - name: Generate code coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
-#      - name: Run coverage
-#        shell: bash
-#        run: |
-#          for crate in $CRATES; do
-#            cargo llvm-cov --workspace --lcov --output-path $crate.lcov
-#          done
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -73,53 +62,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
-
-#      - name: Upload coverage to Codecov
-#        if: success()
-#        uses: codecov/codecov-action@v5
-#        with:
-#          files: |
-#            ./*.lcov
-#            jclass/*.lcov
-#            jdescriptor/*.lcov
-#          token: ${{ secrets.CODECOV_TOKEN }}
-#          fail_ci_if_error: true
-############################################################################################################
-#      - name: Run cargo-tarpaulin
-#        uses: actions-rs/tarpaulin@v0.1
-#
-#      - name: Upload to codecov.io
-#        uses: codecov/codecov-action@v5
-#        with:
-#          token: ${{secrets.CODECOV_TOKEN}}
-#
-#      - name: Archive code coverage results
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: code-coverage-report
-#          path: cobertura.xml
-############################################################################################################
-#      - name: Install Tarpaulin
-#        shell: bash
-#        run: cargo install cargo-tarpaulin
-#
-#      - name: Run coverage
-#        shell: bash
-#        run: |
-#          for crate in $CRATES; do
-#            cargo tarpaulin --manifest-path $crate/Cargo.toml --out Xml --output-dir $crate
-#          done
-#
-#      - name: Upload coverage to Codecov
-#        if: success()
-#        uses: codecov/codecov-action@v5
-#        with:
-#          files: |
-#            ./*.xml
-#            jclass/*.xml
-#            jdescriptor/*.xml
-#          token: ${{ secrets.CODECOV_TOKEN }}
-#          fail_ci_if_error: true
 
   test-on-s390x:
     name: build (linux big-endian)
