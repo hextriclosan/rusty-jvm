@@ -1227,3 +1227,28 @@ fn should_support_unsafe_put_reference_volatile() {
         "[5000000000, 5000000001, 5000000002]\n",
     );
 }
+
+// This test class is put to java.lang package for calling package-private method
+// It's not so nice but bad test is better than no test
+#[test]
+fn should_support_system_get_constant_pool() {
+    assert_success(
+        "java.lang.ConstantPoolExample",
+        r#"Constant pool size: 15
+1: CLASS ()
+2: UTF8 (java/lang/SuppressWarnings)
+3: CLASS ()
+4: UTF8 (java/lang/Object)
+5: CLASS ()
+6: UTF8 (java/lang/annotation/Annotation)
+7: UTF8 (value)
+8: UTF8 (()[Ljava/lang/String;)
+9: UTF8 (SourceFile)
+10: UTF8 (SuppressWarnings.java)
+11: UTF8 (RuntimeVisibleAnnotations)
+12: UTF8 (Ljava/lang/annotation/Retention;)
+13: UTF8 (Ljava/lang/annotation/RetentionPolicy;)
+14: UTF8 (SOURCE)
+"#,
+    );
+}

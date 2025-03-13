@@ -1,4 +1,4 @@
-// javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED  -d . UnsafeGetLongUnalignedExample.java
+// javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED -d . UnsafeGetLongUnalignedExample.java
 // java --add-exports java.base/jdk.internal.misc=ALL-UNNAMED samples.jdkinternal.unsafe.getlongunaligned.UnsafeGetLongUnalignedExample
 package samples.jdkinternal.unsafe.getlongunaligned;
 

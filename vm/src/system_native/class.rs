@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::execution_engine::executor::Executor;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::instance_checker::InstanceChecker;
@@ -398,4 +399,19 @@ fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> crate::error
         with_heap_read_lock(|heap| heap.get_instance_name(obj_ref_to_check))?;
 
     InstanceChecker::checkcast(&class_name_to_check, &this_class_name)
+}
+
+pub(crate) fn get_constant_pool_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let clazz_ref = args[0];
+    let constant_pool_ref = get_constant_pool(clazz_ref)?;
+    Ok(vec![constant_pool_ref])
+}
+fn get_constant_pool(clazz_ref: i32) -> crate::error::Result<i32> {
+    const NAME: &'static str = "jdk/internal/reflect/ConstantPool";
+    let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
+    with_heap_write_lock(|heap| {
+        heap.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])
+    })?;
+
+    Ok(constant_pool_ref)
 }
