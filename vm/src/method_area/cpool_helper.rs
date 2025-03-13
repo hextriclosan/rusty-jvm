@@ -4,6 +4,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct CPoolHelper {
     data: HashMap<CPoolType, HashMap<u16, ConstantPool>>,
+    raw_cpool: Vec<ConstantPool>,
 }
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Copy)]
@@ -63,7 +64,10 @@ impl CPoolHelper {
             entry.insert(index as u16, item.clone());
         }
 
-        Self { data }
+        Self {
+            data,
+            raw_cpool: cpool.to_vec(),
+        }
     }
 
     pub fn get(&self, ctype: CPoolType, index: u16) -> Option<&ConstantPool> {
@@ -214,6 +218,10 @@ impl CPoolHelper {
         let descriptor = self.get_utf8(*descriptor_index)?;
 
         Some((name, descriptor))
+    }
+
+    pub fn raw_cpool(&self) -> &Vec<ConstantPool> {
+        &self.raw_cpool
     }
 }
 
