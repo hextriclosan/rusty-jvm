@@ -1,6 +1,11 @@
 use crate::error::Error;
+use crate::execution_engine::executor::Executor;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::method_area::with_method_area;
+use crate::system_native::method_handle_natives::member_name::ReferenceKind::{
+    REF_getField, REF_getStatic, REF_invokeSpecial, REF_invokeStatic, REF_newInvokeSpecial,
+    REF_putField, REF_putStatic,
+};
 use crate::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::system_native::string::get_utf8_string_by_ref;
 use getset::{CopyGetters, Getters};
@@ -102,6 +107,35 @@ impl MemberName {
             })?;
         }
         Ok(())
+    }
+
+    // This method returns ref to an array of 2 elements: Object[] {Long vmindex, Object vmtarget}
+    pub fn get_member_vm_info(&self, member_name_ref: i32) -> crate::error::Result<i32> {
+        let reference_kind = self.reference_kind();
+        let array_ref = with_heap_write_lock(|heap| heap.create_array("[Ljava/lang/Object;", 2))?;
+        // vmindex it is an index of the method in the vtable, HotSpot uses negative value for methods that don't need dynamic dispatch
+        // We don't have vtable (yet), thus we use -1 for all methods that are not either of virtual or interface
+        let vmindex = match reference_kind {
+            REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => -1,
+            _ => 0,
+        } as i64;
+        let args = vec![vmindex.into()];
+        let long_instance_ref = Executor::invoke_args_constructor(
+            "java/lang/Long",
+            "<init>:(J)V",
+            &args,
+            Some("Long instance creation"),
+        )?;
+
+        let vmtarget = match reference_kind {
+            REF_getField | REF_getStatic | REF_putField | REF_putStatic => self.type_obj_ref(),
+            _ => member_name_ref,
+        };
+
+        with_heap_write_lock(|heap| heap.set_array_value(array_ref, 0, vec![long_instance_ref]))?;
+        with_heap_write_lock(|heap| heap.set_array_value(array_ref, 1, vec![vmtarget]))?;
+
+        Ok(array_ref)
     }
 }
 
