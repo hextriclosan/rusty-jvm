@@ -1252,3 +1252,11 @@ fn should_support_system_get_constant_pool() {
 "#,
     );
 }
+
+#[test]
+fn should_support_assertions() {
+    assert_success(
+        "samples.javacore.assertions.trivial.AssertionExample",
+        "Assertions: enabled\n",
+    );
+}

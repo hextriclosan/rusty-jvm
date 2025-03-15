@@ -61,3 +61,22 @@ fn static_field_base(member_name_ref: i32) -> crate::error::Result<i32> {
     let class_ref = with_method_area(|area| area.load_reflection_class(class_name))?;
     Ok(class_ref)
 }
+
+// By not setting a value for `box` we break the check loop on the Java side so, just bypassing the check
+pub(crate) fn method_handle_natives_get_named_con_wrp(
+    args: &[i32],
+) -> crate::error::Result<Vec<i32>> {
+    let _what = args[0];
+    let _box_ref = args[1];
+    Ok(vec![0])
+}
+
+pub(crate) fn method_handle_natives_get_member_vm_info_wrp(
+    args: &[i32],
+) -> crate::error::Result<Vec<i32>> {
+    // returns {vmindex,vmtarget}
+    let member_name_ref = args[0];
+    let member_name = MemberName::new(member_name_ref)?;
+    let array_ref = member_name.get_member_vm_info(member_name_ref)?;
+    Ok(vec![array_ref])
+}

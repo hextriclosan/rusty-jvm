@@ -19,7 +19,8 @@ use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
 use crate::system_native::method_handle_natives::wrappers::{
-    method_handle_invoke_exact_wrp, method_handle_natives_object_field_offset_wrp,
+    method_handle_invoke_exact_wrp, method_handle_natives_get_member_vm_info_wrp,
+    method_handle_natives_get_named_con_wrp, method_handle_natives_object_field_offset_wrp,
     method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
     method_handle_natives_static_field_offset_wrp,
 };
@@ -102,7 +103,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
-        Basic(bool_stub),
+        Basic(|_args: &[i32]| return_argument_stub(&vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
     );
     table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp));
     table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp));
@@ -228,7 +229,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/Unsafe:shouldBeInitialized0:(Ljava/lang/Class;)Z",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![1])), // all classes are treated as non initialized for simplicity
+        Basic(|_args: &[i32]| return_argument_stub(&vec![0])), // all classes are treated as initialized for simplicity todo: implement real check
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
@@ -393,6 +394,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(method_handle_natives_static_field_base_wrp),
     );
     table.insert(
+        "java/lang/invoke/MethodHandleNatives:getNamedCon:(I[Ljava/lang/Object;)I",
+        Basic(method_handle_natives_get_named_con_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandleNatives:getMemberVMInfo:(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
+        Basic(method_handle_natives_get_member_vm_info_wrp),
+    );
+    table.insert(
         "java/lang/invoke/MethodHandle:invokeExact", // this is a normalized polymorphic signature
         WithMutStackFrames(method_handle_invoke_exact_wrp),
     );
@@ -434,10 +443,6 @@ pub(crate) fn invoke_native_method(
 
 fn void_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     Ok(vec![])
-}
-
-fn bool_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
-    Ok(vec![false as i32])
 }
 
 fn return_argument_stub(args: &[i32]) -> crate::error::Result<Vec<i32>> {
