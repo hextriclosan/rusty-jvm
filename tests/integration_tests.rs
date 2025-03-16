@@ -1260,3 +1260,30 @@ fn should_support_assertions() {
         "Assertions: enabled\n",
     );
 }
+
+#[test]
+fn should_support_lazy_static_initialization() {
+    assert_success(
+        "samples.fields.staticinitialization.lazy.LazyInitializationExample",
+        r#"LazyInitializationExample class loaded.
+Before accessing LazyHolder.VALUE
+Triggering another method, but NOT accessing LazyHolder.
+Now accessing LazyHolder.VALUE: LazyHolder class loaded.
+Initializing VALUE...
+Lazy Loaded Value
+Accessing LazyHolder.VALUE again: Lazy Loaded Value
+"#,
+    );
+}
+
+#[test]
+fn should_support_child_via_parent_static_init() {
+    assert_success(
+        "samples.javacore.abstractclasses.abstractclassstaticinit.AbstractClassStaticInitExample",
+        r#"Abstract static init
+Data constructor
+Data getValue
+42
+"#,
+    );
+}

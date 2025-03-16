@@ -4,6 +4,7 @@ use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::sack_value::StackValueKind;
 use crate::stack::stack_frame::StackFrame;
+use std::sync::atomic::Ordering;
 
 pub struct Executor {}
 
@@ -19,12 +20,18 @@ impl Executor {
     pub fn do_java_class_static_fields_initialization(
         java_class: &JavaClass,
     ) -> crate::error::Result<()> {
-        //todo: protect me with recursive mutex
-        if let Some(static_init_method) = java_class.try_get_method(Self::STATIC_INIT_METHOD) {
-            Engine::execute(
-                static_init_method.new_stack_frame()?,
-                &format!("static initialization {}", java_class.this_class_name()),
-            )?;
+        if java_class
+            .static_fields_initialized()
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            //todo: protect me with recursive mutex
+            if let Some(static_init_method) = java_class.try_get_method(Self::STATIC_INIT_METHOD) {
+                Engine::execute(
+                    static_init_method.new_stack_frame()?,
+                    &format!("static initialization {}", java_class.this_class_name()),
+                )?;
+            }
         }
 
         Ok(())
