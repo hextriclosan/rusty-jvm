@@ -159,10 +159,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_constant_pool_wrp),
     );
     table.insert(
-        "java/lang/Class:getNestHost0:()Ljava/lang/Class;",
-        Basic(|args: &[i32]| Ok(vec![args[0]])), // fixme we are treating all classes as non-nested (yet)
-    );
-    table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
         Basic(void_stub),
     );
