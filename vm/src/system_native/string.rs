@@ -39,7 +39,7 @@ pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> crate::error::Result<St
                 .chunks_exact(2)
                 .map(|chunk| {
                     let bytes: [u8; 2] = chunk.try_into().unwrap();
-                    u16::from_le_bytes(bytes)
+                    u16::from_le_bytes(bytes) // todo: This works for both little- and big-endian - because underlying data is always in LE, consider reworking to `from_ne_bytes`
                 })
                 .collect::<Vec<_>>();
 
