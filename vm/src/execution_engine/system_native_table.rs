@@ -103,7 +103,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
+        Basic(|_args: &[i32]| Ok(vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
     );
     table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp));
     table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp));
@@ -148,7 +148,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Class:isHidden:()Z",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![0])), // we are treating all classes as non-hidden since we don't have a way to mark them as hidden (yet)
+        Basic(|_args: &[i32]| Ok(vec![0])), // we are treating all classes as non-hidden since we don't have a way to mark them as hidden (yet)
     );
     table.insert(
         "java/lang/Class:isInstance:(Ljava/lang/Object;)Z",
@@ -159,12 +159,16 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_constant_pool_wrp),
     );
     table.insert(
+        "java/lang/Class:getNestHost0:()Ljava/lang/Class;",
+        Basic(|args: &[i32]| Ok(vec![args[0]])), // fixme we are treating all classes as non-nested (yet)
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
         Basic(void_stub),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:arrayBaseOffset0:(Ljava/lang/Class;)I",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![0])),
+        Basic(|_args: &[i32]| Ok(vec![0])),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:objectFieldOffset1:(Ljava/lang/Class;Ljava/lang/String;)J",
@@ -229,7 +233,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/Unsafe:shouldBeInitialized0:(Ljava/lang/Class;)Z",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![0])), // all classes are treated as initialized for simplicity todo: implement real check
+        Basic(|_args: &[i32]| Ok(vec![0])), // all classes are treated as initialized for simplicity todo: implement real check
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
@@ -237,14 +241,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Float:floatToRawIntBits:(F)I",
-        Basic(return_argument_stub),
+        Basic(|args: &[i32]| Ok(args.to_vec())),
     );
     table.insert(
         "java/lang/Double:doubleToRawLongBits:(D)J",
         Basic(|args: &[i32]| {
             let mut vec = args.to_vec();
             vec.reverse();
-            return_argument_stub(&vec)
+            Ok(vec)
         }),
     );
     table.insert(
@@ -252,7 +256,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(|args: &[i32]| {
             let mut vec = args.to_vec();
             vec.reverse();
-            return_argument_stub(&vec)
+            Ok(vec)
         }),
     );
     table.insert(
@@ -261,20 +265,20 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/CDS:getRandomSeedForDumping:()J",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![1337, 42])), // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
+        Basic(|_args: &[i32]| Ok(vec![1337, 42])), // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
     );
     table.insert(
         "jdk/internal/misc/CDS:getCDSConfigStatus:()I",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![0])), // Class Data Sharing (CDS) is disabled
+        Basic(|_args: &[i32]| Ok(vec![0])), // Class Data Sharing (CDS) is disabled
     );
     table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
     table.insert(
         "java/lang/Runtime:maxMemory:()J",
-        Basic(|_args: &[i32]| return_argument_stub(&i64_to_vec(i64::MAX))),
+        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))),
     );
     table.insert(
         "java/lang/Runtime:availableProcessors:()I",
-        Basic(|_args: &[i32]| return_argument_stub(&vec![14])),
+        Basic(|_args: &[i32]| Ok(vec![14])),
     );
     table.insert(
         "jdk/internal/util/SystemProps$Raw:platformProperties:()[Ljava/lang/String;",
@@ -293,7 +297,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/FileDescriptor:getAppend:(I)Z",
         Basic(|args: &[i32]| {
             let _fd = args[0];
-            return_argument_stub(&vec![1])
+            Ok(vec![1])
         }),
     );
     table.insert(
@@ -308,14 +312,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "jdk/internal/misc/Signal:findSignal0:(Ljava/lang/String;)I",
         Basic(|args: &[i32]| {
             let _fd = args[0];
-            return_argument_stub(&vec![0])
+            Ok(vec![0])
         }),
     );
     table.insert(
         "jdk/internal/misc/Signal:handle0:(IJ)J",
         Basic(|args: &[i32]| {
             let _fd = args[0];
-            return_argument_stub(&vec![0, 0])
+            Ok(vec![0, 0])
         }),
     );
     table.insert(
@@ -326,7 +330,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
         Basic(|_args: &[i32]| {
-            return_argument_stub(&vec![0, 1]) // it's always 1L, for spawning new threads real one should be incremented
+            Ok(vec![0, 1]) // it's always 1L, for spawning new threads real one should be incremented
         }),
     );
     table.insert("java/lang/Thread:setPriority0:(I)V", Basic(void_stub));
@@ -334,13 +338,13 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
         Basic(|_args: &[i32]| {
-            return_argument_stub(&vec![0]) // false
+            Ok(vec![0]) // false
         }),
     );
     table.insert(
         "java/security/AccessController:getStackAccessControlContext:()Ljava/security/AccessControlContext;",
         Basic(|_args: &[i32]| {
-            return_argument_stub(&vec![0]) // null
+            Ok(vec![0]) // null
         }
     ));
     table.insert(
@@ -447,8 +451,4 @@ pub(crate) fn invoke_native_method(
 
 fn void_stub(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     Ok(vec![])
-}
-
-fn return_argument_stub(args: &[i32]) -> crate::error::Result<Vec<i32>> {
-    Ok(args.to_vec())
 }
