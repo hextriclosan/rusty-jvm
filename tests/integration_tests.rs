@@ -1287,3 +1287,13 @@ Data getValue
 "#,
     );
 }
+
+#[test]
+fn should_do_trivial_operations_on_enums() {
+    assert_success("samples.javacore.enums.trivial.EnumsExample",
+    r#"FormatStyle values: [FULL, LONG, MEDIUM, SHORT]
+FormatStyle.MEDIUM name: MEDIUM
+FormatStyle.MEDIUM ordinal: 2
+medium == anotherMedium: true
+"#);
+}
