@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::execution_engine::executor::Executor;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::helper::strip_nest_host;
 use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
@@ -425,9 +426,7 @@ fn get_nest_host0(clazz_ref: i32) -> crate::error::Result<i32> {
     let clazz_name =
         with_method_area(|method_area| method_area.get_from_reflection_table(clazz_ref))?;
 
-    let nest_host_class_ref = clazz_name
-        .find('$')
-        .map(|index| &clazz_name[..index])
+    let nest_host_class_ref = strip_nest_host(clazz_name.as_str())
         .map(|name| with_method_area(|method_area| method_area.load_reflection_class(name)))
         .unwrap_or(Ok(clazz_ref));
 

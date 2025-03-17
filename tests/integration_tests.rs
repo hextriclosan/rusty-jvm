@@ -1316,3 +1316,21 @@ ClassGetNestHostExample[] (class [Lsamples.reflection.trivial.classgetnesthostex
 "#,
     );
 }
+
+#[test]
+fn should_support_reflection_are_nest_mates() {
+    assert_success(
+        "samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample",
+        r#"class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$NestedClass are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$InnerClass are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$NestedClass and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$InnerClass are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$1LocalClass are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$1 are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$2 are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$1 and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$2 are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class java.lang.String are nest mates: false
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class [Lsamples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample; are nest mates: false
+"#,
+    );
+}

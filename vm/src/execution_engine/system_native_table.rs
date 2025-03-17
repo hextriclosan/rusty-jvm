@@ -27,7 +27,8 @@ use crate::system_native::method_handle_natives::wrappers::{
 use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::system_native::reflect_array::new_array_wrp;
 use crate::system_native::reflecton::{
-    reflection_get_caller_class_wrp, reflection_get_class_access_flags_wrp,
+    reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
+    reflection_get_class_access_flags_wrp,
 };
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{
@@ -368,6 +369,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/reflect/Reflection:getClassAccessFlags:(Ljava/lang/Class;)I",
         Basic(reflection_get_class_access_flags_wrp),
+    );
+    table.insert(
+        "jdk/internal/reflect/Reflection:areNestMates:(Ljava/lang/Class;Ljava/lang/Class;)Z",
+        Basic(reflection_are_nest_mates_wrp),
     );
     table.insert(
         "java/security/AccessController:ensureMaterializedForStackWalk:(Ljava/lang/Object;)V",
