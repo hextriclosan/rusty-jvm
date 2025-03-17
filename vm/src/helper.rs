@@ -66,3 +66,7 @@ pub fn default_value(type_descriptor: &TypeDescriptor) -> crate::error::Result<V
 pub fn argument_length(args: &[TypeDescriptor]) -> crate::error::Result<i32> {
     args.iter().map(get_length).sum()
 }
+
+pub fn strip_nest_host(class_name: &str) -> Option<&str> {
+    class_name.find('$').map(|index| &class_name[..index])
+}
