@@ -6,9 +6,9 @@ use crate::stack::stack_frame::StackFrames;
 use crate::system_native::class::{
     class_init_class_name_wrp, class_is_instance_wrp, for_name0_wrp, get_constant_pool_wrp,
     get_declared_constructors0_wrp, get_declared_methods0_wrp, get_declaring_class0_wrp,
-    get_enclosing_method0_wrp, get_interfaces0_wrp, get_modifiers_wrp, get_primitive_class_wrp,
-    get_raw_annotations_wrp, get_simple_binary_name0_wrp, get_superclass_wrp, is_array_wrp,
-    is_assignable_from_wrp, is_interface_wrp, is_primitive_wrp,
+    get_enclosing_method0_wrp, get_interfaces0_wrp, get_modifiers_wrp, get_nest_host0_wrp,
+    get_primitive_class_wrp, get_raw_annotations_wrp, get_simple_binary_name0_wrp,
+    get_superclass_wrp, is_array_wrp, is_assignable_from_wrp, is_interface_wrp, is_primitive_wrp,
 };
 use crate::system_native::class_loader::define_class0_wrp;
 use crate::system_native::constant_pool::{
@@ -157,6 +157,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Class:getConstantPool:()Ljdk/internal/reflect/ConstantPool;",
         Basic(get_constant_pool_wrp),
+    );
+    table.insert(
+        "java/lang/Class:getNestHost0:()Ljava/lang/Class;",
+        Basic(get_nest_host0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",

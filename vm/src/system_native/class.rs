@@ -415,3 +415,21 @@ fn get_constant_pool(clazz_ref: i32) -> crate::error::Result<i32> {
 
     Ok(constant_pool_ref)
 }
+
+pub(crate) fn get_nest_host0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let clazz_ref = args[0];
+    let nest_host_class_ref = get_nest_host0(clazz_ref)?;
+    Ok(vec![nest_host_class_ref])
+}
+fn get_nest_host0(clazz_ref: i32) -> crate::error::Result<i32> {
+    let clazz_name =
+        with_method_area(|method_area| method_area.get_from_reflection_table(clazz_ref))?;
+
+    let nest_host_class_ref = clazz_name
+        .find('$')
+        .map(|index| &clazz_name[..index])
+        .map(|name| with_method_area(|method_area| method_area.load_reflection_class(name)))
+        .unwrap_or(Ok(clazz_ref));
+
+    nest_host_class_ref
+}
