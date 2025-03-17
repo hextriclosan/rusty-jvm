@@ -18,6 +18,7 @@ impl VM {
         Self::prelude()?;
 
         let internal_name = &main_class_name.replace('.', "/");
+        Executor::do_static_fields_initialization(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
         Executor::invoke_static_method(internal_name, "main:([Ljava/lang/String;)V", &[])
     }
 

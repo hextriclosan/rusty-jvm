@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
+use crate::execution_engine::executor::Executor;
 use crate::execution_engine::invoker::invoke;
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
@@ -173,6 +174,7 @@ pub(crate) fn process(
                 CPoolHelper::get_full_method_info,
             )?;
             let rc = with_method_area(|method_area| method_area.get(&class_name))?;
+            Executor::do_java_class_static_fields_initialization(&rc)?;
             let java_method = rc.get_method(&full_signature)?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), false)?;

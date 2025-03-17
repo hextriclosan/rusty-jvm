@@ -11,7 +11,7 @@ use getset::Getters;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 const INTERFACE: u16 = 0x00000200;
@@ -127,13 +127,7 @@ impl JavaClass {
     }
 
     pub fn static_field(&self, field_name: &str) -> crate::error::Result<Option<Arc<Field>>> {
-        if self
-            .static_fields_initialized
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-        {
-            Executor::do_java_class_static_fields_initialization(self)?;
-        }
+        Executor::do_java_class_static_fields_initialization(self)?;
 
         Ok(self
             .static_fields
@@ -331,6 +325,10 @@ impl JavaClass {
 
     pub fn annotations_raw(&self) -> &Option<Vec<u8>> {
         &self.annotations_raw
+    }
+
+    pub fn static_fields_initialized(&self) -> &AtomicBool {
+        &self.static_fields_initialized
     }
 }
 

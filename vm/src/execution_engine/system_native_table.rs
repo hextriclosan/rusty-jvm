@@ -410,6 +410,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(define_class0_wrp),
     );
     table.insert(
+        "java/lang/ClassLoader:registerNatives:()V",
+        Basic(void_stub),
+    );
+    table.insert(
         "jdk/internal/reflect/ConstantPool:getUTF8At0:(Ljava/lang/Object;I)Ljava/lang/String;",
         Basic(constant_pool_get_utf8_at0_wrp),
     );
