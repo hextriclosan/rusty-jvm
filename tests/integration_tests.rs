@@ -1290,10 +1290,29 @@ Data getValue
 
 #[test]
 fn should_do_trivial_operations_on_enums() {
-    assert_success("samples.javacore.enums.trivial.EnumsExample",
-    r#"FormatStyle values: [FULL, LONG, MEDIUM, SHORT]
+    assert_success(
+        "samples.javacore.enums.trivial.EnumsExample",
+        r#"FormatStyle values: [FULL, LONG, MEDIUM, SHORT]
 FormatStyle.MEDIUM name: MEDIUM
 FormatStyle.MEDIUM ordinal: 2
 medium == anotherMedium: true
-"#);
+"#,
+    );
+}
+
+#[test]
+fn should_support_class_get_nest_host() {
+    assert_success(
+        "samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample",
+        r#"ClassGetNestHostExample (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+NestedClass (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$NestedClass): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+InnerClass (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$InnerClass): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+LocalClass (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$1LocalClass): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+Runnable (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$1): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+InnerInterface (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$2): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+String (class java.lang.String): class java.lang.String
+int (int): int
+ClassGetNestHostExample[] (class [Lsamples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample;): class [Lsamples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample;
+"#,
+    );
 }
