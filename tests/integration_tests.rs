@@ -1345,3 +1345,14 @@ class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExamp
 "#,
     );
 }
+
+#[test]
+fn should_support_class_for_name_method() {
+    assert_success(
+        "samples.reflection.trivial.forname.ClassForNameExample",
+        r#"First static block
+class samples.reflection.trivial.forname.First
+class samples.reflection.trivial.forname.Second
+"#,
+    );
+}

@@ -172,7 +172,7 @@ pub(crate) fn for_name0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
 }
 fn for_name0(
     name_ref: i32,
-    _initialize: bool,
+    initialize: bool,
     _loader_ref: i32,
     _caller_ref: i32,
 ) -> crate::error::Result<i32> {
@@ -180,6 +180,10 @@ fn for_name0(
     let internal_name = name.replace('.', "/");
     let reflection_ref =
         with_method_area(|method_area| method_area.load_reflection_class(&internal_name))?;
+
+    if initialize {
+        Executor::do_static_fields_initialization(&internal_name)?;
+    }
 
     Ok(reflection_ref)
 }
