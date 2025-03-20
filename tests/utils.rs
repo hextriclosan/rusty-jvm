@@ -7,6 +7,14 @@ pub fn is_bigendian() -> bool {
     cfg!(target_endian = "big")
 }
 
+pub fn line_ending() -> &'static str {
+    if cfg!(windows) {
+        "\r\n"
+    } else {
+        "\n"
+    }
+}
+
 #[allow(dead_code)]
 pub fn assert_success(entry: &str, expected: &str) {
     #[cfg(target_os = "windows")]

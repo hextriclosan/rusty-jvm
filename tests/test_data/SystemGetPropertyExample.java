@@ -2,14 +2,34 @@ package samples.system.getpropertyexample;
 
 public class SystemGetPropertyExample {
     public static void main(String[] args) {
-        print("line.separator");
-        print("sun.cpu.endian");
+        generateJson("line.separator", "sun.cpu.endian", "os.version");
     }
 
-    private static void print(String name) {
-        String value = System.getProperty(name);
-        System.out.print(name);
-        System.out.print(": ");
-        System.out.println(value);
+    private static void generateJson(String... properties) {
+        System.out.print("{");
+        for (int i = 0; i < properties.length; i++) {
+            String name = properties[i];
+            String value = escapeString(System.getProperty(name));
+            System.out.print("\"");
+            System.out.print(name);
+            System.out.print("\": \"");
+            System.out.print(value);
+            System.out.print("\"");
+            if (i < properties.length - 1) {
+                System.out.print(", ");
+            }
+        }
+        System.out.println("}");
+    }
+
+    private static String escapeString(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t");
     }
 }

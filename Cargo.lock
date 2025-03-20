@@ -377,6 +377,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
 
 [[package]]
+name = "os_info"
+version = "3.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a604e53c24761286860eba4e2c8b23a0161526476b1de520139d69cdb85a6b5"
+dependencies = [
+ "log",
+ "windows-sys",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -565,6 +575,8 @@ version = "0.1.0"
 dependencies = [
  "assert_cmd",
  "clap",
+ "regex",
+ "serde_json",
  "vm",
 ]
 
@@ -798,6 +810,7 @@ dependencies = [
  "num-traits",
  "num_enum",
  "once_cell",
+ "os_info",
  "serde",
  "serde_json",
  "tracing",

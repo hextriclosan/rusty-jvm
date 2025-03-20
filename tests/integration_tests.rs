@@ -344,7 +344,9 @@ upcasting(): [10, 20, 30]
     );
 }
 
-use crate::utils::{assert_file, get_output, is_bigendian};
+use crate::utils::{assert_file, get_output, is_bigendian, line_ending};
+use regex::Regex;
+use serde_json::Value;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[test]
@@ -1060,13 +1062,22 @@ LocalClass in constructor enclosing method: testEnclosingMethods
 
 #[test]
 fn should_return_system_properties() {
-    assert_success(
-        "samples.system.getpropertyexample.SystemGetPropertyExample",
-        &format!(
-            "line.separator: \n\nsun.cpu.endian: {}\n",
-            if is_bigendian() { "big" } else { "little" }
-        ),
+    let output = get_output("samples.system.getpropertyexample.SystemGetPropertyExample");
+    let json: Value = serde_json::from_str(&output).expect("Output is not valid JSON");
+
+    // Check exact values
+    assert_eq!(json["line.separator"], line_ending());
+    assert_eq!(
+        json["sun.cpu.endian"],
+        if is_bigendian() { "big" } else { "little" }
     );
+
+    // Check os.version format
+    let os_version = json["os.version"]
+        .as_str()
+        .expect("os.version is not a string");
+    let re = Regex::new(r"^\d+\.\d+\.\d+$").unwrap();
+    assert!(re.is_match(os_version), "os.version format is incorrect");
 }
 
 #[test]

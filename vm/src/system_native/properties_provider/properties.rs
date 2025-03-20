@@ -1,3 +1,4 @@
+use once_cell::sync::OnceCell;
 pub(crate) fn is_bigendian() -> bool {
     #[cfg(target_endian = "big")]
     {
@@ -29,4 +30,9 @@ pub(crate) fn line_separator() -> &'static str {
     {
         "\n"
     }
+}
+
+static OS_INFO: OnceCell<String> = OnceCell::new();
+pub(crate) fn os_version() -> &'static str {
+    OS_INFO.get_or_init(|| os_info::get().version().to_string())
 }
