@@ -6,6 +6,7 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /** MethodHandleExample demonstrates a full range of MethodHandles capabilities, including:
  * - findStatic – Static method invocation (Math.pow).
@@ -37,10 +38,10 @@ public class MethodHandleExample {
     }
 
     private static void demonstrateFindStatic(MethodHandles.Lookup lookup) throws Throwable {
-        System.out.println("------- findStatic (Math.pow) -------");
-        MethodType methodType = MethodType.methodType(double.class, double.class, double.class);
-        MethodHandle mh = lookup.findStatic(Math.class, "pow", methodType);
-        sampleMethod(methodType, mh, (double) mh.invokeExact(2.0, 3.0));
+        System.out.println("------- findStatic (Arrays.toString) -------");
+        MethodType methodType = MethodType.methodType(String.class, int[].class);
+        MethodHandle mh = lookup.findStatic(Arrays.class, "toString", methodType);
+        sampleMethod(methodType, mh, (String) mh.invokeExact(new int[]{1, 2, 3}));
     }
 
     private static void demonstrateFindVirtual(MethodHandles.Lookup lookup) throws Throwable {

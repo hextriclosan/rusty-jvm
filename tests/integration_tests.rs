@@ -1175,8 +1175,8 @@ fn should_work_with_method_handle() {
     assert_success(
         "samples.reflection.methodhandleexample.MethodHandleExample",
         r#"MethodHandles Lookup: samples.reflection.methodhandleexample.MethodHandleExample
-------- findStatic (Math.pow) -------
-(double,double)double - MethodHandle(double,double)double: 8.0
+------- findStatic (Arrays.toString) -------
+(int[])String - MethodHandle(int[])String: [1, 2, 3]
 ------- findVirtual (String.regionMatches) -------
 (boolean,int,String,int,int)boolean - MethodHandle(String,boolean,int,String,int,int)boolean: true
 ------- findSpecial (Parent.testMethod) -------
