@@ -61,9 +61,6 @@ impl VM {
     }
 
     fn init() -> crate::error::Result<()> {
-        // explicit static initialization of java.lang.ref.Reference needed for creating JavaLangRefAccess instance
-        Executor::do_static_fields_initialization("java/lang/ref/Reference")?;
-        Executor::do_static_fields_initialization("java/lang/ref/Cleaner")?;
         Executor::do_static_fields_initialization("java/lang/reflect/AccessibleObject")?;
 
         Executor::do_static_fields_initialization("jdk/internal/misc/UnsafeConstants")?;
