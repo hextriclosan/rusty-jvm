@@ -1,6 +1,8 @@
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
-use crate::system_native::properties_provider::properties::{endianness, line_separator};
+use crate::system_native::properties_provider::properties::{
+    endianness, line_separator, os_version,
+};
 
 pub(crate) fn platform_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let string_array_ref = platform_properties()?;
@@ -60,7 +62,7 @@ fn get_platform_properties() -> Vec<&'static str> {
         line_separator(), // "line.separator"
         "os.arch_VALUE",
         "os.name_VALUE",
-        "os.version_VALUE",
+        os_version(), // "os.version",
         "path.separator_VALUE",
         "socksNonProxyHosts_VALUE",
         "socksProxyHost_VALUE",
