@@ -1364,3 +1364,14 @@ fn should_calling_parent_static_method_via_child_class() {
         "Parent method called\n",
     );
 }
+
+#[test]
+fn should_calling_parent_static_block_before_child() {
+    assert_success(
+        "samples.inheritance.parentstaticinit.InitParentStaticBlockBeforeChild",
+        r#"Parent static block
+Child static block
+Child method called
+"#,
+    );
+}
