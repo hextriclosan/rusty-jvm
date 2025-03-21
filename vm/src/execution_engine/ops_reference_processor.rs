@@ -168,14 +168,17 @@ pub(crate) fn process(
             trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESTATIC => {
-            let (class_name, full_signature, _) = get_class_name_and_signature(
+            let (class_name_to_start_lookup_from, full_signature, _) = get_class_name_and_signature(
                 stack_frames,
                 current_class_name,
                 CPoolHelper::get_full_method_info,
             )?;
-            let rc = with_method_area(|method_area| method_area.get(&class_name))?;
+            let rc = with_method_area(|method_area| method_area.get(&class_name_to_start_lookup_from))?;
             Executor::do_java_class_static_fields_initialization(&rc)?;
-            let java_method = rc.get_method(&full_signature)?;
+            let java_method = with_method_area(|method_area| {
+                method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
+                    .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokestatic")))
+            })?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), false)?;
             invoke(
@@ -183,9 +186,9 @@ pub(crate) fn process(
                 &full_signature,
                 &method_args,
                 Arc::clone(&java_method),
-                &class_name,
+                &class_name_to_start_lookup_from,
             )?;
-            trace!("INVOKESTATIC -> {class_name}.{full_signature}({method_args:?})");
+            trace!("INVOKESTATIC -> {class_name_to_start_lookup_from}.{full_signature}({method_args:?})");
         }
         INVOKEINTERFACE => {
             let index = last_frame_mut(stack_frames)?.extract_two_bytes() as u16;

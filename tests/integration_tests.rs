@@ -1356,3 +1356,11 @@ class samples.reflection.trivial.forname.Second
 "#,
     );
 }
+
+#[test]
+fn should_calling_parent_static_method_via_child_class() {
+    assert_success(
+        "samples.inheritance.staticmethod.ParentStaticMethodCalledViaChild",
+        "Parent method called\n",
+    );
+}
