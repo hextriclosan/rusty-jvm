@@ -20,6 +20,18 @@ impl Executor {
     pub fn do_java_class_static_fields_initialization(
         java_class: &JavaClass,
     ) -> crate::error::Result<()> {
+        let hierarchy = java_class.instance_fields_hierarchy()?;
+        for name in hierarchy.keys() {
+            let jc = with_method_area(|area| area.get(name))?;
+            Self::do_java_class_static_fields_initialization_impl(&jc)?;
+        }
+
+        Ok(())
+    }
+
+    fn do_java_class_static_fields_initialization_impl(
+        java_class: &JavaClass,
+    ) -> crate::error::Result<()> {
         if java_class
             .static_fields_initialized()
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
