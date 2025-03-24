@@ -249,6 +249,9 @@ pub(crate) fn process(
                         "Error getting class name by index {class_constpool_index}"
                     ))
                 })?;
+
+            Executor::do_static_fields_initialization(&class_to_invoke_new_for)?;
+
             let instance_with_default_fields = with_method_area(|method_area| {
                 method_area.create_instance_with_default_fields(&class_to_invoke_new_for)
             })?;

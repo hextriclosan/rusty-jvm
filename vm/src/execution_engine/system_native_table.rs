@@ -305,6 +305,8 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/FileDescriptor:close0:()V",
         Basic(file_descriptor_close0_wrp),
     );
+    table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
+    table.insert("java/io/FileInputStream:initIDs:()V", Basic(void_stub));
     table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",
         Basic(void_stub),

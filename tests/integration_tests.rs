@@ -1375,3 +1375,15 @@ Child method called
 "#,
     );
 }
+
+#[test]
+fn should_call_static_init_before_constructor_invocation() {
+    assert_success(
+        "samples.staticinit.byconstructor.StaticInitializationByConstructorExample",
+        r#"main starts
+SomeClass static block
+SomeClass constructor
+main ends
+"#,
+    );
+}
