@@ -76,7 +76,7 @@ pub(crate) fn set_out0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     Ok(vec![])
 }
 fn set_out0(print_stream_ref: i32) -> crate::error::Result<()> {
-    let field_ref = {
+    let (_, field_ref) = {
         let field_ref = with_method_area(|method_area| {
             method_area.lookup_for_static_field("java/lang/System", "out")
         })?;

@@ -23,9 +23,11 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
-            let field = with_method_area(|method_area| {
+            let (fields_class_name, field) = with_method_area(|method_area| {
                 method_area.lookup_for_static_field(&class_name, &field_name)
             })?;
+
+            Executor::do_static_fields_initialization(&fields_class_name)?;
 
             field
                 .raw_value()?
@@ -43,13 +45,15 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
-            let (len, field_ref) = {
-                let field_ref = with_method_area(|method_area| {
+            let (len, fields_class_name, field_ref) = {
+                let (fields_class_name, field_ref) = with_method_area(|method_area| {
                     method_area.lookup_for_static_field(&class_name, &field_name)
                 })?;
                 let len = get_length(field_ref.type_descriptor())?;
-                (len, field_ref)
+                (len, fields_class_name, field_ref)
             };
+
+            Executor::do_static_fields_initialization(&fields_class_name)?;
 
             let mut value = Vec::with_capacity(len as usize);
             for _ in 0..len {

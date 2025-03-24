@@ -127,8 +127,6 @@ impl JavaClass {
     }
 
     pub fn static_field(&self, field_name: &str) -> crate::error::Result<Option<Arc<Field>>> {
-        Executor::do_java_class_static_fields_initialization(self)?;
-
         Ok(self
             .static_fields
             .field_by_name
@@ -255,7 +253,7 @@ impl JavaClass {
         self.get_method_full(full_signature)
             .and_then(|(_index, method)| Some(Arc::clone(&method)))
             .ok_or_else(|| {
-                Error::new_native(&format!(
+                Error::new_execution(&format!(
                     "Method {full_signature} not found in {}",
                     self.this_class_name
                 ))
