@@ -1387,3 +1387,14 @@ main ends
 "#,
     );
 }
+
+#[test]
+fn should_init_only_parent_class_when_its_field_is_accessed() {
+    assert_success(
+        "samples.staticinit.parentstaticfield.OnlyTheClassThatDeclaresStaticFieldIsInitialized",
+        r#"main starts
+1729
+main ends
+"#,
+    );
+}

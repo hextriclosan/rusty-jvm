@@ -360,17 +360,17 @@ impl MethodArea {
         &self,
         class_name: &str,
         field_name: &str,
-    ) -> crate::error::Result<Arc<Field>> {
+    ) -> crate::error::Result<(String, Arc<Field>)> {
         let rc = self.get(class_name)?;
 
         match rc.static_field(field_name)? {
-            Some(field) => Ok(Arc::clone(&field)),
+            Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
             None => match rc.parent() {
                 Some(parent_class_name) => {
                     self.lookup_for_static_field(&parent_class_name, field_name)
                 }
                 None => Err(Error::new_execution(&format!(
-                    "No field {field_name} found in class hierarchy"
+                    "No field {class_name}.{field_name} found in class hierarchy"
                 ))),
             },
         }
