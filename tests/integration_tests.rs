@@ -1429,3 +1429,29 @@ Main method complete
 "#,
     );
 }
+
+#[test]
+fn should_not_initialize_super_interfaces() {
+    assert_success(
+        "samples.staticinit.interfaceinitializationdoesnotinitializesuperinterfaces.InterfaceInitializationDoesNotInitializeSuperinterfaces",
+        r#"main starts
+1
+j=3
+jj=4
+3
+main ends
+"#,
+    );
+}
+
+#[test]
+fn should_use_static_fields_from_parents() {
+    assert_success(
+        "samples.staticinit.parentstaticfieldaccess.StaticFieldAccessFromParentExample",
+        r#"PARENT_FIELD: 1
+CHILD_FIELD: 2
+PARENT_INTERFACE_FIELD: 3
+CHILD_INTERFACE_FIELD: 4
+"#,
+    );
+}

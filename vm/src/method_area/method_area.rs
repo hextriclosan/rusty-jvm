@@ -363,6 +363,19 @@ impl MethodArea {
     ) -> crate::error::Result<(String, Arc<Field>)> {
         let rc = self.get(class_name)?;
 
+        if rc.is_interface() {
+            self.lookup_for_static_field_in_interface(&rc, class_name, field_name)
+        } else {
+            self.lookup_for_static_field_in_class(&rc, class_name, field_name)
+        }
+    }
+
+    fn lookup_for_static_field_in_class(
+        &self,
+        rc: &Arc<JavaClass>,
+        class_name: &str,
+        field_name: &str,
+    ) -> crate::error::Result<(String, Arc<Field>)> {
         match rc.static_field(field_name)? {
             Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
             None => match rc.parent() {
@@ -373,6 +386,32 @@ impl MethodArea {
                     "No field {class_name}.{field_name} found in class hierarchy"
                 ))),
             },
+        }
+    }
+
+    fn lookup_for_static_field_in_interface(
+        &self,
+        rc: &Arc<JavaClass>,
+        class_name: &str,
+        field_name: &str,
+    ) -> crate::error::Result<(String, Arc<Field>)> {
+        match rc.static_field(field_name)? {
+            Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
+            None => {
+                let interfaces = rc.interfaces();
+                for interface_name in interfaces.iter() {
+                    match self.lookup_for_static_field(&interface_name, field_name) {
+                        Ok((interface_class_name, field)) => {
+                            return Ok((interface_class_name, field));
+                        }
+                        Err(_) => continue,
+                    }
+                }
+
+                Err(Error::new_execution(&format!(
+                    "No field {class_name}.{field_name} found in class hierarchy"
+                )))
+            }
         }
     }
 
