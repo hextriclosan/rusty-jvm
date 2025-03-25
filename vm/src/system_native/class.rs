@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::executor::Executor;
+use crate::execution_engine::static_init::StaticInit;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::strip_nest_host;
@@ -182,7 +183,7 @@ fn for_name0(
         with_method_area(|method_area| method_area.load_reflection_class(&internal_name))?;
 
     if initialize {
-        Executor::do_static_fields_initialization(&internal_name)?;
+        StaticInit::initialize(&internal_name)?;
     }
 
     Ok(reflection_ref)

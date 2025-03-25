@@ -1,5 +1,4 @@
 use crate::error::Error;
-use crate::execution_engine::executor::Executor;
 use crate::heap::java_instance::{ClassName, FieldNameType};
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::field::Field;

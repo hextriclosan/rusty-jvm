@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
-use crate::execution_engine::executor::Executor;
 use crate::execution_engine::invoker::invoke;
 use crate::execution_engine::opcode::*;
+use crate::execution_engine::static_init::StaticInit;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::{argument_length, get_length};
 use crate::method_area::cpool_helper::CPoolHelper;
@@ -27,7 +27,7 @@ pub(crate) fn process(
                 method_area.lookup_for_static_field(&class_name, &field_name)
             })?;
 
-            Executor::do_static_fields_initialization(&fields_class_name)?;
+            StaticInit::initialize(&fields_class_name)?;
 
             field
                 .raw_value()?
@@ -53,7 +53,7 @@ pub(crate) fn process(
                 (len, fields_class_name, field_ref)
             };
 
-            Executor::do_static_fields_initialization(&fields_class_name)?;
+            StaticInit::initialize(&fields_class_name)?;
 
             let mut value = Vec::with_capacity(len as usize);
             for _ in 0..len {
@@ -172,13 +172,15 @@ pub(crate) fn process(
             trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESTATIC => {
-            let (class_name_to_start_lookup_from, full_signature, _) = get_class_name_and_signature(
-                stack_frames,
-                current_class_name,
-                CPoolHelper::get_full_method_info,
-            )?;
-            let rc = with_method_area(|method_area| method_area.get(&class_name_to_start_lookup_from))?;
-            Executor::do_java_class_static_fields_initialization(&rc)?;
+            let (class_name_to_start_lookup_from, full_signature, _) =
+                get_class_name_and_signature(
+                    stack_frames,
+                    current_class_name,
+                    CPoolHelper::get_full_method_info,
+                )?;
+            let rc =
+                with_method_area(|method_area| method_area.get(&class_name_to_start_lookup_from))?;
+            StaticInit::initialize_java_class(&rc)?;
             let java_method = with_method_area(|method_area| {
                 method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
                     .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokestatic")))
@@ -254,7 +256,7 @@ pub(crate) fn process(
                     ))
                 })?;
 
-            Executor::do_static_fields_initialization(&class_to_invoke_new_for)?;
+            StaticInit::initialize(&class_to_invoke_new_for)?;
 
             let instance_with_default_fields = with_method_area(|method_area| {
                 method_area.create_instance_with_default_fields(&class_to_invoke_new_for)
