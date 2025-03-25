@@ -1,15 +1,13 @@
 use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
-use crate::execution_engine::executor::Executor;
 use crate::execution_engine::invoker::invoke;
+use crate::execution_engine::static_init::StaticInit;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::field::Field;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrames;
-use crate::system_native::method_handle_natives::member_name::{
-    MemberName, ReferenceKind, ReferenceKind::*,
-};
+use crate::system_native::method_handle_natives::member_name::{MemberName, ReferenceKind::*};
 use crate::system_native::method_handle_natives::offsets::{
     get_field_offset, get_static_field_offset,
 };
@@ -38,7 +36,7 @@ pub fn invoke_exact(
 
     match reference_kind {
         REF_invokeStatic | REF_newInvokeSpecial | REF_getStatic | REF_putStatic => {
-            Executor::do_static_fields_initialization(member_name.class_name())?
+            StaticInit::initialize(member_name.class_name())?
         }
         _ => {}
     }

@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::executor::Executor;
+use crate::execution_engine::static_init::StaticInit;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::{with_method_area, MethodArea};
@@ -18,7 +19,7 @@ impl VM {
         Self::prelude()?;
 
         let internal_name = &main_class_name.replace('.', "/");
-        Executor::do_static_fields_initialization(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
+        StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
         Executor::invoke_static_method(internal_name, "main:([Ljava/lang/String;)V", &[])
     }
 
@@ -61,9 +62,9 @@ impl VM {
     }
 
     fn init() -> crate::error::Result<()> {
-        Executor::do_static_fields_initialization("java/lang/reflect/AccessibleObject")?;
+        StaticInit::initialize("java/lang/reflect/AccessibleObject")?;
 
-        Executor::do_static_fields_initialization("jdk/internal/misc/UnsafeConstants")?;
+        StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
         let lc = with_method_area(|area| area.get("jdk/internal/misc/UnsafeConstants"))?;
         let big_endian = lc.static_field("BIG_ENDIAN")?.unwrap();
         big_endian.set_raw_value(vec![if is_bigendian() { 1 } else { 0 }])?;
