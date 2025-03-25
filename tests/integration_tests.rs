@@ -1398,3 +1398,34 @@ main ends
 "#,
     );
 }
+
+#[test]
+fn should_call_static_init_by_method_handle() {
+    assert_success(
+        "samples.staticinit.bymethodhandle.MethodHandleStaticInitCases",
+        r#"Main method started
+=== Case 1: Invoking a static method (triggers initialization) ===
+MethodHandle obtained, but class not initialized yet
+Static block executed: Class1 initialized
+Class1: Static method invoked
+
+=== Case 2: Invoking a constructor (triggers initialization) ===
+Constructor MethodHandle obtained, but class not initialized yet
+Static block executed: Class2 initialized
+Class2: Constructor executed
+
+=== Case 3: Accessing a static field getter (triggers initialization) ===
+Static field MethodHandle obtained, but class not initialized yet
+Static block executed: Class3 initialized
+Static field value: 42
+
+=== Case 4: Accessing a static field setter (triggers initialization) ===
+Static field setter MethodHandle obtained, but class not initialized yet
+Static block executed: Class4 initialized
+Initial STATIC_FIELD value: 10
+Updated STATIC_FIELD: 100
+
+Main method complete
+"#,
+    );
+}
