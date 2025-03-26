@@ -1455,3 +1455,29 @@ CHILD_INTERFACE_FIELD: 4
 "#,
     );
 }
+
+#[test]
+fn should_() {
+    assert_success(
+        "samples.staticinit.const_vs_nonconst_fields.ConstVsNonConstFieldsExample",
+        r#"CONST_INT_FIELD: 1337
+CONST_STRING_FIELD: Hello, Constant!
+COMPILE_TIME_CONST_FILED: 12.56
+CONST_FILED_FROM_ANOTHER_CLASS: 25.12
+NonConst1 static block
+NON_CONST_INT_FIELD: 1337
+NonConst2 static block
+NON_CONST_STRING_FIELD: Hello, Non-Constant!
+NonConst3 static block
+RUNTIME_INITIALIZED_NON_CONST_FILED: 42
+NonConst4 static block
+NON_CONST_FILED_DEPENDS_ON_ANOTHER: 12.56
+NonConst5 static block
+NON_CONST_FILED_DEPENDS_ON_ANOTHER_CLASS: 25.12
+NonConst6 static block
+NON_CONST_FILED_CONDITIONAL: 10
+NonConst7 static block
+NON_CONST_FILED_ASSIGNED_IN_STATIC_BLOCK: 1337
+"#,
+    );
+}
