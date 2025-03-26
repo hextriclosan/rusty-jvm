@@ -1494,3 +1494,42 @@ exiting main
 "#,
     );
 }
+
+#[test]
+fn should_perform_initialization_of_child_static_field_when_called_from_parent() {
+    assert_success(
+        "samples.staticinit.child_field_in_parent_block_accessed_by_parent.ChildFieldInParentBlockAccessedByParent",
+        r#"entering main
+Parent static block
+Child static block
+null-child-parent
+exiting main
+"#,
+    );
+}
+
+#[test]
+fn should_use_value_from_child_static_block() {
+    assert_success(
+        "samples.staticinit.initialized_child_field_in_parent_block_accessed_by_child.InitializedChildFieldInParentBlockAccessedByChild",
+        r#"entering main
+Parent static block
+Child static block
+initial-child
+exiting main
+"#,
+    );
+}
+
+#[test]
+fn should_perform_initialization_of_child_static_field_and_parent_when_called_from_parent() {
+    assert_success(
+        "samples.staticinit.initialized_child_field_in_parent_block_accessed_by_parent.InitializedChildFieldInParentBlockAccessedByParent",
+        r#"entering main
+Parent static block
+Child static block
+initial-child-parent
+exiting main
+"#,
+    );
+}
