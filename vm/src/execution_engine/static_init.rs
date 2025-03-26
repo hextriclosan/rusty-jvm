@@ -15,13 +15,7 @@ impl StaticInit {
     pub fn initialize_java_class(
         java_class: &JavaClass,
     ) -> crate::error::Result<()> {
-        let hierarchy = java_class.instance_fields_hierarchy()?;
-        for name in hierarchy.keys() {
-            let jc = with_method_area(|area| area.get(name))?;
-            Self::initialization_impl(&jc)?;
-        }
-
-        Ok(())
+        Self::initialization_impl(&java_class)
     }
 
     fn initialization_impl(
@@ -32,6 +26,12 @@ impl StaticInit {
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .is_ok()
         {
+            let hierarchy = java_class.instance_fields_hierarchy()?;
+            for name in hierarchy.keys().take(hierarchy.len() - 1) { // skip last one, it will be initialized below
+                let jc = with_method_area(|area| area.get(name))?;
+                Self::initialization_impl(&jc)?;
+            }
+
             //todo: protect me with recursive mutex
             if let Some(static_init_method) = java_class.try_get_method(Self::STATIC_INIT_METHOD) {
                 Engine::execute(
