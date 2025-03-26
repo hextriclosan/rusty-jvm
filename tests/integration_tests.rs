@@ -1457,7 +1457,7 @@ CHILD_INTERFACE_FIELD: 4
 }
 
 #[test]
-fn should_() {
+fn should_not_call_static_block_for_const_fields_should_call_for_non_constant() {
     assert_success(
         "samples.staticinit.const_vs_nonconst_fields.ConstVsNonConstFieldsExample",
         r#"CONST_INT_FIELD: 1337
@@ -1478,6 +1478,19 @@ NonConst6 static block
 NON_CONST_FILED_CONDITIONAL: 10
 NonConst7 static block
 NON_CONST_FILED_ASSIGNED_IN_STATIC_BLOCK: 1337
+"#,
+    );
+}
+
+#[test]
+fn should_skip_initialization_of_child_static_field_from_parent() {
+    assert_success(
+        "samples.staticinit.child_field_in_parent_block_accessed_by_child.ChildFieldInParentBlockAccessedByChild",
+        r#"entering main
+Parent static block
+Child static block
+null-parent-child
+exiting main
 "#,
     );
 }
