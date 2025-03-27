@@ -40,7 +40,7 @@ use crate::system_native::unsafe_::{
     array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp,
     ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
     get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
-    object_field_offset_1_wrp, put_reference_volatile_wrp,
+    object_field_offset_1_wrp, put_reference_volatile_wrp, should_be_initialized0_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -234,7 +234,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/Unsafe:shouldBeInitialized0:(Ljava/lang/Class;)Z",
-        Basic(|_args: &[i32]| Ok(vec![0])), // all classes are treated as initialized for simplicity todo: implement real check
+        Basic(should_be_initialized0_wrp),
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
