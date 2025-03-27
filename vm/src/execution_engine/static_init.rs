@@ -12,22 +12,19 @@ impl StaticInit {
         Self::initialize_java_class(&java_class)
     }
 
-    pub fn initialize_java_class(
-        java_class: &JavaClass,
-    ) -> crate::error::Result<()> {
+    pub fn initialize_java_class(java_class: &JavaClass) -> crate::error::Result<()> {
         Self::initialization_impl(&java_class)
     }
 
-    fn initialization_impl(
-        java_class: &JavaClass,
-    ) -> crate::error::Result<()> {
+    fn initialization_impl(java_class: &JavaClass) -> crate::error::Result<()> {
         if java_class
             .static_fields_initialized()
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .is_ok()
         {
             let hierarchy = java_class.instance_fields_hierarchy()?;
-            for name in hierarchy.keys().take(hierarchy.len() - 1) { // skip last one, it will be initialized below
+            for name in hierarchy.keys().take(hierarchy.len() - 1) {
+                // skip last one, it will be initialized below
                 let jc = with_method_area(|area| area.get(name))?;
                 Self::initialization_impl(&jc)?;
             }
