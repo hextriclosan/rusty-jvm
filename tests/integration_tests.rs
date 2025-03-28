@@ -1537,7 +1537,16 @@ exiting main
 #[test]
 #[ignore = "implement Class.getDeclaredFields0(...)"]
 fn should_return_random_number() {
+    assert_success("samples.javautil.random.RandomExample", "666\n");
+}
+
+#[test]
+#[ignore = "implement invokedynamic opcode"]
+fn should_work_with_records() {
     assert_success(
-        "samples.javautil.random.RandomExample","666\n",
+        "samples.javacore.recordexample.RecordExample",
+        r#"Rcd[first=10, second=20]
+200
+true"#,
     );
 }
