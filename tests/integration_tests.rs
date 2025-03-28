@@ -1533,3 +1533,11 @@ exiting main
 "#,
     );
 }
+
+#[test]
+#[ignore = "implement Class.getDeclaredFields0(...)"]
+fn should_return_random_number() {
+    assert_success(
+        "samples.javautil.random.RandomExample","666\n",
+    );
+}
