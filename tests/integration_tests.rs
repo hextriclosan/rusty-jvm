@@ -1550,3 +1550,11 @@ fn should_work_with_records() {
 true"#,
     );
 }
+
+#[test]
+fn should_support_constant_call_site() {
+    assert_success(
+        "samples.reflection.constantcallsiteexample.ConstantCallSiteExample",
+        "Hello from CallSite!\n",
+    );
+}
