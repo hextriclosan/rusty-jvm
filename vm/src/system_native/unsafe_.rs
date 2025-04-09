@@ -2,9 +2,9 @@ use crate::error::Error;
 use crate::execution_engine::static_init::StaticInit;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
+use crate::method_area::java_class::InnerState::Initialized;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::object_offset::offset_utils::object_field_offset_by_refs;
-use std::sync::atomic::Ordering;
 
 pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
@@ -330,6 +330,8 @@ fn should_be_initialized0(class_ref: i32) -> crate::error::Result<bool> {
     with_method_area(|method_area| {
         let name = method_area.get_from_reflection_table(class_ref)?;
         let rc = method_area.get(&name)?;
-        Ok(!rc.static_fields_initialized().load(Ordering::SeqCst))
+
+        let guard = rc.static_fields_init_state().lock();
+        Ok(guard.get_inner_state() != Initialized)
     })
 }

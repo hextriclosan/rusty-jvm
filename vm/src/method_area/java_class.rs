@@ -10,7 +10,8 @@ use getset::Getters;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use std::sync::atomic::AtomicBool;
+use parking_lot::ReentrantMutex;
+use std::cell::RefCell;
 use std::sync::Arc;
 
 const INTERFACE: u16 = 0x00000200;
@@ -28,13 +29,47 @@ pub(crate) struct JavaClass {
     interfaces: IndexSet<String>,
     access_flags: u16,
 
-    static_fields_initialized: AtomicBool,
+    static_fields_init_state: Arc<ReentrantMutex<InitState>>,
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
     declaring_class: Option<String>,
     annotations_raw: Option<Vec<u8>>,
     enclosing_method: Option<(String, String, String)>,
+}
+
+#[derive(Debug)]
+pub struct InitState {
+    inner_state: RefCell<InnerState>,
+}
+
+impl InitState {
+    fn new() -> Self {
+        InitState {
+            inner_state: RefCell::new(InnerState::default()),
+        }
+    }
+
+    pub fn set_inner_state(&self, new_state: InnerState) {
+        *self.inner_state.borrow_mut() = new_state;
+    }
+
+    pub fn get_inner_state(&self) -> InnerState {
+        *self.inner_state.borrow()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InnerState {
+    NotInitialized,
+    Initializing,
+    Initialized,
+}
+
+impl Default for InnerState {
+    fn default() -> Self {
+        InnerState::NotInitialized
+    }
 }
 
 #[derive(Debug)]
@@ -100,7 +135,7 @@ impl JavaClass {
             parent,
             interfaces,
             access_flags,
-            static_fields_initialized: AtomicBool::new(false),
+            static_fields_init_state: Arc::new(ReentrantMutex::new(InitState::new())),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
             declaring_class,
@@ -324,8 +359,8 @@ impl JavaClass {
         &self.annotations_raw
     }
 
-    pub fn static_fields_initialized(&self) -> &AtomicBool {
-        &self.static_fields_initialized
+    pub fn static_fields_init_state(&self) -> &Arc<ReentrantMutex<InitState>> {
+        &self.static_fields_init_state
     }
 }
 
