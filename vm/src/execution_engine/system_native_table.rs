@@ -10,7 +10,7 @@ use crate::system_native::class::{
     get_primitive_class_wrp, get_raw_annotations_wrp, get_simple_binary_name0_wrp,
     get_superclass_wrp, is_array_wrp, is_assignable_from_wrp, is_interface_wrp, is_primitive_wrp,
 };
-use crate::system_native::class_loader::define_class0_wrp;
+use crate::system_native::class_loader::{define_class0_wrp, find_bootstrap_class_wrp};
 use crate::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
@@ -19,10 +19,10 @@ use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
 use crate::system_native::method_handle_natives::wrappers::{
-    method_handle_invoke_exact_wrp, method_handle_natives_get_member_vm_info_wrp,
-    method_handle_natives_get_named_con_wrp, method_handle_natives_object_field_offset_wrp,
-    method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
-    method_handle_natives_static_field_offset_wrp,
+    method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp,
+    method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
+    method_handle_natives_object_field_offset_wrp, method_handle_natives_resolve_wrp,
+    method_handle_natives_static_field_base_wrp, method_handle_natives_static_field_offset_wrp,
 };
 use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::system_native::reflect_array::new_array_wrp;
@@ -36,6 +36,7 @@ use crate::system_native::system::{
 };
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
+use crate::system_native::unsafe_::put_reference_wrp;
 use crate::system_native::unsafe_::{
     array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp,
     ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
@@ -223,6 +224,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:getReference:(Ljava/lang/Object;J)Ljava/lang/Object;",
         Basic(get_reference_volatile_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putReference:(Ljava/lang/Object;JLjava/lang/Object;)V",
+        Basic(put_reference_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:putReferenceVolatile:(Ljava/lang/Object;JLjava/lang/Object;)V",
@@ -417,12 +422,20 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         WithMutStackFrames(method_handle_invoke_exact_wrp),
     );
     table.insert(
+        "java/lang/invoke/MethodHandle:invokeBasic", // this is a normalized polymorphic signature
+        WithMutStackFrames(method_handle_invoke_basic_wrp),
+    );
+    table.insert(
         "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
         Basic(define_class0_wrp),
     );
     table.insert(
         "java/lang/ClassLoader:registerNatives:()V",
         Basic(void_stub),
+    );
+    table.insert(
+        "java/lang/ClassLoader:findBootstrapClass:(Ljava/lang/String;)Ljava/lang/Class;",
+        Basic(find_bootstrap_class_wrp),
     );
     table.insert(
         "jdk/internal/reflect/ConstantPool:getUTF8At0:(Ljava/lang/Object;I)Ljava/lang/String;",
@@ -435,6 +448,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/reflect/ConstantPool:getTagAt0:(Ljava/lang/Object;I)B",
         Basic(constant_pool_get_tag_at0_wrp),
+    );
+    table.insert(
+        "jdk/internal/loader/BootLoader:setBootLoaderUnnamedModule0:(Ljava/lang/Module;)V",
+        Basic(void_stub),
     );
 
     table
