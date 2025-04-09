@@ -1558,3 +1558,12 @@ fn should_support_constant_call_site() {
         "Hello from CallSite!\n",
     );
 }
+
+#[test]
+#[ignore = "BoundMethodHandle:53 - assert(speciesData() == speciesDataFor(form))"]
+fn should_support_mutable_call_site() {
+    assert_success(
+        "samples.reflection.mutablecallsiteexample.MutableCallSiteExample",
+        "Hello from targetMethod1!\nHello from targetMethod2!\n",
+    );
+}

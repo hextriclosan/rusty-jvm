@@ -257,16 +257,16 @@ fn compare_and_set_long(
     Ok(updated)
 }
 
-pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+pub(crate) fn put_reference_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
     let ref_value = args[4];
 
-    put_reference_volatile(obj_ref, offset, ref_value)?;
+    put_reference(obj_ref, offset, ref_value)?;
     Ok(vec![])
 }
-fn put_reference_volatile(obj_ref: i32, offset: i64, ref_value: i32) -> crate::error::Result<()> {
+fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> crate::error::Result<()> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     with_heap_write_lock(|heap| {
         if class_name.starts_with("[") {
@@ -278,6 +278,10 @@ fn put_reference_volatile(obj_ref: i32, offset: i64, ref_value: i32) -> crate::e
             heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
         }
     })
+}
+
+pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    put_reference_wrp(args) // todo! make me volatile
 }
 
 pub(crate) fn array_index_scale0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {

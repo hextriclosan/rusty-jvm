@@ -32,6 +32,13 @@ pub(crate) fn method_handle_invoke_exact_wrp(
     Ok(vec![])
 }
 
+pub(crate) fn method_handle_invoke_basic_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<Vec<i32>> {
+    method_handle_invoke_exact_wrp(args, stack_frames) // TODO: implement real invokeBasic
+}
+
 pub(crate) fn method_handle_natives_object_field_offset_wrp(
     args: &[i32],
 ) -> crate::error::Result<Vec<i32>> {

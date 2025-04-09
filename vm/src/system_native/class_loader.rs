@@ -64,6 +64,19 @@ fn define_class0(
 
     clazz_ref
 }
+
+pub(crate) fn find_bootstrap_class_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let name_ref = args[0];
+    let clazz_ref = find_bootstrap_class(name_ref)?;
+
+    Ok(vec![clazz_ref])
+}
+fn find_bootstrap_class(name_ref: i32) -> crate::error::Result<i32> {
+    let name = get_utf8_string_by_ref(name_ref)?;
+    let internal_name = &name.replace('.', "/");
+    clazz_ref(internal_name)
+}
+
 fn increment_counter() -> u32 {
     COUNTER.fetch_add(1, Ordering::SeqCst)
 }
