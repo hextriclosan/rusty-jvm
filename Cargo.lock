@@ -617,6 +617,8 @@ version = "0.1.0"
 dependencies = [
  "assert_cmd",
  "clap",
+ "derive-new",
+ "getset",
  "regex",
  "serde_json",
  "vm",
