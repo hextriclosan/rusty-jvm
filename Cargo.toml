@@ -8,6 +8,8 @@ members = ["jclass", "jdescriptor", "vm"]
 
 [dependencies]
 clap = "4.5.27"
+getset = "0.1.5"
+derive-new = "0.7.0"
 vm = {path = "vm"}
 
 [dev-dependencies]

@@ -1,17 +1,30 @@
-use clap::{arg, Command};
+mod argument_parser;
+
+use crate::argument_parser::group_args;
+use clap::{Arg, ArgAction, Command};
 use std::process;
 use vm::vm::VM;
 
 fn main() {
     let matches = Command::new("rusty-jvm")
-        .arg(arg!(<main_class>).help("Class to run").required(true))
+        .arg(
+            Arg::new("args")
+                .action(ArgAction::Append)
+                .num_args(1..) // capture everything after program name
+                .trailing_var_arg(true)
+                .allow_hyphen_values(true),
+        )
         .get_matches();
 
-    let entry_point = matches
-        .get_one::<String>("main_class")
-        .expect("Missing entry point");
+    let raw_args = matches
+        .get_many::<String>("args")
+        .unwrap_or_default()
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>();
 
-    if let Err(err) = VM::run(entry_point) {
+    let parsed = group_args(raw_args).expect("Could not parse arguments");
+
+    if let Err(err) = VM::run(parsed.entry_point()) {
         eprintln!("VM execution failed: {}", err);
         process::exit(1);
     }
