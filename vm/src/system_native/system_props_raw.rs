@@ -1,7 +1,7 @@
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
 use crate::system_native::properties_provider::properties::{
-    endianness, line_separator, os_version,
+    endianness, line_separator, os_version, user_dir,
 };
 
 pub(crate) fn platform_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -76,7 +76,7 @@ fn get_platform_properties() -> Vec<&'static str> {
         "sun.io.unicode.encoding_VALUE",
         "sun.jnu.encoding_VALUE",
         "sun.os.patch.level_VALUE",
-        "user.dir_VALUE",
+        user_dir(), // "user.dir",
         "user.home_VALUE",
         "user.name_VALUE",
     ]

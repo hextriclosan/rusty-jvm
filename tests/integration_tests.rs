@@ -1078,6 +1078,9 @@ fn should_return_system_properties() {
         .expect("os.version is not a string");
     let re = Regex::new(r"^\d+\.\d+\.\d+$").unwrap();
     assert!(re.is_match(os_version), "os.version format is incorrect");
+
+    let user_dir = json["user.dir"].as_str().expect("user.dir is not a string");
+    assert!(user_dir.ends_with("test_data"));
 }
 
 #[test]
