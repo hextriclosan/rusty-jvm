@@ -1,7 +1,9 @@
 use crate::error::Error;
+use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::object::identity_hashcode;
+use crate::system_native::string::get_utf8_string_by_ref;
 
 pub(crate) fn current_time_millis_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let millis = current_time_millis()?;
@@ -84,4 +86,18 @@ fn set_out0(print_stream_ref: i32) -> crate::error::Result<()> {
     };
 
     field_ref.set_raw_value(vec![print_stream_ref])
+}
+
+pub(crate) fn system_map_library_name_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let name_ref = args[0];
+    let library_name_ref = map_library_name(name_ref)?;
+
+    Ok(vec![library_name_ref])
+}
+fn map_library_name(name_ref: i32) -> crate::error::Result<i32> {
+    let name = get_utf8_string_by_ref(name_ref)?;
+    let library_name = libloading::library_filename(name).into_string()?;
+    let library_name_ref = StringPoolHelper::get_string(library_name.to_string())?;
+
+    Ok(library_name_ref)
 }

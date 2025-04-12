@@ -31,6 +31,7 @@ use crate::system_native::reflecton::{
     reflection_get_class_access_flags_wrp,
 };
 use crate::system_native::string::intern_wrp;
+use crate::system_native::system::system_map_library_name_wrp;
 use crate::system_native::system::{
     arraycopy_wrp, current_time_millis_wrp, set_out0_wrp, system_identity_hashcode_wrp,
 };
@@ -93,6 +94,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/System:identityHashCode:(Ljava/lang/Object;)I",
         Basic(system_identity_hashcode_wrp),
+    );
+    table.insert(
+        "java/lang/System:mapLibraryName:(Ljava/lang/String;)Ljava/lang/String;",
+        Basic(system_map_library_name_wrp),
     );
     table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp));
     table.insert(
