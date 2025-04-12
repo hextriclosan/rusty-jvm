@@ -15,6 +15,18 @@ pub fn line_ending() -> &'static str {
     }
 }
 
+pub fn map_library_name(name: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("{name}.dll")
+    } else if cfg!(target_os = "macos") {
+        format!("lib{name}.dylib")
+    } else if cfg!(target_os = "linux") {
+        format!("lib{name}.so")
+    } else {
+        unreachable!("Unsupported OS")
+    }
+}
+
 #[allow(dead_code)]
 pub fn assert_success(entry: &str, expected: &str) {
     #[cfg(target_os = "windows")]

@@ -344,7 +344,7 @@ upcasting(): [10, 20, 30]
     );
 }
 
-use crate::utils::{assert_file, get_output, is_bigendian, line_ending};
+use crate::utils::{assert_file, get_output, is_bigendian, line_ending, map_library_name};
 use regex::Regex;
 use serde_json::Value;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -1568,5 +1568,13 @@ fn should_support_mutable_call_site() {
     assert_success(
         "samples.reflection.mutablecallsiteexample.MutableCallSiteExample",
         "Hello from targetMethod1!\nHello from targetMethod2!\n",
+    );
+}
+
+#[test]
+fn should_map_library_name() {
+    assert_success(
+        "samples.system.maplibraryname.MapLibraryNameExample",
+        &format!("{}\n", map_library_name("name")),
     );
 }

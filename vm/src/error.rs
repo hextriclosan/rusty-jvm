@@ -1,6 +1,7 @@
 use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
 use jdescriptor::DescriptorError;
 use std::error::Error as StdError;
+use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::string::{FromUtf16Error, FromUtf8Error};
 use std::sync::PoisonError;
@@ -91,6 +92,14 @@ impl From<serde_json::Error> for Error {
 impl<T> From<PoisonError<T>> for Error {
     fn from(error: PoisonError<T>) -> Self {
         Error::new_execution(&format!("PoisonError: {error}"))
+    }
+}
+
+impl From<OsString> for Error {
+    fn from(value: OsString) -> Self {
+        Error::new_execution(&format!(
+            "Failed to convert OsString value {value:?} to String"
+        ))
     }
 }
 
