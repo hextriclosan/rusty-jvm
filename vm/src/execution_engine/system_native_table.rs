@@ -24,6 +24,7 @@ use crate::system_native::method_handle_natives::wrappers::{
     method_handle_natives_object_field_offset_wrp, method_handle_natives_resolve_wrp,
     method_handle_natives_static_field_base_wrp, method_handle_natives_static_field_offset_wrp,
 };
+use crate::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::system_native::reflect_array::new_array_wrp;
 use crate::system_native::reflecton::{
@@ -457,6 +458,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/loader/BootLoader:setBootLoaderUnnamedModule0:(Ljava/lang/Module;)V",
         Basic(void_stub),
+    );
+    table.insert(
+        "jdk/internal/loader/NativeLibraries:findBuiltinLib:(Ljava/lang/String;)Ljava/lang/String;",
+        Basic(find_builtin_lib_wrp),
     );
 
     table
