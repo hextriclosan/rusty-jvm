@@ -1086,6 +1086,7 @@ fn should_return_system_properties() {
 
     let os_name = json["os.name"].as_str().expect("os.name is not a string");
     let os_name = os_name.to_lowercase();
+    println!("!!! os_name: {}", os_name);
     assert!(
         os_name.contains(get_os_name()),
         "os.name format is incorrect"
