@@ -33,9 +33,17 @@ pub(crate) fn line_separator() -> &'static str {
     }
 }
 
-static OS_INFO: OnceCell<String> = OnceCell::new();
+static OS_VERSION: OnceCell<String> = OnceCell::new();
 pub(crate) fn os_version() -> &'static str {
-    OS_INFO.get_or_init(|| os_info::get().version().to_string())
+    OS_VERSION.get_or_init(|| os_info::get().version().to_string())
+}
+
+static OS_NAME: OnceCell<String> = OnceCell::new();
+pub(crate) fn os_name() -> &'static str {
+    OS_NAME.get_or_init(|| {
+        let info = os_info::get();
+        info.os_type().to_string()
+    })
 }
 
 static USER_DIR: OnceCell<String> = OnceCell::new();

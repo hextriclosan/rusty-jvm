@@ -344,7 +344,9 @@ upcasting(): [10, 20, 30]
     );
 }
 
-use crate::utils::{assert_file, get_output, is_bigendian, line_ending, map_library_name};
+use crate::utils::{
+    assert_file, get_os_name, get_output, is_bigendian, line_ending, map_library_name,
+};
 use regex::Regex;
 use serde_json::Value;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -1081,6 +1083,13 @@ fn should_return_system_properties() {
 
     let user_dir = json["user.dir"].as_str().expect("user.dir is not a string");
     assert!(user_dir.ends_with("test_data"));
+
+    let os_name = json["os.name"].as_str().expect("os.name is not a string");
+    let os_name = os_name.to_lowercase();
+    assert!(
+        os_name.contains(get_os_name()),
+        "os.name format is incorrect"
+    );
 }
 
 #[test]
