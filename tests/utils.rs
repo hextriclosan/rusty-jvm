@@ -15,6 +15,22 @@ pub fn line_ending() -> &'static str {
     }
 }
 
+pub fn get_file_separator() -> &'static str {
+    if cfg!(windows) {
+        "\\"
+    } else {
+        "/"
+    }
+}
+
+pub fn get_path_separator() -> &'static str {
+    if cfg!(windows) {
+        ";"
+    } else {
+        ":"
+    }
+}
+
 pub fn map_library_name(name: &str) -> String {
     if cfg!(target_os = "windows") {
         format!("{name}.dll")

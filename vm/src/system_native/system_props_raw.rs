@@ -1,7 +1,7 @@
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
 use crate::system_native::properties_provider::properties::{
-    endianness, line_separator, os_name, os_version, user_dir,
+    endianness, file_separator, line_separator, os_name, os_version, path_separator, user_dir,
 };
 
 pub(crate) fn platform_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -45,7 +45,7 @@ fn get_platform_properties() -> Vec<&'static str> {
         "display.script_VALUE",
         "display.variant_VALUE",
         "file.encoding_VALUE",
-        "file.separator_VALUE",
+        file_separator(), // "file.separator"
         "format.country_VALUE",
         "format.language_VALUE",
         "format.script_VALUE",
@@ -61,9 +61,9 @@ fn get_platform_properties() -> Vec<&'static str> {
         "java.io.tmpdir_VALUE",
         line_separator(), // "line.separator"
         "os.arch_VALUE",
-        os_name(),    // "os.name"
-        os_version(), // "os.version"
-        "path.separator_VALUE",
+        os_name(),        // "os.name"
+        os_version(),     // "os.version"
+        path_separator(), // "path.separator"
         "socksNonProxyHosts_VALUE",
         "socksProxyHost_VALUE",
         "socksProxyPort_VALUE",

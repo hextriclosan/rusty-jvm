@@ -2,7 +2,7 @@ package samples.system.getpropertyexample;
 
 public class SystemGetPropertyExample {
     public static void main(String[] args) {
-        generateJson("line.separator", "sun.cpu.endian", "os.version", "user.dir", "os.name");
+        generateJson("line.separator", "sun.cpu.endian", "os.version", "user.dir", "os.name", "file.separator", "path.separator");
     }
 
     private static void generateJson(String... properties) {

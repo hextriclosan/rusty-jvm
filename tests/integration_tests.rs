@@ -345,7 +345,8 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_file, get_os_name, get_output, is_bigendian, line_ending, map_library_name,
+    assert_file, get_file_separator, get_os_name, get_output, get_path_separator, is_bigendian,
+    line_ending, map_library_name,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1090,6 +1091,16 @@ fn should_return_system_properties() {
         os_name.contains(get_os_name()),
         "os.name format is incorrect"
     );
+
+    let file_separator = json["file.separator"]
+        .as_str()
+        .expect("file.separator is not a string");
+    assert_eq!(file_separator, get_file_separator());
+
+    let path_separator = json["path.separator"]
+        .as_str()
+        .expect("path.separator is not a string");
+    assert_eq!(path_separator, get_path_separator());
 }
 
 #[test]
