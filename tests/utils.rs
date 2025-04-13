@@ -27,6 +27,18 @@ pub fn map_library_name(name: &str) -> String {
     }
 }
 
+pub fn get_os_name() -> &'static str {
+    if cfg!(windows) {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "mac"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        unreachable!("Unsupported OS")
+    }
+}
+
 #[allow(dead_code)]
 pub fn assert_success(entry: &str, expected: &str) {
     #[cfg(target_os = "windows")]
