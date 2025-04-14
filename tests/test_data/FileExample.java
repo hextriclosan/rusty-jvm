@@ -15,14 +15,14 @@ public class FileExample {
 
         printFileInfo(file);
 
-//         createFile(file); Native method java/io/WinNTFileSystem:createFileExclusively0:(Ljava/lang/String;)Z not found
-//         createFile(file); Native method java/io/WinNTFileSystem:createFileExclusively0:(Ljava/lang/String;)Z not found
+        createFile(file);
+        createFile(file);
 
 //         try (FileWriter fileWriter = new FileWriter(file, true)) {
 //             fileWriter.write("Hello, World!\n");
 //         }
 
-//         printFileInfo(file); uncomment after creating the file
+        printFileInfo(file);
 
 
         File dir = new File(DIR_NAME);
@@ -34,8 +34,8 @@ public class FileExample {
 //             }
 //         }
 
-//         deleteFile(file); Native method java/io/WinNTFileSystem:delete0:(Ljava/io/File;)Z not found
-//         deleteFile(file); Native method java/io/WinNTFileSystem:delete0:(Ljava/io/File;)Z not found
+        deleteFile(file);
+        deleteFile(file);
     }
 
     private static void printFileInfo(File file) throws IOException {
@@ -60,17 +60,17 @@ public class FileExample {
 
     private static void createFile(File file) throws IOException {
         if (file.createNewFile()) {
-            System.out.println("File created: " + file.getName());
+            System.out.println(file.getName() + ": created");
         } else {
-            System.out.println("File already exists.");
+            System.out.println(file.getName() + ": already exists");
         }
     }
 
     private static void deleteFile(File file) {
         if (file.delete()) {
-            System.out.println("Deleted the file: " + file.getName());
+            System.out.println(file.getName() + ": deleted");
         } else {
-            System.out.println("Failed to delete the file.");
+            System.out.println(file.getName() + ": does not exist");
         }
     }
 }
