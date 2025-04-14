@@ -1,14 +1,14 @@
 File info: ..\tmp\file_example_test.txt
-	Absolute path: C:\dev\rusty-jvm\tests\test_data\..\tmp\file_example_test.txt
-	Canonical path: C:\dev\rusty-jvm\tests\tmp\file_example_test.txt
+	Absolute path: \tests\test_data\..\tmp\file_example_test.txt
+	Canonical path: \tests\tmp\file_example_test.txt
 	Path: ..\tmp\file_example_test.txt
 	Name: file_example_test.txt
 	Parent: ..\tmp
 	Parent file: ..\tmp
 	Is absolute: false
 File info: ..\tmp
-	Absolute path: C:\dev\rusty-jvm\tests\test_data\..\tmp
-	Canonical path: C:\dev\rusty-jvm\tests\tmp
+	Absolute path: \tests\test_data\..\tmp
+	Canonical path: \tests\tmp
 	Path: ..\tmp
 	Name: tmp
 	Parent: ..

@@ -1619,8 +1619,5 @@ fn should_support_java_io_file() {
 
     let output = get_output("samples.io.fileexample.FileExample");
 
-    assert_eq!(
-        output.replace(repo_path, ""),
-        expected_output.replace(repo_path, "")
-    );
+    assert_eq!(output.replace(repo_path, ""), expected_output);
 }
