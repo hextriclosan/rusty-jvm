@@ -34,9 +34,19 @@ final class DefaultFileSystem {
     private DefaultFileSystem() {}
 
     /**
-     * Return the FileSystem object for Unix-based platform.
+     * Return the FileSystem object for the current operating system.
      */
     public static FileSystem getFileSystem() {
-        return new UnixFileSystem();
+        String osName = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = osName.contains("win");
+        boolean isUnixLike = osName.contains("nix") || osName.contains("nux") || osName.contains("mac");
+
+        if (isWindows) {
+            return new WinNTFileSystem();
+        } else if (isUnixLike) {
+            return new UnixFileSystem();
+        } else {
+            throw new UnsupportedOperationException("Unsupported operating system: " + osName);
+        }
     }
 }
