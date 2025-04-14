@@ -3,6 +3,7 @@ pub(crate) mod class_loader;
 pub(crate) mod constant_pool;
 pub(crate) mod file_descriptor;
 pub(crate) mod file_output_stream;
+pub(crate) mod io_file_system;
 pub(crate) mod method_handle_natives;
 pub(crate) mod native_libraries;
 pub(crate) mod object;

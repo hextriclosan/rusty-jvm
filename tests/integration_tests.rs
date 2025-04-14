@@ -346,7 +346,7 @@ upcasting(): [10, 20, 30]
 
 use crate::utils::{
     assert_file, get_file_separator, get_os_name, get_output, get_path_separator, is_bigendian,
-    line_ending, map_library_name,
+    line_ending, map_library_name, REPO_PATH,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1596,5 +1596,31 @@ fn should_map_library_name() {
     assert_success(
         "samples.system.maplibraryname.MapLibraryNameExample",
         &format!("{}\n", map_library_name("name")),
+    );
+}
+
+#[test]
+fn should_support_java_io_file() {
+    let expected_output = {
+        #[cfg(target_os = "windows")]
+        {
+            include_str!("expected_output/should_support_java_io_file/windows.txt")
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            include_str!("expected_output/should_support_java_io_file/posix.txt")
+        }
+    };
+
+    let repo_path = REPO_PATH
+        .as_path()
+        .to_str()
+        .expect("Failed to convert path to string");
+
+    let output = get_output("samples.io.fileexample.FileExample");
+
+    assert_eq!(
+        output.replace(repo_path, ""),
+        expected_output.replace(repo_path, "")
     );
 }

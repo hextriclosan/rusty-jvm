@@ -21,8 +21,6 @@ impl PlatformFile {
             Ok::<i64, Error>(vec_to_i64(&raw))
         })?;
 
-        eprintln!("close0: raw_fd={raw_fd}");
-
         let file = unsafe { File::from_raw_handle(raw_fd as RawHandle) };
         drop(file);
         Ok(())
