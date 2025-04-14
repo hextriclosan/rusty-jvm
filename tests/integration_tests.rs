@@ -1607,9 +1607,17 @@ fn should_support_java_io_file() {
         {
             include_str!("expected_output/should_support_java_io_file/windows.txt")
         }
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "linux")]
         {
-            include_str!("expected_output/should_support_java_io_file/posix.txt")
+            include_str!("expected_output/should_support_java_io_file/linux.txt")
+        }
+        #[cfg(target_os = "macos")]
+        {
+            include_str!("expected_output/should_support_java_io_file/macos.txt")
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+        {
+            unreachable!("Unsupported OS")
         }
     };
 

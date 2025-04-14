@@ -138,6 +138,77 @@ fn is_hidden(path: &Path) -> bool {
     false
 }
 
+pub(crate) fn check_access0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _filesystem_impl_ref = args[0];
+    let file_ref = args[1];
+    let access = args[2];
+    let result = check_access0(file_ref, access)?;
+
+    Ok(vec![if result { 1 } else { 0 }])
+}
+bitflags! {
+#[derive(Debug, PartialEq)]
+    struct Access: i32 {
+        const ACCESS_EXECUTE = 0x01;
+        const ACCESS_WRITE = 0x02;
+        const ACCESS_READ = 0x04;
+    }
+}
+fn check_access0(file_ref: i32, access: i32) -> crate::error::Result<bool> {
+    let path_ref = extract_path(file_ref)?;
+
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let path = Path::new(&path);
+
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    let access_flags = Access::from_bits(access).expect("Invalid access flags");
+
+    Ok(check_access_impl(path, access_flags))
+}
+#[cfg(unix)]
+fn check_access_impl(path: &Path, mode: Access) -> bool {
+    use nix::unistd::access;
+    use nix::unistd::AccessFlags;
+
+    let mut flags = AccessFlags::empty();
+    if mode.contains(Access::ACCESS_READ) {
+        flags |= AccessFlags::R_OK;
+    }
+    if mode.contains(Access::ACCESS_WRITE) {
+        flags |= AccessFlags::W_OK;
+    }
+    if mode.contains(Access::ACCESS_EXECUTE) {
+        flags |= AccessFlags::X_OK;
+    }
+
+    access(path, flags).is_ok()
+}
+#[cfg(target_os = "windows")]
+fn check_access_impl(path: &Path, mode: Access) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::um::fileapi::{GetFileAttributesW, INVALID_FILE_ATTRIBUTES};
+    use winapi::um::winnt::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY};
+
+    let wide_path: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let attr = unsafe { GetFileAttributesW(wide_path.as_ptr()) }; // todo: add support of reparse point cases
+    if attr == INVALID_FILE_ATTRIBUTES {
+        return false;
+    }
+
+    match mode {
+        Access::ACCESS_READ | Access::ACCESS_EXECUTE => true,
+        Access::ACCESS_WRITE
+            if attr & FILE_ATTRIBUTE_DIRECTORY > 0 || attr & FILE_ATTRIBUTE_READONLY == 0 =>
+        {
+            true
+        }
+        _ => false,
+    }
+}
+
 fn extract_path(file_ref: i32) -> crate::error::Result<i32> {
     Ok(
         with_heap_read_lock(|heap| heap.get_object_field_value(file_ref, "java/io/File", "path"))?
