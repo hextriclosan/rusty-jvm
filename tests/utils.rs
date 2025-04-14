@@ -1,7 +1,11 @@
 use assert_cmd::Command;
+use once_cell::sync::Lazy;
 use std::{env, fs};
 
 const PATH: &str = "tests/test_data";
+
+pub(crate) static REPO_PATH: Lazy<std::path::PathBuf> =
+    Lazy::new(|| env::current_dir().expect("Failed to get current directory"));
 
 pub fn is_bigendian() -> bool {
     cfg!(target_endian = "big")
@@ -91,7 +95,7 @@ pub fn assert_file(entry: &str, file_path: &str, expected_file_content: &str) {
 }
 
 fn get_command(entry: &str) -> Command {
-    let repo_path = env::current_dir().expect("Failed to get current directory");
+    let repo_path = REPO_PATH.as_path();
 
     let mut cmd = Command::cargo_bin("rusty-jvm").expect("Failed to locate rusty-jvm binary");
     cmd.env("RUSTY_JAVA_HOME", repo_path)

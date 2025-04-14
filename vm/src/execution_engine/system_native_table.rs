@@ -18,6 +18,7 @@ use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_hand
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
+use crate::system_native::io_file_system::canonicalize0_wrp;
 use crate::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp,
     method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
@@ -466,6 +467,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/io/WinNTFileSystem:initIDs:()V", // this method is for caching `path` field from java/io/File for faster access in other native methods
         Basic(void_stub),
+    );
+    table.insert(
+        "java/io/WinNTFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
+        Basic(canonicalize0_wrp),
+    );
+    table.insert(
+        "java/io/UnixFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
+        Basic(canonicalize0_wrp),
     );
 
     table

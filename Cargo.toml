@@ -11,6 +11,7 @@ clap = "4.5.27"
 getset = "0.1.5"
 derive-new = "0.7.0"
 vm = {path = "vm"}
+once_cell = "1.21.3"
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
