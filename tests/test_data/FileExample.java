@@ -47,15 +47,15 @@ public class FileExample {
         System.out.println("\tParent: " + file.getParent());
         System.out.println("\tParent file: " + file.getParentFile());
         System.out.println("\tIs absolute: " + file.isAbsolute());
-//         System.out.println("File exists: " + file.exists()); Native method java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I not found
-//         System.out.println("Is file: " + file.isFile()); Native method java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I not found
-//         System.out.println("Is directory: " + file.isDirectory()); Native method java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I not found
-//         System.out.println("Is hidden: " + file.isHidden()); Native method java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I not found
-//         System.out.println("Is writable: " + file.canWrite()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
-//         System.out.println("Is readable: " + file.canRead()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
-//         System.out.println("Is executable: " + file.canExecute()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
-//         System.out.println("File length: " + file.length() + " bytes"); Native method java/io/WinNTFileSystem:getLength0:(Ljava/io/File;)J not found
-//         System.out.println("Last modified: " + file.lastModified()); Native method java/io/WinNTFileSystem:getLastModifiedTime0:(Ljava/io/File;)J not found
+        System.out.println("\tFile exists: " + file.exists());
+        System.out.println("\tIs file: " + file.isFile());
+        System.out.println("\tIs directory: " + file.isDirectory());
+        System.out.println("\tIs hidden: " + file.isHidden());
+//         System.out.println("\tIs writable: " + file.canWrite()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
+//         System.out.println("\tIs readable: " + file.canRead()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
+//         System.out.println("\tIs executable: " + file.canExecute()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
+//         System.out.println("\tFile length: " + file.length() + " bytes"); Native method java/io/WinNTFileSystem:getLength0:(Ljava/io/File;)J not found
+//         System.out.println("\tLast modified: " + file.lastModified()); Native method java/io/WinNTFileSystem:getLastModifiedTime0:(Ljava/io/File;)J not found
     }
 
     private static void createFile(File file) throws IOException {

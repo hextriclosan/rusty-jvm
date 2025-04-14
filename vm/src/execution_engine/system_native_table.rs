@@ -18,8 +18,8 @@ use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_hand
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
-use crate::system_native::io_file_system::delete0_wrp;
 use crate::system_native::io_file_system::{canonicalize0_wrp, create_file_exclusively0_wrp};
+use crate::system_native::io_file_system::{delete0_wrp, get_boolean_attributes0_wrp};
 use crate::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp,
     method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
@@ -492,6 +492,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/io/UnixFileSystem:delete0:(Ljava/io/File;)Z",
         Basic(delete0_wrp),
+    );
+    table.insert(
+        "java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
+        Basic(get_boolean_attributes0_wrp),
+    );
+    table.insert(
+        "java/io/UnixFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
+        Basic(get_boolean_attributes0_wrp),
     );
 
     table
