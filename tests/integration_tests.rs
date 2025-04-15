@@ -345,8 +345,8 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_file, get_file_separator, get_os_name, get_output, get_path_separator, is_bigendian,
-    line_ending, map_library_name, REPO_PATH,
+    assert_file, get_file_separator, get_filesystem_class_name, get_os_name, get_output,
+    get_path_separator, is_bigendian, line_ending, map_library_name, REPO_PATH,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1620,4 +1620,13 @@ fn should_support_java_io_file() {
     let output = get_output("samples.io.fileexample.FileExample");
 
     assert_eq!(output.replace(repo_path, ""), expected_output);
+}
+
+#[cfg(windows)]
+#[test]
+fn should_return_default_filesystem() {
+    assert_success(
+        "samples.filesystem.getdefaultfilesystem.GetDefaultFileSystem",
+        &format!("{}\n", get_filesystem_class_name()),
+    );
 }

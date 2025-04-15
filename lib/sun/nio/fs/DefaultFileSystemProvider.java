@@ -26,21 +26,36 @@
 package sun.nio.fs;
 
 import java.nio.file.FileSystem;
+import java.nio.file.spi.FileSystemProvider;
 
 /**
  * Creates this platform's default FileSystemProvider.
  */
 
 public class DefaultFileSystemProvider {
-    private static final MacOSXFileSystemProvider INSTANCE
-        = new MacOSXFileSystemProvider();
+    private static final FileSystemProvider INSTANCE;
+    static {
+        String osName = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = osName.contains("win");
+        boolean isLinux = osName.contains("linux");
+        boolean isMac = osName.contains("mac");
+        if (isWindows) {
+            INSTANCE = new WindowsFileSystemProvider();
+        } else if (isLinux) {
+            INSTANCE = new LinuxFileSystemProvider();
+        } else if (isMac) {
+            INSTANCE = new MacOSXFileSystemProvider();
+        } else {
+            throw new UnsupportedOperationException("Unsupported operating system: " + osName);
+        }
+    }
 
     private DefaultFileSystemProvider() { }
 
     /**
      * Returns the platform's default file system provider.
      */
-    public static MacOSXFileSystemProvider instance() {
+    public static FileSystemProvider instance() {
         return INSTANCE;
     }
 
@@ -48,6 +63,14 @@ public class DefaultFileSystemProvider {
      * Returns the platform's default file system.
      */
     public static FileSystem theFileSystem() {
-        return INSTANCE.theFileSystem();
+        if (INSTANCE instanceof WindowsFileSystemProvider win) {
+            return win.theFileSystem();
+        } else if (INSTANCE instanceof LinuxFileSystemProvider linux) {
+            return linux.theFileSystem();
+        } else if (INSTANCE instanceof MacOSXFileSystemProvider mac) {
+            return mac.theFileSystem();
+        } else {
+            throw new UnsupportedOperationException("Unsupported file system provider: " + INSTANCE);
+        }
     }
 }
