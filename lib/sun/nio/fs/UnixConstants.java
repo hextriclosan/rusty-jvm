@@ -127,4 +127,7 @@ class UnixConstants {
     static final int ATTR_CMN_ACCTIME = 0x00001000;
     static final int FSOPT_NOFOLLOW = 0x00000001;
 
+    static final int POSIX_FADV_SEQUENTIAL = 2;
+    static final int POSIX_FADV_NOREUSE = 5;
+    static final int POSIX_FADV_WILLNEED = 3;
 }
