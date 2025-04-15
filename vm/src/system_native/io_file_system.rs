@@ -116,10 +116,10 @@ fn is_hidden(path: &Path) -> bool {
     use winapi::um::winnt::FILE_ATTRIBUTE_HIDDEN;
 
     let wide_path = path
-        .to_path_buf()
-        .into_os_string()
+        .as_os_str()
         .encode_wide()
-        .collect::<Vec<u16>>();
+        .chain(Some(0))
+        .collect::<Vec<_>>();
     let attr = unsafe { GetFileAttributesW(wide_path.as_ptr()) };
     if attr == INVALID_FILE_ATTRIBUTES {
         false
