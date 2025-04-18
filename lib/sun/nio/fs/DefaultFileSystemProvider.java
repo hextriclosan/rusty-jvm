@@ -27,6 +27,7 @@ package sun.nio.fs;
 
 import java.nio.file.FileSystem;
 import java.nio.file.spi.FileSystemProvider;
+import jdk.internal.util.OS;
 
 /**
  * Creates this platform's default FileSystemProvider.
@@ -35,18 +36,14 @@ import java.nio.file.spi.FileSystemProvider;
 public class DefaultFileSystemProvider {
     private static final FileSystemProvider INSTANCE;
     static {
-        String osName = System.getProperty("os.name").toLowerCase();
-        boolean isWindows = osName.contains("win");
-        boolean isLinux = osName.contains("linux");
-        boolean isMac = osName.contains("mac");
-        if (isWindows) {
+        if (OS.WINDOWS) {
             INSTANCE = new WindowsFileSystemProvider();
-        } else if (isLinux) {
+        } else if (OS.LINUX) {
             INSTANCE = new LinuxFileSystemProvider();
-        } else if (isMac) {
+        } else if (OS.MACOS) {
             INSTANCE = new MacOSXFileSystemProvider();
         } else {
-            throw new UnsupportedOperationException("Unsupported operating system: " + osName);
+            throw new UnsupportedOperationException("Unsupported operating system");
         }
     }
 
