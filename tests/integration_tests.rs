@@ -1622,7 +1622,6 @@ fn should_support_java_io_file() {
     assert_eq!(output.replace(repo_path, ""), expected_output);
 }
 
-#[cfg(windows)]
 #[test]
 fn should_return_default_filesystem() {
     assert_success(
