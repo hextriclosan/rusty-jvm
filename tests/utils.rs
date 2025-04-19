@@ -73,10 +73,17 @@ pub fn get_filesystem_class_name() -> &'static str {
 
 #[allow(dead_code)]
 pub fn assert_success(entry: &str, expected: &str) {
+    assert_success_with_args(entry, &vec![], expected)
+}
+
+#[allow(dead_code)]
+pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected: &str) {
     #[cfg(target_os = "windows")]
     let expected = to_windows(expected);
 
-    get_command(entry)
+    let mut args = vec![entry];
+    args.extend(arguments);
+    get_command(&args)
         .assert()
         .success()
         .stdout(expected.to_string());
@@ -84,7 +91,7 @@ pub fn assert_success(entry: &str, expected: &str) {
 
 #[allow(dead_code)]
 pub fn get_output(entry: &str) -> String {
-    let output = get_command(entry)
+    let output = get_command(&vec![entry])
         .output()
         .expect("Failed to execute process");
 
@@ -106,13 +113,13 @@ pub fn assert_file(entry: &str, file_path: &str, expected_file_content: &str) {
     fs::remove_file(file_path).expect("Failed to delete file");
 }
 
-fn get_command(entry: &str) -> Command {
+fn get_command(arguments: &[&str]) -> Command {
     let repo_path = REPO_PATH.as_path();
 
     let mut cmd = Command::cargo_bin("rusty-jvm").expect("Failed to locate rusty-jvm binary");
     cmd.env("RUSTY_JAVA_HOME", repo_path)
         .current_dir(PATH)
-        .arg(entry);
+        .args(arguments);
     cmd
 }
 

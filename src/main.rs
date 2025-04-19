@@ -24,7 +24,11 @@ fn main() {
 
     let parsed = group_args(raw_args).expect("Could not parse arguments");
 
-    if let Err(err) = VM::run(parsed.entry_point()) {
+    if let Err(err) = VM::run(
+        parsed.entry_point(),
+        &parsed.system_properties(),
+        &parsed.program_args(),
+    ) {
         eprintln!("VM execution failed: {}", err);
         process::exit(1);
     }

@@ -1,7 +1,7 @@
 use derive_new::new;
 use getset::Getters;
 
-pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParseResult, String> {
+pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, String> {
     let mut java_standard_options = Vec::new();
     let mut java_launcher_options = Vec::new();
     let mut system_properties = Vec::new();
@@ -34,7 +34,7 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParseResult, String> {
 
     let entry_point = entry_point.ok_or_else(|| "No entry point provided".to_string())?;
 
-    Ok(ParseResult::new(
+    Ok(ParsedArguments::new(
         entry_point,
         program_args,
         java_standard_options,
@@ -47,7 +47,7 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParseResult, String> {
 
 #[derive(PartialEq, Debug, new, Getters)]
 #[get = "pub"]
-pub struct ParseResult {
+pub struct ParsedArguments {
     entry_point: String,
     program_args: Vec<String>,
     java_standard_options: Vec<String>,
@@ -76,7 +76,7 @@ mod tests {
         ];
 
         let parsed = group_args(raw_args).unwrap();
-        let expected = ParseResult::new(
+        let expected = ParsedArguments::new(
             "MainClass".to_string(),
             vec!["arg1".to_string(), "arg2".to_string()],
             vec!["-version".to_string()],
