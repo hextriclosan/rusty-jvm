@@ -1,5 +1,4 @@
-use crate::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::heap::heap::with_heap_write_lock;
+use crate::helper::create_array_of_strings;
 use crate::system_native::properties_provider::properties::{
     endianness, file_separator, line_separator, os_name, os_version, path_separator, user_dir,
 };
@@ -10,7 +9,7 @@ pub(crate) fn platform_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec
     Ok(vec![string_array_ref])
 }
 fn platform_properties() -> crate::error::Result<i32> {
-    create_empty_array_of_strings(get_platform_properties().as_slice())
+    create_array_of_strings(get_platform_properties().as_slice())
 }
 
 pub(crate) fn vm_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -19,23 +18,7 @@ pub(crate) fn vm_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>>
     Ok(vec![string_array_ref])
 }
 fn vm_properties() -> crate::error::Result<i32> {
-    create_empty_array_of_strings(get_vm_properties().as_slice())
-}
-
-fn create_empty_array_of_strings(props: &[&str]) -> crate::error::Result<i32> {
-    let class_of_array = "java/lang/String";
-    let class_of_array = format!("[L{class_of_array};");
-    let length = props.len() as i32;
-    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
-
-    for (index, prop) in props.iter().enumerate() {
-        let string_ref = StringPoolHelper::get_string(prop.to_string())?;
-        with_heap_write_lock(|heap| {
-            heap.set_array_value(array_ref, index as i32, vec![string_ref])
-        })?
-    }
-
-    Ok(array_ref)
+    create_array_of_strings(get_vm_properties().as_slice())
 }
 
 fn get_platform_properties() -> Vec<&'static str> {
