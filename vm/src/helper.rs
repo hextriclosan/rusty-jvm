@@ -1,4 +1,6 @@
 use crate::error::Error;
+use crate::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::sack_value::StackValue;
 use jdescriptor::TypeDescriptor;
@@ -69,4 +71,20 @@ pub fn argument_length(args: &[TypeDescriptor]) -> crate::error::Result<i32> {
 
 pub fn strip_nest_host(class_name: &str) -> Option<&str> {
     class_name.find('$').map(|index| &class_name[..index])
+}
+
+pub fn create_array_of_strings(props: &[&str]) -> crate::error::Result<i32> {
+    let class_of_array = "java/lang/String";
+    let class_of_array = format!("[L{class_of_array};");
+    let length = props.len() as i32;
+    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
+
+    for (index, prop) in props.iter().enumerate() {
+        let string_ref = StringPoolHelper::get_string(prop.to_string())?;
+        with_heap_write_lock(|heap| {
+            heap.set_array_value(array_ref, index as i32, vec![string_ref])
+        })?
+    }
+
+    Ok(array_ref)
 }
