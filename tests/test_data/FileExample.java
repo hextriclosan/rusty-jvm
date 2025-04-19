@@ -51,9 +51,9 @@ public class FileExample {
         System.out.println("\tIs file: " + file.isFile());
         System.out.println("\tIs directory: " + file.isDirectory());
         System.out.println("\tIs hidden: " + file.isHidden());
-//         System.out.println("\tIs writable: " + file.canWrite()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
-//         System.out.println("\tIs readable: " + file.canRead()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
-//         System.out.println("\tIs executable: " + file.canExecute()); Native method java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z not found
+        System.out.println("\tIs writable: " + file.canWrite());
+        System.out.println("\tIs readable: " + file.canRead());
+        System.out.println("\tIs executable: " + file.canExecute());
 //         System.out.println("\tFile length: " + file.length() + " bytes"); Native method java/io/WinNTFileSystem:getLength0:(Ljava/io/File;)J not found
 //         System.out.println("\tLast modified: " + file.lastModified()); Native method java/io/WinNTFileSystem:getLastModifiedTime0:(Ljava/io/File;)J not found
     }
