@@ -1,8 +1,8 @@
 mod utils;
 
-use crate::utils::{get_output_with_args, to_windows, REPO_PATH};
-use normpath::PathExt;
+use crate::utils::{get_output_with_args, REPO_PATH};
 use once_cell::sync::Lazy;
+use path_absolutize::Absolutize;
 use std::path::{Path, PathBuf};
 use std::string::ToString;
 
@@ -144,7 +144,7 @@ fn resolve_template(template_values: &TemplateValues) -> String {
         );
 
     #[cfg(target_os = "windows")]
-    let result = to_windows(&result);
+    let result = utils::to_windows(&result);
 
     result
 }
@@ -171,9 +171,9 @@ fn canonical_path() -> PathBuf {
     let absolute = absolute_path();
 
     Path::new(&absolute)
-        .normalize_virtually()
+        .absolutize()
         .expect("Failed to normalize path")
-        .into_path_buf()
+        .to_path_buf()
 }
 
 fn to_string(path: &PathBuf) -> String {
