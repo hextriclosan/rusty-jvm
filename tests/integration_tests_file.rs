@@ -63,8 +63,6 @@ fn file_info_when_exists() {
     let (is_hidden, is_writable, is_readable, is_executable) =
         file_properties(&canonical_path()).expect("Failed to get file properties");
 
-    eprintln!("!!! is_hidden: {is_hidden} is_writable: {is_writable} is_readable: {is_readable} is_executable: {is_executable}");
-
     let template_values = TemplateValues::new(
         to_string(&file_path()),
         to_string(&absolute_path()),
@@ -253,6 +251,7 @@ fn to_string(path: &PathBuf) -> String {
 
 #[cfg(unix)]
 fn file_properties(path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
+    use std::fs;
     use std::os::unix::fs::MetadataExt;
     let metadata = fs::metadata(path)?;
     let permissions = metadata.permissions();
