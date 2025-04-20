@@ -1,10 +1,111 @@
 mod utils;
 
-use crate::utils::{get_output_with_args, REPO_PATH};
+use crate::utils::{assert_success_with_args, REPO_PATH};
 use once_cell::sync::Lazy;
 use path_absolutize::Absolutize;
 use std::path::{Path, PathBuf};
 use std::string::ToString;
+
+#[test]
+fn should_support_java_io_file() {
+    file_info_when_does_not_exist();
+    create_file_when_does_not_exist();
+    create_file_when_exists();
+    file_info_when_exists();
+    delete_file_when_exists();
+    delete_file_when_does_not_exist();
+}
+
+fn file_info_when_does_not_exist() {
+    let template_values = TemplateValues::new(
+        to_string(&file_path()),
+        to_string(&absolute_path()),
+        to_string(&canonical_path()),
+        to_string(&file_path()),
+        FILE_NAME.to_string(),
+        to_string(&DIR_PATH),
+        to_string(&DIR_PATH),
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    );
+    let expected_output = resolve_template(&template_values);
+
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--info", &FILE_PATH_ARG],
+        &expected_output,
+    );
+}
+
+fn create_file_when_does_not_exist() {
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--create", &FILE_PATH_ARG],
+        &format!("{FILE_NAME}: created\n"),
+    );
+}
+
+fn create_file_when_exists() {
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--create", &FILE_PATH_ARG],
+        &format!("{FILE_NAME}: already exists\n"),
+    );
+}
+
+fn file_info_when_exists() {
+    let (is_hidden, is_writable, is_readable, is_executable) =
+        file_properties(&canonical_path()).expect("Failed to get file properties");
+
+    eprintln!("!!! is_hidden: {is_hidden} is_writable: {is_writable} is_readable: {is_readable} is_executable: {is_executable}");
+
+    let template_values = TemplateValues::new(
+        to_string(&file_path()),
+        to_string(&absolute_path()),
+        to_string(&canonical_path()),
+        to_string(&file_path()),
+        FILE_NAME.to_string(),
+        to_string(&DIR_PATH),
+        to_string(&DIR_PATH),
+        false,
+        true,
+        true,
+        false,
+        is_hidden,
+        is_writable,
+        is_readable,
+        is_executable,
+    );
+    let expected_output = resolve_template(&template_values);
+
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--info", &FILE_PATH_ARG],
+        &expected_output,
+    );
+}
+
+fn delete_file_when_exists() {
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--delete", &FILE_PATH_ARG],
+        &format!("{FILE_NAME}: deleted\n"),
+    );
+}
+
+fn delete_file_when_does_not_exist() {
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--delete", &FILE_PATH_ARG],
+        &format!("{FILE_NAME}: does not exist\n"),
+    );
+}
 
 const ENTRY_POINT_ARG: &str = "samples.io.fileexample.FileExample";
 const FILE_PATH_ARG: &str = "../tmp/file_example_test.txt";
@@ -89,36 +190,6 @@ impl TemplateValues {
     }
 }
 
-#[test]
-fn should_support_java_io_file() {
-    non_existing_file_info();
-}
-
-fn non_existing_file_info() {
-    let output = get_output_with_args(ENTRY_POINT_ARG, &["--info", &FILE_PATH_ARG]);
-
-    let template_values = TemplateValues::new(
-        to_string(&file_path()),
-        to_string(&absolute_path()),
-        to_string(&canonical_path()),
-        to_string(&file_path()),
-        FILE_NAME.to_string(),
-        to_string(&DIR_PATH),
-        to_string(&DIR_PATH),
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-    );
-    let expected_output = resolve_template(&template_values);
-
-    assert_eq!(output, expected_output);
-}
-
 fn resolve_template(template_values: &TemplateValues) -> String {
     let result = INFO_TEMPLATE
         .replace("{{FILE_PATH}}", &template_values.file_path)
@@ -178,4 +249,24 @@ fn canonical_path() -> PathBuf {
 
 fn to_string(path: &PathBuf) -> String {
     path.to_string_lossy().to_string()
+}
+
+#[cfg(unix)]
+fn file_properties(path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
+    use std::os::unix::fs::MetadataExt;
+    let metadata = fs::metadata(path)?;
+    let permissions = metadata.permissions();
+    let is_readable = permissions.readonly();
+    let is_writable = !is_readable;
+    let is_executable = metadata.mode() & 0o100 != 0; // Check if executable on Unix
+    let is_hidden = path.file_name().map_or(false, |name| {
+        name.to_str().map_or(false, |s| s.starts_with("."))
+    });
+
+    Ok((is_hidden, is_writable, is_readable, is_executable))
+}
+
+#[cfg(windows)]
+fn file_properties(_path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
+    Ok((false, true, true, true))
 }
