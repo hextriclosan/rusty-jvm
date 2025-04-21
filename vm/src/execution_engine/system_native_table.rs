@@ -530,6 +530,36 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         );
     }
 
+    #[cfg(windows)]
+    {
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::get_logical_drives_wrp;
+
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
+            Basic(void_stub),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetLogicalDrives:()I",
+            Basic(get_logical_drives_wrp),
+        );
+    }
+
+    table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
+    table.insert(
+        "sun/nio/ch/IOUtil:iovMax:()I",
+        Basic(|_args: &[i32]| Ok(vec![16])), // fixme: implement this
+    );
+    table.insert(
+        "sun/nio/ch/IOUtil:writevMax:()J",
+        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // fixme: implement this
+    );
+
+    table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
+    table.insert(
+        "sun/nio/ch/NativeThread:current0:()J",
+        Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // fixme: implement this
+    );
+
     table
 });
 
