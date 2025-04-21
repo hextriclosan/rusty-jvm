@@ -3,11 +3,14 @@ mod utils;
 use crate::utils::{assert_success_with_args, REPO_PATH};
 use once_cell::sync::Lazy;
 use path_absolutize::Absolutize;
+use std::fs::remove_file;
 use std::path::{Path, PathBuf};
 use std::string::ToString;
 
 #[test]
 fn should_support_java_io_file() {
+    let _guard = CleanUpOnPanic {};
+
     file_info_when_does_not_exist();
     create_file_when_does_not_exist();
     create_file_when_exists();
@@ -267,8 +270,17 @@ fn file_properties(path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
 
     Ok((is_hidden, is_writable, is_readable, is_executable))
 }
-
 #[cfg(windows)]
 fn file_properties(_path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
     Ok((false, true, true, true))
+}
+
+struct CleanUpOnPanic;
+
+impl Drop for CleanUpOnPanic {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            let _ = remove_file(canonical_path());
+        }
+    }
 }
