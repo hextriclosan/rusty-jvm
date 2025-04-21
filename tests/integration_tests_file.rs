@@ -254,10 +254,13 @@ fn file_properties(path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
     use std::fs;
     use std::os::unix::fs::MetadataExt;
     let metadata = fs::metadata(path)?;
-    let permissions = metadata.permissions();
-    let is_readable = permissions.readonly();
-    let is_writable = !is_readable;
-    let is_executable = metadata.mode() & 0o100 != 0; // Check if executable on Unix
+    let mode = metadata.mode();
+
+    // Owner permissions
+    let is_readable = mode & 0o400 != 0;
+    let is_writable = mode & 0o200 != 0;
+    let is_executable = mode & 0o100 != 0;
+
     let is_hidden = path.file_name().map_or(false, |name| {
         name.to_str().map_or(false, |s| s.starts_with("."))
     });
