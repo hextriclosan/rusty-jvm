@@ -666,6 +666,7 @@ dependencies = [
  "derive-new",
  "getset",
  "once_cell",
+ "path-absolutize",
  "regex",
  "serde_json",
  "vm",

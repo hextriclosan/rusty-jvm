@@ -1,6 +1,7 @@
+#![allow(dead_code)]
 use assert_cmd::Command;
 use once_cell::sync::Lazy;
-use std::{env, fs};
+use std::{env, fs, iter};
 
 const PATH: &str = "tests/test_data";
 
@@ -71,27 +72,32 @@ pub fn get_filesystem_class_name() -> &'static str {
     }
 }
 
-#[allow(dead_code)]
 pub fn assert_success(entry: &str, expected: &str) {
     assert_success_with_args(entry, &vec![], expected)
 }
 
-#[allow(dead_code)]
 pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected: &str) {
     #[cfg(target_os = "windows")]
     let expected = to_windows(expected);
 
-    let mut args = vec![entry];
-    args.extend(arguments);
+    let args = iter::once(entry)
+        .chain(arguments.iter().copied())
+        .collect::<Vec<_>>();
     get_command(&args)
         .assert()
         .success()
         .stdout(expected.to_string());
 }
 
-#[allow(dead_code)]
 pub fn get_output(entry: &str) -> String {
-    let output = get_command(&vec![entry])
+    get_output_with_args(entry, &vec![])
+}
+
+pub fn get_output_with_args(entry: &str, arguments: &[&str]) -> String {
+    let args = iter::once(entry)
+        .chain(arguments.iter().copied())
+        .collect::<Vec<_>>();
+    let output = get_command(&args)
         .output()
         .expect("Failed to execute process");
 
@@ -124,6 +130,6 @@ fn get_command(arguments: &[&str]) -> Command {
 }
 
 #[cfg(target_os = "windows")]
-fn to_windows(input: &str) -> String {
+pub fn to_windows(input: &str) -> String {
     input.replace("\r\n", "\n").replace("\n", "\r\n")
 }
