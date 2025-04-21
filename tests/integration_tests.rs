@@ -1617,7 +1617,7 @@ FileSystem provider: sun.nio.fs.MacOSXFileSystemProvider
 Separator: /
 Root directories:
   - /
-Supported file attribute views:[basic, dos, owner, posix, unix, user]
+Supported file attribute views:[basic, owner, posix, unix, user]
 Is open: true
 Is read-only: false
 "#

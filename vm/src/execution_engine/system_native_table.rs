@@ -544,22 +544,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         );
     }
 
-    table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
-    table.insert(
-        "sun/nio/ch/IOUtil:iovMax:()I",
-        Basic(|_args: &[i32]| Ok(vec![16])), // fixme: implement this
-    );
-    table.insert(
-        "sun/nio/ch/IOUtil:writevMax:()J",
-        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // fixme: implement this
-    );
-
-    table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
-    table.insert(
-        "sun/nio/ch/NativeThread:current0:()J",
-        Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // fixme: implement this
-    );
-
     table
 });
 
