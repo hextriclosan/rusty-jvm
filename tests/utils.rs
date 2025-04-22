@@ -1,6 +1,7 @@
+#![allow(dead_code)]
 use assert_cmd::Command;
 use once_cell::sync::Lazy;
-use std::{env, fs};
+use std::{env, fs, iter};
 
 const PATH: &str = "tests/test_data";
 
@@ -59,32 +60,32 @@ pub fn get_os_name() -> &'static str {
     }
 }
 
-pub fn get_filesystem_class_name() -> &'static str {
-    if cfg!(windows) {
-        "WindowsFileSystem"
-    } else if cfg!(target_os = "macos") {
-        "MacOSXFileSystem"
-    } else if cfg!(target_os = "linux") {
-        "LinuxFileSystem"
-    } else {
-        unreachable!("Unsupported OS")
-    }
+pub fn assert_success(entry: &str, expected: &str) {
+    assert_success_with_args(entry, &vec![], expected)
 }
 
-#[allow(dead_code)]
-pub fn assert_success(entry: &str, expected: &str) {
+pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected: &str) {
     #[cfg(target_os = "windows")]
     let expected = to_windows(expected);
 
-    get_command(entry)
+    let args = iter::once(entry)
+        .chain(arguments.iter().copied())
+        .collect::<Vec<_>>();
+    get_command(&args)
         .assert()
         .success()
         .stdout(expected.to_string());
 }
 
-#[allow(dead_code)]
 pub fn get_output(entry: &str) -> String {
-    let output = get_command(entry)
+    get_output_with_args(entry, &vec![])
+}
+
+pub fn get_output_with_args(entry: &str, arguments: &[&str]) -> String {
+    let args = iter::once(entry)
+        .chain(arguments.iter().copied())
+        .collect::<Vec<_>>();
+    let output = get_command(&args)
         .output()
         .expect("Failed to execute process");
 
@@ -106,17 +107,17 @@ pub fn assert_file(entry: &str, file_path: &str, expected_file_content: &str) {
     fs::remove_file(file_path).expect("Failed to delete file");
 }
 
-fn get_command(entry: &str) -> Command {
+fn get_command(arguments: &[&str]) -> Command {
     let repo_path = REPO_PATH.as_path();
 
     let mut cmd = Command::cargo_bin("rusty-jvm").expect("Failed to locate rusty-jvm binary");
     cmd.env("RUSTY_JAVA_HOME", repo_path)
         .current_dir(PATH)
-        .arg(entry);
+        .args(arguments);
     cmd
 }
 
 #[cfg(target_os = "windows")]
-fn to_windows(input: &str) -> String {
+pub fn to_windows(input: &str) -> String {
     input.replace("\r\n", "\n").replace("\n", "\r\n")
 }

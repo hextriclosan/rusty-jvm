@@ -25,6 +25,8 @@
 
 package java.io;
 
+import jdk.internal.util.OS;
+
 /**
  *
  * @since 1.8
@@ -37,16 +39,12 @@ final class DefaultFileSystem {
      * Return the FileSystem object for the current operating system.
      */
     public static FileSystem getFileSystem() {
-        String osName = System.getProperty("os.name").toLowerCase();
-        boolean isWindows = osName.contains("win");
-        boolean isUnixLike = osName.contains("nix") || osName.contains("nux") || osName.contains("mac");
-
-        if (isWindows) {
+        if (OS.WINDOWS) {
             return new WinNTFileSystem();
-        } else if (isUnixLike) {
+        } else if (OS.LINUX || OS.MACOS) {
             return new UnixFileSystem();
         } else {
-            throw new UnsupportedOperationException("Unsupported operating system: " + osName);
+            throw new UnsupportedOperationException("Unsupported operating system");
         }
     }
 }

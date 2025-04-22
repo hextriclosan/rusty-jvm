@@ -18,7 +18,9 @@ use crate::system_native::file_descriptor::{file_descriptor_close0_wrp, get_hand
 use crate::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
-use crate::system_native::io_file_system::{canonicalize0_wrp, create_file_exclusively0_wrp};
+use crate::system_native::io_file_system::{
+    canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp,
+};
 use crate::system_native::io_file_system::{delete0_wrp, get_boolean_attributes0_wrp};
 use crate::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp,
@@ -466,6 +468,12 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(find_builtin_lib_wrp),
     );
     table.insert(
+        "jdk/internal/loader/NativeLibraries:load:(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z", // todo: should be implemented with shared library dynamic loading
+        Basic(|_args: &[i32]| {
+            Ok(vec![1]) // true
+        }),
+    );
+    table.insert(
         "java/io/WinNTFileSystem:initIDs:()V", // this method is for caching `path` field from java/io/File for faster access in other native methods
         Basic(void_stub),
     );
@@ -501,6 +509,40 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/UnixFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
         Basic(get_boolean_attributes0_wrp),
     );
+    table.insert(
+        "java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z",
+        Basic(check_access0_wrp),
+    );
+    table.insert(
+        "java/io/UnixFileSystem:checkAccess0:(Ljava/io/File;I)Z",
+        Basic(check_access0_wrp),
+    );
+    #[cfg(unix)]
+    {
+        use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::get_cwd_wrp;
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:getcwd:()[B",
+            Basic(get_cwd_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:init:()I", // todo: return real capability flags
+            Basic(|_args: &[i32]| Ok(vec![0])),
+        );
+    }
+
+    #[cfg(windows)]
+    {
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::get_logical_drives_wrp;
+
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
+            Basic(void_stub),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetLogicalDrives:()I",
+            Basic(get_logical_drives_wrp),
+        );
+    }
 
     table
 });
