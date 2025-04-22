@@ -24,20 +24,9 @@ jobs:
           java-version: '17'
 
       - name: Compile Java file
-        run: javac Main.java
+        run: javac tests/test_data/GetDefaultFileSystem.java
 
       - name: Run Java program
         run: |
-          output=$(java Main)
+          output=$(java java -cp tests/test_data samples.filesystem.getdefaultfilesystem.GetDefaultFileSystem)
           echo "Output: $output"
-
-      - name: Check output (example check)
-        run: |
-          expected="Hello, world"
-          actual=$(java Main)
-          if [ "$actual" != "$expected" ]; then
-            echo "Test failed: expected '$expected', got '$actual'"
-            exit 1
-          else
-            echo "Test passed"
-          fi
