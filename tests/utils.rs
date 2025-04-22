@@ -60,18 +60,6 @@ pub fn get_os_name() -> &'static str {
     }
 }
 
-pub fn get_filesystem_class_name() -> &'static str {
-    if cfg!(windows) {
-        "WindowsFileSystem"
-    } else if cfg!(target_os = "macos") {
-        "MacOSXFileSystem"
-    } else if cfg!(target_os = "linux") {
-        "LinuxFileSystem"
-    } else {
-        unreachable!("Unsupported OS")
-    }
-}
-
 pub fn assert_success(entry: &str, expected: &str) {
     assert_success_with_args(entry, &vec![], expected)
 }

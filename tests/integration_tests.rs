@@ -345,8 +345,8 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_file, assert_success_with_args, get_file_separator, get_filesystem_class_name,
-    get_os_name, get_output, get_path_separator, is_bigendian, line_ending, map_library_name,
+    assert_file, assert_success_with_args, get_file_separator, get_os_name, get_output,
+    get_path_separator, is_bigendian, line_ending, map_library_name,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1601,9 +1601,37 @@ fn should_map_library_name() {
 
 #[test]
 fn should_return_default_filesystem() {
+    let expected = if cfg!(windows) {
+        r#"Default FileSystem class: WindowsFileSystem
+FileSystem provider: sun.nio.fs.WindowsFileSystemProvider
+Separator: \
+Supported file attribute views:[acl, basic, dos, owner, user]
+Is open: true
+Is read-only: false
+"#
+    } else if cfg!(target_os = "macos") {
+        r#"Default FileSystem class: MacOSXFileSystem
+FileSystem provider: sun.nio.fs.MacOSXFileSystemProvider
+Separator: /
+Supported file attribute views:[basic, owner, posix, unix, user]
+Is open: true
+Is read-only: false
+"#
+    } else if cfg!(target_os = "linux") {
+        r#"Default FileSystem class: LinuxFileSystem
+FileSystem provider: sun.nio.fs.LinuxFileSystemProvider
+Separator: /
+Supported file attribute views:[basic, dos, owner, posix, unix, user]
+Is open: true
+Is read-only: false
+"#
+    } else {
+        unreachable!("Unsupported OS")
+    };
+
     assert_success(
         "samples.filesystem.getdefaultfilesystem.GetDefaultFileSystem",
-        &format!("{}\n", get_filesystem_class_name()),
+        &format!("{}", expected),
     );
 }
 
