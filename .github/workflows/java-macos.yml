@@ -28,5 +28,5 @@ jobs:
 
       - name: Run Java program
         run: |
-          output=$(java java -cp tests/test_data samples.filesystem.getdefaultfilesystem.GetDefaultFileSystem)
+          output=$(java -cp tests/test_data samples.filesystem.getdefaultfilesystem.GetDefaultFileSystem)
           echo "Output: $output"
