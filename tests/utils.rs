@@ -2,7 +2,6 @@
 use assert_cmd::Command;
 use once_cell::sync::Lazy;
 use std::{env, fs, iter};
-use sysinfo::Disks;
 
 const PATH: &str = "tests/test_data";
 
@@ -59,18 +58,6 @@ pub fn get_os_name() -> &'static str {
     } else {
         unreachable!("Unsupported OS")
     }
-}
-
-pub fn get_root_directories() -> String {
-    let disks = Disks::new_with_refreshed_list();
-
-    let mut disks = disks
-        .iter()
-        .map(|disk| disk.mount_point().to_string_lossy().to_string())
-        .collect::<Vec<_>>();
-    disks.sort();
-
-    format!("[{}]", disks.join(", "))
 }
 
 pub fn assert_success(entry: &str, expected: &str) {
