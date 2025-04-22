@@ -1614,7 +1614,7 @@ Is read-only: false
         r#"Default FileSystem class: MacOSXFileSystem
 FileSystem provider: sun.nio.fs.MacOSXFileSystemProvider
 Separator: /
-Root directories: /
+Root directories: [/]
 Supported file attribute views:[basic, owner, posix, unix, user]
 Is open: true
 Is read-only: false
@@ -1623,7 +1623,7 @@ Is read-only: false
         r#"Default FileSystem class: LinuxFileSystem
 FileSystem provider: sun.nio.fs.LinuxFileSystemProvider
 Separator: /
-Root directories: /
+Root directories: [/]
 Supported file attribute views:[basic, dos, owner, posix, unix, user]
 Is open: true
 Is read-only: false
