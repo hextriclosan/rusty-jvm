@@ -23,111 +23,170 @@
  * questions.
  */
 
-// AUTOMATICALLY GENERATED FILE - DO NOT EDIT
+// AUTOMATICALLY GENERATED FILE - DO NOT EDIT (not anymore)
 
 package sun.nio.fs;
+
+import jdk.internal.util.OS;
+import static java.lang.Integer.MIN_VALUE;
+
 class UnixConstants {
-    private UnixConstants() { }
-    static final int O_RDONLY = 0x0000;
-    static final int O_WRONLY = 0x0001;
-    static final int O_RDWR = 0x0002;
-    static final int O_APPEND = 0x00000008;
-    static final int O_CREAT = 0x00000200;
-    static final int O_EXCL = 0x00000800;
-    static final int O_TRUNC = 0x00000400;
-    static final int O_SYNC = 0x0080;
+    private UnixConstants() {
+    }
 
+    static final int O_RDONLY;
+    static final int O_WRONLY;
+    static final int O_RDWR;
+    static final int O_APPEND;
+    static final int O_CREAT;
+    static final int O_EXCL;
+    static final int O_TRUNC;
+    static final int O_SYNC;
 
+    static final int O_DSYNC;
 
+    static final int O_NOFOLLOW;
 
+    static final int O_DIRECT;
 
-    static final int O_DSYNC = 0x400000;
+    static final int S_IAMB;
+    static final int S_IRUSR;
+    static final int S_IWUSR;
+    static final int S_IXUSR;
+    static final int S_IRGRP;
+    static final int S_IWGRP;
+    static final int S_IXGRP;
+    static final int S_IROTH;
+    static final int S_IWOTH;
+    static final int S_IXOTH;
 
+    static final int S_IFMT;
+    static final int S_IFREG;
+    static final int S_IFDIR;
+    static final int S_IFLNK;
+    static final int S_IFCHR;
+    static final int S_IFBLK;
+    static final int S_IFIFO;
+    static final int R_OK;
+    static final int W_OK;
+    static final int X_OK;
+    static final int F_OK;
+    static final int ENOENT;
+    static final int ENXIO;
+    static final int EACCES;
+    static final int EEXIST;
+    static final int ENOTDIR;
+    static final int EINVAL;
+    static final int EXDEV;
+    static final int EISDIR;
+    static final int ENOTEMPTY;
+    static final int ENOSPC;
+    static final int EAGAIN;
+    static final int EWOULDBLOCK;
+    static final int ENOSYS;
+    static final int ELOOP;
+    static final int EROFS;
 
+    static final int ENODATA;
 
-    static final int O_NOFOLLOW = 0x00000100;
+    static final int XATTR_NOT_FOUND;
 
-    static final int O_DIRECT = 00;
+    static final int ERANGE;
+    static final int EMFILE;
 
+    static final int ENOTSUP;
 
-    static final int S_IAMB =
-        (0000400|0000200|0000100|0000040|0000020|0000010|0000004|0000002|0000001);
-    static final int S_IRUSR = 0000400;
-    static final int S_IWUSR = 0000200;
-    static final int S_IXUSR = 0000100;
-    static final int S_IRGRP = 0000040;
-    static final int S_IWGRP = 0000020;
-    static final int S_IXGRP = 0000010;
-    static final int S_IROTH = 0000004;
-    static final int S_IWOTH = 0000002;
-    static final int S_IXOTH = 0000001;
+    static final int AT_SYMLINK_NOFOLLOW;
+    static final int AT_REMOVEDIR;
 
-    static final int S_IFMT = 0170000;
-    static final int S_IFREG = 0100000;
-    static final int S_IFDIR = 0040000;
-    static final int S_IFLNK = 0120000;
-    static final int S_IFCHR = 0020000;
-    static final int S_IFBLK = 0060000;
-    static final int S_IFIFO = 0010000;
-    static final int R_OK = (1<<2);
-    static final int W_OK = (1<<1);
-    static final int X_OK = (1<<0);
-    static final int F_OK = 0;
-    static final int ENOENT = 2;
-    static final int ENXIO = 6;
-    static final int EACCES = 13;
-    static final int EEXIST = 17;
-    static final int ENOTDIR = 20;
-    static final int EINVAL = 22;
-    static final int EXDEV = 18;
-    static final int EISDIR = 21;
-    static final int ENOTEMPTY = 66;
-    static final int ENOSPC = 28;
-    static final int EAGAIN = 35;
-    static final int EWOULDBLOCK = 35;
-    static final int ENOSYS = 78;
-    static final int ELOOP = 62;
-    static final int EROFS = 30;
+    static final int CLONE_NOFOLLOW;
+    static final int CLONE_NOOWNERCOPY;
 
+    static final int ATTR_CMN_CRTIME;
+    static final int ATTR_CMN_MODTIME;
+    static final int ATTR_CMN_ACCTIME;
+    static final int FSOPT_NOFOLLOW;
 
+    static final int POSIX_FADV_SEQUENTIAL;
+    static final int POSIX_FADV_NOREUSE;
+    static final int POSIX_FADV_WILLNEED;
 
+    static {
+        O_RDONLY = 00;
+        O_WRONLY = 01;
+        O_RDWR = 02;
+        O_APPEND = OS.LINUX ? 02000 : 0x00000008;
+        O_CREAT = OS.LINUX ? 0100 : 0x00000200;
+        O_EXCL = OS.LINUX ? 0200 : 0x00000800;
+        O_TRUNC = OS.LINUX ? 01000 : 0x00000400;
+        O_SYNC = OS.LINUX ? 04010000 : 0x0080;
 
+        O_DSYNC = OS.LINUX ? 010000 : 0x400000;
 
-    static final int ENODATA = 96;
+        O_NOFOLLOW = OS.LINUX ? 0400000 : 0x00000100;
 
+        O_DIRECT = OS.LINUX ? 040000 : 00;
 
+        S_IAMB = OS.LINUX ? (0400 | 0200 | 0100 | (0400 >> 3) | (0200 >> 3) | (0100 >> 3) | ((0400 >> 3) >> 3) | ((0200 >> 3) >> 3) | ((0100 >> 3) >> 3)) : (0000400 | 0000200 | 0000100 | 0000040 | 0000020 | 0000010 | 0000004 | 0000002 | 0000001);
+        S_IRUSR = OS.LINUX ? 0400 : 0000400;
+        S_IWUSR = OS.LINUX ? 0200 : 0000200;
+        S_IXUSR = OS.LINUX ? 0100 : 0000100;
+        S_IRGRP = OS.LINUX ? (0400 >> 3) : 0000040;
+        S_IWGRP = OS.LINUX ? (0200 >> 3) : 0000020;
+        S_IXGRP = OS.LINUX ? (0100 >> 3) : 0000010;
+        S_IROTH = OS.LINUX ? ((0400 >> 3) >> 3) : 0000004;
+        S_IWOTH = OS.LINUX ? ((0200 >> 3) >> 3) : 0000002;
+        S_IXOTH = OS.LINUX ? ((0100 >> 3) >> 3) : 0000001;
 
+        S_IFMT = OS.LINUX ? 0170000 : 0170000;
+        S_IFREG = OS.LINUX ? 0100000 : 0100000;
+        S_IFDIR = OS.LINUX ? 0040000 : 0040000;
+        S_IFLNK = OS.LINUX ? 0120000 : 0120000;
+        S_IFCHR = OS.LINUX ? 0020000 : 0020000;
+        S_IFBLK = OS.LINUX ? 0060000 : 0060000;
+        S_IFIFO = OS.LINUX ? 0010000 : 0010000;
+        R_OK = OS.LINUX ? 4 : (1 << 2);
+        W_OK = OS.LINUX ? 2 : (1 << 1);
+        X_OK = OS.LINUX ? 1 : (1 << 0);
+        F_OK = OS.LINUX ? 0 : 0;
+        ENOENT = OS.LINUX ? 2 : 2;
+        ENXIO = OS.LINUX ? 6 : 6;
+        EACCES = OS.LINUX ? 13 : 13;
+        EEXIST = OS.LINUX ? 17 : 17;
+        ENOTDIR = 20;
+        EINVAL = 22;
+        EXDEV = 18;
+        EISDIR = 21;
+        ENOTEMPTY = OS.LINUX ? 39 : 66;
+        ENOSPC = 28;
+        EAGAIN = OS.LINUX ? 11 : 35;
+        EWOULDBLOCK = OS.LINUX ? 11 : 35;
+        ENOSYS = OS.LINUX ? 38 : 78;
+        ELOOP = OS.LINUX ? 40 : 62;
+        EROFS = 30;
 
-    static final int XATTR_NOT_FOUND = 93;
+        ENODATA = OS.LINUX ? 61 : 96;
 
+        XATTR_NOT_FOUND = OS.LINUX ? 61 : 93;
 
+        ERANGE = 34;
+        EMFILE = 24;
 
+        ENOTSUP = OS.LINUX ? MIN_VALUE : 45;
 
+        AT_SYMLINK_NOFOLLOW = OS.LINUX ? 0x100 : 0x0020;
+        AT_REMOVEDIR = OS.LINUX ? 0x200 : 0x0080;
 
+        CLONE_NOFOLLOW = OS.LINUX ? MIN_VALUE : 0x0001;
+        CLONE_NOOWNERCOPY = OS.LINUX ? MIN_VALUE : 0x0002;
 
+        ATTR_CMN_CRTIME = OS.LINUX ? 00 : 0x00000200;
+        ATTR_CMN_MODTIME = OS.LINUX ? 00 : 0x00000400;
+        ATTR_CMN_ACCTIME = OS.LINUX ? 00 : 0x00001000;
+        FSOPT_NOFOLLOW = OS.LINUX ? 00 : 0x00000001;
 
-    static final int ERANGE = 34;
-    static final int EMFILE = 24;
-
-
-    static final int ENOTSUP = 45;
-
-
-
-
-    static final int AT_SYMLINK_NOFOLLOW = 0x0020;
-    static final int AT_REMOVEDIR = 0x0080;
-
-    static final int CLONE_NOFOLLOW = 0x0001;
-    static final int CLONE_NOOWNERCOPY = 0x0002;
-
-
-    static final int ATTR_CMN_CRTIME = 0x00000200;
-    static final int ATTR_CMN_MODTIME = 0x00000400;
-    static final int ATTR_CMN_ACCTIME = 0x00001000;
-    static final int FSOPT_NOFOLLOW = 0x00000001;
-
-    static final int POSIX_FADV_SEQUENTIAL = 2;
-    static final int POSIX_FADV_NOREUSE = 5;
-    static final int POSIX_FADV_WILLNEED = 3;
+        POSIX_FADV_SEQUENTIAL = OS.LINUX ? 2 : MIN_VALUE;
+        POSIX_FADV_NOREUSE = OS.LINUX ? 5 : MIN_VALUE;
+        POSIX_FADV_WILLNEED = OS.LINUX ? 3 : MIN_VALUE;
+    }
 }

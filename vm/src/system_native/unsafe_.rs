@@ -5,6 +5,7 @@ use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::method_area::java_class::InnerState::Initialized;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::object_offset::offset_utils::object_field_offset_by_refs;
+use std::alloc::Layout;
 
 pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
@@ -142,10 +143,21 @@ pub(crate) fn get_int_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
 
-    let int = get_int(obj_ref, offset)?;
+    let int = if obj_ref == 0 {
+        get_int_raw(offset)?
+    } else {
+        get_int_via_object(obj_ref, offset)?
+    };
     Ok(vec![int])
 }
-pub(crate) fn get_int(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
+pub(crate) fn get_int_raw(address: i64) -> crate::error::Result<i32> {
+    let ptr = address as usize as *const i32;
+    unsafe {
+        let ptr = ptr.add(0);
+        Ok(std::ptr::read(ptr))
+    }
+}
+pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
     if obj_ref != 0 {
         let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
         if class_name.starts_with("[") {
@@ -284,6 +296,88 @@ pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<V
     put_reference_wrp(args) // todo! make me volatile
 }
 
+pub(crate) fn put_char_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let char_value = args[4];
+
+    eprintln!("!!! put_char_wrp: obj_ref={obj_ref}, offset={offset}, char_value={char_value}");
+    put_char(obj_ref, offset, char_value)?;
+    Ok(vec![])
+}
+fn put_char(obj_ref: i32, offset: i64, char_value: i32) -> crate::error::Result<()> {
+    if obj_ref == 0 {
+        put_char_raw(offset, char_value as u16)
+    } else {
+        put_char_via_object(obj_ref, offset, char_value)
+    }
+}
+fn put_char_raw(address: i64, char_value: u16) -> crate::error::Result<()> {
+    let ptr = address as usize as *mut u8;
+    unsafe {
+        let ptr = ptr.add(0);
+        let src = &char_value as *const u16 as *const u8;
+        std::ptr::copy(src, ptr, 2);
+    }
+
+    Ok(())
+}
+fn put_char_via_object(obj_ref: i32, offset: i64, char_value: i32) -> crate::error::Result<()> {
+    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+    with_heap_write_lock(|heap| {
+        if class_name.starts_with("[") {
+            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![char_value])
+        } else {
+            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![char_value])
+        }
+    })
+}
+
+pub(crate) fn put_byte_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let byte_value = args[4];
+
+    eprintln!("!!! put_byte_wrp: obj_ref={obj_ref}, offset={offset}, byte_value={byte_value}");
+    put_byte(obj_ref, offset, byte_value)?;
+    Ok(vec![])
+}
+fn put_byte(obj_ref: i32, offset: i64, byte_value: i32) -> crate::error::Result<()> {
+    if obj_ref == 0 {
+        put_byte_raw(offset, byte_value as u8)
+    } else {
+        put_byte_via_object(obj_ref, offset, byte_value)
+    }
+}
+fn put_byte_raw(address: i64, byte_value: u8) -> crate::error::Result<()> {
+    let ptr = address as usize as *mut u8;
+    unsafe {
+        let ptr = ptr.add(0);
+        let src = &byte_value as *const u8;
+        std::ptr::copy(src, ptr, 2);
+    }
+
+    Ok(())
+}
+fn put_byte_via_object(obj_ref: i32, offset: i64, byte_value: i32) -> crate::error::Result<()> {
+    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+    with_heap_write_lock(|heap| {
+        if class_name.starts_with("[") {
+            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![byte_value])
+        } else {
+            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![byte_value])
+        }
+    })
+}
+
 pub(crate) fn array_index_scale0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let class_ref = args[1];
@@ -338,4 +432,95 @@ fn should_be_initialized0(class_ref: i32) -> crate::error::Result<bool> {
         let guard = rc.static_fields_init_state().lock();
         Ok(guard.get_inner_state() != Initialized)
     })
+}
+
+pub(crate) fn allocate_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let bytes = i32toi64(args[2], args[1]);
+
+    let addr = allocate_memory0(bytes)?;
+    Ok(i64_to_vec(addr))
+}
+fn allocate_memory0(bytes: i64) -> crate::error::Result<i64> {
+    let layout = Layout::array::<u8>(bytes as usize)
+        .map_err(|_| Error::new_execution("Invalid memory allocation"))?;
+    let ptr = unsafe { std::alloc::alloc(layout) };
+    if ptr.is_null() {
+        panic!("allocation failed");
+    }
+
+    let address = ptr as usize as i64;
+
+    eprintln!("!!! allocate_memory0: bytes={bytes} ptr={ptr:?} address={address}");
+    Ok(address)
+}
+
+pub(crate) fn copy_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let src_base_ref = args[1];
+    let src_offset = i32toi64(args[3], args[2]);
+    let dest_base_ref = args[4];
+    let dest_offset = i32toi64(args[6], args[5]);
+    let bytes = i32toi64(args[8], args[7]);
+
+    copy_memory0(src_base_ref, src_offset, dest_base_ref, dest_offset, bytes)?;
+    Ok(vec![])
+}
+fn copy_memory0(
+    src_base_ref: i32,
+    src_offset: i64,
+    dest_base_ref: i32,
+    dest_offset: i64,
+    bytes: i64,
+) -> crate::error::Result<()> {
+    eprintln!("!!! copy_memory0: src_base_ref={src_base_ref}, src_offset={src_offset}, dest_base_ref={dest_base_ref}, dest_offset={dest_offset}, bytes={bytes}");
+
+    let ptr = dest_base_ref as usize as *mut u8;
+
+    let arr = with_heap_read_lock(|heap| heap.get_entire_array(src_base_ref))?;
+    let raw = arr.raw_data();
+
+    let to_copy = raw
+        .iter()
+        .skip(src_offset as usize)
+        .take(bytes as usize)
+        .map(|v| *v)
+        .collect::<Vec<_>>();
+    unsafe {
+        std::ptr::copy(
+            to_copy.as_ptr(),
+            ptr.add(dest_offset as usize),
+            to_copy.len(),
+        );
+    }
+
+    Ok(())
+}
+
+pub(crate) fn set_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let bytes = i32toi64(args[5], args[4]);
+    let value = args[6] as u8;
+
+    set_memory0(obj_ref, offset, bytes, value)?;
+    Ok(vec![])
+}
+fn set_memory0(obj_ref: i32, offset: i64, bytes: i64, value: u8) -> crate::error::Result<()> {
+    eprintln!("!!! set_memory0: obj_ref={obj_ref}, offset={offset}, bytes={bytes}, value={value}");
+
+    if obj_ref != 0 {
+        unimplemented!("implement this for objects")
+    }
+
+    let ptr = offset as usize as *mut u8;
+
+    unsafe {
+        let ptr = ptr.add(0);
+        let src = &value as *const u8;
+        std::ptr::copy(src, ptr, bytes as usize);
+    }
+
+    Ok(())
 }

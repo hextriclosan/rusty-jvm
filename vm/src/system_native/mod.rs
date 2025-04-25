@@ -9,6 +9,7 @@ pub(crate) mod native_libraries;
 pub(crate) mod object;
 mod object_offset;
 mod platform_file;
+pub(crate) mod platform_file_dispatcher;
 pub(crate) mod platform_native_dispatcher;
 pub(crate) mod properties_provider;
 pub(crate) mod reflect_array;

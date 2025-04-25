@@ -42,7 +42,7 @@ use crate::system_native::system::{
 };
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
-use crate::system_native::unsafe_::put_reference_wrp;
+use crate::system_native::unsafe_::{allocate_memory0_wrp, copy_memory0_wrp, put_byte_wrp, put_char_wrp, put_reference_wrp, set_memory0_wrp};
 use crate::system_native::unsafe_::{
     array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp,
     ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
@@ -244,12 +244,32 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(put_reference_volatile_wrp),
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:putChar:(Ljava/lang/Object;JC)V",
+        Basic(put_char_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putByte:(Ljava/lang/Object;JB)V",
+        Basic(put_byte_wrp),
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:ensureClassInitialized0:(Ljava/lang/Class;)V",
         Basic(ensure_class_initialized0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:shouldBeInitialized0:(Ljava/lang/Class;)Z",
         Basic(should_be_initialized0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:copyMemory0:(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
+        Basic(copy_memory0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:setMemory0:(Ljava/lang/Object;JJB)V",
+        Basic(set_memory0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:allocateMemory0:(J)J",
+        Basic(allocate_memory0_wrp),
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
@@ -344,6 +364,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
         Basic(current_thread_wrp),
     );
+    table.insert(
+        "java/lang/Thread:currentCarrierThread:()Ljava/lang/Thread;",
+        Basic(current_thread_wrp),
+    );
     table.insert("java/lang/Thread:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
@@ -379,6 +403,12 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(file_output_stream_write_bytes_wrp),
     );
     table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
+    table.insert(
+        "java/lang/ref/Reference:refersTo0:(Ljava/lang/Object;)Z",
+        Basic(|_args: &[i32]| {
+            Ok(vec![0]) // todo: this should be implemented with GC
+        }),
+    );
     table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
         WithStackFrames(reflection_get_caller_class_wrp),
@@ -520,6 +550,9 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     #[cfg(unix)]
     {
         use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::get_cwd_wrp;
+        use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::unix_native_dispatcher_open0_wrp;
+        use crate::system_native::platform_file_dispatcher::unix_file_dispatcher::unix_file_dispatcher_impl_write0_wrp;
+
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:getcwd:()[B",
             Basic(get_cwd_wrp),
@@ -528,11 +561,147 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
             "sun/nio/fs/UnixNativeDispatcher:init:()I", // todo: return real capability flags
             Basic(|_args: &[i32]| Ok(vec![0])),
         );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:open0:(JII)I",
+            Basic(unix_native_dispatcher_open0_wrp),
+        );
+        // table.insert(
+        //     "sun/nio/fs/UnixNativeDispatcher:access0:(JI)I",
+        //     Basic(get_access0_wrp),
+        // );
+        // table.insert(
+        //     "sun/nio/fs/UnixNativeDispatcher:stat0:(JLsun/nio/fs/UnixFileAttributes;)I",
+        //     Basic(stat0_wrp),
+        // );
+
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JI)I",
+            Basic(unix_file_dispatcher_impl_write0_wrp),
+        );
     }
 
     #[cfg(windows)]
     {
-        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::get_logical_drives_wrp;
+        use crate::system_native::platform_file_dispatcher::windows_file_dispatcher::{
+            allocation_granularity0_wrp, windows_file_dispatcher_write0_wrp,
+        };
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
+            close_handle_wrp, create_directory0_wrp, get_current_process_wrp,
+            get_current_thread_wrp, get_file_security0_wrp, get_logical_drives_wrp,
+            get_volume_information0_wrp, get_volume_path_name0_wrp, open_process_token_wrp,
+            open_thread_token_wrp,
+        };
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
+            create_file0_wrp, get_file_attributes_ex0_wrp, set_end_of_file_wrp,
+        };
+
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
+            Basic(void_stub),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetFileAttributesEx0:(JJ)V",
+            Basic(get_file_attributes_ex0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetFileSecurity0:(JIJI)I",
+            Basic(get_file_security0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetCurrentProcess:()J",
+            Basic(get_current_process_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetCurrentThread:()J",
+            Basic(get_current_thread_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:OpenProcessToken:(JI)J",
+            Basic(open_process_token_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:OpenThreadToken:(JIZ)J",
+            Basic(open_thread_token_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:AccessCheck:(JJIIIII)Z",
+            Basic(|_args: &[i32]| Ok(vec![1])),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CloseHandle:(J)V",
+            Basic(close_handle_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetVolumePathName0:(J)Ljava/lang/String;",
+            Basic(get_volume_path_name0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetVolumeInformation0:(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V",
+            Basic(get_volume_information0_wrp), // fixme: implement this
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetDriveType0:(J)I",
+            Basic(|_args: &[i32]| Ok(vec![3 /*DRIVE_FIXED*/])), // fixme: implement this
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetLogicalDrives:()I",
+            Basic(get_logical_drives_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CreateDirectory0:(JJ)V",
+            Basic(create_directory0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CreateFile0:(JIIJII)J",
+            Basic(create_file0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:SetEndOfFile:(J)V",
+            Basic(set_end_of_file_wrp),
+        );
+
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:allocationGranularity0:()J",
+            Basic(allocation_granularity0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:maxDirectTransferSize0:()I", // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
+            Basic(|_args| Ok(vec![i32::MAX - 1])),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
+            Basic(windows_file_dispatcher_write0_wrp),
+        );
+    }
+
+    table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
+    table.insert(
+        "sun/nio/ch/IOUtil:iovMax:()I",
+        Basic(|_args: &[i32]| Ok(vec![16])), // fixme: implement this
+    );
+    table.insert(
+        "sun/nio/ch/IOUtil:writevMax:()J",
+        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // fixme: implement this
+    );
+
+    table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
+    table.insert(
+        "sun/nio/ch/NativeThread:current0:()J",
+        Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // fixme: implement this
+    );
+
+    #[cfg(windows)]
+    {
+        use crate::system_native::platform_file_dispatcher::windows_file_dispatcher::windows_file_dispatcher_write0_wrp;
+        use crate::system_native::platform_file_dispatcher::windows_file_dispatcher::{
+            allocation_granularity0_wrp,
+        };
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
+            get_logical_drives_wrp,
+        };
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
+            create_file0_wrp, set_end_of_file_wrp,
+        };
 
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
@@ -542,6 +711,45 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
             "sun/nio/fs/WindowsNativeDispatcher:GetLogicalDrives:()I",
             Basic(get_logical_drives_wrp),
         );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:SetEndOfFile:(J)V",
+            Basic(set_end_of_file_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:allocationGranularity0:()J",
+            Basic(allocation_granularity0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:maxDirectTransferSize0:()I", // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
+            Basic(|_args| Ok(vec![i32::MAX - 1])),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
+            Basic(windows_file_dispatcher_write0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CreateFile0:(JIIJII)J",
+            Basic(create_file0_wrp),
+        );
+        table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
+        table.insert(
+            "sun/nio/ch/IOUtil:iovMax:()I",
+            Basic(|_args: &[i32]| Ok(vec![16])), // fixme: implement this
+        );
+        table.insert(
+            "sun/nio/ch/IOUtil:writevMax:()J",
+            Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // fixme: implement this
+        );
+        table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
+        table.insert(
+            "sun/nio/ch/NativeThread:current0:()J",
+            Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // fixme: implement this
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        table.insert("sun/nio/ch/LinuxFileDispatcherImpl:init0:()V", Basic(void_stub));
     }
 
     table

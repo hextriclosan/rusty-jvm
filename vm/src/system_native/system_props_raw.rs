@@ -18,7 +18,9 @@ pub(crate) fn vm_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>>
     Ok(vec![string_array_ref])
 }
 fn vm_properties() -> crate::error::Result<i32> {
-    create_array_of_strings(get_vm_properties().as_slice())
+    let x = get_vm_properties();
+    let x_refs: Vec<&str> = x.iter().map(|s| s.as_str()).collect();
+    create_array_of_strings(&x_refs)
 }
 
 fn get_platform_properties() -> Vec<&'static str> {
@@ -65,6 +67,14 @@ fn get_platform_properties() -> Vec<&'static str> {
     ]
 }
 
-fn get_vm_properties() -> Vec<&'static str> {
-    vec!["java.home", "java.home_VALUE"]
+fn get_vm_properties() -> Vec<String> {
+    let mut out = vec![
+        "java.home".to_string(),
+        "java.home_VALUE".to_string(),
+        //"jdk.invoke.MethodHandle.dumpClassFiles".to_string(), "true".to_string()
+    ];
+    //let x = SYSTEM_PROPERTIES.get().expect("Failed to get system properties");
+    //out.extend_from_slice(x.as_slice());
+
+    out
 }
