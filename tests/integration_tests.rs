@@ -1194,6 +1194,11 @@ fn should_support_dup_x2_opcode() {
 }
 
 #[test]
+fn should_support_pop2_opcode() {
+    assert_success("samples.opcodes.pop2.Pop2GeneratedExample", "1000\n");
+}
+
+#[test]
 fn should_work_with_method_handle() {
     assert_success(
         "samples.reflection.methodhandleexample.MethodHandleExample",
