@@ -12,6 +12,13 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
             stack_frame.incr_pc();
             trace!("POP");
         }
+        POP2 => {
+            let _value: i32 = stack_frame.pop();
+            let _value: i32 = stack_frame.pop();
+
+            stack_frame.incr_pc();
+            trace!("POP2");
+        }
         DUP => {
             let value: i32 = stack_frame.pop();
             stack_frame.push(value);
