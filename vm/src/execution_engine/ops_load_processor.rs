@@ -1,7 +1,7 @@
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::heap::heap::with_heap_read_lock;
-use crate::stack::sack_value::StackValue;
+use crate::stack::stack_value::StackValue;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
 use tracing::trace;

@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::with_method_area;
-use crate::stack::sack_value::StackValue;
+use crate::stack::stack_value::StackValue;
 use jdescriptor::TypeDescriptor;
 
 pub fn i32toi64(high: i32, low: i32) -> i64 {

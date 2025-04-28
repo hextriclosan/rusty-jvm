@@ -7,7 +7,7 @@ use crate::execution_engine::ops_math_processor::increment;
 use crate::execution_engine::ops_store_processor::handle_store;
 use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::with_method_area;
-use crate::stack::sack_value::StackValue;
+use crate::stack::stack_value::StackValue;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
 use tracing::trace;

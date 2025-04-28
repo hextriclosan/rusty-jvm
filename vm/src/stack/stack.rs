@@ -35,7 +35,7 @@ mod tests {
         assert_eq!(stack.push(1), Ok(()));
         assert_eq!(stack.push(2), Ok(()));
         assert_eq!(stack.push(3), Ok(()));
-        assert_eq!(stack.push(4), Err("Stack overflow".to_string()));
+        assert_eq!(stack.push(4), Err("Exceeded max stack size".to_string()));
         assert_eq!(stack.pop(), Some(3));
         assert_eq!(stack.pop(), Some(2));
         assert_eq!(stack.pop(), Some(1));
