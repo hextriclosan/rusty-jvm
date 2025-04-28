@@ -1,6 +1,6 @@
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
-use crate::stack::sack_value::StackValue;
+use crate::stack::stack_value::StackValue;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
 use tracing::trace;
 
@@ -14,7 +14,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
                 |a, b| Some(a.cmp(&b)),
                 0, // No NaN handling for integers
                 "LCMP",
-            );
+            )?;
         }
         FCMPL | FCMPG => {
             let nan_result = if code == FCMPL { -1 } else { 1 };
@@ -24,7 +24,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
                 |a, b| a.partial_cmp(&b),
                 nan_result,
                 if code == FCMPL { "FCMPL" } else { "FCMPG" },
-            );
+            )?;
         }
         DCMPL | DCMPG => {
             let nan_result = if code == DCMPL { -1 } else { 1 };
@@ -34,7 +34,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
                 |a, b| a.partial_cmp(&b),
                 nan_result,
                 if code == DCMPL { "DCMPL" } else { "DCMPG" },
-            );
+            )?;
         }
         IFEQ => {
             branch1arg(|a| a == 0, stack_frame, "IFEQ");
@@ -112,7 +112,8 @@ fn perform_comparison<T: StackValue + std::fmt::Display + Copy, F, G>(
     compare: G,
     nan_result: i32,
     name: &str,
-) where
+) -> crate::error::Result<()>
+where
     F: Fn(T, T) -> Option<i32>,
     G: Fn(T, T) -> Option<std::cmp::Ordering>,
 {
@@ -123,9 +124,11 @@ fn perform_comparison<T: StackValue + std::fmt::Display + Copy, F, G>(
         .or_else(|| compare(a, b).map(|ord| ordering_to_i32(Some(ord))))
         .unwrap_or(nan_result);
 
-    stack_frame.push(result);
+    stack_frame.push(result)?;
     stack_frame.incr_pc();
     trace!("{name} -> {a} ? {b}");
+
+    Ok(())
 }
 
 fn ordering_to_i32(ordering: Option<std::cmp::Ordering>) -> i32 {

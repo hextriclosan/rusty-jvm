@@ -32,7 +32,7 @@ pub(crate) fn invoke(
 
         let result = invoke_native_method(&full_native_signature, &method_args, stack_frames)?;
         for result_chunk in result.iter().rev() {
-            last_frame_mut(stack_frames)?.push(*result_chunk);
+            last_frame_mut(stack_frames)?.push(*result_chunk)?;
         }
     } else {
         let mut next_frame = java_method.new_stack_frame()?;

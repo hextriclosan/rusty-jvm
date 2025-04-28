@@ -1,7 +1,7 @@
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
 use crate::method_area::method_area::{with_method_area, MethodArea};
-use crate::stack::sack_value::StackValue;
+use crate::stack::stack_value::StackValue;
 use crate::stack::stack_frame::{StackFrame, StackFrames};
 use std::fmt::Display;
 use tracing::trace;
@@ -38,33 +38,35 @@ pub(crate) fn process(
             |stack_frame| stack_frame.extract_two_bytes() as i32,
             "SIPUSH",
         ),
-        LDC | LDC_W | LDC2_W => handle_ldc_cases(stack_frame, code, &current_class_name)?,
-        _ => {
-            return Err(crate::error::Error::new_execution(&format!(
-                "Unknown constant opcode: {}",
-                code
-            )));
-        }
+        LDC | LDC_W | LDC2_W => handle_ldc_cases(stack_frame, code, &current_class_name),
+        _ => Err(crate::error::Error::new_execution(&format!(
+            "Unknown constant opcode: {}",
+            code
+        ))),
     }
-
-    Ok(())
 }
 
-fn push_constant<T: StackValue>(stack_frame: &mut StackFrame, value: T, name: &str) {
-    stack_frame.push(value);
+fn push_constant<T: StackValue>(
+    stack_frame: &mut StackFrame,
+    value: T,
+    name: &str,
+) -> crate::error::Result<()> {
+    stack_frame.push(value)?;
     stack_frame.incr_pc();
     trace!("{name}");
+    Ok(())
 }
 
 fn handle_push<T: StackValue + Display + Copy>(
     stack_frame: &mut StackFrame,
     extractor: impl FnOnce(&mut StackFrame) -> T,
     name: &str,
-) {
+) -> crate::error::Result<()> {
     let value = extractor(stack_frame);
-    stack_frame.push(value);
+    stack_frame.push(value)?;
     stack_frame.incr_pc();
     trace!("{name} -> value={value}");
+    Ok(())
 }
 
 fn handle_ldc_cases(
@@ -111,7 +113,7 @@ fn handle_ldc_generic<T: StackValue + Display + Copy>(
     let value =
         with_method_area(|method_area| resolver(method_area, current_class_name, cpoolindex))?;
 
-    stack_frame.push(value);
+    stack_frame.push(value)?;
 
     stack_frame.incr_pc();
     trace!("{name} -> cpoolindex={cpoolindex}, value={value}");

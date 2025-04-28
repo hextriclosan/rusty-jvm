@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::opcode::*;
-use crate::stack::sack_value::StackValue;
+use crate::stack::stack_value::StackValue;
 use crate::stack::stack_frame::StackFrames;
 use std::fmt::Display;
 use tracing::trace;
@@ -95,7 +95,7 @@ fn perform_return<T: StackValue + Copy + Display>(
     let next_frame = stack_frames
         .last_mut()
         .ok_or(Error::new_execution("Error getting stack last value"))?;
-    next_frame.push(result);
+    next_frame.push(result)?;
 
     trace!("{name} -> {result}");
     Ok(())

@@ -33,7 +33,7 @@ pub(crate) fn process(
                 .raw_value()?
                 .iter()
                 .rev()
-                .for_each(|x| stack_frame.push(*x));
+                .try_for_each(|x| stack_frame.push(*x))?;
 
             stack_frame.incr_pc();
             trace!(
@@ -73,7 +73,7 @@ pub(crate) fn process(
                 heap.get_object_field_value(objectref, class_name.as_str(), field_name.as_str())
             })?;
 
-            value.iter().rev().for_each(|x| stack_frame.push(*x));
+            value.iter().rev().try_for_each(|x| stack_frame.push(*x))?;
 
             stack_frame.incr_pc();
             trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
@@ -264,7 +264,7 @@ pub(crate) fn process(
 
             let instanceref =
                 with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
-            stack_frame.push(instanceref);
+            stack_frame.push(instanceref)?;
 
             trace!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
             stack_frame.incr_pc();
@@ -292,7 +292,7 @@ pub(crate) fn process(
             let length = stack_frame.pop();
 
             let arrayref = with_heap_write_lock(|heap| heap.create_array(type_name, length))?;
-            stack_frame.push(arrayref);
+            stack_frame.push(arrayref)?;
 
             stack_frame.incr_pc();
             trace!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
@@ -315,7 +315,7 @@ pub(crate) fn process(
             let class_of_array = format!("[L{class_of_array};");
             let arrayref =
                 with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
-            stack_frame.push(arrayref);
+            stack_frame.push(arrayref)?;
 
             stack_frame.incr_pc();
             trace!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
@@ -325,7 +325,7 @@ pub(crate) fn process(
             let arrayref = stack_frame.pop();
 
             let len = with_heap_read_lock(|heap| heap.get_array_len(arrayref))?;
-            stack_frame.push(len);
+            stack_frame.push(len)?;
 
             stack_frame.incr_pc();
             trace!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
@@ -358,7 +358,7 @@ pub(crate) fn process(
                 }
             }
 
-            stack_frame.push(objectref);
+            stack_frame.push(objectref)?;
 
             trace!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }
@@ -387,7 +387,7 @@ pub(crate) fn process(
                 objectref = if instanse_of { 1 } else { 0 };
             }
 
-            stack_frame.push(objectref);
+            stack_frame.push(objectref)?;
 
             trace!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }
