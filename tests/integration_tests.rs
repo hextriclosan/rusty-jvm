@@ -345,8 +345,8 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_file, assert_success_with_args, get_file_separator, get_os_name, get_output,
-    get_path_separator, is_bigendian, line_ending, map_library_name,
+    assert_failure, assert_file, assert_success_with_args, get_file_separator, get_os_name,
+    get_output, get_path_separator, is_bigendian, line_ending, map_library_name,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1646,5 +1646,13 @@ fn should_print_out_program_args() {
         "samples.system.programargs.ProgramArgsExample",
         &["Hello", "from", "Java", "!"],
         "[Hello, from, Java, !]\n",
+    );
+}
+
+#[test]
+fn should_handle_operand_stack_overflow() {
+    assert_failure(
+        "samples.invalidprograms.operandstackoverflow.OperandStackOverflowExample",
+        r#"VM execution failed: Execution Error: Reason: Execution Error: Exceeded max stack size; Current Frame: StackFrame { pc: 5, locals: [], operand_stack: Stack { max_size: 2, data: [10, 20] }, bytecode_ref: [18, 7, 18, 8, 18, 9, 172], current_class_name: "samples/invalidprograms/operandstackoverflow/OperandStackOverflowExample", line_numbers: {} }"#,
     );
 }

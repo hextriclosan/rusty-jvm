@@ -22,26 +22,23 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
         I2B => convert::<i32, i32>(stack_frame, |from| from as i8 as i32, "I2B"),
         I2C => convert::<i32, i32>(stack_frame, |from| from as u16 as i32, "I2C"),
         I2S => convert::<i32, i32>(stack_frame, |from| from as i16 as i32, "I2S"),
-        _ => {
-            return Err(crate::error::Error::new_execution(&format!(
-                "Unknown conversion opcode: {}",
-                code
-            )));
-        }
+        _ => Err(crate::error::Error::new_execution(&format!(
+            "Unknown conversion opcode: {}",
+            code
+        ))),
     }
-
-    Ok(())
 }
 
 fn convert<From: StackValue + Copy + Display, To: StackValue + Copy + Display>(
     stack_frame: &mut StackFrame,
     convertor: impl Fn(From) -> To,
     name: &str,
-) {
+) -> crate::error::Result<()> {
     let from: From = stack_frame.pop();
     let to = convertor(from);
-    stack_frame.push(to);
+    stack_frame.push(to)?;
 
     stack_frame.incr_pc();
     trace!("{name} -> {from}->{to}");
+    Ok(())
 }

@@ -1,12 +1,14 @@
+use crate::error::Error;
 use crate::stack::sack_value::StackValue;
+use crate::stack::stack::Stack;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct StackFrame {
     pc: usize,
-    locals: Vec<i32>,
-    operand_stack: Vec<i32>,
+    locals: Box<[i32]>,
+    operand_stack: Stack<i32>,
     bytecode_ref: Arc<Vec<u8>>,
     current_class_name: String,
     line_numbers: Arc<BTreeMap<u16, u16>>,
@@ -24,8 +26,8 @@ impl StackFrame {
     ) -> Self {
         StackFrame {
             pc: 0,
-            locals: vec![0i32; locals_size],
-            operand_stack: Vec::with_capacity(stack_size),
+            locals: vec![0i32; locals_size].into_boxed_slice(),
+            operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
             current_class_name,
             line_numbers,
@@ -90,16 +92,20 @@ impl StackFrame {
         }
     }
 
-    pub fn push<T: StackValue>(&mut self, stack_value: T) {
-        stack_value.push_onto(self);
+    pub fn push<T: StackValue>(&mut self, stack_value: T) -> crate::error::Result<()> {
+        stack_value
+            .push_onto(self)
+            .map_err(|e| Error::new_execution(&format!("Reason: {e}; Current Frame: {self:?}")))
     }
 
     pub fn pop<T: StackValue>(&mut self) -> T {
         T::pop_from(self)
     }
 
-    pub(crate) fn push_raw(&mut self, val: i32) {
-        self.operand_stack.push(val);
+    pub(crate) fn push_raw(&mut self, val: i32) -> crate::error::Result<()> {
+        self.operand_stack
+            .push(val)
+            .map_err(|e| Error::new_execution(&e))
     }
 
     pub(crate) fn pop_raw(&mut self) -> i32 {

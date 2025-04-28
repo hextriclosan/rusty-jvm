@@ -81,8 +81,7 @@ fn invoke_exact_method(
             with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
 
         let stack_frame = last_frame_mut(stack_frames)?;
-        stack_frame.push(instanceref); // NEW opcode
-        stack_frame.push(instanceref); // DUP opcode
+        stack_frame.push(instanceref)?; // NEW opcode
 
         let method_args = std::iter::once(instanceref)
             .chain(method_args.iter().cloned())
@@ -112,7 +111,7 @@ fn invoke_exact_get_field(
         heap.get_object_field_value(instance_ref, &class_name, &field_name)
     })?;
     let last_frame = last_frame_mut(stack_frames)?;
-    value.iter().for_each(|val| last_frame.push(*val));
+    value.iter().try_for_each(|val| last_frame.push(*val))?;
 
     Ok(())
 }
@@ -136,7 +135,7 @@ fn invoke_exact_get_static_field(
     let (field, _args) = prepare_static_field(member_name, method_args)?;
     let value = field.raw_value()?;
     let last_frame = last_frame_mut(stack_frames)?;
-    value.iter().for_each(|val| last_frame.push(*val));
+    value.iter().try_for_each(|val| last_frame.push(*val))?;
 
     Ok(())
 }

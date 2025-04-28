@@ -95,7 +95,7 @@ fn perform_return<T: StackValue + Copy + Display>(
     let next_frame = stack_frames
         .last_mut()
         .ok_or(Error::new_execution("Error getting stack last value"))?;
-    next_frame.push(result);
+    next_frame.push(result)?;
 
     trace!("{name} -> {result}");
     Ok(())

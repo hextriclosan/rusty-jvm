@@ -29,45 +29,43 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
         ALOAD_0 | ALOAD_1 | ALOAD_2 | ALOAD_3 => {
             handle_load::<i32, _>(stack_frame, code - ALOAD_0, "ALOAD_")
         }
-        IALOAD => handle_array_load::<i32>(stack_frame, "IALOAD")?,
-        LALOAD => handle_array_load::<i64>(stack_frame, "LALOAD")?,
-        FALOAD => handle_array_load::<f32>(stack_frame, "FALOAD")?,
-        DALOAD => handle_array_load::<f64>(stack_frame, "DALOAD")?,
-        AALOAD => handle_array_load::<i32>(stack_frame, "AALOAD")?,
-        BALOAD => handle_array_load::<i32>(stack_frame, "BALOAD")?,
-        CALOAD => handle_array_load::<i32>(stack_frame, "CALOAD")?,
-        SALOAD => handle_array_load::<i32>(stack_frame, "SALOAD")?,
-        _ => {
-            return Err(crate::error::Error::new_execution(&format!(
-                "Unknown load opcode: {}",
-                code
-            )));
-        }
+        IALOAD => handle_array_load::<i32>(stack_frame, "IALOAD"),
+        LALOAD => handle_array_load::<i64>(stack_frame, "LALOAD"),
+        FALOAD => handle_array_load::<f32>(stack_frame, "FALOAD"),
+        DALOAD => handle_array_load::<f64>(stack_frame, "DALOAD"),
+        AALOAD => handle_array_load::<i32>(stack_frame, "AALOAD"),
+        BALOAD => handle_array_load::<i32>(stack_frame, "BALOAD"),
+        CALOAD => handle_array_load::<i32>(stack_frame, "CALOAD"),
+        SALOAD => handle_array_load::<i32>(stack_frame, "SALOAD"),
+        _ => Err(crate::error::Error::new_execution(&format!(
+            "Unknown load opcode: {}",
+            code
+        ))),
     }
-
-    Ok(())
 }
 
 fn handle_pos_and_load<T: StackValue + Display + Copy>(
     stack_frame: &mut StackFrame,
     name_starts: &str,
-) {
+) -> crate::error::Result<()> {
     let pos = stack_frame.extract_one_byte();
-    handle_load::<T, _>(stack_frame, pos, name_starts);
+    handle_load::<T, _>(stack_frame, pos, name_starts)
 }
 
 pub(crate) fn handle_load<T: StackValue + Display + Copy, POS: Display + Copy>(
     stack_frame: &mut StackFrame,
     pos: POS,
     name_starts: &str,
-) where
+) -> crate::error::Result<()>
+where
     usize: From<POS>,
 {
     let value: T = stack_frame.get_local(pos.into());
-    stack_frame.push(value);
+    stack_frame.push(value)?;
 
     stack_frame.incr_pc();
     trace!("{name_starts}{pos} -> value={value}");
+    Ok(())
 }
 
 fn handle_array_load<T: StackValue + Display + Copy>(
@@ -80,7 +78,7 @@ fn handle_array_load<T: StackValue + Display + Copy>(
 
     let value: T = T::from_vec(&raw_value);
 
-    stack_frame.push(value);
+    stack_frame.push(value)?;
     stack_frame.incr_pc();
     trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");
 

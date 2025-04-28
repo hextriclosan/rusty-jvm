@@ -22,11 +22,11 @@ pub(crate) fn process(
         WIDE => {
             let opcode = stack_frame.extract_one_byte();
             match opcode {
-                ILOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ILOAD "),
-                LLOAD => handle_pos_and_load::<i64>(stack_frame, "WIDE LLOAD "),
-                FLOAD => handle_pos_and_load::<f32>(stack_frame, "WIDE FLOAD "),
-                DLOAD => handle_pos_and_load::<f64>(stack_frame, "WIDE DLOAD "),
-                ALOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ALOAD "),
+                ILOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ILOAD ")?,
+                LLOAD => handle_pos_and_load::<i64>(stack_frame, "WIDE LLOAD ")?,
+                FLOAD => handle_pos_and_load::<f32>(stack_frame, "WIDE FLOAD ")?,
+                DLOAD => handle_pos_and_load::<f64>(stack_frame, "WIDE DLOAD ")?,
+                ALOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ALOAD ")?,
                 ISTORE => handle_pos_and_store::<i32>(stack_frame, "WIDE ISTORE "),
                 LSTORE => handle_pos_and_store::<i64>(stack_frame, "WIDE LSTORE "),
                 FSTORE => handle_pos_and_store::<f32>(stack_frame, "WIDE FSTORE "),
@@ -67,7 +67,7 @@ pub(crate) fn process(
                 .collect::<Vec<_>>();
 
             let root_array_ref = create_n_array(&dimentions, &class_name, 0)?;
-            stack_frame.push(root_array_ref);
+            stack_frame.push(root_array_ref)?;
 
             stack_frame.incr_pc();
             trace!("MULTIANEWARRAY -> type={class_name}, dimension_number={dimension_number}, root_array_ref={root_array_ref}");
@@ -88,9 +88,9 @@ pub(crate) fn process(
 fn handle_pos_and_load<T: StackValue + Display + Copy>(
     stack_frame: &mut StackFrame,
     name_starts: &str,
-) {
+) -> crate::error::Result<()> {
     let pos = stack_frame.extract_two_bytes();
-    handle_load::<T, _>(stack_frame, pos as usize, name_starts);
+    handle_load::<T, _>(stack_frame, pos as usize, name_starts)
 }
 
 fn handle_pos_and_store<T: StackValue + Display + Copy>(

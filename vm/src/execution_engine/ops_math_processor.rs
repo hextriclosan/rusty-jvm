@@ -61,48 +61,49 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
         LOR => binary_operation(stack_frame, |a: i64, b: i64| a | b, "LOR"),
         IXOR => binary_operation(stack_frame, |a: i32, b: i32| a ^ b, "IXOR"),
         LXOR => binary_operation(stack_frame, |a: i64, b: i64| a ^ b, "LXOR"),
-        IINC => increment(
-            stack_frame,
-            |sf| sf.extract_one_byte() as usize,
-            |sf| sf.extract_one_byte() as i8 as i32,
-            "IINC",
-        ),
-        _ => {
-            return Err(crate::error::Error::new_execution(&format!(
-                "Unknown math opcode: {}",
-                code
-            )));
+        IINC => {
+            increment(
+                stack_frame,
+                |sf| sf.extract_one_byte() as usize,
+                |sf| sf.extract_one_byte() as i8 as i32,
+                "IINC",
+            );
+            Ok(())
         }
+        _ => Err(crate::error::Error::new_execution(&format!(
+            "Unknown math opcode: {}",
+            code
+        ))),
     }
-
-    Ok(())
 }
 
 fn unary_operation<T: StackValue + Copy + Display>(
     stack_frame: &mut StackFrame,
     op: impl Fn(T) -> T,
     name: &str,
-) {
+) -> crate::error::Result<()> {
     let value: T = stack_frame.pop();
     let result = op(value);
-    stack_frame.push(result);
+    stack_frame.push(result)?;
 
     stack_frame.incr_pc();
     trace!("{name} -> ({value})->{result}");
+    Ok(())
 }
 
 fn binary_operation<T1: StackValue + Copy + Display, T2: StackValue + Copy + Display>(
     stack_frame: &mut StackFrame,
     op: impl Fn(T1, T2) -> T1,
     name: &str,
-) {
+) -> crate::error::Result<()> {
     let b: T2 = stack_frame.pop();
     let a: T1 = stack_frame.pop();
     let result = op(a, b);
-    stack_frame.push(result);
+    stack_frame.push(result)?;
 
     stack_frame.incr_pc();
     trace!("{name} -> ({a}, {b})->{result}");
+    Ok(())
 }
 
 pub(crate) fn increment<I, V>(

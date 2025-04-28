@@ -77,6 +77,23 @@ pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected: &str)
         .stdout(expected.to_string());
 }
 
+pub fn assert_failure(entry: &str, expected: &str) {
+    assert_failure_with_args(entry, &vec![], expected)
+}
+
+pub fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
+    #[cfg(target_os = "windows")]
+    let expected = to_windows(expected);
+
+    let args = iter::once(entry)
+        .chain(arguments.iter().copied())
+        .collect::<Vec<_>>();
+    get_command(&args)
+        .assert()
+        .failure()
+        .stderr(format!("{}\n", expected)); //todo: remove \n (it's added as a workaround for windows)
+}
+
 pub fn get_output(entry: &str) -> String {
     get_output_with_args(entry, &vec![])
 }
