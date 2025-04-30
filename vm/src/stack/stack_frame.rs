@@ -1,6 +1,6 @@
 use crate::error::Error;
-use crate::stack::stack_value::StackValue;
 use crate::stack::stack::Stack;
+use crate::stack::stack_value::StackValue;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

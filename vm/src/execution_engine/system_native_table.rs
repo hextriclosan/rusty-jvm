@@ -22,6 +22,7 @@ use crate::system_native::io_file_system::{
     canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp,
 };
 use crate::system_native::io_file_system::{delete0_wrp, get_boolean_attributes0_wrp};
+use crate::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp,
     method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
@@ -36,18 +37,19 @@ use crate::system_native::reflecton::{
     reflection_get_class_access_flags_wrp,
 };
 use crate::system_native::string::intern_wrp;
-use crate::system_native::system::system_map_library_name_wrp;
 use crate::system_native::system::{
     arraycopy_wrp, current_time_millis_wrp, set_out0_wrp, system_identity_hashcode_wrp,
+    system_map_library_name_wrp,
 };
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
-use crate::system_native::unsafe_::put_reference_wrp;
 use crate::system_native::unsafe_::{
-    array_index_scale0_wrp, compare_and_set_int_wrp, compare_and_set_long_wrp,
-    ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
-    get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
-    object_field_offset_1_wrp, put_reference_volatile_wrp, should_be_initialized0_wrp,
+    allocate_memory0_wrp, array_index_scale0_wrp, compare_and_set_int_wrp,
+    compare_and_set_long_wrp, copy_memory0_wrp, ensure_class_initialized0_wrp, get_byte_wrp,
+    get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
+    get_reference_volatile_wrp, get_short_wrp, object_field_offset_1_wrp, put_byte_wrp,
+    put_char_wrp, put_reference_volatile_wrp, put_reference_wrp, set_memory0_wrp,
+    should_be_initialized0_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -244,12 +246,32 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(put_reference_volatile_wrp),
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:putChar:(Ljava/lang/Object;JC)V",
+        Basic(put_char_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putByte:(Ljava/lang/Object;JB)V",
+        Basic(put_byte_wrp),
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:ensureClassInitialized0:(Ljava/lang/Class;)V",
         Basic(ensure_class_initialized0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:shouldBeInitialized0:(Ljava/lang/Class;)Z",
         Basic(should_be_initialized0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:copyMemory0:(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
+        Basic(copy_memory0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:setMemory0:(Ljava/lang/Object;JJB)V",
+        Basic(set_memory0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:allocateMemory0:(J)J",
+        Basic(allocate_memory0_wrp),
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
@@ -344,6 +366,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
         Basic(current_thread_wrp),
     );
+    table.insert(
+        "java/lang/Thread:currentCarrierThread:()Ljava/lang/Thread;",
+        Basic(current_thread_wrp), //todo: use current carrier thread here (no matter what it is)
+    );
     table.insert("java/lang/Thread:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
@@ -379,6 +405,12 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(file_output_stream_write_bytes_wrp),
     );
     table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
+    table.insert(
+        "java/lang/ref/Reference:refersTo0:(Ljava/lang/Object;)Z",
+        Basic(|_args: &[i32]| {
+            Ok(vec![0]) // todo: this should be implemented with GC
+        }),
+    );
     table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
         WithStackFrames(reflection_get_caller_class_wrp),
@@ -517,9 +549,62 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/UnixFileSystem:checkAccess0:(Ljava/io/File;I)Z",
         Basic(check_access0_wrp),
     );
+    table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
+    table.insert("sun/nio/ch/IOUtil:iovMax:()I", Basic(iov_max_wrp));
+    table.insert("sun/nio/ch/IOUtil:writevMax:()J", Basic(writev_max_wrp));
+    table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
+    table.insert(
+        "sun/nio/ch/NativeThread:current0:()J",
+        Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // todo: implement this (by 0 we say that the platform can not signal native threads)
+    );
+
+    platform_specific(&mut table);
+
+    table
+});
+
+fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
+    #[cfg(windows)]
+    {
+        use crate::system_native::platform_file_dispatcher::windows_file_dispatcher::{
+            allocation_granularity0_wrp, windows_file_dispatcher_write0_wrp,
+        };
+        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
+            create_file0_wrp, set_end_of_file_wrp,
+        };
+
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
+            Basic(void_stub),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CreateFile0:(JIIJII)J",
+            Basic(create_file0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:SetEndOfFile:(J)V",
+            Basic(set_end_of_file_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:allocationGranularity0:()J",
+            Basic(allocation_granularity0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:maxDirectTransferSize0:()I", // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
+            Basic(|_args| Ok(vec![i32::MAX - 1])),
+        );
+        table.insert(
+            "sun/nio/ch/WindowsFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
+            Basic(windows_file_dispatcher_write0_wrp),
+        );
+    }
+
     #[cfg(unix)]
     {
+        use crate::system_native::platform_file_dispatcher::unix_file_dispatcher::unix_file_dispatcher_impl_write0_wrp;
         use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::get_cwd_wrp;
+        use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::unix_native_dispatcher_open0_wrp;
+
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:getcwd:()[B",
             Basic(get_cwd_wrp),
@@ -528,24 +613,24 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
             "sun/nio/fs/UnixNativeDispatcher:init:()I", // todo: return real capability flags
             Basic(|_args: &[i32]| Ok(vec![0])),
         );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:open0:(JII)I",
+            Basic(unix_native_dispatcher_open0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JI)I",
+            Basic(unix_file_dispatcher_impl_write0_wrp),
+        );
     }
 
-    #[cfg(windows)]
+    #[cfg(target_os = "linux")]
     {
-        use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::get_logical_drives_wrp;
-
         table.insert(
-            "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
+            "sun/nio/ch/LinuxFileDispatcherImpl:init0:()V",
             Basic(void_stub),
         );
-        table.insert(
-            "sun/nio/fs/WindowsNativeDispatcher:GetLogicalDrives:()I",
-            Basic(get_logical_drives_wrp),
-        );
     }
-
-    table
-});
+}
 
 pub(crate) fn invoke_native_method(
     method_signature: &str,

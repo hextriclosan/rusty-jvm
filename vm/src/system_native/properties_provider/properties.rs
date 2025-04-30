@@ -1,5 +1,6 @@
 use once_cell::sync::OnceCell;
 use os_info::Type;
+use os_info::Version::Semantic;
 use std::env;
 
 pub(crate) fn is_bigendian() -> bool {
@@ -59,7 +60,14 @@ pub(crate) fn file_separator() -> &'static str {
 
 static OS_VERSION: OnceCell<String> = OnceCell::new();
 pub(crate) fn os_version() -> &'static str {
-    OS_VERSION.get_or_init(|| os_info::get().version().to_string())
+    OS_VERSION.get_or_init(|| {
+        let info = os_info::get();
+        let version = info.version();
+        match version {
+            Semantic(_, _, _) => version.to_string(),
+            _ => "0.0.0".to_string(),
+        }
+    })
 }
 
 static OS_NAME: OnceCell<&'static str> = OnceCell::new();

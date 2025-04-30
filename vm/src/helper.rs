@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::heap::heap::with_heap_write_lock;
+use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_value::StackValue;
 use jdescriptor::TypeDescriptor;
@@ -87,4 +87,19 @@ pub fn create_array_of_strings(props: &[&str]) -> crate::error::Result<i32> {
     }
 
     Ok(array_ref)
+}
+
+#[cfg(unix)]
+pub fn get_fd(fd_ref: i32) -> crate::error::Result<i32> {
+    with_heap_read_lock(|heap| {
+        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?;
+        Ok::<i32, Error>(raw[0])
+    })
+}
+#[cfg(windows)]
+pub fn get_handle(fd_ref: i32) -> crate::error::Result<i64> {
+    with_heap_read_lock(|heap| {
+        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
+        Ok::<i64, Error>(vec_to_i64(&raw))
+    })
 }

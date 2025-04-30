@@ -1656,3 +1656,25 @@ fn should_handle_operand_stack_overflow() {
         r#"VM execution failed: Execution Error: Reason: Execution Error: Exceeded max stack size; Current Frame: StackFrame { pc: 5, locals: [], operand_stack: Stack { max_size: 2, data: [10, 20] }, bytecode_ref: [18, 7, 18, 8, 18, 9, 172], current_class_name: "samples/invalidprograms/operandstackoverflow/OperandStackOverflowExample", line_numbers: {} }"#,
     );
 }
+
+#[test]
+fn should_support_file_dispatcher_for_various_os() {
+    let expected_file_content = "Hello from FileChannel!";
+    assert_file(
+        "samples.nio.filedispatcherexample.FileDispatcherExample",
+        "tests/tmp/file_dispatcher_example.txt",
+        expected_file_content,
+    );
+}
+
+#[test]
+fn should_write_file_with_nio() {
+    let expected_file_content = r#"Hello, world!
+This is written using NIO.
+"#;
+    assert_file(
+        "samples.nio.niowritefileexample.NioFileWriteExample",
+        "tests/tmp/write_nio_test.txt",
+        expected_file_content,
+    );
+}

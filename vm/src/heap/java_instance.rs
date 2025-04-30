@@ -161,6 +161,10 @@ impl Array {
     pub fn type_name(&self) -> &str {
         &self.type_name
     }
+
+    pub fn raw_data(&self) -> &Vec<u8> {
+        &self.data
+    }
 }
 
 #[derive(Debug, Serialize)]

@@ -1,8 +1,8 @@
 use crate::execution_engine::engine::Engine;
 use crate::heap::heap::with_heap_write_lock;
 use crate::method_area::method_area::with_method_area;
-use crate::stack::stack_value::StackValueKind;
 use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_value::StackValueKind;
 
 pub struct Executor {}
 
