@@ -6,6 +6,7 @@ use nix::libc::{c_char, mode_t};
 use nix::sys::stat::Mode;
 use nix::unistd::getcwd;
 use std::ffi::CStr;
+use std::os::fd::IntoRawFd;
 
 pub fn get_cwd_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let byte_array_ref = get_cwd()?;
@@ -62,5 +63,5 @@ fn open0(path_address: i64, flags: i32, mode: i32) -> crate::error::Result<i32> 
     )
     .map_err(|e| Error::new_native(&format!("Failed to open file: {} ({})", path, e)))?;
 
-    Ok(fd as i32)
+    Ok(fd.into_raw_fd() as i32)
 }
