@@ -5,6 +5,14 @@ use crate::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::method_area::java_class::InnerState::Initialized;
 use crate::method_area::method_area::with_method_area;
 use crate::system_native::object_offset::offset_utils::object_field_offset_by_refs;
+use std::alloc::{alloc, Layout};
+use std::ptr::{copy, read};
+
+#[derive(Clone, Copy)]
+enum ValueType {
+    Char,
+    Byte,
+}
 
 pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
@@ -142,10 +150,21 @@ pub(crate) fn get_int_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
 
-    let int = get_int(obj_ref, offset)?;
+    let int = if obj_ref == 0 {
+        get_int_raw(offset)?
+    } else {
+        get_int_via_object(obj_ref, offset)?
+    };
     Ok(vec![int])
 }
-pub(crate) fn get_int(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
+pub(crate) fn get_int_raw(address: i64) -> crate::error::Result<i32> {
+    let ptr = address as usize as *const i32;
+    unsafe {
+        let ptr = ptr.add(0);
+        Ok(read(ptr))
+    }
+}
+pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> crate::error::Result<i32> {
     if obj_ref != 0 {
         let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
         if class_name.starts_with("[") {
@@ -284,6 +303,60 @@ pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> crate::error::Result<V
     put_reference_wrp(args) // todo! make me volatile
 }
 
+pub(crate) fn put_char_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    put_value_wrapper(args, ValueType::Char)
+}
+
+pub(crate) fn put_byte_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    put_value_wrapper(args, ValueType::Byte)
+}
+
+fn put_value_wrapper(args: &[i32], value_type: ValueType) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let value = args[4];
+
+    put_value(obj_ref, offset, value, value_type)?;
+    Ok(vec![])
+}
+
+fn put_value(
+    obj_ref: i32,
+    offset: i64,
+    value: i32,
+    value_type: ValueType,
+) -> crate::error::Result<()> {
+    if obj_ref == 0 {
+        match value_type {
+            ValueType::Char => write_raw(offset, value as u16),
+            ValueType::Byte => write_raw(offset, value as u8),
+        }
+        Ok(())
+    } else {
+        put_value_via_object(obj_ref, offset, value)
+    }
+}
+
+fn write_raw<T: Copy>(address: i64, value: T) {
+    let ptr = address as usize as *mut u8;
+    let src = &value as *const T as *const u8;
+    unsafe { copy(src, ptr, size_of::<T>()) };
+}
+
+fn put_value_via_object(obj_ref: i32, offset: i64, value: i32) -> crate::error::Result<()> {
+    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+    with_heap_write_lock(|heap| {
+        if class_name.starts_with('[') {
+            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![value])
+        } else {
+            let jc = with_method_area(|area| area.get(&class_name))?;
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![value])
+        }
+    })
+}
+
 pub(crate) fn array_index_scale0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let class_ref = args[1];
@@ -338,4 +411,89 @@ fn should_be_initialized0(class_ref: i32) -> crate::error::Result<bool> {
         let guard = rc.static_fields_init_state().lock();
         Ok(guard.get_inner_state() != Initialized)
     })
+}
+
+pub(crate) fn allocate_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let bytes = i32toi64(args[2], args[1]);
+
+    let addr = allocate_memory0(bytes)?;
+    Ok(i64_to_vec(addr))
+}
+fn allocate_memory0(bytes: i64) -> crate::error::Result<i64> {
+    let layout = Layout::array::<u8>(bytes as usize)
+        .map_err(|_| Error::new_native("Invalid memory allocation"))?;
+    let ptr = unsafe { alloc(layout) };
+    if ptr.is_null() {
+        return Err(Error::new_native("Failed to allocate memory"));
+    }
+
+    let address = ptr as usize as i64;
+
+    Ok(address)
+}
+
+pub(crate) fn copy_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let src_base_ref = args[1];
+    let src_offset = i32toi64(args[3], args[2]);
+    let dest_base_ref = args[4];
+    let dest_offset = i32toi64(args[6], args[5]);
+    let bytes = i32toi64(args[8], args[7]);
+
+    copy_memory0(src_base_ref, src_offset, dest_base_ref, dest_offset, bytes)?;
+    Ok(vec![])
+}
+fn copy_memory0(
+    src_base_ref: i32,
+    src_offset: i64,
+    dest_base_ref: i32,
+    dest_offset: i64,
+    bytes: i64,
+) -> crate::error::Result<()> {
+    let ptr = dest_base_ref as usize as *mut u8;
+
+    let arr = with_heap_read_lock(|heap| heap.get_entire_array(src_base_ref))?; // todo: only arrays are supported so far
+    let raw = arr.raw_data();
+
+    let to_copy = raw
+        .iter()
+        .skip(src_offset as usize)
+        .take(bytes as usize)
+        .map(|v| *v)
+        .collect::<Vec<_>>();
+    unsafe {
+        let src = to_copy.as_ptr();
+        let dst = ptr.add(dest_offset as usize);
+        let len = to_copy.len();
+        copy(src, dst, len);
+    }
+
+    Ok(())
+}
+
+pub(crate) fn set_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let bytes = i32toi64(args[5], args[4]);
+    let value = args[6] as u8;
+
+    set_memory0(obj_ref, offset, bytes, value)?;
+    Ok(vec![])
+}
+fn set_memory0(obj_ref: i32, offset: i64, bytes: i64, value: u8) -> crate::error::Result<()> {
+    if obj_ref != 0 {
+        unimplemented!("implement this for objects")
+    }
+
+    let ptr = offset as usize as *mut u8;
+
+    unsafe {
+        let ptr = ptr.add(0);
+        let src = &value as *const u8;
+        copy(src, ptr, bytes as usize);
+    }
+
+    Ok(())
 }

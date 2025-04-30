@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::helper::get_fd;
 use std::fs::File;
 use std::mem::ManuallyDrop;
 use std::os::fd::{FromRawFd, IntoRawFd};
@@ -8,9 +9,7 @@ pub struct PlatformFile {}
 
 impl PlatformFile {
     pub fn close(file_descriptor_ref: i32) -> crate::error::Result<()> {
-        let raw_fd = with_heap_read_lock(|heap| {
-            heap.get_object_field_value(file_descriptor_ref, "java/io/FileDescriptor", "fd")
-        })?[0];
+        let raw_fd = get_fd(file_descriptor_ref)?;
 
         let file = unsafe { File::from_raw_fd(raw_fd) };
         drop(file);
@@ -39,7 +38,7 @@ impl PlatformFile {
         let fd = with_heap_read_lock(|heap| {
             let fd_ref =
                 heap.get_object_field_value(obj_ref, "java/io/FileOutputStream", "fd")?[0];
-            let fd = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?[0];
+            let fd = get_fd(fd_ref)?;
 
             Ok::<i32, Error>(fd)
         })?;

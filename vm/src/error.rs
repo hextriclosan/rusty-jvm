@@ -26,7 +26,7 @@ impl Error {
         Self::new(Execution(String::from(descr)))
     }
 
-    pub(crate) fn new_native(descr: &String) -> Error {
+    pub(crate) fn new_native(descr: &str) -> Error {
         Self::new(Native(String::from(descr)))
     }
 
