@@ -1,6 +1,7 @@
+use crate::error::Error;
 use crate::helper::create_array_of_strings;
-use crate::system_native::properties_provider::properties::{
-    endianness, file_separator, line_separator, os_name, os_version, path_separator, user_dir,
+use crate::properties::system_properties::{
+    OVERRIDDEN_PLATFORM_PROPERTIES, OVERRIDDEN_VM_PROPERTIES,
 };
 
 pub(crate) fn platform_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -9,7 +10,7 @@ pub(crate) fn platform_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec
     Ok(vec![string_array_ref])
 }
 fn platform_properties() -> crate::error::Result<i32> {
-    create_array_of_strings(get_platform_properties().as_slice())
+    create_array_of_strings(&get_platform_properties()?)
 }
 
 pub(crate) fn vm_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>> {
@@ -18,53 +19,27 @@ pub(crate) fn vm_properties_wrp(_args: &[i32]) -> crate::error::Result<Vec<i32>>
     Ok(vec![string_array_ref])
 }
 fn vm_properties() -> crate::error::Result<i32> {
-    create_array_of_strings(get_vm_properties().as_slice())
+    create_array_of_strings(&get_vm_properties()?)
 }
 
-fn get_platform_properties() -> Vec<&'static str> {
-    vec![
-        "display.country_VALUE",
-        "display.language_VALUE",
-        "display.script_VALUE",
-        "display.variant_VALUE",
-        "file.encoding_VALUE",
-        file_separator(), // "file.separator"
-        "format.country_VALUE",
-        "format.language_VALUE",
-        "format.script_VALUE",
-        "format.variant_VALUE",
-        "ftp.nonProxyHosts_VALUE",
-        "ftp.proxyHost_VALUE",
-        "ftp.proxyPort_VALUE",
-        "http.nonProxyHosts_VALUE",
-        "http.proxyHost_VALUE",
-        "http.proxyPort_VALUE",
-        "https.proxyHost_VALUE",
-        "https.proxyPort_VALUE",
-        "java.io.tmpdir_VALUE",
-        line_separator(), // "line.separator"
-        "os.arch_VALUE",
-        os_name(),        // "os.name"
-        os_version(),     // "os.version"
-        path_separator(), // "path.separator"
-        "socksNonProxyHosts_VALUE",
-        "socksProxyHost_VALUE",
-        "socksProxyPort_VALUE",
-        "stderr.encoding_VALUE",
-        "stdout.encoding_VALUE",
-        "sun.arch.abi_VALUE",
-        "sun.arch.data.model_VALUE",
-        endianness(), // "sun.cpu.endian"
-        "sun.cpu.isalist_VALUE",
-        "sun.io.unicode.encoding_VALUE",
-        "sun.jnu.encoding_VALUE",
-        "sun.os.patch.level_VALUE",
-        user_dir(), // "user.dir"
-        "user.home_VALUE",
-        "user.name_VALUE",
-    ]
+fn get_platform_properties() -> crate::error::Result<Vec<String>> {
+    Ok(OVERRIDDEN_PLATFORM_PROPERTIES
+        .get()
+        .ok_or(Error::new_execution(
+            "Failed to get OVERRIDDEN_PLATFORM_PROPERTIES",
+        ))?
+        .iter()
+        .map(|(_key, value)| value.clone())
+        .collect())
 }
 
-fn get_vm_properties() -> Vec<&'static str> {
-    vec!["java.home", "java.home_VALUE"]
+fn get_vm_properties() -> crate::error::Result<Vec<String>> {
+    Ok(OVERRIDDEN_VM_PROPERTIES
+        .get()
+        .ok_or(Error::new_execution(
+            "Failed to get OVERRIDDEN_VM_PROPERTIES",
+        ))?
+        .iter()
+        .flat_map(|(key, value)| vec![key.clone(), value.clone()])
+        .collect())
 }
