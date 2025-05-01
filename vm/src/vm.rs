@@ -5,8 +5,9 @@ use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::helper::create_array_of_strings;
 use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::{with_method_area, MethodArea};
+use crate::properties::system_properties::init_system_properties;
 use crate::system_native::properties_provider::properties::is_bigendian;
-use once_cell::sync::OnceCell;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -14,31 +15,22 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 pub struct VM {}
 
-pub static SYSTEM_PROPERTIES: OnceCell<Vec<String>> = OnceCell::new();
-
 impl VM {
     const JAVA_HOME_ENV: &'static str = "RUSTY_JAVA_HOME";
 
     pub fn run(
         main_class_name: &str,
-        system_properties: &[String],
+        system_properties: HashMap<String, String>,
         program_args: &[String],
     ) -> crate::error::Result<()> {
-        SYSTEM_PROPERTIES
-            .set(system_properties.to_vec())
-            .map_err(|existing_value| {
-                Error::new_execution(&format!(
-                    "SYSTEM_PROPERTIES already initialized: {existing_value:?}"
-                ))
-            })?;
+        init_system_properties(system_properties)?;
 
         Self::prelude()?;
 
         let internal_name = &main_class_name.replace('.', "/");
         StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
 
-        let args_array_ref =
-            create_array_of_strings(&program_args.iter().map(String::as_str).collect::<Vec<_>>())?;
+        let args_array_ref = create_array_of_strings(program_args)?;
         Executor::invoke_static_method(
             internal_name,
             "main:([Ljava/lang/String;)V",

@@ -26,7 +26,7 @@ fn main() {
 
     if let Err(err) = VM::run(
         parsed.entry_point(),
-        &parsed.system_properties(),
+        parsed.system_properties().clone(),
         &parsed.program_args(),
     ) {
         eprintln!("VM execution failed: {}", err);

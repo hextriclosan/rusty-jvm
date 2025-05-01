@@ -1,10 +1,11 @@
 use derive_new::new;
 use getset::Getters;
+use std::collections::HashMap;
 
 pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, String> {
     let mut java_standard_options = Vec::new();
     let mut java_launcher_options = Vec::new();
-    let mut system_properties = Vec::new();
+    let mut system_properties = HashMap::new();
     let mut jvm_options = Vec::new();
     let mut advanced_jvm_options = Vec::new();
     let mut entry_point = None;
@@ -18,7 +19,12 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, Strin
             } else if arg.starts_with("-X") {
                 jvm_options.push(arg);
             } else if arg.starts_with("-D") {
-                system_properties.push(arg);
+                let trimmed = &arg[2..];
+                let (key, value) = match trimmed.split_once('=') {
+                    Some((key, value)) => (key, value),
+                    None => (trimmed, ""),
+                };
+                system_properties.insert(key.to_string(), value.to_string());
             } else if arg.starts_with("--") {
                 java_launcher_options.push(arg);
             } else {
@@ -52,7 +58,7 @@ pub struct ParsedArguments {
     program_args: Vec<String>,
     java_standard_options: Vec<String>,
     java_launcher_options: Vec<String>,
-    system_properties: Vec<String>,
+    system_properties: HashMap<String, String>,
     jvm_options: Vec<String>,
     advanced_jvm_options: Vec<String>,
 }
@@ -81,10 +87,10 @@ mod tests {
             vec!["arg1".to_string(), "arg2".to_string()],
             vec!["-version".to_string()],
             vec!["--launcher-option".to_string()],
-            vec![
-                "-Dproperty1=value1".to_string(),
-                "-Dproperty2=value2".to_string(),
-            ],
+            HashMap::from([
+                ("property1".to_string(), "value1".to_string()),
+                ("property2".to_string(), "value2".to_string()),
+            ]),
             vec!["-Xmx1024m".to_string()],
             vec!["-XX:+UseG1GC".to_string()],
         );

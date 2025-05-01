@@ -102,6 +102,11 @@ pub fn get_output_with_args(entry: &str, arguments: &[&str]) -> String {
     let args = iter::once(entry)
         .chain(arguments.iter().copied())
         .collect::<Vec<_>>();
+
+    get_output_with_raw_args(&args)
+}
+
+pub fn get_output_with_raw_args(args: &[&str]) -> String {
     let output = get_command(&args)
         .output()
         .expect("Failed to execute process");

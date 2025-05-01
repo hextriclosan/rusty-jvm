@@ -346,7 +346,8 @@ upcasting(): [10, 20, 30]
 
 use crate::utils::{
     assert_failure, assert_file, assert_success_with_args, get_file_separator, get_os_name,
-    get_output, get_path_separator, is_bigendian, line_ending, map_library_name,
+    get_output, get_output_with_raw_args, get_path_separator, is_bigendian, line_ending,
+    map_library_name,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1101,6 +1102,32 @@ fn should_return_system_properties() {
         .as_str()
         .expect("path.separator is not a string");
     assert_eq!(path_separator, get_path_separator());
+
+    let path_separator = json["other.property"]
+        .as_str()
+        .expect("other.property is not a string");
+    assert_eq!(path_separator, "null");
+
+    let java_home = json["java.home"]
+        .as_str()
+        .expect("java.home is not a string");
+    assert_eq!(java_home, "java.home_DEFAULT");
+}
+
+#[test]
+fn should_return_overridden_system_properties() {
+    let args = [
+        "-Dother.property=other_value",
+        "-Dos.version=42.42.42",
+        "-Djava.home=some_dir",
+        "samples.system.getpropertyexample.SystemGetPropertyExample",
+    ];
+    let output = get_output_with_raw_args(&args);
+    let json: Value = serde_json::from_str(&output).expect("Output is not valid JSON");
+
+    assert_eq!(json["other.property"], "other_value");
+    assert_eq!(json["os.version"], "42.42.42");
+    assert_eq!(json["java.home"], "some_dir");
 }
 
 #[test]

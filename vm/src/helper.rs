@@ -73,7 +73,7 @@ pub fn strip_nest_host(class_name: &str) -> Option<&str> {
     class_name.find('$').map(|index| &class_name[..index])
 }
 
-pub fn create_array_of_strings(props: &[&str]) -> crate::error::Result<i32> {
+pub fn create_array_of_strings(props: &[String]) -> crate::error::Result<i32> {
     let class_of_array = "java/lang/String";
     let class_of_array = format!("[L{class_of_array};");
     let length = props.len() as i32;
