@@ -11,7 +11,8 @@ import java.util.List;
 
 public class NioFileWriteExample {
     public static void main(String[] args) throws IOException {
-        Path path = Paths.get("../tmp/write_nio_test.txt");
+        Path parentPath = Paths.get("../tmp");
+        Path filePath = parentPath.resolve("write_nio_test.txt");
 
         // Content to write
         List<String> lines = List.of(
@@ -20,6 +21,6 @@ public class NioFileWriteExample {
         );
 
         // Create or overwrite the file and write the content
-        Files.write(path, lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(filePath, lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 }
