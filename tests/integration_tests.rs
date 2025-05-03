@@ -1705,3 +1705,15 @@ This is written using NIO.
         expected_file_content,
     );
 }
+
+#[test]
+fn should_support_exceptions() {
+    assert_success(
+        "samples.javacore.exceptionexample.ExceptionExample",
+        r#"Beginning of main
+Inside try block
+Caught as Throwable: java.lang.Error
+End of main
+"#,
+    );
+}

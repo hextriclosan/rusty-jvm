@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::method_area::instance_checker::InstanceChecker;
 use crate::stack::stack::Stack;
 use crate::stack::stack_value::StackValue;
 use derive_new::new;
@@ -28,6 +29,20 @@ pub struct ExceptionTableRecord {
 #[derive(Debug, new)]
 pub struct ExceptionTable {
     table: Vec<ExceptionTableRecord>,
+}
+
+impl ExceptionTable {
+    pub fn find_exception_handler(&self, exception_name: &str) -> Option<u16> {
+        for record in self.table.iter() {
+            let castable = InstanceChecker::checkcast(exception_name, &record.catch_type)
+                .expect("Error in checkcast");
+            if castable {
+                return Some(record.handler_pc);
+            }
+        }
+
+        None
+    }
 }
 
 pub type StackFrames = Vec<StackFrame>;
@@ -108,6 +123,10 @@ impl StackFrame {
         } else {
             self.pc -= (-offset) as usize;
         }
+    }
+
+    pub fn set_pc(&mut self, pc: i16) {
+        self.pc = pc as usize;
     }
 
     pub fn push<T: StackValue>(&mut self, stack_value: T) -> crate::error::Result<()> {
