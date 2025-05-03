@@ -331,6 +331,22 @@ pub(crate) fn process(
             stack_frame.incr_pc();
             trace!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
         }
+        ATHROW => {
+            let throwable_ref = {
+                let stack_frame = last_frame_mut(stack_frames)?;
+                let throwable_ref: i32 = stack_frame.pop();
+                throwable_ref
+            };
+            let exception_name =
+                with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
+            let found_exception_handler = throw_exception(stack_frames, &exception_name)?;
+
+            let stack_frame = last_frame_mut(stack_frames)?;
+            stack_frame.set_pc(found_exception_handler);
+            stack_frame.push(throwable_ref)?;
+
+            trace!("ATHROW -> throwable_ref={throwable_ref}, exception_name={exception_name}");
+        }
         CHECKCAST => {
             let stack_frame = last_frame_mut(stack_frames)?;
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
@@ -415,6 +431,28 @@ pub(crate) fn process(
     }
 
     Ok(())
+}
+
+fn throw_exception(
+    stack_frames: &mut StackFrames,
+    exception_name: &str,
+) -> crate::error::Result<i16> {
+    while !stack_frames.is_empty() {
+        let stack_frame = last_frame_mut(stack_frames)?;
+        let exception_table = stack_frame.exception_table();
+        match exception_table.find_exception_handler(exception_name) {
+            Some(exception_handler) => {
+                return Ok(exception_handler as i16);
+            }
+            None => {
+                stack_frames.pop();
+            }
+        }
+    }
+
+    Err(Error::new_execution(&format!(
+        "Exception {exception_name} not handled"
+    )))
 }
 
 fn prepare_invoke_context(

@@ -557,6 +557,13 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "sun/nio/ch/NativeThread:current0:()J",
         Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // todo: implement this (by 0 we say that the platform can not signal native threads)
     );
+    table.insert(
+        "java/lang/Throwable:fillInStackTrace:(I)Ljava/lang/Throwable;",
+        Basic(|args| {
+            let throwable_ref = args[0];
+            Ok(vec![throwable_ref]) // fixme: this should be implemented with stack trace
+        }),
+    );
 
     platform_specific(&mut table);
 
