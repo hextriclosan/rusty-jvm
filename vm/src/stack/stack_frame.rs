@@ -21,6 +21,7 @@ pub struct ExceptionTableRecord {
     start_pc: u16,
     end_pc: u16,
     handler_pc: u16,
+    /// The type of exception to catch. Use "any" to represent a catch-all handler.
     catch_type: String,
 }
 
