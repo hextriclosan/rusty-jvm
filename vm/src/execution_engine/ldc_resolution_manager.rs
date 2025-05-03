@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::execution_engine::reflection_class_loader::ReflectionClassLoader;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::helper::{i64_to_vec, vec_to_i64};
+use crate::method_area::cpool_helper::CPoolHelperTrait;
 use crate::method_area::method_area::with_method_area;
 use std::collections::HashMap;
 use std::sync::RwLock;

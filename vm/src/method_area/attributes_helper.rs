@@ -1,4 +1,6 @@
 use crate::method_area::cpool_helper::CPoolHelper;
+use crate::method_area::cpool_helper::CPoolHelperTrait;
+use crate::stack::stack_frame::ExceptionTableRecord;
 use jclass::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
 use std::collections::{HashMap, HashSet};
 
@@ -99,19 +101,53 @@ impl AttributesHelper {
         }
     }
 
-    pub fn get_code(&self) -> Option<(u16, u16, Vec<u8>, Vec<LineNumberRecord>)> {
+    pub fn get_code<T: CPoolHelperTrait>(
+        &self,
+        cpool_helper: &T,
+    ) -> Option<(
+        u16,
+        u16,
+        Vec<u8>,
+        Vec<LineNumberRecord>,
+        Vec<ExceptionTableRecord>,
+    )> {
         match self.data.get(&AttributeType::Code)? {
             Attribute::Code {
                 max_stack,
                 max_locals,
                 code,
-                exception_table: _,
+                exception_table,
                 attributes,
             } => {
                 let attributes_helper = AttributesHelper::new(attributes);
                 let line_numbers = attributes_helper.get_line_number_table();
 
-                Some((*max_stack, *max_locals, code.clone(), line_numbers))
+                let exception_table = exception_table
+                    .iter()
+                    .map(|rec| {
+                        ExceptionTableRecord::new(
+                            rec.start_pc(),
+                            rec.end_pc(),
+                            rec.handler_pc(),
+                            if rec.catch_type() == 0 {
+                                "any".to_string()
+                            } else {
+                                cpool_helper
+                                    .get_class(rec.catch_type())
+                                    .expect("Error getting class")
+                                    .to_string()
+                            },
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                Some((
+                    *max_stack,
+                    *max_locals,
+                    code.clone(),
+                    line_numbers,
+                    exception_table,
+                ))
             }
             _ => None,
         }
@@ -185,11 +221,13 @@ impl AttributesHelper {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::method_area::cpool_helper::MockCPoolHelperTrait;
     use jclass::attributes::Attribute::{
         Code, LineNumberTable, LocalVariableTable, MethodParameters,
     };
     use jclass::attributes::{
-        LineNumberRecord, LocalVariableTableRecord, MethodParameterFlags, MethodParameterRecord,
+        ExceptionRecord, LineNumberRecord, LocalVariableTableRecord, MethodParameterFlags,
+        MethodParameterRecord,
     };
     use std::collections::HashMap;
 
@@ -234,7 +272,7 @@ mod tests {
             max_stack: 2,
             max_locals: 4,
             code: vec![0x2a, 0xb7, 0x0, 0x1],
-            exception_table: vec![],
+            exception_table: vec![ExceptionRecord::new(1, 2, 3, 4)],
             attributes: vec![LineNumberTable {
                 line_number_table: vec![LineNumberRecord::new(0, 4)],
             }],
@@ -249,14 +287,26 @@ mod tests {
 
         let attributes_helper = AttributesHelper::new(&attributes);
 
+        let mut mock = MockCPoolHelperTrait::new();
+
+        mock.expect_get_class()
+            .withf(|index| *index == 4)
+            .return_const(Some("java/lang/Exception".to_string()));
+
         assert_eq!(
             Some((
                 2,
                 4,
                 vec![0x2a, 0xb7, 0x0, 0x1],
-                vec![LineNumberRecord::new(0, 4)]
+                vec![LineNumberRecord::new(0, 4)],
+                vec![ExceptionTableRecord::new(
+                    1,
+                    2,
+                    3,
+                    "java/lang/Exception".to_string()
+                )]
             )),
-            attributes_helper.get_code()
+            attributes_helper.get_code(&mock)
         );
     }
 }

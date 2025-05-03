@@ -28,3 +28,6 @@ winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef", 
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.30.0", features = ["fs"] }
+
+[dev-dependencies]
+mockall = "0.13.1"
