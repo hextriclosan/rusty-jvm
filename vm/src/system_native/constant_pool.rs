@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::method_area::cpool_helper::CPoolHelperTrait;
 use crate::method_area::java_class::JavaClass;
 use crate::method_area::method_area::with_method_area;
 use jclass::constant_pool::ConstantPool;

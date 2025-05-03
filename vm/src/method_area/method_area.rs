@@ -3,10 +3,12 @@ use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::method_area::attributes_helper::AttributesHelper;
 use crate::method_area::cpool_helper::CPoolHelper;
+use crate::method_area::cpool_helper::CPoolHelperTrait;
 use crate::method_area::field::Field;
 use crate::method_area::java_class::{FieldProperties, FieldProperty, Fields, JavaClass, Methods};
 use crate::method_area::java_method::{CodeContext, JavaMethod};
 use crate::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
+use crate::stack;
 use indexmap::{IndexMap, IndexSet};
 use jclass::class_file::{parse, ClassFile};
 use jclass::fields::{FieldFlags, FieldInfo};
@@ -243,11 +245,13 @@ impl MethodArea {
             let attributes_helper = AttributesHelper::new(method_info.attributes());
 
             let access_flags = method_info.access_flags();
-            let code_context =
-                if !access_flags.intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE) {
-                    attributes_helper
-                        .get_code()
-                        .map(|(max_stack, max_locals, code, line_numbers)| {
+            let code_context = if !access_flags
+                .intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE)
+            {
+                attributes_helper
+                    .get_code(helper)
+                    .map(
+                        |(max_stack, max_locals, code, line_numbers, exception_table)| {
                             let line_numbers = line_numbers
                                 .iter()
                                 .map(|record| (record.start_pc(), record.line_number()))
@@ -257,16 +261,18 @@ impl MethodArea {
                                 max_locals,
                                 Arc::new(code),
                                 Arc::new(line_numbers),
+                                Arc::new(stack::stack_frame::ExceptionTable::new(exception_table)),
                             ))
-                        })
-                        .ok_or_else(|| {
-                            Error::new_execution(&format!(
-                                "Error getting code attribute for method {full_signature}"
-                            ))
-                        })?
-                } else {
-                    None
-                };
+                        },
+                    )
+                    .ok_or_else(|| {
+                        Error::new_execution(&format!(
+                            "Error getting code attribute for method {full_signature}"
+                        ))
+                    })?
+            } else {
+                None
+            };
 
             let exception_indexes = attributes_helper.get_exception_indexes().unwrap_or(vec![]);
 

@@ -6,6 +6,7 @@ use crate::execution_engine::static_init::StaticInit;
 use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::{argument_length, get_length};
 use crate::method_area::cpool_helper::CPoolHelper;
+use crate::method_area::cpool_helper::CPoolHelperTrait;
 use crate::method_area::instance_checker::InstanceChecker;
 use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::{StackFrame, StackFrames};

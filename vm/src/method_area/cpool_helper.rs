@@ -1,6 +1,24 @@
 use jclass::constant_pool::ConstantPool;
 use std::collections::HashMap;
 
+#[cfg_attr(test, mockall::automock)]
+pub trait CPoolHelperTrait {
+    fn get<'a>(&'a self, ctype: CPoolType, index: u16) -> Option<&'a ConstantPool>;
+    fn get_first<'a>(&'a self, ctypes: &[CPoolType], index: u16) -> Option<&'a ConstantPool>;
+    fn get_class_name(&self, index: u16) -> Option<String>;
+    fn get_integer(&self, index: u16) -> Option<i32>;
+    fn get_float(&self, index: u16) -> Option<f32>;
+    fn get_double(&self, index: u16) -> Option<f64>;
+    fn get_class(&self, index: u16) -> Option<String>;
+    fn get_string(&self, index: u16) -> Option<String>;
+    fn get_long(&self, index: u16) -> Option<i64>;
+    fn get_utf8(&self, index: u16) -> Option<String>;
+    fn get_full_field_info(&self, index: u16) -> Option<(String, String)>;
+    fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)>;
+    fn get_full_interfacemethodref_info(&self, index: u16) -> Option<(String, String, String)>;
+    fn get_name_and_type(&self, index: u16) -> Option<(String, String)>;
+}
+
 #[derive(Debug)]
 pub struct CPoolHelper {
     data: HashMap<CPoolType, HashMap<u16, ConstantPool>>,
@@ -70,11 +88,17 @@ impl CPoolHelper {
         }
     }
 
-    pub fn get(&self, ctype: CPoolType, index: u16) -> Option<&ConstantPool> {
+    pub fn raw_cpool(&self) -> &Vec<ConstantPool> {
+        &self.raw_cpool
+    }
+}
+
+impl CPoolHelperTrait for CPoolHelper {
+    fn get(&self, ctype: CPoolType, index: u16) -> Option<&ConstantPool> {
         self.data.get(&ctype)?.get(&index)
     }
 
-    pub fn get_first(&self, ctypes: &[CPoolType], index: u16) -> Option<&ConstantPool> {
+    fn get_first(&self, ctypes: &[CPoolType], index: u16) -> Option<&ConstantPool> {
         for &ctype in ctypes {
             if let Some(constant_pool) = self.get(ctype, index) {
                 return Some(constant_pool);
@@ -83,7 +107,7 @@ impl CPoolHelper {
         None
     }
 
-    pub fn get_class_name(&self, index: u16) -> Option<String> {
+    fn get_class_name(&self, index: u16) -> Option<String> {
         let name_index = match *self.get(CPoolType::Class, index)? {
             ConstantPool::Class { name_index } => name_index,
             _ => return None,
@@ -92,28 +116,28 @@ impl CPoolHelper {
         self.get_utf8(name_index)
     }
 
-    pub fn get_integer(&self, index: u16) -> Option<i32> {
+    fn get_integer(&self, index: u16) -> Option<i32> {
         match self.get(CPoolType::Integer, index)? {
             ConstantPool::Integer { value } => Some(*value),
             _ => None,
         }
     }
 
-    pub fn get_float(&self, index: u16) -> Option<f32> {
+    fn get_float(&self, index: u16) -> Option<f32> {
         match self.get(CPoolType::Float, index)? {
             ConstantPool::Float { value } => Some(*value),
             _ => None,
         }
     }
 
-    pub fn get_double(&self, index: u16) -> Option<f64> {
+    fn get_double(&self, index: u16) -> Option<f64> {
         match self.get(CPoolType::Double, index)? {
             ConstantPool::Double { value } => Some(*value),
             _ => None,
         }
     }
 
-    pub fn get_class(&self, index: u16) -> Option<String> {
+    fn get_class(&self, index: u16) -> Option<String> {
         let name_index = match self.get(CPoolType::Class, index)? {
             ConstantPool::Class { name_index } => Some(name_index),
             _ => None,
@@ -122,7 +146,7 @@ impl CPoolHelper {
         self.get_utf8(*name_index)
     }
 
-    pub fn get_string(&self, index: u16) -> Option<String> {
+    fn get_string(&self, index: u16) -> Option<String> {
         let name_index = match self.get(CPoolType::String, index)? {
             ConstantPool::String { string_index } => Some(string_index),
             _ => None,
@@ -131,21 +155,21 @@ impl CPoolHelper {
         self.get_utf8(*name_index)
     }
 
-    pub fn get_long(&self, index: u16) -> Option<i64> {
+    fn get_long(&self, index: u16) -> Option<i64> {
         match self.get(CPoolType::Long, index)? {
             ConstantPool::Long { value } => Some(*value),
             _ => None,
         }
     }
 
-    pub fn get_utf8(&self, index: u16) -> Option<String> {
+    fn get_utf8(&self, index: u16) -> Option<String> {
         match self.get(CPoolType::Utf8, index)? {
             ConstantPool::Utf8 { value } => Some(value.clone()),
             _ => None,
         }
     }
 
-    pub fn get_full_field_info(&self, index: u16) -> Option<(String, String)> {
+    fn get_full_field_info(&self, index: u16) -> Option<(String, String)> {
         let (class_index, name_and_type_index) = match self.get(CPoolType::Fieldref, index)? {
             ConstantPool::Fieldref {
                 class_index,
@@ -160,7 +184,7 @@ impl CPoolHelper {
         Some((class_name, field_name))
     }
 
-    pub fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)> {
+    fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)> {
         let constant_pool = self.get_first(
             &[CPoolType::Methodref, CPoolType::InterfaceMethodref],
             index,
@@ -186,10 +210,7 @@ impl CPoolHelper {
         Some((class_name, method_name, method_descriptor))
     }
 
-    pub fn get_full_interfacemethodref_info(
-        &self,
-        index: u16,
-    ) -> Option<(String, String, String)> {
+    fn get_full_interfacemethodref_info(&self, index: u16) -> Option<(String, String, String)> {
         let (class_index, name_and_type_index) =
             match self.get(CPoolType::InterfaceMethodref, index)? {
                 ConstantPool::InterfaceMethodref {
@@ -205,7 +226,7 @@ impl CPoolHelper {
         Some((class_name, method_name, method_descriptor))
     }
 
-    pub fn get_name_and_type(&self, index: u16) -> Option<(String, String)> {
+    fn get_name_and_type(&self, index: u16) -> Option<(String, String)> {
         let (name_index, descriptor_index) = match self.get(CPoolType::NameAndType, index)? {
             ConstantPool::NameAndType {
                 name_index,
@@ -218,10 +239,6 @@ impl CPoolHelper {
         let descriptor = self.get_utf8(*descriptor_index)?;
 
         Some((name, descriptor))
-    }
-
-    pub fn raw_cpool(&self) -> &Vec<ConstantPool> {
-        &self.raw_cpool
     }
 }
 

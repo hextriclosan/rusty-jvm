@@ -3,8 +3,11 @@ use crate::execution_engine::executor::Executor;
 use crate::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::heap::heap::with_heap_write_lock;
 use crate::helper::clazz_ref;
+use crate::method_area::cpool_helper::CPoolHelperTrait;
 use crate::method_area::method_area::with_method_area;
-use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_frame::{ExceptionTable, StackFrame};
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 use jdescriptor::MethodDescriptor;
 use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashSet};
@@ -27,44 +30,18 @@ pub(crate) struct JavaMethod {
     runtime_visible_annotations: HashSet<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, new, Getters, CopyGetters)]
 pub(crate) struct CodeContext {
+    #[get_copy = "pub"]
     max_stack: u16,
+    #[get_copy = "pub"]
     max_locals: u16,
+    #[get = "pub"]
     bytecode: Arc<Vec<u8>>,
+    #[get = "pub"]
     line_numbers: Arc<BTreeMap<u16, u16>>,
-}
-
-impl CodeContext {
-    pub fn new(
-        max_stack: u16,
-        max_locals: u16,
-        bytecode: Arc<Vec<u8>>,
-        line_numbers: Arc<BTreeMap<u16, u16>>,
-    ) -> Self {
-        Self {
-            max_stack,
-            max_locals,
-            bytecode,
-            line_numbers,
-        }
-    }
-
-    pub fn max_stack(&self) -> u16 {
-        self.max_stack
-    }
-
-    pub fn max_locals(&self) -> u16 {
-        self.max_locals
-    }
-
-    pub fn bytecode(&self) -> &Arc<Vec<u8>> {
-        &self.bytecode
-    }
-
-    pub fn line_numbers(&self) -> &Arc<BTreeMap<u16, u16>> {
-        &self.line_numbers
-    }
+    #[get = "pub"]
+    exception_table: Arc<ExceptionTable>,
 }
 
 impl JavaMethod {
@@ -105,6 +82,7 @@ impl JavaMethod {
                 Arc::clone(context.bytecode()),
                 self.class_name.clone(),
                 Arc::clone(context.line_numbers()),
+                Arc::clone(context.exception_table()),
             )),
             None => Err(Error::new_execution(&format!(
                 "Code context is missing for {}.{}",

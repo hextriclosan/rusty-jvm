@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::stack::stack::Stack;
 use crate::stack::stack_value::StackValue;
+use derive_new::new;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -12,6 +13,20 @@ pub(crate) struct StackFrame {
     bytecode_ref: Arc<Vec<u8>>,
     current_class_name: String,
     line_numbers: Arc<BTreeMap<u16, u16>>,
+    exception_table: Arc<ExceptionTable>,
+}
+
+#[derive(Debug, new, PartialEq)]
+pub struct ExceptionTableRecord {
+    start_pc: u16,
+    end_pc: u16,
+    handler_pc: u16,
+    catch_type: String,
+}
+
+#[derive(Debug, new)]
+pub struct ExceptionTable {
+    table: Vec<ExceptionTableRecord>,
 }
 
 pub type StackFrames = Vec<StackFrame>;
@@ -23,6 +38,7 @@ impl StackFrame {
         bytecode_ref: Arc<Vec<u8>>,
         current_class_name: String,
         line_numbers: Arc<BTreeMap<u16, u16>>,
+        exception_table: Arc<ExceptionTable>,
     ) -> Self {
         StackFrame {
             pc: 0,
@@ -31,6 +47,7 @@ impl StackFrame {
             bytecode_ref,
             current_class_name,
             line_numbers,
+            exception_table,
         }
     }
 
@@ -130,5 +147,9 @@ impl StackFrame {
 
     pub fn line_numbers(&self) -> &BTreeMap<u16, u16> {
         &self.line_numbers
+    }
+
+    pub fn exception_table(&self) -> &Arc<ExceptionTable> {
+        &self.exception_table
     }
 }
