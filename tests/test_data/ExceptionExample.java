@@ -15,6 +15,13 @@ public class ExceptionExample {
         } catch (Throwable e) {
             System.out.println("Caught as Throwable: " + e);
         }
+
+        try {
+            System.out.println("Inside another try block");
+            throw new Error();
+        } catch (Throwable e) {
+            System.out.println("Caught as Throwable second time: " + e);
+        }
         System.out.println("End of main");
     }
 

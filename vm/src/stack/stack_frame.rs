@@ -32,8 +32,11 @@ pub struct ExceptionTable {
 }
 
 impl ExceptionTable {
-    pub fn find_exception_handler(&self, exception_name: &str) -> Option<u16> {
+    pub fn find_exception_handler(&self, exception_name: &str, pc: u16) -> Option<u16> {
         for record in self.table.iter() {
+            if pc < record.start_pc || pc >= record.end_pc {
+                continue;
+            }
             let castable = InstanceChecker::checkcast(exception_name, &record.catch_type)
                 .expect("Error in checkcast");
             if castable {
