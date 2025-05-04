@@ -440,7 +440,8 @@ fn throw_exception(
     while !stack_frames.is_empty() {
         let stack_frame = last_frame_mut(stack_frames)?;
         let exception_table = stack_frame.exception_table();
-        match exception_table.find_exception_handler(exception_name) {
+        let pc = stack_frame.pc() as u16;
+        match exception_table.find_exception_handler(exception_name, pc) {
             Some(exception_handler) => {
                 return Ok(exception_handler as i16);
             }

@@ -1713,6 +1713,8 @@ fn should_support_exceptions() {
         r#"Beginning of main
 Inside try block
 Caught as Throwable: java.lang.Error
+Inside another try block
+Caught as Throwable second time: java.lang.Error
 End of main
 "#,
     );
