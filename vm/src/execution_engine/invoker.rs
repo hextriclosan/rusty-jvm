@@ -42,7 +42,7 @@ pub(crate) fn invoke(
             .enumerate()
             .for_each(|(index, val)| next_frame.set_local(index, *val));
 
-        stack_frames.push(next_frame);
+        stack_frames.new_frame(next_frame);
     }
     Ok(())
 }

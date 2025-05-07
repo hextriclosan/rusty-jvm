@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::execution_engine::common::last_frame_mut;
+use crate::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::execution_engine::invoker::invoke;
 use crate::execution_engine::opcode::*;
 use crate::execution_engine::static_init::StaticInit;
@@ -113,6 +113,7 @@ pub(crate) fn process(
             stack_frame.incr_pc();
         }
         INVOKEVIRTUAL => {
+            store_ex_pc(stack_frames)?;
             let (_, full_signature, method_signature) = get_class_name_and_signature(
                 stack_frames,
                 current_class_name,
@@ -150,6 +151,7 @@ pub(crate) fn process(
             trace!("INVOKEVIRTUAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESPECIAL => {
+            store_ex_pc(stack_frames)?;
             let (class_name_to_start_lookup_from, full_signature, _) =
                 get_class_name_and_signature(
                     stack_frames,
@@ -173,6 +175,7 @@ pub(crate) fn process(
             trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESTATIC => {
+            store_ex_pc(stack_frames)?;
             let (class_name_to_start_lookup_from, full_signature, _) =
                 get_class_name_and_signature(
                     stack_frames,
@@ -198,6 +201,7 @@ pub(crate) fn process(
             trace!("INVOKESTATIC -> {class_name_to_start_lookup_from}.{full_signature}({method_args:?})");
         }
         INVOKEINTERFACE => {
+            store_ex_pc(stack_frames)?;
             let index = last_frame_mut(stack_frames)?.extract_two_bytes() as u16;
             let arg_num = last_frame_mut(stack_frames)?.extract_one_byte() as usize;
             let method_args = get_args(stack_frames, arg_num)?;
@@ -442,14 +446,14 @@ fn throw_exception(
     while !stack_frames.is_empty() {
         let stack_frame = last_frame_mut(stack_frames)?;
         let exception_table = stack_frame.exception_table();
-        let pc = stack_frame.pc() as u16;
+        let pc = stack_frame.ex_pc() as u16;
         match exception_table.find_exception_handler(exception_name, pc, stack_frame.method_name())
         {
             Some(exception_handler) => {
                 return Ok(exception_handler as i16);
             }
             None => {
-                stack_frames.pop();
+                stack_frames.propagate_exception();
             }
         }
     }

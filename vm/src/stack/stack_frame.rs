@@ -17,6 +17,8 @@ pub(crate) struct StackFrame {
     index: u32, // this field is only for debugging, it isn't involved in any program logic
     method_name: Arc<String>, // this field is only for debugging, it isn't involved in any program logic
     pc: usize,
+    /// Stores the current program counter (pc) in `ex_pc` before invoking a method. This value is later used as the current `pc` if an exception is thrown.
+    ex_pc: Option<usize>,
     locals: Box<[i32]>,
     operand_stack: Stack<i32>,
     bytecode_ref: Arc<Vec<u8>>,
@@ -57,6 +59,7 @@ impl ExceptionTable {
             let castable = InstanceChecker::checkcast(exception_name, &record.catch_type)
                 .expect("Error in checkcast");
             if castable {
+                trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
                 return Some(record.handler_pc);
             }
         }
@@ -87,11 +90,33 @@ impl StackFrames {
         self.frames.last_mut()
     }
 
-    pub fn push(&mut self, frame: StackFrame) {
+    /// Pushes a new stack frame onto the stack frames.
+    pub fn new_frame(&mut self, frame: StackFrame) {
         self.frames.push(frame);
     }
 
-    pub fn pop(&mut self) -> Option<StackFrame> {
+    /// Pops the top stack frame from the stack frames and returns it.
+    /// Resets the exception program counter (ex_pc) of the next frame if it exists since it is normal stack unwinding.
+    pub fn exit_frame(&mut self) -> Option<StackFrame> {
+        let popped_frame = self.pop();
+
+        // Resetting the exception program counter (ex_pc) of the next frame is an intentional
+        // part of the normal stack unwinding process.
+        if let Some(next_frame) = self.frames.last_mut() {
+            next_frame.reset_ex_pc()
+        }
+
+        popped_frame
+    }
+
+    /// Pops the top stack frame from the stack frames and returns it.
+    /// Doesn't reset the exception program counter (ex_pc) of the next frame since it is not normal stack unwinding, and it will be used for correct exception handling.
+    pub fn propagate_exception(&mut self) -> Option<StackFrame> {
+        self.pop()
+    }
+
+    /// Pops the top stack frame from the stack frames and returns it.
+    fn pop(&mut self) -> Option<StackFrame> {
         self.frames.pop()
     }
 }
@@ -110,6 +135,7 @@ impl StackFrame {
             index: COUNTER.fetch_add(1, SeqCst),
             method_name,
             pc: 0,
+            ex_pc: None,
             locals: vec![0i32; locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
@@ -181,6 +207,16 @@ impl StackFrame {
         self.pc = pc as usize;
     }
 
+    /// Stores the current program counter (PC) in the exception PC (ex_pc) field.
+    pub fn store_ex_pc(&mut self) {
+        self.ex_pc = Some(self.pc);
+    }
+
+    /// Resets the exception program counter (ex_pc) to None.
+    pub fn reset_ex_pc(&mut self) {
+        self.ex_pc = None;
+    }
+
     pub fn clear_stack(&mut self) {
         self.operand_stack.clear()
     }
@@ -231,5 +267,10 @@ impl StackFrame {
 
     pub fn method_name(&self) -> &str {
         &self.method_name
+    }
+
+    /// Returns the exception program counter (ex_pc) if it is set, otherwise returns the current program counter (pc).
+    pub fn ex_pc(&self) -> usize {
+        self.ex_pc.unwrap_or(self.pc)
     }
 }
