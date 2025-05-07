@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
+use tracing::trace;
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -14,11 +15,12 @@ static COUNTER: AtomicU32 = AtomicU32::new(0);
 pub(crate) struct StackFrame {
     #[allow(dead_code)]
     index: u32, // this field is only for debugging, it isn't involved in any program logic
+    method_name: Arc<String>, // this field is only for debugging, it isn't involved in any program logic
     pc: usize,
     locals: Box<[i32]>,
     operand_stack: Stack<i32>,
     bytecode_ref: Arc<Vec<u8>>,
-    current_class_name: String,
+    current_class_name: Arc<String>,
     line_numbers: Arc<BTreeMap<u16, u16>>,
     exception_table: Arc<ExceptionTable>,
 }
@@ -38,8 +40,14 @@ pub struct ExceptionTable {
 }
 
 impl ExceptionTable {
-    pub fn find_exception_handler(&self, exception_name: &str, pc: u16) -> Option<u16> {
+    pub fn find_exception_handler(
+        &self,
+        exception_name: &str,
+        pc: u16,
+        method_name: &str,
+    ) -> Option<u16> {
         for record in self.table.iter() {
+            trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
             if pc < record.start_pc || pc >= record.end_pc {
                 continue;
             }
@@ -58,15 +66,17 @@ pub type StackFrames = Vec<StackFrame>;
 
 impl StackFrame {
     pub fn new(
+        method_name: Arc<String>,
         locals_size: usize,
         stack_size: usize,
         bytecode_ref: Arc<Vec<u8>>,
-        current_class_name: String,
+        current_class_name: Arc<String>,
         line_numbers: Arc<BTreeMap<u16, u16>>,
         exception_table: Arc<ExceptionTable>,
     ) -> Self {
         StackFrame {
             index: COUNTER.fetch_add(1, SeqCst),
+            method_name,
             pc: 0,
             locals: vec![0i32; locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
@@ -185,5 +195,9 @@ impl StackFrame {
 
     pub fn exception_table(&self) -> &Arc<ExceptionTable> {
         &self.exception_table
+    }
+
+    pub fn method_name(&self) -> &str {
+        &self.method_name
     }
 }

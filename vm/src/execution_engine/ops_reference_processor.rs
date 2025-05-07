@@ -339,6 +339,7 @@ pub(crate) fn process(
             };
             let exception_name =
                 with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
+            trace!("ATHROW -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
             let found_exception_handler = throw_exception(stack_frames, &exception_name)?;
 
             let stack_frame = last_frame_mut(stack_frames)?;
@@ -442,7 +443,8 @@ fn throw_exception(
         let stack_frame = last_frame_mut(stack_frames)?;
         let exception_table = stack_frame.exception_table();
         let pc = stack_frame.pc() as u16;
-        match exception_table.find_exception_handler(exception_name, pc) {
+        match exception_table.find_exception_handler(exception_name, pc, stack_frame.method_name())
+        {
             Some(exception_handler) => {
                 return Ok(exception_handler as i16);
             }
