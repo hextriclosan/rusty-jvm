@@ -1711,10 +1711,12 @@ fn should_support_exceptions() {
     assert_success(
         "samples.javacore.exceptionexample.ExceptionExample",
         r#"Beginning of main
-Inside try block
-Caught as Throwable: java.lang.Error
-Inside another try block
-Caught as Throwable second time: java.lang.Error
+Running case: FewTriesInOneMethod
+  Inside try block
+  Caught as Throwable: java.lang.Error: This is an error
+  Inside another try block
+  Caught as Throwable second time: java.lang.IndexOutOfBoundsException: This is an index out of bounds exception
+
 End of main
 "#,
     );
