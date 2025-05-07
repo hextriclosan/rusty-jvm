@@ -4,10 +4,16 @@ use crate::stack::stack::Stack;
 use crate::stack::stack_value::StackValue;
 use derive_new::new;
 use std::collections::BTreeMap;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
+
+static COUNTER: AtomicU32 = AtomicU32::new(0);
 
 #[derive(Clone, Debug)]
 pub(crate) struct StackFrame {
+    #[allow(dead_code)]
+    index: u32, // this field is only for debugging, it isn't involved in any program logic
     pc: usize,
     locals: Box<[i32]>,
     operand_stack: Stack<i32>,
@@ -60,6 +66,7 @@ impl StackFrame {
         exception_table: Arc<ExceptionTable>,
     ) -> Self {
         StackFrame {
+            index: COUNTER.fetch_add(1, SeqCst),
             pc: 0,
             locals: vec![0i32; locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
@@ -130,6 +137,10 @@ impl StackFrame {
 
     pub fn set_pc(&mut self, pc: i16) {
         self.pc = pc as usize;
+    }
+
+    pub fn clear_stack(&mut self) {
+        self.operand_stack.clear()
     }
 
     pub fn push<T: StackValue>(&mut self, stack_value: T) -> crate::error::Result<()> {

@@ -23,6 +23,10 @@ impl<T> Stack<T> {
     pub fn pop(&mut self) -> Option<T> {
         self.data.pop()
     }
+
+    pub fn clear(&mut self) {
+        self.data.clear();
+    }
 }
 
 #[cfg(test)]
