@@ -16,8 +16,8 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub(crate) struct JavaMethod {
     method_descriptor: MethodDescriptor,
-    class_name: String,
-    name_signature: String,
+    class_name: Arc<String>,
+    name_signature: Arc<String>,
     code_context: Option<CodeContext>,
     native: bool,
 
@@ -60,8 +60,8 @@ impl JavaMethod {
     ) -> Self {
         Self {
             method_descriptor,
-            class_name: class_name.to_string(),
-            name_signature: name_signature.to_string(),
+            class_name: Arc::new(class_name.to_string()),
+            name_signature: Arc::new(name_signature.to_string()),
             code_context,
             native,
             reflection_ref: OnceCell::new(),
@@ -77,10 +77,11 @@ impl JavaMethod {
     pub fn new_stack_frame(&self) -> crate::error::Result<StackFrame> {
         match &self.code_context {
             Some(context) => Ok(StackFrame::new(
+                Arc::clone(&self.name_signature),
                 context.max_locals() as usize,
                 context.max_stack() as usize,
                 Arc::clone(context.bytecode()),
-                self.class_name.clone(),
+                Arc::clone(&self.class_name),
                 Arc::clone(context.line_numbers()),
                 Arc::clone(context.exception_table()),
             )),
