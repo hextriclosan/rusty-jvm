@@ -46,6 +46,9 @@ impl ExceptionTable {
         pc: u16,
         method_name: &str,
     ) -> Option<u16> {
+        if self.table.is_empty() {
+            trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {method_name}");
+        }
         for record in self.table.iter() {
             trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
             if pc < record.start_pc || pc >= record.end_pc {
@@ -62,7 +65,36 @@ impl ExceptionTable {
     }
 }
 
-pub type StackFrames = Vec<StackFrame>;
+#[derive(Debug, new)]
+pub struct StackFrames {
+    frames: Vec<StackFrame>,
+}
+
+impl StackFrames {
+    pub fn iter(&self) -> std::slice::Iter<'_, StackFrame> {
+        self.frames.iter()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+
+    pub fn last(&self) -> Option<&StackFrame> {
+        self.frames.last()
+    }
+
+    pub fn last_mut(&mut self) -> Option<&mut StackFrame> {
+        self.frames.last_mut()
+    }
+
+    pub fn push(&mut self, frame: StackFrame) {
+        self.frames.push(frame);
+    }
+
+    pub fn pop(&mut self) -> Option<StackFrame> {
+        self.frames.pop()
+    }
+}
 
 impl StackFrame {
     pub fn new(
