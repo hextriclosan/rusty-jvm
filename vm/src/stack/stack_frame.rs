@@ -98,13 +98,15 @@ impl StackFrames {
     /// Pops the top stack frame from the stack frames and returns it.
     /// Resets the exception program counter (ex_pc) of the next frame if it exists since it is normal stack unwinding.
     pub fn exit_frame(&mut self) -> Option<StackFrame> {
-        let frame = self.pop();
+        let popped_frame = self.pop();
 
+        // Resetting the exception program counter (ex_pc) of the next frame is an intentional
+        // part of the normal stack unwinding process.
         if let Some(next_frame) = self.frames.last_mut() {
             next_frame.reset_ex_pc()
         }
 
-        frame
+        popped_frame
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
