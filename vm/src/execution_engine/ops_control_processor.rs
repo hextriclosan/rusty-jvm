@@ -70,7 +70,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
         DRETURN => perform_return::<f64>(stack_frames, "DRETURN")?,
         ARETURN => perform_return::<i32>(stack_frames, "ARETURN")?,
         RETURN => {
-            stack_frames.pop();
+            stack_frames.exit_frame();
             trace!("RETURN");
         }
         _ => {
@@ -91,7 +91,7 @@ fn perform_return<T: StackValue + Copy + Display>(
     let stack_frame = last_frame_mut(stack_frames)?;
     let result: T = stack_frame.pop();
 
-    stack_frames.pop();
+    stack_frames.exit_frame();
     let next_frame = stack_frames
         .last_mut()
         .ok_or(Error::new_execution("Error getting stack last value"))?;

@@ -6,7 +6,7 @@ import java.util.List;
 public class ExceptionExample {
     public static void main(String[] args) {
         System.out.println("Beginning of main");
-        List<Case> cases = List.of(new FewTriesInOneMethod());
+        List<Case> cases = List.of(new FewTriesInOneMethod(), new TryWithResources());
         for (Case aCase: cases) {
             aCase.run();
         }
@@ -36,7 +36,6 @@ class FewTriesInOneMethod extends Case {
         try {
             print("Inside try block");
             thrower();
-            print("Should be never reached");
         } catch (NullPointerException e) {
             print("Caught as NullPointerException: " + e);
         } catch (RuntimeException e) {
@@ -55,5 +54,35 @@ class FewTriesInOneMethod extends Case {
 
     private static void thrower() {
         throw new Error("This is an error");
+    }
+}
+
+class TryWithResources extends Case {
+    @Override
+    protected void runImpl() {
+        try {
+            print("Inside try-with-resources block");
+            tryWithResourcesWithNoCatch();
+        } catch (Exception e) {
+            print("Caught try-with-resources exception: " + e);
+        }
+    }
+
+    private static void tryWithResourcesWithNoCatch() {
+        try (CustomResource resource = new CustomResource()) {
+            resource.doSomethingAndThrow();
+        }
+    }
+}
+
+class CustomResource implements AutoCloseable {
+    public void doSomethingAndThrow() {
+        System.out.println("  Doing something with the resource");
+        throw new RuntimeException("An error occurred while using the resource");
+    }
+
+    @Override
+    public void close() {
+        System.out.println("  Custom resource closed");
     }
 }
