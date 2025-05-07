@@ -7,7 +7,7 @@ use crate::execution_engine::{
     ops_constant_processor, ops_load_processor, ops_math_processor, ops_stack_processor,
     ops_store_processor,
 };
-use crate::stack::stack_frame::StackFrame;
+use crate::stack::stack_frame::{StackFrame, StackFrames};
 use tracing::{span, trace, Level};
 
 pub(crate) struct Engine {}
@@ -19,7 +19,7 @@ impl Engine {
     ) -> crate::error::Result<()> {
         trace!("@@@ Entering execute: {reason}");
 
-        let mut stack_frames = vec![initial_stack_frame];
+        let mut stack_frames = StackFrames::new(vec![initial_stack_frame]);
         while !stack_frames.is_empty() {
             let (class, code, pc, line_numbers) = {
                 let frame = stack_frames

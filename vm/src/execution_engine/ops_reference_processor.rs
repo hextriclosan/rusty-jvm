@@ -460,7 +460,7 @@ fn throw_exception(
 }
 
 fn prepare_invoke_context(
-    stack_frames: &mut [StackFrame],
+    stack_frames: &mut StackFrames,
     method_descriptor: &MethodDescriptor,
     use_self_ref: bool,
 ) -> crate::error::Result<Vec<i32>> {
@@ -470,7 +470,7 @@ fn prepare_invoke_context(
     get_args(stack_frames, arg_num as usize)
 }
 
-fn get_args(stack_frames: &mut [StackFrame], arg_num: usize) -> crate::error::Result<Vec<i32>> {
+fn get_args(stack_frames: &mut StackFrames, arg_num: usize) -> crate::error::Result<Vec<i32>> {
     let mut method_args = Vec::with_capacity(arg_num);
     for _ in 0..arg_num {
         let val = last_frame_mut(stack_frames)?.pop();
@@ -482,7 +482,7 @@ fn get_args(stack_frames: &mut [StackFrame], arg_num: usize) -> crate::error::Re
 }
 
 fn get_class_name_and_signature<F>(
-    stack_frames: &mut [StackFrame],
+    stack_frames: &mut StackFrames,
     current_class_name: &str,
     cpool_getter: F,
 ) -> crate::error::Result<(String, String, String)>
