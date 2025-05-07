@@ -343,6 +343,7 @@ pub(crate) fn process(
 
             let stack_frame = last_frame_mut(stack_frames)?;
             stack_frame.set_pc(found_exception_handler);
+            stack_frame.clear_stack(); // according to JVM spec
             stack_frame.push(throwable_ref)?;
 
             trace!("ATHROW -> throwable_ref={throwable_ref}, exception_name={exception_name}");

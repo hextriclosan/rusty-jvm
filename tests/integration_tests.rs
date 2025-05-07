@@ -1680,7 +1680,7 @@ fn should_print_out_program_args() {
 fn should_handle_operand_stack_overflow() {
     assert_failure(
         "samples.invalidprograms.operandstackoverflow.OperandStackOverflowExample",
-        r#"VM execution failed: Execution Error: Reason: Execution Error: Exceeded max stack size; Current Frame: StackFrame { pc: 5, locals: [], operand_stack: Stack { max_size: 2, data: [10, 20] }, bytecode_ref: [18, 7, 18, 8, 18, 9, 172], current_class_name: "samples/invalidprograms/operandstackoverflow/OperandStackOverflowExample", line_numbers: {}, exception_table: ExceptionTable { table: [] } }"#,
+        r#"VM execution failed: Execution Error: Reason: Execution Error: Exceeded max stack size; Current Frame: StackFrame { index: 11435, pc: 5, locals: [], operand_stack: Stack { max_size: 2, data: [10, 20] }, bytecode_ref: [18, 7, 18, 8, 18, 9, 172], current_class_name: "samples/invalidprograms/operandstackoverflow/OperandStackOverflowExample", line_numbers: {}, exception_table: ExceptionTable { table: [] } }"#,
     );
 }
 
