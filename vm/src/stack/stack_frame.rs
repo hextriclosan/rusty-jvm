@@ -17,7 +17,7 @@ pub(crate) struct StackFrame {
     index: u32, // this field is only for debugging, it isn't involved in any program logic
     method_name: Arc<String>, // this field is only for debugging, it isn't involved in any program logic
     pc: usize,
-    /// The exception program counter (ex_pc) is used to store the program counter (pc) before invocation a method. It is used then as a current program counter (pc) if an exception is thrown.
+    /// Stores the current program counter (pc) in `ex_pc` before invoking a method. This value is later used as the current `pc` if an exception is thrown.
     ex_pc: Option<usize>,
     locals: Box<[i32]>,
     operand_stack: Stack<i32>,
