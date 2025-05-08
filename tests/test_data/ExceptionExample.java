@@ -12,7 +12,8 @@ public class ExceptionExample {
                 new TryWithResources(true),
                 new TryWithResourcesMimic(false),
                 new TryWithResourcesMimic(true),
-                new ReThrowWithCause()
+                new ReThrowWithCause(),
+                new FinallyIllustration()
         );
         for (Case aCase : cases) {
             aCase.run();
@@ -143,6 +144,72 @@ class ReThrowWithCause extends Case {
             }
         } catch (IllegalStateException e) {
             print("Caught as IllegalStateException", e);
+        }
+    }
+}
+
+class FinallyIllustration extends Case {
+    private String data;
+
+    @Override
+    protected void runImpl() {
+        withoutException();
+        print("No exception in try, finally still executes: " + data);
+        print("============================");
+
+        withCaughtException();
+        print("Caught exception in try, finally still executes: " + data);
+        print("============================");
+
+        try {
+            withUncaughtException();
+            print("never reaches here");
+        } catch (Throwable e) {
+            print("Caught as Throwable", e);
+            print("Uncaught exception in try, finally still executes: " + data);
+        }
+    }
+
+    private void withoutException() {
+        data = "";
+        try {
+            print("Executing try block");
+            data += "try-";
+        } finally {
+            print("Executing finally block");
+            data += "finally";
+        }
+    }
+
+    private void withCaughtException() {
+        data = "";
+        try {
+            print("Executing try block");
+            data += "try-";
+            throw new RuntimeException("Exception in try");
+        } catch (IllegalArgumentException e) {
+            data += "catch0-";
+        } catch (Throwable e) {
+            print("Executing catch block" + e);
+            data += "catch-";
+        } finally {
+            print("Executing finally block");
+            data += "finally";
+        }
+    }
+
+    private void withUncaughtException() {
+        data = "";
+        try {
+            print("Executing try block");
+            data += "try-";
+            throw new RuntimeException("Exception in try");
+        } catch (IllegalArgumentException e) {
+            print("Executing catch block", e);
+            data += "catch-";
+        } finally {
+            print("Executing finally block");
+            data += "finally";
         }
     }
 }

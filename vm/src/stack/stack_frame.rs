@@ -51,14 +51,16 @@ impl ExceptionTable {
         if self.table.is_empty() {
             trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {method_name}");
         }
+        const FINALLY_MARK: &'static str = "any";
         for record in self.table.iter() {
             trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
             if pc < record.start_pc || pc >= record.end_pc {
                 continue;
             }
-            let castable = InstanceChecker::checkcast(exception_name, &record.catch_type)
-                .expect("Error in checkcast");
-            if castable {
+            let eligible = record.catch_type == FINALLY_MARK
+                || InstanceChecker::checkcast(exception_name, &record.catch_type)
+                    .expect("Error in checkcast");
+            if eligible {
                 trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
                 return Some(record.handler_pc);
             }

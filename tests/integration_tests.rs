@@ -1747,6 +1747,21 @@ Inside try block
 Caught as Throwable: java.lang.RuntimeException: This is a runtime exception. cause=null stackTrace=[] suppressed=[]
 Caught as IllegalStateException: java.lang.IllegalStateException: java.lang.RuntimeException: This is a runtime exception. cause=java.lang.RuntimeException: This is a runtime exception stackTrace=[] suppressed=[]
 
+Running case: FinallyIllustration
+Executing try block
+Executing finally block
+No exception in try, finally still executes: try-finally
+============================
+Executing try block
+Executing catch blockjava.lang.RuntimeException: Exception in try
+Executing finally block
+Caught exception in try, finally still executes: try-catch-finally
+============================
+Executing try block
+Executing finally block
+Caught as Throwable: java.lang.RuntimeException: Exception in try. cause=null stackTrace=[] suppressed=[]
+Uncaught exception in try, finally still executes: try-finally
+
 "#,
     );
 }
