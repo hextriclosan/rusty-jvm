@@ -56,9 +56,10 @@ impl ExceptionTable {
             if pc < record.start_pc || pc >= record.end_pc {
                 continue;
             }
-            let castable = InstanceChecker::checkcast(exception_name, &record.catch_type)
-                .expect("Error in checkcast");
-            if castable {
+            let eligible = record.catch_type == "any"
+                || InstanceChecker::checkcast(exception_name, &record.catch_type)
+                    .expect("Error in checkcast");
+            if eligible {
                 trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
                 return Some(record.handler_pc);
             }
