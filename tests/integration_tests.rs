@@ -1710,20 +1710,43 @@ This is written using NIO.
 fn should_support_exceptions() {
     assert_success(
         "samples.javacore.exceptionexample.ExceptionExample",
-        r#"Beginning of main
-Running case: FewTriesInOneMethod
-  Inside try block
-  Caught as Throwable: java.lang.Error: This is an error
-  Inside another try block
-  Caught as Throwable second time: java.lang.IndexOutOfBoundsException: This is an index out of bounds exception
+        r#"Running case: FewTriesInOneMethod
+Inside try block
+Caught as Throwable: java.lang.Error: This is an error. cause=null stackTrace=[] suppressed=[]
+Inside another try block
+Caught as Throwable second time: java.lang.IndexOutOfBoundsException: This is an index out of bounds exception. cause=null stackTrace=[] suppressed=[]
 
 Running case: TryWithResources
-  Inside try-with-resources block
-  Doing something with the resource
-  Custom resource closed
-  Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource
+Inside try-with-resources block
+Doing something with the resource
+Custom resource is about to be closed
+Custom resource is closed
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[] suppressed=[]
 
-End of main
+Running case: TryWithResources
+Inside try-with-resources block
+Doing something with the resource
+Custom resource is about to be closed
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[] suppressed=[java.lang.IllegalStateException: An error occurred while closing the resource]
+
+Running case: TryWithResourcesMimic
+Inside try-with-resources block
+Doing something with the resource
+Custom resource is about to be closed
+Custom resource is closed
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[] suppressed=[]
+
+Running case: TryWithResourcesMimic
+Inside try-with-resources block
+Doing something with the resource
+Custom resource is about to be closed
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[] suppressed=[java.lang.IllegalStateException: An error occurred while closing the resource]
+
+Running case: ReThrowWithCause
+Inside try block
+Caught as Throwable: java.lang.RuntimeException: This is a runtime exception. cause=null stackTrace=[] suppressed=[]
+Caught as IllegalStateException: java.lang.IllegalStateException: java.lang.RuntimeException: This is a runtime exception. cause=java.lang.RuntimeException: This is a runtime exception stackTrace=[] suppressed=[]
+
 "#,
     );
 }
