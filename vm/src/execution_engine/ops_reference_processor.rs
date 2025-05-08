@@ -447,7 +447,7 @@ fn throw_exception(
         let stack_frame = last_frame_mut(stack_frames)?;
         let exception_table = stack_frame.exception_table();
         let pc = stack_frame.ex_pc() as u16;
-        match exception_table.find_exception_handler(exception_name, pc, stack_frame.method_name())
+        match exception_table.find_exception_handler(exception_name, pc, stack_frame.method_name())?
         {
             Some(exception_handler) => {
                 return Ok(exception_handler as i16);

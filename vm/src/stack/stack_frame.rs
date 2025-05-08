@@ -47,7 +47,7 @@ impl ExceptionTable {
         exception_name: &str,
         pc: u16,
         method_name: &str,
-    ) -> Option<u16> {
+    ) -> crate::error::Result<Option<u16>> {
         if self.table.is_empty() {
             trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {method_name}");
         }
@@ -58,15 +58,14 @@ impl ExceptionTable {
                 continue;
             }
             let eligible = record.catch_type == FINALLY_MARK
-                || InstanceChecker::checkcast(exception_name, &record.catch_type)
-                    .expect("Error in checkcast");
+                || InstanceChecker::checkcast(exception_name, &record.catch_type)?;
             if eligible {
                 trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
-                return Some(record.handler_pc);
+                return Ok(Some(record.handler_pc));
             }
         }
 
-        None
+        Ok(None)
     }
 }
 
