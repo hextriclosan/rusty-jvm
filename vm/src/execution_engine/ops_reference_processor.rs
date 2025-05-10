@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::exception::common::throw_exception_with_ref;
 use crate::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::execution_engine::invoker::invoke;
 use crate::execution_engine::opcode::*;
@@ -341,17 +342,9 @@ pub(crate) fn process(
                 let throwable_ref: i32 = stack_frame.pop();
                 throwable_ref
             };
-            let exception_name =
-                with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
-            trace!("ATHROW -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
-            let found_exception_handler = throw_exception(stack_frames, &exception_name)?;
-
-            let stack_frame = last_frame_mut(stack_frames)?;
-            stack_frame.set_pc(found_exception_handler);
-            stack_frame.clear_stack(); // according to JVM spec
-            stack_frame.push(throwable_ref)?;
-
-            trace!("ATHROW -> throwable_ref={throwable_ref}, exception_name={exception_name}");
+            let (exception_name, found_exception_handler) =
+                throw_exception_with_ref(throwable_ref, stack_frames)?;
+            trace!("ATHROW -> throwable_ref={throwable_ref}, exception_name={exception_name}, found_exception_handler={found_exception_handler}");
         }
         CHECKCAST => {
             let stack_frame = last_frame_mut(stack_frames)?;
@@ -437,30 +430,6 @@ pub(crate) fn process(
     }
 
     Ok(())
-}
-
-fn throw_exception(
-    stack_frames: &mut StackFrames,
-    exception_name: &str,
-) -> crate::error::Result<i16> {
-    while !stack_frames.is_empty() {
-        let stack_frame = last_frame_mut(stack_frames)?;
-        let exception_table = stack_frame.exception_table();
-        let pc = stack_frame.ex_pc() as u16;
-        match exception_table.find_exception_handler(exception_name, pc, stack_frame.method_name())?
-        {
-            Some(exception_handler) => {
-                return Ok(exception_handler as i16);
-            }
-            None => {
-                stack_frames.propagate_exception();
-            }
-        }
-    }
-
-    Err(Error::new_execution(&format!(
-        "Exception {exception_name} not handled"
-    )))
 }
 
 fn prepare_invoke_context(

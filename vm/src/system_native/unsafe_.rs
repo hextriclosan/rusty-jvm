@@ -444,6 +444,8 @@ pub(crate) fn copy_memory0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     copy_memory0(src_base_ref, src_offset, dest_base_ref, dest_offset, bytes)?;
     Ok(vec![])
 }
+// Todo: for all *_ref/offset pairs:
+//  *_ref is 0 means that corresponding offset represents absolute address, otherwise it is relative within the object
 fn copy_memory0(
     src_base_ref: i32,
     src_offset: i64,
@@ -453,20 +455,24 @@ fn copy_memory0(
 ) -> crate::error::Result<()> {
     let ptr = dest_base_ref as usize as *mut u8;
 
-    let arr = with_heap_read_lock(|heap| heap.get_entire_array(src_base_ref))?; // todo: only arrays are supported so far
-    let raw = arr.raw_data();
+    if src_base_ref != 0 {
+        let arr = with_heap_read_lock(|heap| heap.get_entire_array(src_base_ref))?; // todo: only arrays are supported so far
+        let raw = arr.raw_data();
 
-    let to_copy = raw
-        .iter()
-        .skip(src_offset as usize)
-        .take(bytes as usize)
-        .map(|v| *v)
-        .collect::<Vec<_>>();
-    unsafe {
-        let src = to_copy.as_ptr();
-        let dst = ptr.add(dest_offset as usize);
-        let len = to_copy.len();
-        copy(src, dst, len);
+        let to_copy = raw
+            .iter()
+            .skip(src_offset as usize)
+            .take(bytes as usize)
+            .map(|v| *v)
+            .collect::<Vec<_>>();
+        unsafe {
+            let src = to_copy.as_ptr();
+            let dst = ptr.add(dest_offset as usize);
+            let len = to_copy.len();
+            copy(src, dst, len);
+        }
+    } else {
+        todo!("implement this for absolute addresses");
     }
 
     Ok(())

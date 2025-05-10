@@ -1,4 +1,4 @@
-use crate::error::ErrorKind::{ClassFile, ConstantPool, Execution, Io, Native};
+use crate::error::ErrorKind::{ClassFile, ConstantPool, ExceptionThrown, Execution, Io, Native};
 use jdescriptor::DescriptorError;
 use std::error::Error as StdError;
 use std::ffi::OsString;
@@ -30,6 +30,10 @@ impl Error {
         Self::new(Native(String::from(descr)))
     }
 
+    pub(crate) fn new_exception() -> Error {
+        Self::new(ExceptionThrown)
+    }
+
     pub fn kind(&self) -> &ErrorKind {
         &self.0
     }
@@ -47,6 +51,7 @@ impl Display for Error {
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
             Execution(descr) => write!(f, "Execution Error: {descr}"),
             Native(descr) => write!(f, "Native Call Error: {descr}"),
+            ExceptionThrown => write!(f, "Exception thrown"),
 
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -112,6 +117,7 @@ pub enum ErrorKind {
     ConstantPool(String),
     Execution(String),
     Native(String),
+    ExceptionThrown,
 
     #[doc(hidden)]
     __Nonexhaustive,
