@@ -79,11 +79,11 @@ fn read0(
     let result = match read(fd, buf) {
         Ok(read) => {
             if read == 0 {
-                IOS_EOF
+                IOS_EOF // EOF is -1 in javaland
             } else {
                 read as i32
             }
-        } /* EOF is -1 in javaland */
+        }
         Err(errno) => match errno {
             nix::errno::Errno::EAGAIN => IOS_UNAVAILABLE,
             nix::errno::Errno::EINTR => IOS_INTERRUPTED,
