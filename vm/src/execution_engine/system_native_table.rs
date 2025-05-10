@@ -577,7 +577,8 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             allocation_granularity0_wrp, windows_file_dispatcher_write0_wrp,
         };
         use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
-            create_file0_wrp, set_end_of_file_wrp,
+            create_directory0_wrp, create_file0_wrp, delete_file0_wrp,
+            get_file_attributes_ex0_wrp, remove_directory0_wrp, set_end_of_file_wrp,
         };
 
         table.insert(
@@ -585,12 +586,28 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             Basic(void_stub),
         );
         table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CreateDirectory0:(JJ)V",
+            WithMutStackFrames(create_directory0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetFileAttributesEx0:(JJ)V",
+            WithMutStackFrames(get_file_attributes_ex0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:DeleteFile0:(J)V",
+            WithMutStackFrames(delete_file0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:RemoveDirectory0:(J)V",
+            WithMutStackFrames(remove_directory0_wrp),
+        );
+        table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:CreateFile0:(JIIJII)J",
-            Basic(create_file0_wrp),
+            WithMutStackFrames(create_file0_wrp),
         );
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:SetEndOfFile:(J)V",
-            Basic(set_end_of_file_wrp),
+            WithMutStackFrames(set_end_of_file_wrp),
         );
         table.insert(
             "sun/nio/ch/WindowsFileDispatcherImpl:allocationGranularity0:()J",
@@ -602,19 +619,24 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         );
         table.insert(
             "sun/nio/ch/WindowsFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
-            Basic(windows_file_dispatcher_write0_wrp),
+            WithMutStackFrames(windows_file_dispatcher_write0_wrp),
         );
     }
 
     #[cfg(unix)]
     {
-        use crate::system_native::platform_file_dispatcher::unix_file_dispatcher::unix_file_dispatcher_impl_write0_wrp;
-        use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::get_cwd_wrp;
-        use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::unix_native_dispatcher_open0_wrp;
+        use crate::system_native::platform_file_dispatcher::unix_file_dispatcher::{
+            unix_file_dispatcher_impl_read0_wrp, unix_file_dispatcher_impl_size0_wrp,
+            unix_file_dispatcher_impl_write0_wrp,
+        };
+        use crate::system_native::platform_native_dispatcher::unix_native_dispatcher::{
+            get_access0_wrp, get_cwd_wrp, lstat0_wrp, mkdir0_wrp, rmdir0_wrp, stat0_wrp,
+            unix_native_dispatcher_open0_wrp, unlink0_wrp,
+        };
 
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:getcwd:()[B",
-            Basic(get_cwd_wrp),
+            WithMutStackFrames(get_cwd_wrp),
         );
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:init:()I", // todo: return real capability flags
@@ -622,11 +644,44 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         );
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:open0:(JII)I",
-            Basic(unix_native_dispatcher_open0_wrp),
+            WithMutStackFrames(unix_native_dispatcher_open0_wrp),
         );
         table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:access0:(JI)I",
+            Basic(get_access0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:stat0:(JLsun/nio/fs/UnixFileAttributes;)I",
+            Basic(stat0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:lstat0:(JLsun/nio/fs/UnixFileAttributes;)V",
+            WithMutStackFrames(lstat0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:mkdir0:(JI)V",
+            WithMutStackFrames(mkdir0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:unlink0:(J)V",
+            WithMutStackFrames(unlink0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/UnixNativeDispatcher:rmdir0:(J)V",
+            WithMutStackFrames(rmdir0_wrp),
+        );
+
+        table.insert(
             "sun/nio/ch/UnixFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JI)I",
-            Basic(unix_file_dispatcher_impl_write0_wrp),
+            WithMutStackFrames(unix_file_dispatcher_impl_write0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:read0:(Ljava/io/FileDescriptor;JI)I",
+            WithMutStackFrames(unix_file_dispatcher_impl_read0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",
+            WithMutStackFrames(unix_file_dispatcher_impl_size0_wrp),
         );
     }
 

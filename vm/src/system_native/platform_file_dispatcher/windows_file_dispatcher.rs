@@ -1,5 +1,6 @@
-use crate::error::Error;
+use crate::exception::helpers::throw_ioexception;
 use crate::helper::{get_handle, i32toi64, i64_to_vec};
+use crate::stack::stack_frame::StackFrames;
 use crate::system_native::platform_native_dispatcher::windows_helpers::get_last_error;
 use std::mem::zeroed;
 use std::ptr::null_mut;
@@ -22,21 +23,33 @@ fn allocation_granularity0() -> i64 {
     si.dwAllocationGranularity as i64
 }
 
-pub fn windows_file_dispatcher_write0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+pub fn windows_file_dispatcher_write0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<Vec<i32>> {
     let fd_ref = args[0];
     let address = i32toi64(args[2], args[1]);
     let len = args[3];
     let append = args[4] != 0;
 
-    let result = write0(fd_ref, address, len, append)?;
-
-    Ok(vec![result])
+    match write0(fd_ref, address, len, append, stack_frames) {
+        Ok(result) => Ok(vec![result]),
+        Err(e) if matches!(e.kind(), crate::error::ErrorKind::ExceptionThrown) => Ok(vec![]),
+        Err(e) => Err(e),
+    }
 }
-fn write0(fd_ref: i32, address: i64, len: i32, append: bool) -> crate::error::Result<i32> {
+fn write0(
+    fd_ref: i32,
+    address: i64,
+    len: i32,
+    append: bool,
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<i32> {
     let handle = get_handle(fd_ref)?;
     let handle = handle as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
-        return Err(Error::new_native("Invalid handle"));
+        throw_ioexception("Invalid handle".to_string(), stack_frames)?;
+        return Err(crate::error::Error::new_exception());
     }
 
     let mut ov: OVERLAPPED = unsafe { zeroed() };
@@ -60,9 +73,8 @@ fn write0(fd_ref: i32, address: i64, len: i32, append: bool) -> crate::error::Re
 
     if result == 0 {
         let error_msg = get_last_error();
-        return Err(Error::new_native(&format!(
-            "write0 failed java/io/IOException: {error_msg}"
-        )));
+        throw_ioexception(error_msg, stack_frames)?;
+        return Err(crate::error::Error::new_exception());
     }
 
     Ok(written as i32)

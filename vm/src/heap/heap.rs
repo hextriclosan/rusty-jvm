@@ -128,6 +128,11 @@ impl Heap {
     }
 
     pub(crate) fn get_entire_array(&self, array_ref: i32) -> crate::error::Result<Array> {
+        if array_ref == 0 {
+            return Err(Error::new_execution(
+                "NullPointerException: null array reference",
+            )); //todo: throw an appropriate exception here
+        }
         if let Some(Arr(array)) = self.data.get(&array_ref) {
             Ok(array.clone())
         } else {
