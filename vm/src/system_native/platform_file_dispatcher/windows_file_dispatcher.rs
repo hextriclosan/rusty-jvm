@@ -72,7 +72,7 @@ fn write0(
     };
 
     if result == 0 {
-        let error_msg = get_last_error();
+        let error_msg = get_last_error()?;
         throw_ioexception(error_msg, stack_frames)?;
         return Err(crate::error::Error::new_exception());
     }
