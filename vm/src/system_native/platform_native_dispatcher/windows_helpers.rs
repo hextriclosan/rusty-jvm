@@ -4,10 +4,11 @@ use crate::stack::stack_value::StackValueKind;
 use std::ptr::null_mut;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::winbase::{FormatMessageW, FORMAT_MESSAGE_FROM_SYSTEM};
+use winapi::um::winnt::WCHAR;
 
-pub fn get_last_error() -> String {
+pub fn get_last_error() -> crate::error::Result<String> {
     let error_code = unsafe { GetLastError() };
-    let mut message = [0u16; 256];
+    let mut message = [0 as WCHAR; 256];
 
     let msg_len = unsafe {
         FormatMessageW(
@@ -22,7 +23,11 @@ pub fn get_last_error() -> String {
     };
 
     let message = &message[..msg_len as usize];
-    format!("{} ({})", String::from_utf16_lossy(&message), error_code)
+    Ok(format!(
+        "{} ({})",
+        String::from_utf16(&message)?,
+        error_code
+    ))
 }
 
 pub fn throw_windows_exception(stack_frames: &mut StackFrames) -> crate::error::Result<()> {
@@ -36,4 +41,14 @@ pub fn throw_windows_exception(stack_frames: &mut StackFrames) -> crate::error::
     )?;
 
     Ok(())
+}
+
+pub fn strip_string(volume_name: &[WCHAR]) -> crate::error::Result<String> {
+    let mut len = 0;
+    while volume_name[len] != 0 {
+        len += 1;
+    }
+    let slice = &volume_name[0..len];
+    let stripped = String::from_utf16(&slice)?;
+    Ok(stripped)
 }

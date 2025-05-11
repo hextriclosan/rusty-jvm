@@ -7,6 +7,7 @@ const PATH: &str = "tests/test_data";
 
 pub(crate) static REPO_PATH: Lazy<std::path::PathBuf> =
     Lazy::new(|| env::current_dir().expect("Failed to get current directory"));
+pub(crate) static TEST_PATH: Lazy<std::path::PathBuf> = Lazy::new(|| REPO_PATH.join(PATH));
 
 pub fn is_bigendian() -> bool {
     cfg!(target_endian = "big")

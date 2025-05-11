@@ -26,6 +26,8 @@ public class NioFileExample {
             System.out.println("File content: " + content);
         } else if ("--delete".equals(operation)) {
             delete(name);
+        } else if ("--is-writable".equals(operation)) {
+            isWritable(name);
         } else {
             System.err.println("Unknown operation: " + operation);
         }
@@ -52,5 +54,11 @@ public class NioFileExample {
         Path path = Paths.get(name);
         Files.createDirectories(path);
         System.out.println("Created directories: " + path);
+    }
+
+    private static void isWritable(String name) {
+        Path path = Paths.get(name);
+        boolean writable = Files.isWritable(path);
+        System.out.println(path + " is writable: " + writable);
     }
 }
