@@ -1,6 +1,7 @@
-use crate::utils::{assert_success_with_args, get_output_with_args};
+use crate::utils::{assert_success_with_args, get_output_with_args, TEST_PATH};
 use derive_new::new;
-use std::fs::remove_file;
+use std::env;
+use std::fs::remove_dir_all;
 use std::path::PathBuf;
 
 mod utils;
@@ -21,6 +22,7 @@ fn should_support_nio_file() {
     let _guard = CleanUpOnPanic::new(grand_parent_dir.to_path_buf());
 
     create_dirs(dir_path.to_str().unwrap());
+    is_writable(dir_path.to_str().unwrap());
     let content = "Some content";
     write_file(file_path.to_str().unwrap(), content);
     //read_file(file_path.to_str().unwrap(), content); todo: uncomment when Unsafe memory methods are fixed
@@ -34,6 +36,14 @@ fn create_dirs(path: &str) {
         ENTRY_POINT_ARG,
         &["--create-dirs", path],
         &format!("Created directories: {path}\n"),
+    );
+}
+
+fn is_writable(path: &str) {
+    assert_success_with_args(
+        ENTRY_POINT_ARG,
+        &["--is-writable", path],
+        &format!("{path} is writable: true\n"),
     );
 }
 
@@ -61,13 +71,14 @@ fn delete_file(path: &str) {
 
 #[derive(new)]
 struct CleanUpOnPanic {
-    _temp_dir: PathBuf,
+    temp_dir: PathBuf,
 }
 
 impl Drop for CleanUpOnPanic {
     fn drop(&mut self) {
         if std::thread::panicking() {
-            let _ = remove_file(&self._temp_dir);
+            env::set_current_dir(TEST_PATH.as_path()).unwrap();
+            remove_dir_all(&self.temp_dir).unwrap();
         }
     }
 }

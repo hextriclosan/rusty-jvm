@@ -201,7 +201,7 @@ fn check_access_impl(path: &Path, mode: Access) -> bool {
     match mode {
         Access::ACCESS_READ | Access::ACCESS_EXECUTE => true,
         Access::ACCESS_WRITE
-            if attr & FILE_ATTRIBUTE_DIRECTORY > 0 || attr & FILE_ATTRIBUTE_READONLY == 0 =>
+            if (attr & FILE_ATTRIBUTE_DIRECTORY) > 0 || (attr & FILE_ATTRIBUTE_READONLY) == 0 =>
         {
             true
         }

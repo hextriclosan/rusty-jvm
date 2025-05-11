@@ -577,8 +577,12 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             allocation_granularity0_wrp, windows_file_dispatcher_write0_wrp,
         };
         use crate::system_native::platform_native_dispatcher::windows_native_dispatcher::{
-            create_directory0_wrp, create_file0_wrp, delete_file0_wrp,
-            get_file_attributes_ex0_wrp, remove_directory0_wrp, set_end_of_file_wrp,
+            access_check_wrp, close_handle_wrp, create_directory0_wrp, create_file0_wrp,
+            delete_file0_wrp, duplicate_token_ex_wrp, format_message_wrp, get_current_process_wrp,
+            get_current_thread_wrp, get_drive_type0_wrp, get_file_attributes_ex0_wrp,
+            get_file_security0_wrp, get_volume_information0_wrp, get_volume_path_name0_wrp,
+            open_process_token_wrp, open_thread_token_wrp, remove_directory0_wrp,
+            set_end_of_file_wrp,
         };
 
         table.insert(
@@ -609,6 +613,55 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             "sun/nio/fs/WindowsNativeDispatcher:SetEndOfFile:(J)V",
             WithMutStackFrames(set_end_of_file_wrp),
         );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetFileSecurity0:(JIJI)I",
+            WithMutStackFrames(get_file_security0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetCurrentProcess:()J",
+            Basic(get_current_process_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:OpenProcessToken:(JI)J",
+            WithMutStackFrames(open_process_token_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetCurrentThread:()J",
+            Basic(get_current_thread_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:OpenThreadToken:(JIZ)J",
+            WithMutStackFrames(open_thread_token_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:DuplicateTokenEx:(JI)J",
+            WithMutStackFrames(duplicate_token_ex_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:AccessCheck:(JJIIIII)Z",
+            WithMutStackFrames(access_check_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:CloseHandle:(J)V",
+            Basic(close_handle_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetVolumePathName0:(J)Ljava/lang/String;",
+            WithMutStackFrames(get_volume_path_name0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetVolumeInformation0:(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V",
+            WithMutStackFrames(get_volume_information0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetDriveType0:(J)I",
+            Basic(get_drive_type0_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:FormatMessage:(I)Ljava/lang/String;",
+            Basic(format_message_wrp),
+        );
+
         table.insert(
             "sun/nio/ch/WindowsFileDispatcherImpl:allocationGranularity0:()J",
             Basic(allocation_granularity0_wrp),

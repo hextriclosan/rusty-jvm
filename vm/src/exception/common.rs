@@ -4,6 +4,7 @@ use crate::execution_engine::executor::Executor;
 use crate::heap::heap::with_heap_read_lock;
 use crate::stack::stack_frame::StackFrames;
 use crate::stack::stack_value::StackValueKind;
+use crate::system_native::string::get_utf8_string_by_ref;
 use tracing::trace;
 
 pub fn construct_exception_and_throw(
@@ -34,7 +35,7 @@ pub fn throw_exception_with_ref(
 ) -> crate::error::Result<(String, i16)> {
     let exception_name = with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
     trace!("<THROWING> -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
-    let found_exception_handler = unwind_stack(stack_frames, &exception_name)?;
+    let found_exception_handler = unwind_stack(throwable_ref, stack_frames)?;
 
     let stack_frame = last_frame_mut(stack_frames)?;
     stack_frame.set_pc(found_exception_handler);
@@ -44,16 +45,14 @@ pub fn throw_exception_with_ref(
     Ok((exception_name, found_exception_handler))
 }
 
-fn unwind_stack(
-    stack_frames: &mut StackFrames,
-    exception_name: &str,
-) -> crate::error::Result<i16> {
+fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> crate::error::Result<i16> {
+    let exception_name = with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
     while !stack_frames.is_empty() {
         let stack_frame = last_frame_mut(stack_frames)?;
         let exception_table = stack_frame.exception_table();
         let pc = stack_frame.ex_pc() as u16;
         match exception_table.find_exception_handler(
-            exception_name,
+            &exception_name,
             pc,
             stack_frame.method_name(),
         )? {
@@ -67,6 +66,25 @@ fn unwind_stack(
     }
 
     Err(Error::new_execution(&format!(
-        "Exception {exception_name} not handled"
+        "Exception not handled: {}",
+        format_exception_message(throwable_ref, &exception_name)?
     )))
+}
+
+fn format_exception_message(
+    throwable_ref: i32,
+    exception_name: &str,
+) -> crate::error::Result<String> {
+    let message_ref = with_heap_read_lock(|heap| {
+        heap.get_object_field_value(throwable_ref, exception_name, "detailMessage")
+    })?[0];
+
+    Ok(format!(
+        "{exception_name} ({})",
+        if message_ref != 0 {
+            get_utf8_string_by_ref(message_ref)?
+        } else {
+            String::new()
+        }
+    ))
 }
