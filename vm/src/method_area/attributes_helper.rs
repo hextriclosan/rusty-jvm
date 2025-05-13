@@ -177,6 +177,13 @@ impl AttributesHelper {
         }
     }
 
+    pub fn get_source_file<T: CPoolHelperTrait>(&self, cpool_helper: &T) -> Option<String> {
+        match self.data.get(&AttributeType::SourceFile)? {
+            Attribute::SourceFile { sourcefile_index } => cpool_helper.get_utf8(*sourcefile_index),
+            _ => None,
+        }
+    }
+
     pub fn get_exception_indexes(&self) -> Option<Vec<u16>> {
         match self.data.get(&AttributeType::Exceptions)? {
             Attribute::Exceptions {
@@ -307,6 +314,25 @@ mod tests {
                 )]
             )),
             attributes_helper.get_code(&mock)
+        );
+    }
+
+    #[test]
+    fn should_return_source_file() {
+        let source_file_attribute = Attribute::SourceFile {
+            sourcefile_index: 42,
+        };
+        let attributes = vec![source_file_attribute.clone()];
+        let attributes_helper = AttributesHelper::new(&attributes);
+
+        let mut mock = MockCPoolHelperTrait::new();
+        mock.expect_get_utf8()
+            .withf(|index| *index == 42)
+            .return_const(Some("TestSourceFile.java".to_string()));
+
+        assert_eq!(
+            Some("TestSourceFile.java".to_string()),
+            attributes_helper.get_source_file(&mock)
         );
     }
 }
