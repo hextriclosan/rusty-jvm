@@ -4,6 +4,7 @@ use crate::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::helper::vec_to_i64;
 use crate::method_area::java_method::JavaMethod;
 use crate::method_area::method_area::with_method_area;
+use crate::system_native::throwable::NATIVE_METHOD;
 
 const NATIVE_MARKER: i32 = -2;
 const CLASS_NAME: &'static str = "java/lang/StackTraceElement";
@@ -22,13 +23,18 @@ fn init_stack_trace_elements(
     depth: i32,
 ) -> crate::error::Result<()> {
     // extract arrays from Object[] Throwable.backtrace
-    let (class_array_ref, method_array_ref, line_array_ref, native) =
+    let (class_array_ref, method_array_ref, line_array_ref, tag_array_ref) =
         with_heap_read_lock(|heap| {
             let class_array_ref = heap.get_array_value(backtrace_ref, 0)?[0];
             let method_array_ref = heap.get_array_value(backtrace_ref, 1)?[0];
             let line_array_ref = heap.get_array_value(backtrace_ref, 2)?[0];
-            let native = heap.get_array_value(backtrace_ref, 3)?[0] == 2;
-            Ok::<_, Error>((class_array_ref, method_array_ref, line_array_ref, native))
+            let tag_array_ref = heap.get_array_value(backtrace_ref, 3)?[0];
+            Ok::<_, Error>((
+                class_array_ref,
+                method_array_ref,
+                line_array_ref,
+                tag_array_ref,
+            ))
         })?;
 
     for index in 0..depth {
@@ -59,10 +65,13 @@ fn init_stack_trace_elements(
             StringPoolHelper::get_string(source_file.to_string())?
         };
 
-        let line_number = if native {
-            NATIVE_MARKER
-        } else {
-            with_heap_read_lock(|heap| heap.get_array_value(line_array_ref, index))?[0]
+        let line_number = {
+            let tag = with_heap_read_lock(|heap| heap.get_array_value(tag_array_ref, index))?[0];
+            if tag == NATIVE_METHOD {
+                NATIVE_MARKER
+            } else {
+                with_heap_read_lock(|heap| heap.get_array_value(line_array_ref, index))?[0]
+            }
         };
 
         with_heap_write_lock(|heap| {

@@ -17,6 +17,10 @@ pub(crate) fn fill_in_stack_trace_wrp(
 
     Ok(vec![throwable_ref])
 }
+
+const INTERPRETED_METHOD: i32 = 1;
+pub const NATIVE_METHOD: i32 = 2;
+
 /// This function is called from the Java code to fill in the stack trace of a throwable object.
 /// Fields are set as follows:
 ///   - Throwable.backtrace: is Object[] type, internal object that holds the stack trace information
@@ -66,7 +70,11 @@ fn fill_in_stack_trace(
             heap.set_array_value(
                 tag_array_ref,
                 index as i32,
-                vec![if stack_element.is_native() { 2 } else { 1 }],
+                vec![if stack_element.is_native() {
+                    NATIVE_METHOD
+                } else {
+                    INTERPRETED_METHOD
+                }],
             )?;
         }
 
