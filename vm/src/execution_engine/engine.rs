@@ -8,6 +8,7 @@ use crate::execution_engine::{
     ops_store_processor,
 };
 use crate::stack::stack_frame::{StackFrame, StackFrames};
+use crate::stack::stack_frames_util::StackFramesUtil;
 use tracing::{span, trace, Level};
 
 pub(crate) struct Engine {}
@@ -32,12 +33,8 @@ impl Engine {
                     frame.line_numbers(),
                 )
             };
-            let inctruction_line_num = line_numbers
-                .range(..=&(pc as u16))
-                .next_back()
-                .map(|(_pc, line)| *line)
-                .unwrap_or_default();
-            let span = span!(Level::TRACE, "", "{class}:{inctruction_line_num}");
+            let instruction_line_num = StackFramesUtil::extract_line_number(line_numbers, pc);
+            let span = span!(Level::TRACE, "", "{class}:{instruction_line_num}");
             let _entered = span.enter();
 
             match code {

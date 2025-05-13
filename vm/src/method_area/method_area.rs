@@ -202,6 +202,7 @@ impl MethodArea {
             .and_then(|(_annotations, annotations_raw)| Some(annotations_raw));
 
         let enclosing_method = Self::get_enclosing_method(&attributes_helper, &cpool_helper);
+        let source_file = Self::get_source_file(&attributes_helper, &cpool_helper);
 
         Ok((
             class_name.clone(),
@@ -217,6 +218,7 @@ impl MethodArea {
                 declaring_class,
                 annotations_raw,
                 enclosing_method,
+                source_file,
             )),
         ))
     }
@@ -577,6 +579,7 @@ impl MethodArea {
             None,
             None,
             None,
+            None,
         ))
     }
 
@@ -596,6 +599,7 @@ impl MethodArea {
                 "java/io/Serializable".to_string(),
             ]),
             PUBLIC | FINAL | ABSTRACT,
+            None,
             None,
             None,
             None,
@@ -668,5 +672,12 @@ impl MethodArea {
         let (name, descriptor) = cpool_helper.get_name_and_type(method_index)?;
 
         Some((class_name, name, descriptor))
+    }
+
+    fn get_source_file(
+        attributes_helper: &AttributesHelper,
+        cpool_helper: &CPoolHelper,
+    ) -> Option<String> {
+        attributes_helper.get_source_file(cpool_helper)
     }
 }

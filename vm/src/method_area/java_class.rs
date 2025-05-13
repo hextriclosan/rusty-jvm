@@ -36,6 +36,7 @@ pub(crate) struct JavaClass {
     declaring_class: Option<String>,
     annotations_raw: Option<Vec<u8>>,
     enclosing_method: Option<(String, String, String)>,
+    source_file: Option<String>,
 }
 
 #[derive(Debug)]
@@ -119,6 +120,7 @@ impl JavaClass {
         declaring_class: Option<String>,
         annotations_raw: Option<Vec<u8>>,
         enclosing_method: Option<(String, String, String)>,
+        source_file: Option<String>,
     ) -> Self {
         let external_name = PRIMITIVE_TYPE_BY_CODE
             .get(this_class_name)
@@ -141,6 +143,7 @@ impl JavaClass {
             declaring_class,
             annotations_raw,
             enclosing_method,
+            source_file,
         }
     }
 
@@ -361,6 +364,10 @@ impl JavaClass {
 
     pub fn static_fields_init_state(&self) -> &Arc<ReentrantMutex<InitState>> {
         &self.static_fields_init_state
+    }
+
+    pub fn source_file(&self) -> &Option<String> {
+        &self.source_file
     }
 }
 

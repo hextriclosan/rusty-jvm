@@ -36,6 +36,7 @@ use crate::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
     reflection_get_class_access_flags_wrp,
 };
+use crate::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::system_native::string::intern_wrp;
 use crate::system_native::system::{
     arraycopy_wrp, current_time_millis_wrp, set_out0_wrp, system_identity_hashcode_wrp,
@@ -43,6 +44,7 @@ use crate::system_native::system::{
 };
 use crate::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::system_native::thread::current_thread_wrp;
+use crate::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_set_int_wrp,
     compare_and_set_long_wrp, copy_memory0_wrp, ensure_class_initialized0_wrp, get_byte_wrp,
@@ -559,10 +561,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Throwable:fillInStackTrace:(I)Ljava/lang/Throwable;",
-        Basic(|args| {
-            let throwable_ref = args[0];
-            Ok(vec![throwable_ref]) // fixme: this should be implemented with stack trace
-        }),
+        WithStackFrames(fill_in_stack_trace_wrp),
+    );
+    table.insert(
+        "java/lang/StackTraceElement:initStackTraceElements:([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
+        Basic(init_stack_trace_elements_wrp),
     );
 
     platform_specific(&mut table);
