@@ -88,6 +88,23 @@ fn set_out0(print_stream_ref: i32) -> crate::error::Result<()> {
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 
+pub(crate) fn set_err0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+    let print_stream_ref = args[0];
+    set_err0(print_stream_ref)?;
+
+    Ok(vec![])
+}
+fn set_err0(print_stream_ref: i32) -> crate::error::Result<()> {
+    let (_, field_ref) = {
+        let field_ref = with_method_area(|method_area| {
+            method_area.lookup_for_static_field("java/lang/System", "err")
+        })?;
+        field_ref
+    };
+
+    field_ref.set_raw_value(vec![print_stream_ref])
+}
+
 pub(crate) fn system_map_library_name_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let name_ref = args[0];
     let library_name_ref = map_library_name(name_ref)?;
