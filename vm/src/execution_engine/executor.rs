@@ -18,7 +18,7 @@ impl Executor {
     }
 
     /// Invokes a non-static method on an instance of a class.
-    /// This method assumes that provided arguments are already resolved it doesn't do any lookups.
+    /// This method assumes arguments are already resolved; it doesn't perform lookups.
     /// Calls like invokevirtual and invokeinterface should be pre-resolved before calling this method.
     pub fn invoke_non_static_method(
         class_name: &str,
