@@ -39,8 +39,8 @@ pub(crate) struct MethodArea {
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
-    system_thread_id: RwLock<Option<i32>>, // initial thread, spawned by VM
-    system_thread_group_id: RwLock<Option<i32>>, // initial thread group, created by VM
+    system_thread_id: OnceCell<i32>, // initial thread, spawned by VM
+    system_thread_group_id: OnceCell<i32>, // initial thread group, created by VM
 }
 
 impl MethodArea {
@@ -57,8 +57,8 @@ impl MethodArea {
             loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::new(HashMap::new()),
             ldc_resolution_manager: LdcResolutionManager::new(),
-            system_thread_id: RwLock::new(None),
-            system_thread_group_id: RwLock::new(None),
+            system_thread_id: OnceCell::new(),
+            system_thread_group_id: OnceCell::new(),
         }
     }
 
@@ -632,26 +632,30 @@ impl MethodArea {
 
     pub fn system_thread_id(&self) -> crate::error::Result<i32> {
         self.system_thread_id
-            .read()?
+            .get()
+            .copied()
             .ok_or_else(|| Error::new_execution("system_thread_id wasn't set"))
     }
 
     pub fn set_system_thread_id(&self, thread_id: i32) -> crate::error::Result<()> {
-        let mut guard = self.system_thread_id.write()?;
-        *guard = Some(thread_id);
-        Ok(())
+        self.system_thread_id.set(thread_id).map_err(|_| {
+            Error::new_execution("system_thread_id was already set, cannot be set again")
+        })
     }
 
     pub fn system_thread_group_id(&self) -> crate::error::Result<i32> {
         self.system_thread_group_id
-            .read()?
-            .ok_or_else(|| Error::new_execution("system_thread_id wasn't set"))
+            .get()
+            .copied()
+            .ok_or_else(|| Error::new_execution("system_thread_group_id wasn't set"))
     }
 
-    pub fn set_system_thread_group_id(&self, thread_id: i32) -> crate::error::Result<()> {
-        let mut guard = self.system_thread_group_id.write()?;
-        *guard = Some(thread_id);
-        Ok(())
+    pub fn set_system_thread_group_id(&self, thread_group_id: i32) -> crate::error::Result<()> {
+        self.system_thread_group_id
+            .set(thread_group_id)
+            .map_err(|_| {
+                Error::new_execution("system_thread_group_id was already set, cannot be set again")
+            })
     }
 
     fn get_declaring_class(

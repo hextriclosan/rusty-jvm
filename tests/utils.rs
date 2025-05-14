@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use crate::utils::ExecutionResult::{Failure, Success};
 use assert_cmd::Command;
 use once_cell::sync::Lazy;
 use std::{env, fs, iter};
@@ -80,22 +79,34 @@ pub fn assert_failure_with_stderr(entry: &str, expected_stdout: &str, expected_s
     assert_failure_with_args_with_stderr(entry, &vec![], expected_stdout, expected_stderr)
 }
 
-pub fn assert_success_with_args_with_stderr(
+fn assert_success_with_args_with_stderr(
     entry: &str,
     arguments: &[&str],
     expected_stdout: &str,
     expected_stderr: &str,
 ) {
-    assert_with_args_with_stderr(entry, arguments, expected_stdout, expected_stderr, Success)
+    assert_with_args_with_stderr(
+        entry,
+        arguments,
+        expected_stdout,
+        expected_stderr,
+        ExecutionResult::Success,
+    )
 }
 
-pub fn assert_failure_with_args_with_stderr(
+fn assert_failure_with_args_with_stderr(
     entry: &str,
     arguments: &[&str],
     expected_stdout: &str,
     expected_stderr: &str,
 ) {
-    assert_with_args_with_stderr(entry, arguments, expected_stdout, expected_stderr, Failure)
+    assert_with_args_with_stderr(
+        entry,
+        arguments,
+        expected_stdout,
+        expected_stderr,
+        ExecutionResult::Failure,
+    )
 }
 
 fn assert_with_args_with_stderr(
@@ -114,7 +125,7 @@ fn assert_with_args_with_stderr(
         .chain(arguments.iter().copied())
         .collect::<Vec<_>>();
     let assert = get_command(&args).assert();
-    let assert = if expected_result == Success {
+    let assert = if expected_result == ExecutionResult::Success {
         assert.success()
     } else {
         assert.failure()
@@ -133,7 +144,7 @@ pub fn assert_failure(entry: &str, expected: &str) {
     assert_failure_with_args(entry, &vec![], expected)
 }
 
-pub fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
+fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
     #[cfg(target_os = "windows")]
     let expected = to_windows(expected);
 
