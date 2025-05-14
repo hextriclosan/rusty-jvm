@@ -345,9 +345,9 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_failure, assert_file, assert_success_with_args, get_file_separator, get_os_name,
-    get_output, get_output_with_raw_args, get_path_separator, is_bigendian, line_ending,
-    map_library_name,
+    assert_failure, assert_file, assert_success_with_args, assert_success_with_stderr,
+    get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
+    is_bigendian, line_ending, map_library_name,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1750,6 +1750,19 @@ Executing finally block
 Caught as Throwable: java.lang.RuntimeException: Exception in try. cause=null stackTrace=[samples.javacore.exceptionexample.FinallyIllustration.withUncaughtException(ExceptionExample.java:206), samples.javacore.exceptionexample.FinallyIllustration.runImpl(ExceptionExample.java:165), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
 Uncaught exception in try, finally still executes: try-finally
 
+"#,
+    );
+}
+
+#[test]
+fn should_support_both_stdout_and_stderr() {
+    assert_success_with_stderr(
+        "samples.system.normaloutputwitherroutput.NormalOutputWithErrorOutput",
+        r#"This is normal output.
+This is another normal output.
+"#,
+        r#"This is error output.
+This is another error output.
 "#,
     );
 }

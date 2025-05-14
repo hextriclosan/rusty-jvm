@@ -61,13 +61,24 @@ pub fn get_os_name() -> &'static str {
     }
 }
 
-pub fn assert_success(entry: &str, expected: &str) {
-    assert_success_with_args(entry, &vec![], expected)
+pub fn assert_success(entry: &str, expected_stdout: &str) {
+    assert_success_with_args(entry, &vec![], expected_stdout)
 }
 
-pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected: &str) {
+pub fn assert_success_with_stderr(entry: &str, expected_stdout: &str, expected_stderr: &str) {
+    assert_success_with_args_with_stderr(entry, &vec![], expected_stdout, expected_stderr)
+}
+
+pub fn assert_success_with_args_with_stderr(
+    entry: &str,
+    arguments: &[&str],
+    expected_stdout: &str,
+    expected_stderr: &str,
+) {
     #[cfg(target_os = "windows")]
-    let expected = to_windows(expected);
+    let expected_stdout = to_windows(expected_stdout);
+    #[cfg(target_os = "windows")]
+    let expected_stderr = to_windows(expected_stderr);
 
     let args = iter::once(entry)
         .chain(arguments.iter().copied())
@@ -75,7 +86,12 @@ pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected: &str)
     get_command(&args)
         .assert()
         .success()
-        .stdout(expected.to_string());
+        .stdout(expected_stdout.to_string())
+        .stderr(expected_stderr.to_string());
+}
+
+pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected_stdout: &str) {
+    assert_success_with_args_with_stderr(entry, arguments, expected_stdout, "")
 }
 
 pub fn assert_failure(entry: &str, expected: &str) {
