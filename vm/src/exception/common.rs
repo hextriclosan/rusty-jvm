@@ -2,9 +2,9 @@ use crate::error::Error;
 use crate::execution_engine::common::last_frame_mut;
 use crate::execution_engine::executor::Executor;
 use crate::heap::heap::with_heap_read_lock;
+use crate::method_area::method_area::with_method_area;
 use crate::stack::stack_frame::StackFrames;
 use crate::stack::stack_value::StackValueKind;
-use crate::system_native::string::get_utf8_string_by_ref;
 use tracing::trace;
 
 pub fn construct_exception_and_throw(
@@ -65,26 +65,14 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> crate::er
         }
     }
 
-    Err(Error::new_execution(&format!(
-        "Exception not handled: {}",
-        format_exception_message(throwable_ref, &exception_name)?
-    )))
-}
+    let system_thread_group_ref = with_method_area(|area| area.system_thread_group_id())?;
+    let system_thread_ref = with_method_area(|area| area.system_thread_id())?;
+    Executor::invoke_non_static_method(
+        "java/lang/ThreadGroup",
+        "uncaughtException:(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
+        system_thread_group_ref,
+        &[system_thread_ref.into(), throwable_ref.into()],
+    )?;
 
-fn format_exception_message(
-    throwable_ref: i32,
-    exception_name: &str,
-) -> crate::error::Result<String> {
-    let message_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(throwable_ref, exception_name, "detailMessage")
-    })?[0];
-
-    Ok(format!(
-        "{exception_name} ({})",
-        if message_ref != 0 {
-            get_utf8_string_by_ref(message_ref)?
-        } else {
-            String::new()
-        }
-    ))
+    Err(Error::new_exception())
 }

@@ -17,6 +17,24 @@ impl Executor {
         Self::exec(class_name, method_name, args, None)
     }
 
+    /// Invokes a non-static method on an instance of a class.
+    /// This method assumes that provided arguments are already resolved it doesn't do any lookups.
+    /// Calls like invokevirtual and invokeinterface should be pre-resolved before calling this method.
+    pub fn invoke_non_static_method(
+        class_name: &str,
+        method_name: &str,
+        instance_ref: i32,
+        args: &[StackValueKind],
+    ) -> crate::error::Result<()> {
+        let new_args = {
+            let mut new_args = Vec::with_capacity(args.len() + 1);
+            new_args.push(instance_ref.into());
+            new_args.extend_from_slice(args);
+            new_args
+        };
+        Self::exec(class_name, method_name, &new_args, None)
+    }
+
     pub fn invoke_default_constructor(class_name: &str) -> crate::error::Result<i32> {
         let instance_with_default_fields = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields(class_name)

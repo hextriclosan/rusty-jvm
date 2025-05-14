@@ -41,6 +41,11 @@ impl Error {
     pub fn into_kind(self) -> ErrorKind {
         *self.0
     }
+
+    /// Returns `true` if the error represents an unhandled Java exception.
+    pub fn is_exception_thrown(&self) -> bool {
+        matches!(*self.0, ExceptionThrown)
+    }
 }
 
 impl Display for Error {
