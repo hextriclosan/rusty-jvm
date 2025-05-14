@@ -5,6 +5,12 @@ use std::{env, fs, iter};
 
 const PATH: &str = "tests/test_data";
 
+#[derive(PartialEq)]
+enum ExecutionResult {
+    Success,
+    Failure,
+}
+
 pub(crate) static REPO_PATH: Lazy<std::path::PathBuf> =
     Lazy::new(|| env::current_dir().expect("Failed to get current directory"));
 pub(crate) static TEST_PATH: Lazy<std::path::PathBuf> = Lazy::new(|| REPO_PATH.join(PATH));
@@ -69,11 +75,46 @@ pub fn assert_success_with_stderr(entry: &str, expected_stdout: &str, expected_s
     assert_success_with_args_with_stderr(entry, &vec![], expected_stdout, expected_stderr)
 }
 
-pub fn assert_success_with_args_with_stderr(
+pub fn assert_failure_with_stderr(entry: &str, expected_stdout: &str, expected_stderr: &str) {
+    assert_failure_with_args_with_stderr(entry, &vec![], expected_stdout, expected_stderr)
+}
+
+fn assert_success_with_args_with_stderr(
     entry: &str,
     arguments: &[&str],
     expected_stdout: &str,
     expected_stderr: &str,
+) {
+    assert_with_args_with_stderr(
+        entry,
+        arguments,
+        expected_stdout,
+        expected_stderr,
+        ExecutionResult::Success,
+    )
+}
+
+fn assert_failure_with_args_with_stderr(
+    entry: &str,
+    arguments: &[&str],
+    expected_stdout: &str,
+    expected_stderr: &str,
+) {
+    assert_with_args_with_stderr(
+        entry,
+        arguments,
+        expected_stdout,
+        expected_stderr,
+        ExecutionResult::Failure,
+    )
+}
+
+fn assert_with_args_with_stderr(
+    entry: &str,
+    arguments: &[&str],
+    expected_stdout: &str,
+    expected_stderr: &str,
+    expected_result: ExecutionResult,
 ) {
     #[cfg(target_os = "windows")]
     let expected_stdout = to_windows(expected_stdout);
@@ -83,9 +124,14 @@ pub fn assert_success_with_args_with_stderr(
     let args = iter::once(entry)
         .chain(arguments.iter().copied())
         .collect::<Vec<_>>();
-    get_command(&args)
-        .assert()
-        .success()
+    let assert = get_command(&args).assert();
+    let assert = if expected_result == ExecutionResult::Success {
+        assert.success()
+    } else {
+        assert.failure()
+    };
+
+    assert
         .stdout(expected_stdout.to_string())
         .stderr(expected_stderr.to_string());
 }
@@ -98,7 +144,7 @@ pub fn assert_failure(entry: &str, expected: &str) {
     assert_failure_with_args(entry, &vec![], expected)
 }
 
-pub fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
+fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
     #[cfg(target_os = "windows")]
     let expected = to_windows(expected);
 

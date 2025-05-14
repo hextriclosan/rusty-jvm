@@ -5,6 +5,9 @@ use clap::{Arg, ArgAction, Command};
 use std::process;
 use vm::vm::VM;
 
+const EXIT_SUCCESS: i32 = 0;
+const EXIT_FAILURE: i32 = 1;
+
 fn main() {
     let matches = Command::new("rusty-jvm")
         .arg(
@@ -24,12 +27,18 @@ fn main() {
 
     let parsed = group_args(raw_args).expect("Could not parse arguments");
 
-    if let Err(err) = VM::run(
+    let exit_code = match VM::run(
         parsed.entry_point(),
         parsed.system_properties().clone(),
         &parsed.program_args(),
     ) {
-        eprintln!("VM execution failed: {}", err);
-        process::exit(1);
-    }
+        Ok(()) => EXIT_SUCCESS,
+        Err(err) if err.is_exception_thrown() => EXIT_FAILURE, // Unhandled exception, print nothing here, since stack trace is already printed by the VM
+        Err(err) => {
+            eprintln!("VM execution failed: {}", err);
+            EXIT_FAILURE
+        }
+    };
+
+    process::exit(exit_code)
 }

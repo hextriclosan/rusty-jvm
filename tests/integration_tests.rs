@@ -345,9 +345,9 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_failure, assert_file, assert_success_with_args, assert_success_with_stderr,
-    get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
-    is_bigendian, line_ending, map_library_name,
+    assert_failure, assert_failure_with_stderr, assert_file, assert_success_with_args,
+    assert_success_with_stderr, get_file_separator, get_os_name, get_output,
+    get_output_with_raw_args, get_path_separator, is_bigendian, line_ending, map_library_name,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1763,6 +1763,29 @@ This is another normal output.
 "#,
         r#"This is error output.
 This is another error output.
+"#,
+    );
+}
+
+#[test]
+fn should_print_info_about_unhandled_exception() {
+    assert_failure_with_stderr(
+        "samples.javacore.unhandledexception.UnhandledExceptionExample",
+        r#""#,
+        r#"Exception in thread "system" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
+	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:55)
+	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:52)
+	at jdk.internal.util.Preconditions$4.apply(Preconditions.java:213)
+	at jdk.internal.util.Preconditions$4.apply(Preconditions.java:210)
+	at jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:98)
+	at jdk.internal.util.Preconditions.outOfBoundsCheckFromToIndex(Preconditions.java:112)
+	at jdk.internal.util.Preconditions.checkFromToIndex(Preconditions.java:349)
+	at java.lang.String.checkBoundsBeginEnd(String.java:4963)
+	at java.lang.String.substring(String.java:2925)
+	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun3(UnhandledExceptionExample.java:18)
+	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun2(UnhandledExceptionExample.java:13)
+	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun1(UnhandledExceptionExample.java:9)
+	at samples.javacore.unhandledexception.UnhandledExceptionExample.main(UnhandledExceptionExample.java:5)
 "#,
     );
 }
