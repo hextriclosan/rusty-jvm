@@ -1,6 +1,8 @@
 // javac -XDstringConcat=inline  -d . ExceptionExample.java
 package samples.javacore.exceptionexample;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,7 +15,8 @@ public class ExceptionExample {
                 new TryWithResourcesMimic(false),
                 new TryWithResourcesMimic(true),
                 new ReThrowWithCause(),
-                new FinallyIllustration()
+                new FinallyIllustration(),
+                new ExceptionFromNativeMethod()
         );
         for (Case aCase : cases) {
             aCase.run();
@@ -211,6 +214,25 @@ class FinallyIllustration extends Case {
             print("Executing finally block");
             data += "finally";
         }
+    }
+}
+
+class ExceptionFromNativeMethod extends Case {
+
+    @Override
+    protected void runImpl() {
+        try {
+            open();
+        } catch (IOException e) {
+            print("Caught as IOException", e);
+        }
+    }
+
+    private void open() throws IOException {
+        try (FileWriter writer = new FileWriter("non_existing/non_existing.txt")) {
+            System.out.println("This line will not be reached if the file is missing.");
+        }
+        System.out.println("This line will not be reached if the file is missing either.");
     }
 }
 

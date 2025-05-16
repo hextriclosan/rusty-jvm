@@ -480,7 +480,7 @@ fn access_check(
         throw_windows_exception(stack_frames)?;
         Err(Error::new_exception())
     } else {
-        Ok(if result == TRUE { true } else { false })
+        Ok(result == TRUE)
     }
 }
 

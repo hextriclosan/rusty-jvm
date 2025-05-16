@@ -1,35 +1,51 @@
+use crate::exception::helpers::throw_file_not_found_exception;
 use crate::heap::heap::with_heap_read_lock;
+use crate::stack::stack_frame::StackFrames;
 use crate::system_native::platform_file::PlatformFile;
 use crate::system_native::string::get_utf8_string_by_ref;
 use std::fs::OpenOptions;
 use std::io::Write;
 
-pub(crate) fn file_output_stream_open0_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
+pub(crate) fn file_output_stream_open0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<Vec<i32>> {
     let obj_ref = args[0];
     let string_ref = args[1];
     let append = args[2];
-    open0(obj_ref, string_ref, if append != 0 { true } else { false })?;
+    open0(obj_ref, string_ref, append != 0, stack_frames)?;
     Ok(vec![])
 }
 
-fn open0(obj_ref: i32, file_name_ref: i32, append: bool) -> crate::error::Result<()> {
+fn open0(
+    obj_ref: i32,
+    file_name_ref: i32,
+    append: bool,
+    stack_frames: &mut StackFrames,
+) -> crate::error::Result<()> {
     let file_name = get_utf8_string_by_ref(file_name_ref)?;
 
-    let file = OpenOptions::new() // throw FileNotFoundException if file not found
+    match OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(!append)
         .append(append)
-        .open(file_name)?;
-
-    Ok(PlatformFile::set_raw_id(obj_ref, file)?)
+        .open(file_name)
+    {
+        Ok(file) => PlatformFile::set_raw_id(obj_ref, file),
+        Err(e) => {
+            let message = e.to_string();
+            throw_file_not_found_exception(file_name_ref, message, stack_frames)?;
+            Ok(())
+        }
+    }
 }
 
 pub(crate) fn file_output_stream_write_wrp(args: &[i32]) -> crate::error::Result<Vec<i32>> {
     let obj_ref = args[0];
     let byte = args[1];
     let append = args[2];
-    write(obj_ref, byte, if append != 0 { true } else { false })?;
+    write(obj_ref, byte, append != 0)?;
     Ok(vec![])
 }
 fn write(obj_ref: i32, byte: i32, _append: bool) -> crate::error::Result<()> {
@@ -46,13 +62,7 @@ pub(crate) fn file_output_stream_write_bytes_wrp(args: &[i32]) -> crate::error::
     let off = args[2];
     let len = args[3];
     let append = args[4];
-    write_bytes(
-        obj_ref,
-        bytes_ref,
-        off,
-        len,
-        if append != 0 { true } else { false },
-    )?;
+    write_bytes(obj_ref, bytes_ref, off, len, append != 0)?;
     Ok(vec![])
 }
 fn write_bytes(
