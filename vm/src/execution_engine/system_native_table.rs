@@ -395,7 +395,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     ));
     table.insert(
         "java/io/FileOutputStream:open0:(Ljava/lang/String;Z)V",
-        Basic(file_output_stream_open0_wrp),
+        WithMutStackFrames(file_output_stream_open0_wrp),
     );
     table.insert("java/io/FileOutputStream:initIDs:()V", Basic(void_stub));
     table.insert(

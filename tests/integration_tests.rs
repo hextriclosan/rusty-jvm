@@ -1695,45 +1695,51 @@ fn should_support_file_dispatcher_for_various_os() {
 }
 
 #[test]
+// todo: https://github.com/hextriclosan/rusty-jvm/issues/317
 fn should_support_exceptions() {
+    let expected_error_text = if cfg!(windows) {
+        "non_existing\\non_existing.txt (The system cannot find the path specified. (os error 3))"
+    } else {
+        "non_existing/non_existing.txt (No such file or directory (os error 2))"
+    };
     assert_success(
         "samples.javacore.exceptionexample.ExceptionExample",
         r#"Running case: FewTriesInOneMethod
 Inside try block
-Caught as Throwable: java.lang.Error: This is an error. cause=null stackTrace=[samples.javacore.exceptionexample.FewTriesInOneMethod.thrower(ExceptionExample.java:70), samples.javacore.exceptionexample.FewTriesInOneMethod.runImpl(ExceptionExample.java:52), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
+Caught as Throwable: java.lang.Error: This is an error. cause=null stackTrace=[samples.javacore.exceptionexample.FewTriesInOneMethod.thrower(ExceptionExample.java:73), samples.javacore.exceptionexample.FewTriesInOneMethod.runImpl(ExceptionExample.java:55), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
 Inside another try block
-Caught as Throwable second time: java.lang.IndexOutOfBoundsException: This is an index out of bounds exception. cause=null stackTrace=[samples.javacore.exceptionexample.FewTriesInOneMethod.runImpl(ExceptionExample.java:63), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
+Caught as Throwable second time: java.lang.IndexOutOfBoundsException: This is an index out of bounds exception. cause=null stackTrace=[samples.javacore.exceptionexample.FewTriesInOneMethod.runImpl(ExceptionExample.java:66), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
 
 Running case: TryWithResources
 Inside try-with-resources block
 Doing something with the resource
 Custom resource is about to be closed
 Custom resource is closed
-Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:226), samples.javacore.exceptionexample.TryWithResources.tryWithResourcesWithNoCatch(ExceptionExample.java:93), samples.javacore.exceptionexample.TryWithResources.runImpl(ExceptionExample.java:85), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:248), samples.javacore.exceptionexample.TryWithResources.tryWithResourcesWithNoCatch(ExceptionExample.java:96), samples.javacore.exceptionexample.TryWithResources.runImpl(ExceptionExample.java:88), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
 
 Running case: TryWithResources
 Inside try-with-resources block
 Doing something with the resource
 Custom resource is about to be closed
-Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:226), samples.javacore.exceptionexample.TryWithResources.tryWithResourcesWithNoCatch(ExceptionExample.java:93), samples.javacore.exceptionexample.TryWithResources.runImpl(ExceptionExample.java:85), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[java.lang.IllegalStateException: An error occurred while closing the resource]
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:248), samples.javacore.exceptionexample.TryWithResources.tryWithResourcesWithNoCatch(ExceptionExample.java:96), samples.javacore.exceptionexample.TryWithResources.runImpl(ExceptionExample.java:88), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[java.lang.IllegalStateException: An error occurred while closing the resource]
 
 Running case: TryWithResourcesMimic
 Inside try-with-resources block
 Doing something with the resource
 Custom resource is about to be closed
 Custom resource is closed
-Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:226), samples.javacore.exceptionexample.TryWithResourcesMimic.tryWithResourcesMimic(ExceptionExample.java:119), samples.javacore.exceptionexample.TryWithResourcesMimic.runImpl(ExceptionExample.java:109), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:248), samples.javacore.exceptionexample.TryWithResourcesMimic.tryWithResourcesMimic(ExceptionExample.java:122), samples.javacore.exceptionexample.TryWithResourcesMimic.runImpl(ExceptionExample.java:112), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
 
 Running case: TryWithResourcesMimic
 Inside try-with-resources block
 Doing something with the resource
 Custom resource is about to be closed
-Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:226), samples.javacore.exceptionexample.TryWithResourcesMimic.tryWithResourcesMimic(ExceptionExample.java:119), samples.javacore.exceptionexample.TryWithResourcesMimic.runImpl(ExceptionExample.java:109), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[java.lang.IllegalStateException: An error occurred while closing the resource]
+Caught try-with-resources exception: java.lang.RuntimeException: An error occurred while using the resource. cause=null stackTrace=[samples.javacore.exceptionexample.CustomResource.doSomethingAndThrow(ExceptionExample.java:248), samples.javacore.exceptionexample.TryWithResourcesMimic.tryWithResourcesMimic(ExceptionExample.java:122), samples.javacore.exceptionexample.TryWithResourcesMimic.runImpl(ExceptionExample.java:112), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[java.lang.IllegalStateException: An error occurred while closing the resource]
 
 Running case: ReThrowWithCause
 Inside try block
-Caught as Throwable: java.lang.RuntimeException: This is a runtime exception. cause=null stackTrace=[samples.javacore.exceptionexample.ReThrowWithCause.runImpl(ExceptionExample.java:140), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
-Caught as IllegalStateException: java.lang.IllegalStateException: java.lang.RuntimeException: This is a runtime exception. cause=java.lang.RuntimeException: This is a runtime exception stackTrace=[samples.javacore.exceptionexample.ReThrowWithCause.runImpl(ExceptionExample.java:143), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
+Caught as Throwable: java.lang.RuntimeException: This is a runtime exception. cause=null stackTrace=[samples.javacore.exceptionexample.ReThrowWithCause.runImpl(ExceptionExample.java:143), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
+Caught as IllegalStateException: java.lang.IllegalStateException: java.lang.RuntimeException: This is a runtime exception. cause=java.lang.RuntimeException: This is a runtime exception stackTrace=[samples.javacore.exceptionexample.ReThrowWithCause.runImpl(ExceptionExample.java:146), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
 
 Running case: FinallyIllustration
 Executing try block
@@ -1747,10 +1753,13 @@ Caught exception in try, finally still executes: try-catch-finally
 ============================
 Executing try block
 Executing finally block
-Caught as Throwable: java.lang.RuntimeException: Exception in try. cause=null stackTrace=[samples.javacore.exceptionexample.FinallyIllustration.withUncaughtException(ExceptionExample.java:206), samples.javacore.exceptionexample.FinallyIllustration.runImpl(ExceptionExample.java:165), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:30), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:19)] suppressed=[]
+Caught as Throwable: java.lang.RuntimeException: Exception in try. cause=null stackTrace=[samples.javacore.exceptionexample.FinallyIllustration.withUncaughtException(ExceptionExample.java:209), samples.javacore.exceptionexample.FinallyIllustration.runImpl(ExceptionExample.java:168), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:33), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:22)] suppressed=[]
 Uncaught exception in try, finally still executes: try-finally
 
-"#,
+Running case: ExceptionFromNativeMethod
+Caught as IOException: java.io.FileNotFoundException: {ERROR_TEXT}. cause=null stackTrace=[] suppressed=[]
+
+"#.replace("{ERROR_TEXT}", expected_error_text).as_str(),
     );
 }
 
