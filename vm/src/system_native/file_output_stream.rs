@@ -13,12 +13,7 @@ pub(crate) fn file_output_stream_open0_wrp(
     let obj_ref = args[0];
     let string_ref = args[1];
     let append = args[2];
-    open0(
-        obj_ref,
-        string_ref,
-        if append != 0 { true } else { false },
-        stack_frames,
-    )?;
+    open0(obj_ref, string_ref, append != 0, stack_frames)?;
     Ok(vec![])
 }
 
@@ -50,7 +45,7 @@ pub(crate) fn file_output_stream_write_wrp(args: &[i32]) -> crate::error::Result
     let obj_ref = args[0];
     let byte = args[1];
     let append = args[2];
-    write(obj_ref, byte, if append != 0 { true } else { false })?;
+    write(obj_ref, byte, append != 0)?;
     Ok(vec![])
 }
 fn write(obj_ref: i32, byte: i32, _append: bool) -> crate::error::Result<()> {
@@ -67,13 +62,7 @@ pub(crate) fn file_output_stream_write_bytes_wrp(args: &[i32]) -> crate::error::
     let off = args[2];
     let len = args[3];
     let append = args[4];
-    write_bytes(
-        obj_ref,
-        bytes_ref,
-        off,
-        len,
-        if append != 0 { true } else { false },
-    )?;
+    write_bytes(obj_ref, bytes_ref, off, len, append != 0)?;
     Ok(vec![])
 }
 fn write_bytes(
