@@ -2,13 +2,12 @@ use crate::error::Error;
 use crate::heap::java_instance::HeapValue::{Arr, Object};
 use crate::heap::java_instance::{Array, HeapValue, JavaInstance};
 use indexmap::IndexMap;
-use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{LazyLock, RwLock};
 use tracing::trace;
 
-static HEAP: Lazy<RwLock<Heap>> = Lazy::new(|| RwLock::new(Heap::new()));
+static HEAP: LazyLock<RwLock<Heap>> = LazyLock::new(RwLock::default);
 
 pub(crate) fn with_heap_read_lock<F, R>(f: F) -> R
 where
@@ -26,20 +25,13 @@ where
     f(&mut heap)
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub(crate) struct Heap {
     data: IndexMap<i32, HeapValue>,
     ref_by_stringvalue: HashMap<String, i32>,
 }
 
 impl Heap {
-    fn new() -> Self {
-        Self {
-            data: IndexMap::new(),
-            ref_by_stringvalue: HashMap::new(),
-        }
-    }
-
     // todo: still possible race condition here
     fn next_id(&self) -> i32 {
         let last_key = if let Some((last_key, _)) = self.data.iter().last() {

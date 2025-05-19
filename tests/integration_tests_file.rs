@@ -1,6 +1,7 @@
 mod utils;
 
 use crate::utils::{assert_success_with_args, REPO_PATH};
+use derive_new::new;
 use once_cell::sync::Lazy;
 use path_absolutize::Absolutize;
 use std::fs::remove_file;
@@ -135,6 +136,7 @@ Is readable: {{IS_READABLE}}
 Is executable: {{IS_EXECUTABLE}}
 "#;
 
+#[derive(new)]
 struct TemplateValues {
     file_path: String,
     absolute_path: String,
@@ -151,44 +153,6 @@ struct TemplateValues {
     is_writable: bool,
     is_readable: bool,
     is_executable: bool,
-}
-
-impl TemplateValues {
-    pub fn new(
-        file_path: String,
-        absolute_path: String,
-        canonical_path: String,
-        path: String,
-        name: String,
-        parent: String,
-        parent_file: String,
-        is_absolute: bool,
-        file_exists: bool,
-        is_file: bool,
-        is_directory: bool,
-        is_hidden: bool,
-        is_writable: bool,
-        is_readable: bool,
-        is_executable: bool,
-    ) -> Self {
-        Self {
-            file_path,
-            absolute_path,
-            canonical_path,
-            path,
-            name,
-            parent,
-            parent_file,
-            is_absolute,
-            file_exists,
-            is_file,
-            is_directory,
-            is_hidden,
-            is_writable,
-            is_readable,
-            is_executable,
-        }
-    }
 }
 
 fn resolve_template(template_values: &TemplateValues) -> String {

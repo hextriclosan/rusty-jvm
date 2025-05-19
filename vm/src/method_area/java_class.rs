@@ -17,40 +17,40 @@ use std::sync::Arc;
 const INTERFACE: u16 = 0x00000200;
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
-#[derive(Debug)]
+#[derive(Debug, Getters)]
 pub(crate) struct JavaClass {
     methods: Methods,
     static_fields: Fields,
     non_static_field_properties: FieldProperties,
     cpool_helper: CPoolHelper,
     this_class_name: String,
+    #[get = "pub"]
     external_name: String,
     parent: Option<String>,
     interfaces: IndexSet<String>,
     access_flags: u16,
 
+    #[get = "pub"]
     static_fields_init_state: Arc<ReentrantMutex<InitState>>,
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
+    #[get = "pub"]
     declaring_class: Option<String>,
+    #[get = "pub"]
     annotations_raw: Option<Vec<u8>>,
+    #[get = "pub"]
     enclosing_method: Option<(String, String, String)>,
+    #[get = "pub"]
     source_file: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InitState {
     inner_state: RefCell<InnerState>,
 }
 
 impl InitState {
-    fn new() -> Self {
-        InitState {
-            inner_state: RefCell::new(InnerState::default()),
-        }
-    }
-
     pub fn set_inner_state(&self, new_state: InnerState) {
         *self.inner_state.borrow_mut() = new_state;
     }
@@ -73,12 +73,12 @@ impl Default for InnerState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub(crate) struct Methods {
     method_by_signature: IndexMap<String, Arc<JavaMethod>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub(crate) struct Fields {
     pub(crate) field_by_name: IndexMap<String, Arc<Field>>,
 }
@@ -90,21 +90,9 @@ pub(crate) struct FieldProperty {
     flags: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub(crate) struct FieldProperties {
     pub(crate) properties_by_name: IndexMap<String, FieldProperty>,
-}
-
-impl FieldProperties {
-    pub fn new(properties_by_name: IndexMap<String, FieldProperty>) -> Self {
-        Self { properties_by_name }
-    }
-}
-
-impl Fields {
-    pub fn new(field_by_name: IndexMap<String, Arc<Field>>) -> Self {
-        Self { field_by_name }
-    }
 }
 
 impl JavaClass {
@@ -137,7 +125,7 @@ impl JavaClass {
             parent,
             interfaces,
             access_flags,
-            static_fields_init_state: Arc::new(ReentrantMutex::new(InitState::new())),
+            static_fields_init_state: Arc::default(),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
             declaring_class,
@@ -344,37 +332,5 @@ impl JavaClass {
 
             Ok(fields_offset_mapping)
         })
-    }
-
-    pub fn external_name(&self) -> &str {
-        &self.external_name
-    }
-
-    pub fn declaring_class(&self) -> &Option<String> {
-        &self.declaring_class
-    }
-
-    pub fn enclosing_method(&self) -> &Option<(String, String, String)> {
-        &self.enclosing_method
-    }
-
-    pub fn annotations_raw(&self) -> &Option<Vec<u8>> {
-        &self.annotations_raw
-    }
-
-    pub fn static_fields_init_state(&self) -> &Arc<ReentrantMutex<InitState>> {
-        &self.static_fields_init_state
-    }
-
-    pub fn source_file(&self) -> &Option<String> {
-        &self.source_file
-    }
-}
-
-impl Methods {
-    pub fn new(method_by_signature: IndexMap<String, Arc<JavaMethod>>) -> Self {
-        Self {
-            method_by_signature,
-        }
     }
 }

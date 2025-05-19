@@ -4,18 +4,12 @@ use jdescriptor::TypeDescriptor;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ReflectionClassLoader {
     class_type_instance_by_name: RwLock<HashMap<String, i32>>,
 }
 
 impl ReflectionClassLoader {
-    pub fn new() -> Self {
-        Self {
-            class_type_instance_by_name: RwLock::new(HashMap::new()),
-        }
-    }
-
     pub fn load(&self, for_class: &str) -> crate::error::Result<i32> {
         let component_type_ref_empty = 0;
         if !for_class.starts_with('[') && !for_class.ends_with(';') {

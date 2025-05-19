@@ -55,8 +55,8 @@ impl MethodArea {
         Self {
             std_dir: std_dir.to_string(),
             loaded_classes: RwLock::new(synthetic_classes),
-            javaclass_by_reflectionref: RwLock::new(HashMap::new()),
-            ldc_resolution_manager: LdcResolutionManager::new(),
+            javaclass_by_reflectionref: RwLock::default(),
+            ldc_resolution_manager: LdcResolutionManager::default(),
             system_thread_id: OnceCell::new(),
             system_thread_group_id: OnceCell::new(),
         }
