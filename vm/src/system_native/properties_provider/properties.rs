@@ -1,7 +1,7 @@
-use once_cell::sync::OnceCell;
 use os_info::Type;
 use os_info::Version::Semantic;
 use std::env;
+use std::sync::LazyLock;
 
 pub(crate) fn is_bigendian() -> bool {
     #[cfg(target_endian = "big")]
@@ -58,68 +58,70 @@ pub(crate) fn file_separator() -> &'static str {
     }
 }
 
-static OS_VERSION: OnceCell<String> = OnceCell::new();
+static OS_VERSION: LazyLock<String> = LazyLock::new(|| {
+    let info = os_info::get();
+    let version = info.version();
+    match version {
+        Semantic(_, _, _) => version.to_string(),
+        _ => "0.0.0".to_string(),
+    }
+});
 pub(crate) fn os_version() -> &'static str {
-    OS_VERSION.get_or_init(|| {
-        let info = os_info::get();
-        let version = info.version();
-        match version {
-            Semantic(_, _, _) => version.to_string(),
-            _ => "0.0.0".to_string(),
-        }
-    })
+    &OS_VERSION
 }
 
-static OS_NAME: OnceCell<&'static str> = OnceCell::new();
+static OS_NAME: LazyLock<&'static str> = LazyLock::new(|| {
+    let info = os_info::get();
+    match info.os_type() {
+        Type::AlmaLinux
+        | Type::Alpaquita
+        | Type::Alpine
+        | Type::Amazon
+        | Type::Arch
+        | Type::Artix
+        | Type::CachyOS
+        | Type::CentOS
+        | Type::Debian
+        | Type::EndeavourOS
+        | Type::Fedora
+        | Type::Garuda
+        | Type::Gentoo
+        | Type::Kali
+        | Type::Linux
+        | Type::Mabox
+        | Type::Manjaro
+        | Type::Mariner
+        | Type::Mint
+        | Type::NixOS
+        | Type::Nobara
+        | Type::OpenCloudOS
+        | Type::openEuler
+        | Type::openSUSE
+        | Type::OracleLinux
+        | Type::Pop
+        | Type::Raspbian
+        | Type::Redhat
+        | Type::RedHatEnterprise
+        | Type::RockyLinux
+        | Type::Solus
+        | Type::SUSE
+        | Type::Ubuntu
+        | Type::Ultramarine
+        | Type::Uos
+        | Type::Void => "Linux",
+        Type::Windows => "Windows",
+        Type::Macos => "macOS",
+        _ => unreachable!("Unsupported OS type"),
+    }
+});
 pub(crate) fn os_name() -> &'static str {
-    OS_NAME.get_or_init(|| {
-        let info = os_info::get();
-        match info.os_type() {
-            Type::AlmaLinux
-            | Type::Alpaquita
-            | Type::Alpine
-            | Type::Amazon
-            | Type::Arch
-            | Type::Artix
-            | Type::CachyOS
-            | Type::CentOS
-            | Type::Debian
-            | Type::EndeavourOS
-            | Type::Fedora
-            | Type::Garuda
-            | Type::Gentoo
-            | Type::Kali
-            | Type::Linux
-            | Type::Mabox
-            | Type::Manjaro
-            | Type::Mariner
-            | Type::Mint
-            | Type::NixOS
-            | Type::Nobara
-            | Type::OpenCloudOS
-            | Type::openEuler
-            | Type::openSUSE
-            | Type::OracleLinux
-            | Type::Pop
-            | Type::Raspbian
-            | Type::Redhat
-            | Type::RedHatEnterprise
-            | Type::RockyLinux
-            | Type::Solus
-            | Type::SUSE
-            | Type::Ubuntu
-            | Type::Ultramarine
-            | Type::Uos
-            | Type::Void => "Linux",
-            Type::Windows => "Windows",
-            Type::Macos => "macOS",
-            _ => unreachable!("Unsupported OS type"),
-        }
-    })
+    &OS_NAME
 }
 
-static USER_DIR: OnceCell<String> = OnceCell::new();
-pub(crate) fn user_dir() -> &'static str {
+static USER_DIR: LazyLock<String> = LazyLock::new(|| {
     let current_dir = env::current_dir().expect("Failed to get current directory");
-    USER_DIR.get_or_init(|| current_dir.display().to_string())
+    current_dir.display().to_string()
+});
+pub(crate) fn user_dir() -> &'static str {
+    &USER_DIR
 }

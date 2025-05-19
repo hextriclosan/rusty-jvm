@@ -10,20 +10,13 @@ use std::sync::RwLock;
 type CPoolIndex = u16;
 type Value = Vec<i32>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct LdcResolutionManager {
     reflection_class_loader: ReflectionClassLoader,
     cache: RwLock<HashMap<String, HashMap<CPoolIndex, Value>>>,
 }
 
 impl LdcResolutionManager {
-    pub fn new() -> Self {
-        Self {
-            reflection_class_loader: ReflectionClassLoader::new(),
-            cache: RwLock::new(HashMap::new()),
-        }
-    }
-
     pub fn resolve_ldc(
         &self,
         current_class_name: &str,

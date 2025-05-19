@@ -1,12 +1,13 @@
 use crate::error::Error;
 use crate::method_area::field::Field;
+use derive_new::new;
 use indexmap::IndexMap;
 use serde::Serialize;
 
 pub type ClassName = String;
 pub type FieldNameType = String;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, new)]
 pub(crate) struct JavaInstance {
     instance_name: String,
     fields: IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
@@ -174,16 +175,6 @@ pub(crate) enum HeapValue {
 }
 
 impl JavaInstance {
-    pub fn new(
-        instance_name: String,
-        fields: IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
-    ) -> Self {
-        Self {
-            instance_name,
-            fields,
-        }
-    }
-
     pub fn set_field_value(
         &mut self,
         class_name: &str,
