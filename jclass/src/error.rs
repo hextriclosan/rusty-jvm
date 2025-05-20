@@ -2,7 +2,7 @@ use crate::error::ErrorKind::{InvalidInput, Io};
 use std::fmt::{Debug, Display, Formatter};
 use std::{error::Error as StdError, io, result};
 
-pub type Result<T> = result::Result<T, Error>;
+pub(crate) type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Error(Box<ErrorKind>);
@@ -13,15 +13,7 @@ impl Error {
     }
 
     pub(crate) fn new_io(kind: io::ErrorKind, error: &str) -> Self {
-        Self::new(ErrorKind::Io(io::Error::new(kind, error)))
-    }
-
-    pub fn kind(&self) -> &ErrorKind {
-        &self.0
-    }
-
-    pub fn into_kind(self) -> ErrorKind {
-        *self.0
+        Self::new(Io(io::Error::new(kind, error)))
     }
 }
 
@@ -39,7 +31,7 @@ impl Display for Error {
 impl StdError for Error {}
 
 #[derive(Debug)]
-pub enum ErrorKind {
+pub(crate) enum ErrorKind {
     Io(io::Error),
     InvalidInput(String),
 
