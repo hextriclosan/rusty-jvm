@@ -3,6 +3,8 @@ use crate::constant_pool::ConstantPool;
 use crate::error::Result;
 use crate::extractors::{get_bitfield, get_int};
 use bitflags::bitflags;
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
@@ -19,40 +21,16 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Getters, CopyGetters, new)]
 pub struct FieldInfo {
+    #[get = "pub"]
     access_flags: FieldFlags,
+    #[get_copy = "pub"]
     name_index: u16,
+    #[get_copy = "pub"]
     descriptor_index: u16,
+    #[get = "pub"]
     attributes: Vec<Attribute>,
-}
-
-impl FieldInfo {
-    pub fn new(
-        access_flags: FieldFlags,
-        name_index: u16,
-        descriptor_index: u16,
-        attributes: Vec<Attribute>,
-    ) -> Self {
-        Self {
-            access_flags,
-            name_index,
-            descriptor_index,
-            attributes,
-        }
-    }
-    pub fn access_flags(&self) -> &FieldFlags {
-        &self.access_flags
-    }
-    pub fn name_index(&self) -> u16 {
-        self.name_index
-    }
-    pub fn descriptor_index(&self) -> u16 {
-        self.descriptor_index
-    }
-    pub fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
 }
 
 pub(crate) fn get_fields(

@@ -10,9 +10,10 @@ const MAGIC: u32 = 0xCAFEBABE;
 
 use crate::attributes::Attribute;
 use crate::error::ErrorKind::InvalidInput;
-use bitflags::bitflags;
-
 use crate::fields::FieldInfo;
+use bitflags::bitflags;
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
@@ -29,82 +30,30 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Getters, CopyGetters, new)]
 pub struct ClassFile {
+    #[get_copy = "pub"]
     magic: u32,
+    #[get_copy = "pub"]
     minor_version: u16,
+    #[get_copy = "pub"]
     major_version: u16,
+    #[get = "pub"]
     constant_pool: Vec<ConstantPool>,
+    #[get = "pub"]
     access_flags: ClassFlags,
+    #[get_copy = "pub"]
     this_class: u16,
+    #[get_copy = "pub"]
     super_class: u16,
+    #[get = "pub"]
     interfaces: Vec<u16>,
+    #[get = "pub"]
     fields: Vec<FieldInfo>,
+    #[get = "pub"]
     methods: Vec<MethodInfo>,
+    #[get = "pub"]
     attributes: Vec<Attribute>,
-}
-
-impl ClassFile {
-    pub fn new(
-        magic: u32,
-        minor_version: u16,
-        major_version: u16,
-        constant_pool: Vec<ConstantPool>,
-        access_flags: ClassFlags,
-        this_class: u16,
-        super_class: u16,
-        interfaces: Vec<u16>,
-        fields: Vec<FieldInfo>,
-        methods: Vec<MethodInfo>,
-        attributes: Vec<Attribute>,
-    ) -> Self {
-        Self {
-            magic,
-            minor_version,
-            major_version,
-            constant_pool,
-            access_flags,
-            this_class,
-            super_class,
-            interfaces,
-            fields,
-            methods,
-            attributes,
-        }
-    }
-    pub fn magic(&self) -> u32 {
-        self.magic
-    }
-    pub fn minor_version(&self) -> u16 {
-        self.minor_version
-    }
-    pub fn major_version(&self) -> u16 {
-        self.major_version
-    }
-    pub fn constant_pool(&self) -> &Vec<ConstantPool> {
-        &self.constant_pool
-    }
-    pub fn access_flags(&self) -> &ClassFlags {
-        &self.access_flags
-    }
-    pub fn this_class(&self) -> u16 {
-        self.this_class
-    }
-    pub fn super_class(&self) -> u16 {
-        self.super_class
-    }
-    pub fn interfaces(&self) -> &Vec<u16> {
-        &self.interfaces
-    }
-    pub fn fields(&self) -> &Vec<FieldInfo> {
-        &self.fields
-    }
-    pub fn methods(&self) -> &Vec<MethodInfo> {
-        &self.methods
-    }
-    pub fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
 }
 
 pub fn parse(data: &[u8]) -> Result<ClassFile> {

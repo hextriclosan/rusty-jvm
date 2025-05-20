@@ -11,6 +11,8 @@ use crate::constant_pool::ConstantPool::*;
 use crate::error::{Error, Result};
 use crate::extractors::{get_bitfield, get_bytes, get_int, read_byte_block};
 use bitflags::bitflags;
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 use std::io::ErrorKind::InvalidData;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -94,7 +96,8 @@ pub enum Attribute {
     },
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, CopyGetters, new)]
+#[get_copy = "pub"]
 pub struct ExceptionRecord {
     start_pc: u16,
     end_pc: u16,
@@ -102,51 +105,15 @@ pub struct ExceptionRecord {
     catch_type: u16,
 }
 
-impl ExceptionRecord {
-    pub fn new(start_pc: u16, end_pc: u16, handler_pc: u16, catch_type: u16) -> Self {
-        Self {
-            start_pc,
-            end_pc,
-            handler_pc,
-            catch_type,
-        }
-    }
-    pub fn start_pc(&self) -> u16 {
-        self.start_pc
-    }
-    pub fn end_pc(&self) -> u16 {
-        self.end_pc
-    }
-    pub fn handler_pc(&self) -> u16 {
-        self.handler_pc
-    }
-    pub fn catch_type(&self) -> u16 {
-        self.catch_type
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, CopyGetters, new)]
+#[get_copy = "pub"]
 pub struct LineNumberRecord {
     start_pc: u16,
     line_number: u16,
 }
 
-impl LineNumberRecord {
-    pub fn new(start_pc: u16, line_number: u16) -> Self {
-        Self {
-            start_pc,
-            line_number,
-        }
-    }
-    pub fn start_pc(&self) -> u16 {
-        self.start_pc
-    }
-    pub fn line_number(&self) -> u16 {
-        self.line_number
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, CopyGetters, new)]
+#[get_copy = "pub"]
 pub struct LocalVariableTableRecord {
     start_pc: u16,
     length: u16,
@@ -155,79 +122,14 @@ pub struct LocalVariableTableRecord {
     index: u16,
 }
 
-impl LocalVariableTableRecord {
-    pub fn new(
-        start_pc: u16,
-        length: u16,
-        name_index: u16,
-        descriptor_index: u16,
-        index: u16,
-    ) -> Self {
-        Self {
-            start_pc,
-            length,
-            name_index,
-            descriptor_index,
-            index,
-        }
-    }
-    pub fn start_pc(&self) -> u16 {
-        self.start_pc
-    }
-    pub fn length(&self) -> u16 {
-        self.length
-    }
-    pub fn name_index(&self) -> u16 {
-        self.name_index
-    }
-    pub fn descriptor_index(&self) -> u16 {
-        self.descriptor_index
-    }
-    pub fn index(&self) -> u16 {
-        self.index
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, CopyGetters, new)]
+#[get_copy = "pub"]
 pub struct LocalVariableTypeTableRecord {
     start_pc: u16,
     length: u16,
     name_index: u16,
     signature_index: u16,
     index: u16,
-}
-
-impl LocalVariableTypeTableRecord {
-    pub fn new(
-        start_pc: u16,
-        length: u16,
-        name_index: u16,
-        signature_index: u16,
-        index: u16,
-    ) -> Self {
-        Self {
-            start_pc,
-            length,
-            name_index,
-            signature_index,
-            index,
-        }
-    }
-    pub fn start_pc(&self) -> u16 {
-        self.start_pc
-    }
-    pub fn length(&self) -> u16 {
-        self.length
-    }
-    pub fn name_index(&self) -> u16 {
-        self.name_index
-    }
-    pub fn signature_index(&self) -> u16 {
-        self.signature_index
-    }
-    pub fn index(&self) -> u16 {
-        self.index
-    }
 }
 
 bitflags! {
@@ -239,25 +141,12 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
 pub struct MethodParameterRecord {
+    #[get_copy = "pub"]
     name_index: u16,
+    #[get = "pub"]
     access_flags: MethodParameterFlags,
-}
-
-impl MethodParameterRecord {
-    pub fn new(name_index: u16, access_flags: MethodParameterFlags) -> Self {
-        Self {
-            name_index,
-            access_flags,
-        }
-    }
-    pub fn name_index(&self) -> u16 {
-        self.name_index
-    }
-    pub fn access_flags(&self) -> &MethodParameterFlags {
-        &self.access_flags
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -310,46 +199,20 @@ pub enum VerificationTypeInfo {
     UninitializedVariableInfo { offset: u16 },
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
 pub struct Annotation {
+    #[get_copy = "pub"]
     type_index: u16,
+    #[get = "pub"]
     element_value_pairs: Vec<ElementValuePair>,
 }
 
-impl Annotation {
-    pub fn new(type_index: u16, element_value_pairs: Vec<ElementValuePair>) -> Self {
-        Self {
-            type_index,
-            element_value_pairs,
-        }
-    }
-    pub fn type_index(&self) -> u16 {
-        self.type_index
-    }
-    pub fn element_value_pairs(&self) -> &Vec<ElementValuePair> {
-        &self.element_value_pairs
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
 pub struct ElementValuePair {
+    #[get_copy = "pub"]
     element_name_index: u16,
+    #[get = "pub"]
     value: ElementValue,
-}
-
-impl ElementValuePair {
-    pub fn new(element_name_index: u16, value: ElementValue) -> Self {
-        Self {
-            element_name_index,
-            value,
-        }
-    }
-    pub fn element_name_index(&self) -> u16 {
-        self.element_name_index
-    }
-    pub fn value(&self) -> &ElementValue {
-        &self.value
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -393,87 +256,34 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
 pub struct InnerClassRecord {
+    #[get_copy = "pub"]
     inner_class_info_index: u16,
+    #[get_copy = "pub"]
     outer_class_info_index: u16,
+    #[get_copy = "pub"]
     inner_name_index: u16,
+    #[get = "pub"]
     inner_class_access_flags: NestedClassFlags,
 }
 
-impl InnerClassRecord {
-    pub fn new(
-        inner_class_info_index: u16,
-        outer_class_info_index: u16,
-        inner_name_index: u16,
-        inner_class_access_flags: NestedClassFlags,
-    ) -> Self {
-        Self {
-            inner_class_info_index,
-            outer_class_info_index,
-            inner_name_index,
-            inner_class_access_flags,
-        }
-    }
-    pub fn inner_class_info_index(&self) -> u16 {
-        self.inner_class_info_index
-    }
-    pub fn outer_class_info_index(&self) -> u16 {
-        self.outer_class_info_index
-    }
-    pub fn inner_name_index(&self) -> u16 {
-        self.inner_name_index
-    }
-    pub fn inner_class_access_flags(&self) -> &NestedClassFlags {
-        &self.inner_class_access_flags
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
 pub struct BootstrapMethodRecord {
+    #[get_copy = "pub"]
     bootstrap_method_ref: u16,
+    #[get = "pub"]
     bootstrap_arguments: Vec<u16>,
 }
 
-impl BootstrapMethodRecord {
-    pub fn new(bootstrap_method_ref: u16, bootstrap_arguments: Vec<u16>) -> Self {
-        Self {
-            bootstrap_method_ref,
-            bootstrap_arguments,
-        }
-    }
-    pub fn bootstrap_method_ref(&self) -> u16 {
-        self.bootstrap_method_ref
-    }
-    pub fn bootstrap_arguments(&self) -> &Vec<u16> {
-        &self.bootstrap_arguments
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
 pub struct RecordComponentInfo {
+    #[get_copy = "pub"]
     name_index: u16,
+    #[get_copy = "pub"]
     descriptor_index: u16,
+    #[get = "pub"]
     attributes: Vec<Attribute>,
-}
-
-impl RecordComponentInfo {
-    pub fn new(name_index: u16, descriptor_index: u16, attributes: Vec<Attribute>) -> Self {
-        Self {
-            name_index,
-            descriptor_index,
-            attributes,
-        }
-    }
-    pub fn name_index(&self) -> u16 {
-        self.name_index
-    }
-    pub fn descriptor_index(&self) -> u16 {
-        self.descriptor_index
-    }
-    pub fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
 }
 
 pub(crate) fn get_attributes(
