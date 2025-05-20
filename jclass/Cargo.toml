@@ -8,4 +8,6 @@ workspace = ".."
 [dependencies]
 num-traits = "0.2.19"
 cesu8 = "1.1.0"
-bitflags = "2.8.0"
+bitflags = "2.9.1"
+getset = "0.1.5"
+derive-new = "0.7.0"
