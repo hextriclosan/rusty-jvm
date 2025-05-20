@@ -69,6 +69,12 @@ impl From<io::Error> for Error {
     }
 }
 
+impl From<jclass::error::Error> for Error {
+    fn from(error: jclass::error::Error) -> Self {
+        Error::new(ClassFile(error.to_string()))
+    }
+}
+
 impl From<SystemTimeError> for Error {
     fn from(error: SystemTimeError) -> Self {
         Error::new_execution(&format!("SystemTimeError: {error}"))

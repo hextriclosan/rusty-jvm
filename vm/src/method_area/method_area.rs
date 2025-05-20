@@ -1,4 +1,4 @@
-use crate::error::{Error, ErrorKind};
+use crate::error::Error;
 use crate::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::method_area::attributes_helper::AttributesHelper;
@@ -104,9 +104,7 @@ impl MethodArea {
             return Ok(());
         }
 
-        let class_file =
-            parse(bytecode).map_err(|err| Error::new(ErrorKind::ClassFile(err.to_string())))?;
-
+        let class_file = parse(bytecode)?;
         let (_, java_class) = self.to_java_class(class_file)?;
         self.loaded_classes.write()?.insert(
             fully_qualified_class_name.to_string(),
@@ -130,24 +128,26 @@ impl MethodArea {
 
         paths
             .iter()
-            .find_map(|file_name| self.try_open_and_parse(file_name))
+            .find_map(|file_name| self.try_open_and_parse(file_name).transpose())
+            .transpose()?
             .ok_or_else(|| {
                 Error::new_execution(&format!("error opening file {fully_qualified_class_name}"))
             })
     }
 
-    fn try_open_and_parse(&self, path: &PathBuf) -> Option<Arc<JavaClass>> {
-        let mut file = File::open(path).ok()?;
+    fn try_open_and_parse(&self, path: &PathBuf) -> crate::error::Result<Option<Arc<JavaClass>>> {
+        let mut file = match File::open(path) {
+            Ok(file) => file,
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None), // File not found is not considered as an error
+            Err(e) => return Err(e.into()),
+        };
         let mut buff = Vec::new();
-        file.read_to_end(&mut buff).ok()?;
+        file.read_to_end(&mut buff)?;
 
-        let class_file = parse(buff.as_slice())
-            .map_err(|err| Error::new(ErrorKind::ClassFile(err.to_string())))
-            .ok()?;
+        let class_file = parse(&buff)?;
 
         self.to_java_class(class_file)
-            .map(|(_, java_class)| java_class)
-            .ok()
+            .map(|(_, java_class)| Ok(Some(java_class)))?
     }
 
     fn to_java_class(
