@@ -16,6 +16,7 @@ use getset::{CopyGetters, Getters};
 use std::io::ErrorKind::InvalidData;
 
 #[derive(Debug, PartialEq, Clone)]
+/// `attribute_info` structure (JVMS §4.7).
 pub enum Attribute {
     ConstantValue {
         constantvalue_index: u16,
@@ -98,6 +99,7 @@ pub enum Attribute {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+/// `exception_table` entry (JVMS §4.7.3).
 pub struct ExceptionRecord {
     start_pc: u16,
     end_pc: u16,
@@ -107,6 +109,7 @@ pub struct ExceptionRecord {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+/// `LineNumberTable` entry (JVMS §4.7.12).
 pub struct LineNumberRecord {
     start_pc: u16,
     line_number: u16,
@@ -114,6 +117,7 @@ pub struct LineNumberRecord {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+/// `LocalVariableTable` entry (JVMS §4.7.13).
 pub struct LocalVariableTableRecord {
     start_pc: u16,
     length: u16,
@@ -124,6 +128,7 @@ pub struct LocalVariableTableRecord {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+/// `LocalVariableTypeTable` entry (JVMS §4.7.14).
 pub struct LocalVariableTypeTableRecord {
     start_pc: u16,
     length: u16,
@@ -134,14 +139,23 @@ pub struct LocalVariableTypeTableRecord {
 
 bitflags! {
     #[derive(Debug, PartialEq, Clone)]
+    /// Access and property modifiers from `MethodParameters` (JVMS §4.7.24).
     pub struct MethodParameterFlags: u16 {
-        const ACC_FINAL = 0x0010;       // Indicates that the formal parameter was declared final.
-        const ACC_SYNTHETIC = 0x1000;   // Indicates that the formal parameter was not explicitly or implicitly declared in source code, according to the specification of the language in which the source code was written (JLS §13.1). (The formal parameter is an implementation artifact of the compiler which produced this class file.)
-        const ACC_MANDATED = 0x8000;    // Indicates that the formal parameter was implicitly declared in source code, according to the specification of the language in which the source code was written (JLS §13.1). (The formal parameter is mandated by a language specification, so all compilers for the language must emit it.)
+        /// Indicates that the formal parameter was declared `final`.
+        const ACC_FINAL = 0x0010;
+        /// Indicates that the formal parameter was not explicitly or implicitly declared in source code,
+        /// according to the specification of the language in which the source code was written (JLS §13.1).
+        /// (The formal parameter is an implementation artifact of the compiler which produced this class file.)
+        const ACC_SYNTHETIC = 0x1000;
+        /// Indicates that the formal parameter was implicitly declared in source code,
+        /// according to the specification of the language in which the source code was written (JLS §13.1).
+        /// (The formal parameter is mandated by a language specification, so all compilers for the language must emit it.)
+        const ACC_MANDATED = 0x8000;
     }
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+/// `MethodParameters` entry (JVMS §4.7.24).
 pub struct MethodParameterRecord {
     #[get_copy = "pub"]
     name_index: u16,
@@ -150,6 +164,7 @@ pub struct MethodParameterRecord {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// `stack_map_frame` structure (JVMS §4.7.4).
 pub enum StackMapFrame {
     SameFrame {
         frame_type: u8,
@@ -187,6 +202,7 @@ pub enum StackMapFrame {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// `verification_type_info` structure (JVMS §4.7.4).
 pub enum VerificationTypeInfo {
     TopVariableInfo,
     IntegerVariableInfo,
@@ -200,22 +216,29 @@ pub enum VerificationTypeInfo {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+/// `annotation` structure (JVMS §4.7.16).
 pub struct Annotation {
     #[get_copy = "pub"]
+    /// Type index in the constant pool
     type_index: u16,
     #[get = "pub"]
+    /// Element value pairs
     element_value_pairs: Vec<ElementValuePair>,
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+/// `element_value_pairs` structure (JVMS §4.7.16).
 pub struct ElementValuePair {
     #[get_copy = "pub"]
+    /// Element name index in the constant pool
     element_name_index: u16,
     #[get = "pub"]
+    /// Element value
     value: ElementValue,
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// `element_value` structure (JVMS §4.7.16.1).
 pub enum ElementValue {
     ConstValueIndex {
         tag: u8,
@@ -242,47 +265,70 @@ pub enum ElementValue {
 
 bitflags! {
     #[derive(Debug, PartialEq, Clone)]
+    /// Access and property modifiers of `inner_class_access_flags` (JVMS §4.7.6).
     pub struct NestedClassFlags: u16 {
-        const ACC_PUBLIC = 0x0001;      // Marked or implicitly public in source.
-        const ACC_PRIVATE = 0x0002;     // Marked private in source.
-        const ACC_PROTECTED = 0x0004;   // Marked protected in source.
-        const ACC_STATIC = 0x0008;      // Marked or implicitly static in source.
-        const ACC_FINAL = 0x0010;       // Marked or implicitly final in source.
-        const ACC_INTERFACE = 0x0200;   // Was an interface in source.
-        const ACC_ABSTRACT = 0x0400;    // Marked or implicitly abstract in source.
-        const ACC_SYNTHETIC = 0x1000;   // Declared synthetic; not present in the source code.
-        const ACC_ANNOTATION = 0x2000;  // Declared as an annotation interface.
-        const ACC_ENUM = 0x4000;        // Declared as an enum class.
+        /// Marked or implicitly public in source.
+        const ACC_PUBLIC = 0x0001;
+        /// Marked private in source.
+        const ACC_PRIVATE = 0x0002;
+        /// Marked protected in source.
+        const ACC_PROTECTED = 0x0004;
+        /// Marked or implicitly static in source.
+        const ACC_STATIC = 0x0008;
+        /// Marked or implicitly final in source.
+        const ACC_FINAL = 0x0010;
+        /// Was an interface in source.
+        const ACC_INTERFACE = 0x0200;
+        /// Marked or implicitly abstract in source.
+        const ACC_ABSTRACT = 0x0400;
+        /// Declared synthetic; not present in the source code.
+        const ACC_SYNTHETIC = 0x1000;
+        /// Declared as an annotation interface.
+        const ACC_ANNOTATION = 0x2000;
+        /// Declared as an enum class.
+        const ACC_ENUM = 0x4000;
     }
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+/// `InnerClasses` entry (JVMS §4.7.6).
 pub struct InnerClassRecord {
     #[get_copy = "pub"]
+    /// Inner class info index in the constant pool
     inner_class_info_index: u16,
     #[get_copy = "pub"]
+    /// Outer class info index in the constant pool
     outer_class_info_index: u16,
     #[get_copy = "pub"]
+    /// Inner name index in the constant pool
     inner_name_index: u16,
     #[get = "pub"]
+    /// Access and property flags for the inner class
     inner_class_access_flags: NestedClassFlags,
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+/// `BootstrapMethods` entry (JVMS §4.7.23).
 pub struct BootstrapMethodRecord {
     #[get_copy = "pub"]
+    /// Bootstrap method reference index in the constant pool
     bootstrap_method_ref: u16,
     #[get = "pub"]
+    /// Bootstrap method arguments
     bootstrap_arguments: Vec<u16>,
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+/// `record_component_info` entry (JVMS §4.7.30).
 pub struct RecordComponentInfo {
     #[get_copy = "pub"]
+    /// Name index in the constant pool
     name_index: u16,
     #[get_copy = "pub"]
+    /// Descriptor index in the constant pool
     descriptor_index: u16,
     #[get = "pub"]
+    /// Attributes associated with the record component
     attributes: Vec<Attribute>,
 }
 

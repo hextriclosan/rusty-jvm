@@ -5,6 +5,7 @@ use std::io::ErrorKind::InvalidInput;
 
 #[repr(u8)]
 #[derive(Debug, PartialEq, Clone)]
+/// Constant Pool entries (JVMS §4.4).
 pub enum ConstantPool {
     Empty = 0,
     Utf8 {
