@@ -8,7 +8,7 @@ use getset::{CopyGetters, Getters};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
-    /// Field access and property modifiers
+    /// Method access and property modifiers
     pub struct MethodFlags: u16 {
         /// Declared public; may be accessed from outside its package.
         const ACC_PUBLIC = 0x0001;
