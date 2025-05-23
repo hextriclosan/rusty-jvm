@@ -17,7 +17,7 @@ To use it, add the following lines to your `Cargo.toml` file:
 jclassfile = "0.1.0"
 ```
 
-## Implementation covers
+## Implementation Status
 The following sections of the Java Virtual Machine Specification (JVMS, Java SE 23 Edition) are implemented:
 
 - [x] The ClassFile Structure ([§4.1][jvms-4.1])
