@@ -18,6 +18,8 @@ jclassfile = "0.1.0"
 ```
 
 ## Implementation covers
+The following sections of the Java Virtual Machine Specification (JVMS, Java SE 23 Edition) are implemented:
+
 - [x] The ClassFile Structure ([§4.1][jvms-4.1])
 - [x] The Constant Pool ([§4.4][jvms-4.4])
   - [x] The CONSTANT_Class_info Structure ([§4.4.1][jvms-4.4.1])
