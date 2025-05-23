@@ -1,4 +1,4 @@
-use jclass::class_file::{parse, ClassFile};
+use jclassfile::class_file::{parse, ClassFile};
 use std::error::Error;
 use std::{env, fs};
 

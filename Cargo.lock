@@ -282,7 +282,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
-name = "jclass"
+name = "jclassfile"
 version = "0.1.0"
 dependencies = [
  "bitflags",
@@ -943,7 +943,7 @@ dependencies = [
  "derive-new",
  "getset",
  "indexmap",
- "jclass",
+ "jclassfile",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
  "mockall",

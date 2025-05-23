@@ -1,7 +1,7 @@
 use crate::method_area::cpool_helper::CPoolHelper;
 use crate::method_area::cpool_helper::CPoolHelperTrait;
 use crate::stack::stack_frame::ExceptionTableRecord;
-use jclass::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
+use jclassfile::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
 use std::collections::{HashMap, HashSet};
 
 pub struct AttributesHelper {
@@ -229,10 +229,10 @@ impl AttributesHelper {
 mod tests {
     use super::*;
     use crate::method_area::cpool_helper::MockCPoolHelperTrait;
-    use jclass::attributes::Attribute::{
+    use jclassfile::attributes::Attribute::{
         Code, LineNumberTable, LocalVariableTable, MethodParameters,
     };
-    use jclass::attributes::{
+    use jclassfile::attributes::{
         ExceptionRecord, LineNumberRecord, LocalVariableTableRecord, MethodParameterFlags,
         MethodParameterRecord,
     };
