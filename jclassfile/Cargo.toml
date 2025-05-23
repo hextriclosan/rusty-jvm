@@ -2,6 +2,16 @@
 name = "jclassfile"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igor Rudenko <iostream64@gmail.com>"]
+description = "Java class files parser"
+license = "MIT"
+homepage = "https://github.com/hextriclosan/rusty-jvm"
+repository = "https://github.com/hextriclosan/rusty-jvm"
+documentation = "https://docs.rs/jclassfile"
+readme = "README.md"
+keywords = ["jvm", "java", "bytecode", "classfile", "parser"]
+categories = ["parser-implementations", "parsing", "development-tools::ffi"]
+exclude = ["src/bin/**", "tests/**"]
 
 workspace = ".."
 
