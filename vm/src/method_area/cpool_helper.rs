@@ -1,4 +1,4 @@
-use jclass::constant_pool::ConstantPool;
+use jclassfile::constant_pool::ConstantPool;
 use std::collections::HashMap;
 
 #[cfg_attr(test, mockall::automock)]
@@ -245,7 +245,7 @@ impl CPoolHelperTrait for CPoolHelper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jclass::constant_pool::ConstantPool::{
+    use jclassfile::constant_pool::ConstantPool::{
         Class, Double, Empty, Fieldref, Float, Integer, InterfaceMethodref, Long, Methodref,
         NameAndType, String, Utf8,
     };

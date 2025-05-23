@@ -69,8 +69,8 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<jclass::error::Error> for Error {
-    fn from(error: jclass::error::Error) -> Self {
+impl From<jclassfile::error::Error> for Error {
+    fn from(error: jclassfile::error::Error) -> Self {
         Error::new(ClassFile(error.to_string()))
     }
 }

@@ -1,12 +1,12 @@
-use jclass::attributes::Attribute::*;
-use jclass::attributes::ElementValue::*;
-use jclass::attributes::StackMapFrame::*;
-use jclass::attributes::VerificationTypeInfo::*;
-use jclass::attributes::*;
-use jclass::class_file::{parse, ClassFile, ClassFlags};
-use jclass::constant_pool::ConstantPool::*;
-use jclass::fields::{FieldFlags, FieldInfo};
-use jclass::methods::{MethodFlags, MethodInfo};
+use jclassfile::attributes::Attribute::*;
+use jclassfile::attributes::ElementValue::*;
+use jclassfile::attributes::StackMapFrame::*;
+use jclassfile::attributes::VerificationTypeInfo::*;
+use jclassfile::attributes::*;
+use jclassfile::class_file::{parse, ClassFile, ClassFlags};
+use jclassfile::constant_pool::ConstantPool::*;
+use jclassfile::fields::{FieldFlags, FieldInfo};
+use jclassfile::methods::{MethodFlags, MethodInfo};
 
 #[test]
 fn should_load_and_parse() {

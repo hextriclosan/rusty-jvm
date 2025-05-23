@@ -5,7 +5,7 @@ use std::{error::Error as StdError, io, result};
 pub(crate) type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
-/// Error type for the jclass library.
+/// Error type for the jclassfile library.
 pub struct Error(Box<ErrorKind>);
 
 impl Error {
