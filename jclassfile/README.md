@@ -97,7 +97,6 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 [license-mit-image]: https://img.shields.io/badge/license-MIT-blue.svg
 [license-mit-link]: LICENSE
 
-[jvms-index]: https://docs.oracle.com/javase/specs/jvms/se23/html/
 [jvms-4]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html
 [jvms-4.1]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1
 [jvms-4.4]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4

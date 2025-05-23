@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Igor Rudenko <iostream64@gmail.com>"]
 description = "Java class files parser"
 license = "MIT"
+license-file = "LICENSE"
 homepage = "https://github.com/hextriclosan/rusty-jvm"
 repository = "https://github.com/hextriclosan/rusty-jvm"
 documentation = "https://docs.rs/jclassfile"
