@@ -18,9 +18,9 @@ jclassfile = "0.1.0"
 ```
 
 ## Implementation covers
-[x] The ClassFile Structure ([§4.1][jvms-4.1])
-[x] The Constant Pool ([§4.4][jvms-4.4])
-&nbsp;&nbsp;[x] The CONSTANT_Class_info Structure ([§4.4.1][jvms-4.4.1])
+- [x] The ClassFile Structure ([§4.1][jvms-4.1])
+- [x] The Constant Pool ([§4.4][jvms-4.4])
+  - [x] The CONSTANT_Class_info Structure ([§4.4.1][jvms-4.4.1])
   - [x] The CONSTANT_Fieldref_info, CONSTANT_Methodref_info, and CONSTANT_InterfaceMethodref_info Structures ([§4.4.2][jvms-4.4.2])
   - [x] The CONSTANT_String_info Structure ([§4.4.3][jvms-4.4.3])
   - [x] The CONSTANT_Integer_info and CONSTANT_Float_info Structures ([§4.4.4][jvms-4.4.4])
