@@ -307,6 +307,7 @@ dependencies = [
  "getset",
  "num-traits",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
