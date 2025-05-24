@@ -17,6 +17,7 @@ use getset::{CopyGetters, Getters};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     /// Class access and property modifiers
     pub struct ClassFlags: u16 {
         /// Declared public; may be accessed from outside its package.
@@ -41,6 +42,7 @@ bitflags! {
 }
 
 #[derive(Debug, PartialEq, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `ClassFile` structure (JVMS §4.1).
 pub struct ClassFile {
     #[get_copy = "pub"]

@@ -8,6 +8,7 @@ use getset::{CopyGetters, Getters};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     /// Field access and property modifiers
     pub struct FieldFlags: u16 {
         /// Declared public; may be accessed from outside its package.
@@ -32,6 +33,7 @@ bitflags! {
 }
 
 #[derive(Debug, PartialEq, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `field_info` structure (JVMS §4.5).
 pub struct FieldInfo {
     #[get = "pub"]
