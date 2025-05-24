@@ -16,6 +16,7 @@ use getset::{CopyGetters, Getters};
 use std::io::ErrorKind::InvalidData;
 
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `attribute_info` structure (JVMS §4.7).
 pub enum Attribute {
     ConstantValue {
@@ -99,6 +100,7 @@ pub enum Attribute {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `exception_table` entry (JVMS §4.7.3).
 pub struct ExceptionRecord {
     start_pc: u16,
@@ -109,6 +111,7 @@ pub struct ExceptionRecord {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `LineNumberTable` entry (JVMS §4.7.12).
 pub struct LineNumberRecord {
     start_pc: u16,
@@ -117,6 +120,7 @@ pub struct LineNumberRecord {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `LocalVariableTable` entry (JVMS §4.7.13).
 pub struct LocalVariableTableRecord {
     start_pc: u16,
@@ -128,6 +132,7 @@ pub struct LocalVariableTableRecord {
 
 #[derive(Debug, PartialEq, Clone, CopyGetters, new)]
 #[get_copy = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `LocalVariableTypeTable` entry (JVMS §4.7.14).
 pub struct LocalVariableTypeTableRecord {
     start_pc: u16,
@@ -139,6 +144,7 @@ pub struct LocalVariableTypeTableRecord {
 
 bitflags! {
     #[derive(Debug, PartialEq, Clone)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     /// Access and property modifiers from `MethodParameters` (JVMS §4.7.24).
     pub struct MethodParameterFlags: u16 {
         /// Indicates that the formal parameter was declared `final`.
@@ -155,6 +161,7 @@ bitflags! {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `MethodParameters` entry (JVMS §4.7.24).
 pub struct MethodParameterRecord {
     #[get_copy = "pub"]
@@ -164,6 +171,7 @@ pub struct MethodParameterRecord {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `stack_map_frame` structure (JVMS §4.7.4).
 pub enum StackMapFrame {
     SameFrame {
@@ -202,6 +210,7 @@ pub enum StackMapFrame {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `verification_type_info` structure (JVMS §4.7.4).
 pub enum VerificationTypeInfo {
     TopVariableInfo,
@@ -216,6 +225,7 @@ pub enum VerificationTypeInfo {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `annotation` structure (JVMS §4.7.16).
 pub struct Annotation {
     #[get_copy = "pub"]
@@ -227,6 +237,7 @@ pub struct Annotation {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `element_value_pairs` structure (JVMS §4.7.16).
 pub struct ElementValuePair {
     #[get_copy = "pub"]
@@ -238,6 +249,7 @@ pub struct ElementValuePair {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `element_value` structure (JVMS §4.7.16.1).
 pub enum ElementValue {
     ConstValueIndex {
@@ -265,6 +277,7 @@ pub enum ElementValue {
 
 bitflags! {
     #[derive(Debug, PartialEq, Clone)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     /// Access and property modifiers of `inner_class_access_flags` (JVMS §4.7.6).
     pub struct NestedClassFlags: u16 {
         /// Marked or implicitly public in source.
@@ -291,6 +304,7 @@ bitflags! {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `InnerClasses` entry (JVMS §4.7.6).
 pub struct InnerClassRecord {
     #[get_copy = "pub"]
@@ -308,6 +322,7 @@ pub struct InnerClassRecord {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `BootstrapMethods` entry (JVMS §4.7.23).
 pub struct BootstrapMethodRecord {
     #[get_copy = "pub"]
@@ -319,6 +334,7 @@ pub struct BootstrapMethodRecord {
 }
 
 #[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// `record_component_info` entry (JVMS §4.7.30).
 pub struct RecordComponentInfo {
     #[get_copy = "pub"]

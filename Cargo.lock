@@ -87,6 +87,9 @@ name = "bitflags"
 version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bstr"
@@ -284,6 +287,8 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 [[package]]
 name = "jclassfile"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b1b85ce9eeab603dada274d708e301daf34c6ec89ce4fb9ba17e8f346983e63"
 dependencies = [
  "bitflags",
  "cesu8",
@@ -294,15 +299,14 @@ dependencies = [
 
 [[package]]
 name = "jclassfile"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b1b85ce9eeab603dada274d708e301daf34c6ec89ce4fb9ba17e8f346983e63"
+version = "0.2.0"
 dependencies = [
  "bitflags",
  "cesu8",
  "derive-new",
  "getset",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -956,7 +960,7 @@ dependencies = [
  "derive-new",
  "getset",
  "indexmap",
- "jclassfile 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jclassfile 0.1.0",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
  "mockall",
