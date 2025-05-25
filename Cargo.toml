@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["jclassfile", "jdescriptor", "vm"]
+members = ["jclassfile", "jdescriptor", "rusty-jvm-vm"]
 
 [dependencies]
 clap = "4.5.27"
 getset = "0.1.5"
 derive-new = "0.7.0"
-vm = {path = "vm"}
+rusty-jvm-vm = {path = "rusty-jvm-vm" }
 once_cell = "1.21.3"
 
 [dev-dependencies]
