@@ -726,8 +726,35 @@ dependencies = [
  "once_cell",
  "path-absolutize",
  "regex",
+ "rusty-jvm-vm",
  "serde_json",
- "vm",
+]
+
+[[package]]
+name = "rusty-jvm-vm"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "derive-new",
+ "getset",
+ "indexmap",
+ "jclassfile 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libloading",
+ "mockall",
+ "murmur3",
+ "nix",
+ "num-traits",
+ "num_enum",
+ "once_cell",
+ "os_info",
+ "parking_lot",
+ "path-absolutize",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "winapi",
 ]
 
 [[package]]
@@ -952,33 +979,6 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
-
-[[package]]
-name = "vm"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "derive-new",
- "getset",
- "indexmap",
- "jclassfile 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libloading",
- "mockall",
- "murmur3",
- "nix",
- "num-traits",
- "num_enum",
- "once_cell",
- "os_info",
- "parking_lot",
- "path-absolutize",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
- "winapi",
-]
 
 [[package]]
 name = "wait-timeout"
