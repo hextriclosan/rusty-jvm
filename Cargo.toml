@@ -2,6 +2,15 @@
 name = "rusty-jvm"
 version = "0.1.0"
 edition = "2021"
+description = "An implementation of a Java Virtual Machine (JVM)."
+documentation = "https://docs.rs/rusty-jvm"
+homepage = "https://github.com/hextriclosan/rusty-jvm"
+repository = "https://github.com/hextriclosan/rusty-jvm"
+readme = "README.md"
+keywords = ["jvm", "java", "virtual-machine", "interpreter", "jvm-implementation"]
+categories = ["command-line-utilities", "emulators", "virtualization"]
+license = "MIT"
+exclude = [".github/**", "docs/**", "lib/**", "tests/**", "utils/**"]
 
 [workspace]
 members = ["jclassfile", "jdescriptor"]
