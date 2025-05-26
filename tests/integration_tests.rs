@@ -1231,6 +1231,11 @@ fn should_support_nop_opcode() {
 }
 
 #[test]
+fn should_support_dup2_x1_opcode() {
+    assert_success("samples.opcodes.dup2_x1.Dup2_X1GeneratedExample", "21321\n");
+}
+
+#[test]
 fn should_work_with_method_handle() {
     assert_success(
         "samples.reflection.methodhandleexample.MethodHandleExample",
