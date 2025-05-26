@@ -13,6 +13,11 @@ pub(crate) fn process(
 ) -> crate::error::Result<()> {
     let stack_frame = last_frame_mut(stack_frames)?;
     match code {
+        NOP => {
+            stack_frame.incr_pc();
+            trace!("NOP");
+            Ok(())
+        }
         ACONST_NULL => push_constant(stack_frame, 0i32, "ACONST_NULL"),
         ICONST_M1 => push_constant(stack_frame, -1i32, "ICONST_M1"),
         ICONST_0 => push_constant(stack_frame, 0i32, "ICONST_0"),

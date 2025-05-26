@@ -1226,6 +1226,11 @@ fn should_support_pop2_opcode() {
 }
 
 #[test]
+fn should_support_nop_opcode() {
+    assert_success("samples.opcodes.nop.NopGeneratedExample", "12\n");
+}
+
+#[test]
 fn should_work_with_method_handle() {
     assert_success(
         "samples.reflection.methodhandleexample.MethodHandleExample",
