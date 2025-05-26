@@ -34,7 +34,7 @@ fn main() {
             process::exit(EXIT_FAILURE);
         }
         Err(err) => {
-            eprintln!("Parsing error: {:?}", err);
+            eprintln!("Parsing error: {}", err);
             process::exit(EXIT_FAILURE);
         }
     };

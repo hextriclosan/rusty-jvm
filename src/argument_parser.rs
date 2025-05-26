@@ -1,10 +1,12 @@
 use derive_new::new;
 use getset::Getters;
 use std::collections::HashMap;
+use thiserror::Error;
 use crate::argument_parser::ParserError::NoEntryPointProvided;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub(crate) enum ParserError {
+    #[error("No Entry Point Provided.")]
     NoEntryPointProvided,
 }
 
