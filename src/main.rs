@@ -26,7 +26,16 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<_>>();
 
-    let parsed = group_args(raw_args).expect("Could not parse arguments");
+    let parsed = match group_args(raw_args) {
+        Ok(parsed) => parsed,
+        Err(err) if matches!(err, argument_parser::ParserError::NoEntryPointProvided) => {
+            eprintln!("{}", usage());
+            process::exit(EXIT_FAILURE);
+        }
+        Err(_) => {
+            todo!("Other parsing errors will be here if any");
+        }
+    };
 
     let exit_code = match VM::run(
         parsed.entry_point(),
@@ -42,4 +51,8 @@ fn main() {
     };
 
     process::exit(exit_code)
+}
+
+fn usage() -> &'static str {
+    "Usage: rusty-jvm [options] <mainclass> [args...]"
 }
