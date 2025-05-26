@@ -1,6 +1,6 @@
 mod argument_parser;
 
-use crate::argument_parser::group_args;
+use crate::argument_parser::{group_args, ParserError};
 use clap::{Arg, ArgAction, Command};
 
 use rusty_jvm::VM;
@@ -18,6 +18,7 @@ fn main() {
                 .trailing_var_arg(true)
                 .allow_hyphen_values(true),
         )
+        .override_help(help())
         .get_matches();
 
     let raw_args = matches
@@ -26,7 +27,17 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<_>>();
 
-    let parsed = group_args(raw_args).expect("Could not parse arguments");
+    let parsed = match group_args(raw_args) {
+        Ok(parsed) => parsed,
+        Err(err) if matches!(err, ParserError::NoEntryPointProvided) => {
+            eprintln!("{}", help());
+            process::exit(EXIT_FAILURE);
+        }
+        Err(err) => {
+            eprintln!("Parsing error: {}", err);
+            process::exit(EXIT_FAILURE);
+        }
+    };
 
     let exit_code = match VM::run(
         parsed.entry_point(),
@@ -42,4 +53,17 @@ fn main() {
     };
 
     process::exit(exit_code)
+}
+
+fn help() -> &'static str {
+    r#"Usage: rusty-jvm [options] <mainclass> [args...]
+
+Options:
+    -D<name>=<value>  Set a system property
+    -X<option>        JVM options
+    -XX:<option>      Advanced JVM options
+    --<option>        Java launcher options
+    -<option>         Java standard options
+    -h, --help        Show this help message
+"#
 }

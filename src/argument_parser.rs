@@ -1,8 +1,15 @@
 use derive_new::new;
 use getset::Getters;
 use std::collections::HashMap;
+use thiserror::Error;
 
-pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, String> {
+#[derive(Debug, PartialEq, Error)]
+pub(crate) enum ParserError {
+    #[error("No Entry Point Provided")]
+    NoEntryPointProvided,
+}
+
+pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, ParserError> {
     let mut java_standard_options = Vec::new();
     let mut java_launcher_options = Vec::new();
     let mut system_properties = HashMap::new();
@@ -38,7 +45,7 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, Strin
 
     program_args.extend(iter);
 
-    let entry_point = entry_point.ok_or_else(|| "No entry point provided".to_string())?;
+    let entry_point = entry_point.ok_or(ParserError::NoEntryPointProvided)?;
 
     Ok(ParsedArguments::new(
         entry_point,
@@ -110,13 +117,13 @@ mod tests {
 
         let result = group_args(raw_args);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "No entry point provided");
+        assert_eq!(result.unwrap_err(), ParserError::NoEntryPointProvided);
     }
 
     #[test]
     fn test_empty_args() {
         let result = group_args(vec![]);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "No entry point provided");
+        assert_eq!(result.unwrap_err(), ParserError::NoEntryPointProvided);
     }
 }
