@@ -1,6 +1,6 @@
 mod argument_parser;
 
-use crate::argument_parser::group_args;
+use crate::argument_parser::{group_args, ParserError};
 use clap::{Arg, ArgAction, Command};
 
 use rusty_jvm::VM;
@@ -29,7 +29,7 @@ fn main() {
 
     let parsed = match group_args(raw_args) {
         Ok(parsed) => parsed,
-        Err(err) if matches!(err, argument_parser::ParserError::NoEntryPointProvided) => {
+        Err(err) if matches!(err, ParserError::NoEntryPointProvided) => {
             eprintln!("{}", help());
             process::exit(EXIT_FAILURE);
         }
@@ -64,5 +64,6 @@ Options:
     -XX:<option>      Advanced JVM options
     --<option>        Java launcher options
     -<option>         Java standard options
-    -h, --help        Show this help message"#
+    -h, --help        Show this help message
+"#
 }

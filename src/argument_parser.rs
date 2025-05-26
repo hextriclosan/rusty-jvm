@@ -2,11 +2,10 @@ use derive_new::new;
 use getset::Getters;
 use std::collections::HashMap;
 use thiserror::Error;
-use crate::argument_parser::ParserError::NoEntryPointProvided;
 
 #[derive(Debug, PartialEq, Error)]
 pub(crate) enum ParserError {
-    #[error("No Entry Point Provided.")]
+    #[error("No Entry Point Provided")]
     NoEntryPointProvided,
 }
 
@@ -46,7 +45,7 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, Parse
 
     program_args.extend(iter);
 
-    let entry_point = entry_point.ok_or(NoEntryPointProvided)?;
+    let entry_point = entry_point.ok_or(ParserError::NoEntryPointProvided)?;
 
     Ok(ParsedArguments::new(
         entry_point,
@@ -118,13 +117,13 @@ mod tests {
 
         let result = group_args(raw_args);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), NoEntryPointProvided);
+        assert_eq!(result.unwrap_err(), ParserError::NoEntryPointProvided);
     }
 
     #[test]
     fn test_empty_args() {
         let result = group_args(vec![]);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), NoEntryPointProvided);
+        assert_eq!(result.unwrap_err(), ParserError::NoEntryPointProvided);
     }
 }
