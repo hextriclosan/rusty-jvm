@@ -1,6 +1,6 @@
 mod error;
 mod stack;
-pub mod vm;
+mod vm;
 
 mod exception;
 mod execution_engine;

@@ -2,7 +2,8 @@ mod argument_parser;
 
 use crate::argument_parser::group_args;
 use clap::{Arg, ArgAction, Command};
-use rusty_jvm_vm::VM;
+
+use rusty_jvm::VM;
 use std::process;
 
 const EXIT_SUCCESS: i32 = 0;
