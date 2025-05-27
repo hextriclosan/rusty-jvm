@@ -1241,6 +1241,11 @@ fn should_support_dup2_x2_opcode() {
 }
 
 #[test]
+fn should_support_swap_opcode() {
+    assert_success("samples.opcodes.swap.SwapGeneratedExample", "2\n");
+}
+
+#[test]
 fn should_work_with_method_handle() {
     assert_success(
         "samples.reflection.methodhandleexample.MethodHandleExample",
