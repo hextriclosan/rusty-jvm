@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 //Constants
 pub(crate) const NOP: u8 = 0;
 pub(crate) const ACONST_NULL: u8 = 1;
@@ -183,8 +181,10 @@ pub(crate) const IF_ACMPNE: u8 = 166;
 
 // Control
 pub(crate) const GOTO: u8 = 167;
-pub(crate) const JSR: u8 = 168;
-pub(crate) const RET: u8 = 169;
+#[allow(dead_code)]
+pub(crate) const JSR: u8 = 168; // Obsolete since Java 6 SE
+#[allow(dead_code)]
+pub(crate) const RET: u8 = 169; // Obsolete since Java 6 SE
 pub(crate) const TABLESWITCH: u8 = 170;
 pub(crate) const LOOKUPSWITCH: u8 = 171;
 pub(crate) const IRETURN: u8 = 172;
@@ -203,6 +203,7 @@ pub(crate) const INVOKEVIRTUAL: u8 = 182;
 pub(crate) const INVOKESPECIAL: u8 = 183;
 pub(crate) const INVOKESTATIC: u8 = 184;
 pub(crate) const INVOKEINTERFACE: u8 = 185;
+#[allow(dead_code)]
 pub(crate) const INVOKEDYNAMIC: u8 = 186;
 pub(crate) const NEW: u8 = 187;
 pub(crate) const NEWARRAY: u8 = 188;
@@ -219,10 +220,15 @@ pub(crate) const WIDE: u8 = 196;
 pub(crate) const MULTIANEWARRAY: u8 = 197;
 pub(crate) const IFNULL: u8 = 198;
 pub(crate) const IFNONNULL: u8 = 199;
+#[allow(dead_code)]
 pub(crate) const GOTO_W: u8 = 200;
-pub(crate) const JSR_W: u8 = 201;
+#[allow(dead_code)]
+pub(crate) const JSR_W: u8 = 201; // Obsolete since Java 6 SE
 
 // Reserved
+#[allow(dead_code)]
 pub(crate) const BREAKPOINT: u8 = 202;
+#[allow(dead_code)]
 pub(crate) const IMPDEP1: u8 = 254;
+#[allow(dead_code)]
 pub(crate) const IMPDEP2: u8 = 255;
