@@ -220,7 +220,6 @@ pub(crate) const WIDE: u8 = 196;
 pub(crate) const MULTIANEWARRAY: u8 = 197;
 pub(crate) const IFNULL: u8 = 198;
 pub(crate) const IFNONNULL: u8 = 199;
-#[allow(dead_code)]
 pub(crate) const GOTO_W: u8 = 200;
 #[allow(dead_code)]
 pub(crate) const JSR_W: u8 = 201; // Obsolete since Java 6 SE

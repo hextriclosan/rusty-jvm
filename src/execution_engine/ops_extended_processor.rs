@@ -75,6 +75,12 @@ pub(crate) fn process(
         }
         IFNULL => branch1arg(|a| a == 0, stack_frame, "IFNULL"),
         IFNONNULL => branch1arg(|a| a != 0, stack_frame, "IFNONNULL"),
+        GOTO_W => {
+            let stack_frame = last_frame_mut(stack_frames)?;
+            let offset = stack_frame.get_four_bytes_ahead();
+            stack_frame.advance_pc_wide(offset);
+            trace!("GOTO_W -> offset={offset}");
+        }
         _ => {
             return Err(Error::new_execution(&format!(
                 "Unknown extended opcode: {}",
