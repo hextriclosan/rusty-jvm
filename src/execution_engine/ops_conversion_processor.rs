@@ -19,6 +19,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
         F2D => convert::<f32, f64>(stack_frame, |from| from as f64, "F2D"),
         D2I => convert::<f64, i32>(stack_frame, |from| from as i32, "D2I"),
         D2L => convert::<f64, i64>(stack_frame, |from| from as i64, "D2L"),
+        D2F => convert::<f64, f32>(stack_frame, |from| from as f32, "D2F"),
         I2B => convert::<i32, i32>(stack_frame, |from| from as i8 as i32, "I2B"),
         I2C => convert::<i32, i32>(stack_frame, |from| from as u16 as i32, "I2C"),
         I2S => convert::<i32, i32>(stack_frame, |from| from as i16 as i32, "I2S"),
