@@ -14,6 +14,7 @@ public class DoubleOperations {
         double product = small * tiny;           // Multiplication with small numbers
         double quotient = huge / large;          // Division with large numbers
         double remainder = huge % large;         // Modulus operation
+        double negLarge = -large;                // Negation of a large number
 
 
         // Special cases
@@ -26,6 +27,7 @@ public class DoubleOperations {
         System.out.println(product);
         System.out.println(quotient);
         System.out.println(remainder);
+        System.out.println(negLarge);
         System.out.println(underflow);
         System.out.println(overflow);
         System.out.println(nan);
