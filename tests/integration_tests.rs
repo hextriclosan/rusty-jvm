@@ -370,6 +370,26 @@ fn should_do_native_call_on_system_current_time() {
 }
 
 #[test]
+fn should_do_operations_with_floats() {
+    assert_success(
+        "samples.arithmetics.operations.floats.FloatOperations",
+        r#"3.4028235E38
+3.4028235E38
+0.0
+1.7108213E8
+1.5857277E30
+NaN
+-1.989E30
+1.0
+Infinity
+0.0
+Infinity
+NaN
+"#,
+    );
+}
+
+#[test]
 fn should_do_operations_with_doubles() {
     assert_success(
         "samples.arithmetics.operations.doubles.DoubleOperations",
@@ -378,6 +398,8 @@ fn should_do_operations_with_doubles() {
 0.0
 8.547008547008547E277
 1.338773289334918E30
+NaN
+-1.989E30
 9.32579185520362E-74
 Infinity
 NaN

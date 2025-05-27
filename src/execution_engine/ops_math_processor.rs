@@ -26,9 +26,12 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> crate::error:
         DDIV => binary_operation(stack_frame, |a: f64, b: f64| a / b, "DDIV"),
         IREM => binary_operation(stack_frame, |a: i32, b| a.wrapping_rem(b), "IREM"), // todo add check for ArithmeticException here
         LREM => binary_operation(stack_frame, |a: i64, b| a.wrapping_rem(b), "LREM"), // todo add check for ArithmeticException here
+        FREM => binary_operation(stack_frame, |a: f32, b: f32| a % b, "FREM"),
         DREM => binary_operation(stack_frame, |a: f64, b: f64| a % b, "DREM"),
         INEG => unary_operation(stack_frame, |a: i32| a.wrapping_neg(), "INEG"),
         LNEG => unary_operation(stack_frame, |a: i64| a.wrapping_neg(), "LNEG"),
+        FNEG => unary_operation(stack_frame, |a: f32| -a, "FNEG"),
+        DNEG => unary_operation(stack_frame, |a: f64| -a, "DNEG"),
         ISHL => binary_operation(stack_frame, |a: i32, b: i32| a << (b & 0b00011111), "ISHL"),
         LSHL => binary_operation(
             stack_frame,
