@@ -164,6 +164,15 @@ impl StackFrame {
 
         ((branchbyte1 << 8) | branchbyte2) as i16
     }
+    
+    pub fn get_four_bytes_ahead(&self) -> i32 {
+        let byte1 = self.bytecode_ref[self.pc + 1] as u32;
+        let byte2 = self.bytecode_ref[self.pc + 2] as u32;
+        let byte3 = self.bytecode_ref[self.pc + 3] as u32;
+        let byte4 = self.bytecode_ref[self.pc + 4] as u32;
+
+        ((byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4) as i32
+    }
 
     pub fn extract_one_byte(&mut self) -> u8 {
         self.incr_pc();
@@ -204,6 +213,14 @@ impl StackFrame {
         }
     }
 
+    pub fn advance_pc_wide(&mut self, offset: i32) {
+        if offset >= 0 {
+            self.pc += offset as usize;
+        } else {
+            self.pc -= (-offset) as usize;
+        }
+    }
+    
     pub fn set_pc(&mut self, pc: i16) {
         self.pc = pc as usize;
     }

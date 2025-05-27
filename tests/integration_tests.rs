@@ -598,6 +598,7 @@ fn should_do_wide_instructions() {
 31.0
 10001000000
 Updated wide test
+Testing GOTO_W
 "#,
     );
 }
