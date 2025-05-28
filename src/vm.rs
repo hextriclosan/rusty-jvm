@@ -16,16 +16,15 @@ use tracing_subscriber::{fmt, EnvFilter};
 pub struct VM {}
 
 impl VM {
-    const JAVA_HOME_ENV: &'static str = "RUSTY_JAVA_HOME";
-
     pub fn run(
         main_class_name: &str,
         system_properties: HashMap<String, String>,
         program_args: &[String],
+        std_dir: &str,
     ) -> crate::error::Result<()> {
         init_system_properties(system_properties)?;
 
-        Self::prelude()?;
+        Self::prelude(std_dir)?;
 
         let internal_name = &main_class_name.replace('.', "/");
         StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
@@ -38,10 +37,9 @@ impl VM {
         )
     }
 
-    fn prelude() -> crate::error::Result<()> {
+    fn prelude(std_dir: &str) -> crate::error::Result<()> {
         Self::init_logger()?;
 
-        let std_dir = Self::get_std_dir()?;
         MethodArea::init(&std_dir)?;
 
         Self::init()?;
@@ -63,17 +61,6 @@ impl VM {
             .init();
 
         Ok(())
-    }
-
-    fn get_std_dir() -> crate::error::Result<String> {
-        if let Ok(rusty_java_home) = std::env::var(Self::JAVA_HOME_ENV) {
-            Ok(format!("{}/lib", rusty_java_home))
-        } else {
-            Err(Error::new_execution(&format!(
-                "{} environment variable is not set",
-                Self::JAVA_HOME_ENV
-            )))
-        }
     }
 
     fn init() -> crate::error::Result<()> {

@@ -194,9 +194,10 @@ pub fn assert_file(entry: &str, file_path: &str, expected_file_content: &str) {
 
 fn get_command(arguments: &[&str]) -> Command {
     let repo_path = REPO_PATH.as_path();
+    let lib_dir = repo_path.join("lib");
 
     let mut cmd = Command::cargo_bin("rusty-jvm").expect("Failed to locate rusty-jvm binary");
-    cmd.env("RUSTY_JAVA_HOME", repo_path)
+    cmd.env("RUSTY_LIB_DIR", lib_dir)
         .current_dir(PATH)
         .args(arguments);
     cmd

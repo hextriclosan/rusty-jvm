@@ -244,7 +244,12 @@ struct CleanUpOnPanic;
 impl Drop for CleanUpOnPanic {
     fn drop(&mut self) {
         if std::thread::panicking() {
-            let _ = remove_file(canonical_path());
+            remove_file(canonical_path()).unwrap_or_else(|e| {
+                eprintln!(
+                    "Failed to remove file during cleanup: {} ({e})",
+                    canonical_path().display()
+                );
+            });
         }
     }
 }

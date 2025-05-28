@@ -78,7 +78,12 @@ impl Drop for CleanUpOnPanic {
     fn drop(&mut self) {
         if std::thread::panicking() {
             env::set_current_dir(TEST_PATH.as_path()).unwrap();
-            remove_dir_all(&self.temp_dir).unwrap();
+            remove_dir_all(&self.temp_dir).unwrap_or_else(|e| {
+                eprintln!(
+                    "Failed to remove temp dir: {} ({e})",
+                    self.temp_dir.display()
+                )
+            });
         }
     }
 }

@@ -1,8 +1,9 @@
-mod argument_parser;
-
-use crate::argument_parser::{group_args, ParserError};
+mod cli;
+use crate::cli::argument_parser::group_args;
 use clap::{Arg, ArgAction, Command};
 
+use crate::cli::installer::{do_install, do_purge};
+use crate::cli::utils::resolve_std_dir;
 use rusty_jvm::VM;
 use std::process;
 
@@ -27,22 +28,60 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<_>>();
 
-    let parsed = match group_args(raw_args) {
-        Ok(parsed) => parsed,
-        Err(err) if matches!(err, ParserError::NoEntryPointProvided) => {
-            eprintln!("{}", help());
+    let parsed = group_args(raw_args);
+    if parsed.is_install_mode() {
+        let exit_code = match do_install(parsed.is_yes()) {
+            Ok(()) => EXIT_SUCCESS,
+            Err(err) => {
+                eprintln!("Installation failed: {}", err);
+                EXIT_FAILURE
+            }
+        };
+        process::exit(exit_code);
+    }
+
+    if parsed.is_purge_mode() {
+        let exit_code = match do_purge(parsed.is_yes()) {
+            Ok(()) => EXIT_SUCCESS,
+            Err(err) => {
+                eprintln!("Purge failed: {}", err);
+                EXIT_FAILURE
+            }
+        };
+        process::exit(exit_code);
+    }
+
+    let std_dir = match resolve_std_dir() {
+        Ok(Some(dir)) => dir,
+        Ok(None) => {
+            eprintln!(
+                r#"Standard library directory was not found. You can either:
+    - Run the installation command: rusty-jvm --install
+    - Set the RUSTY_LIB_DIR environment variable to the path of the standard libraries
+"#
+            );
             process::exit(EXIT_FAILURE);
         }
         Err(err) => {
-            eprintln!("Parsing error: {}", err);
+            eprintln!("Error resolving standard library directory: {}", err);
+            process::exit(EXIT_FAILURE);
+        }
+    };
+
+    let entry_point = match parsed.entry_point() {
+        Some(ep) => ep,
+        None => {
+            eprintln!("No entry point provided. Please specify the main class to run.");
+            eprintln!("{}", help());
             process::exit(EXIT_FAILURE);
         }
     };
 
     let exit_code = match VM::run(
-        parsed.entry_point(),
+        entry_point,
         parsed.system_properties().clone(),
         &parsed.program_args(),
+        &std_dir,
     ) {
         Ok(()) => EXIT_SUCCESS,
         Err(err) if err.is_exception_thrown() => EXIT_FAILURE, // Unhandled exception, print nothing here, since stack trace is already printed by the VM
@@ -65,5 +104,10 @@ Options:
     --<option>        Java launcher options
     -<option>         Java standard options
     -h, --help        Show this help message
+    
+Installation options:
+    --install         Download and install standard libraries
+    --purge           Remove all installed standard libraries
+    --yes             Automatically say "yes" to prompts
 "#
 }

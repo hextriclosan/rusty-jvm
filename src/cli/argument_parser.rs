@@ -1,15 +1,8 @@
 use derive_new::new;
 use getset::Getters;
 use std::collections::HashMap;
-use thiserror::Error;
 
-#[derive(Debug, PartialEq, Error)]
-pub(crate) enum ParserError {
-    #[error("No Entry Point Provided")]
-    NoEntryPointProvided,
-}
-
-pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, ParserError> {
+pub(crate) fn group_args(raw_args: Vec<String>) -> ParsedArguments {
     let mut java_standard_options = Vec::new();
     let mut java_launcher_options = Vec::new();
     let mut system_properties = HashMap::new();
@@ -45,9 +38,7 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, Parse
 
     program_args.extend(iter);
 
-    let entry_point = entry_point.ok_or(ParserError::NoEntryPointProvided)?;
-
-    Ok(ParsedArguments::new(
+    ParsedArguments::new(
         entry_point,
         program_args,
         java_standard_options,
@@ -55,19 +46,50 @@ pub(crate) fn group_args(raw_args: Vec<String>) -> Result<ParsedArguments, Parse
         system_properties,
         jvm_options,
         advanced_jvm_options,
-    ))
+    )
 }
 
 #[derive(PartialEq, Debug, new, Getters)]
 #[get = "pub"]
+/// Represents the parsed command-line arguments for the Java program.
 pub struct ParsedArguments {
-    entry_point: String,
+    /// The entry point for the Java program.  
+    /// This may be `None` when running in install or purge mode.
+    entry_point: Option<String>,
+    /// The arguments passed to the Java program.
     program_args: Vec<String>,
+    /// The standard Java options (e.g., `-version`, `-help`).
     java_standard_options: Vec<String>,
+    /// The options passed to the Java launcher (e.g., `--install`, `--purge`).
     java_launcher_options: Vec<String>,
+    /// System properties set for the Java program (e.g., `-Dproperty=value`).
     system_properties: HashMap<String, String>,
+    /// JVM options (e.g., `-Xmx1024m`).
     jvm_options: Vec<String>,
+    /// Advanced JVM options (e.g., `-XX:+UseG1GC`).
     advanced_jvm_options: Vec<String>,
+}
+
+impl ParsedArguments {
+    pub fn is_install_mode(&self) -> bool {
+        self.java_launcher_option_is_set("--install")
+    }
+
+    pub fn is_purge_mode(&self) -> bool {
+        self.java_launcher_option_is_set("--purge")
+    }
+
+    pub fn is_yes(&self) -> bool {
+        self.java_launcher_option_is_set("--yes")
+    }
+
+    fn java_launcher_option_is_set(&self, option: &str) -> bool {
+        if self.java_launcher_options().is_empty() {
+            return false;
+        }
+
+        self.java_launcher_options().iter().any(|v| v == option)
+    }
 }
 
 #[cfg(test)]
@@ -88,9 +110,9 @@ mod tests {
             "arg2".to_string(),
         ];
 
-        let parsed = group_args(raw_args).unwrap();
+        let parsed = group_args(raw_args);
         let expected = ParsedArguments::new(
-            "MainClass".to_string(),
+            Some("MainClass".to_string()),
             vec!["arg1".to_string(), "arg2".to_string()],
             vec!["-version".to_string()],
             vec!["--launcher-option".to_string()],
@@ -115,15 +137,24 @@ mod tests {
             "-XX:+UseG1GC".to_string(),
         ];
 
-        let result = group_args(raw_args);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ParserError::NoEntryPointProvided);
+        let parsed = group_args(raw_args);
+        let expected = ParsedArguments::new(
+            None,
+            vec![],
+            vec!["-version".to_string()],
+            vec!["--launcher-option".to_string()],
+            HashMap::from([("property".to_string(), "value".to_string())]),
+            vec!["-Xmx1024m".to_string()],
+            vec!["-XX:+UseG1GC".to_string()],
+        );
+        assert_eq!(parsed, expected);
     }
 
     #[test]
     fn test_empty_args() {
-        let result = group_args(vec![]);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ParserError::NoEntryPointProvided);
+        let parsed = group_args(vec![]);
+        let expected =
+            ParsedArguments::new(None, vec![], vec![], vec![], HashMap::new(), vec![], vec![]);
+        assert_eq!(parsed, expected);
     }
 }
