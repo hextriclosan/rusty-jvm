@@ -10,5 +10,6 @@ docker run -it --platform=linux/s390x -v <PROJECT_DIR>:/mnt/rusty-jvm --entrypoi
 cd /mnt/rusty-jvm/tests/test_data
 ```
 ```bash
-CARGO_TARGET_DIR=../../target/s390x-unknown-linux-gnu RUSTY_JAVA_HOME=../.. cargo test
+CARGO_TARGET_DIR=../../target/s390x-unknown-linux-gnu cargo run -- --install --yes
+CARGO_TARGET_DIR=../../target/s390x-unknown-linux-gnu cargo test
 ```

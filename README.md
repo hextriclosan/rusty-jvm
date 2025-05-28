@@ -22,9 +22,11 @@ Refer [integration tests](tests/test_data) for examples of supported Java featur
 
 #### Prerequisites
 Ensure you have the following:
-- A machine running Windows, macOS, or Linux.
-- Rust installed and configured.
-- The `RUSTY_JAVA_HOME` environment variable is set to the root of this project to locate Java standard library classes.
+- A machine running **Windows**, **macOS**, or **Linux**.
+- **Rust** installed and configured.
+- The **Java standard library classes**, which can be prepared by either:
+    - Running the installation command: `rusty-jvm --install`
+    - Setting the `RUSTY_LIB_DIR` environment variable to the path of the standard library ([lib](lib) directory from this repository is recommended).
 
 #### Example Program
 This program calculates the total attack power of a group of units in a game. 

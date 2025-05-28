@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  CRATES: ". jclassfile jdescriptor"
 
 jobs:
   build:
@@ -59,11 +58,11 @@ jobs:
       - name: Run checks, build, and test
         shell: bash
         run: |
-          for crate in $CRATES; do
-            cargo check --manifest-path $crate/Cargo.toml --verbose
-            cargo build --manifest-path $crate/Cargo.toml --verbose
-            cargo test --manifest-path $crate/Cargo.toml --verbose
-          done
+          cargo check --workspace --verbose
+          cargo build --workspace --verbose
+          cargo run --verbose -- --install --yes
+          cargo test --workspace --verbose
+          cargo run --verbose -- --purge --yes
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
@@ -111,6 +110,4 @@ jobs:
       - name: Run tests on s390x (Big Endian)
         shell: bash
         run: |
-          for crate in $CRATES; do
-            cross test --manifest-path $crate/Cargo.toml --target s390x-unknown-linux-gnu -- --test-threads=8
-          done
+          cross test --workspace --target s390x-unknown-linux-gnu -- --test-threads=8
