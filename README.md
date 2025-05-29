@@ -1,7 +1,6 @@
 # rusty-jvm
 ![Platform](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-blue)
 [![Build Status](https://github.com/hextriclosan/rusty-jvm/actions/workflows/rust.yml/badge.svg)](https://github.com/hextriclosan/rusty-jvm/actions)
-![LoC](https://tokei.rs/b1/github/hextriclosan/rusty-jvm?type=Rust)
 ![License](https://img.shields.io/github/license/hextriclosan/rusty-jvm)
 [![codecov](https://codecov.io/gh/hextriclosan/rusty-jvm/branch/main/graph/badge.svg)](https://codecov.io/gh/hextriclosan/rusty-jvm)
 [![dependency status](https://deps.rs/repo/github/hextriclosan/rusty-jvm/status.svg)](https://deps.rs/repo/github/hextriclosan/rusty-jvm)
