@@ -164,7 +164,7 @@ impl StackFrame {
 
         ((branchbyte1 << 8) | branchbyte2) as i16
     }
-    
+
     pub fn get_four_bytes_ahead(&self) -> i32 {
         let byte1 = self.bytecode_ref[self.pc + 1] as u32;
         let byte2 = self.bytecode_ref[self.pc + 2] as u32;
@@ -220,7 +220,7 @@ impl StackFrame {
             self.pc -= (-offset) as usize;
         }
     }
-    
+
     pub fn set_pc(&mut self, pc: i16) {
         self.pc = pc as usize;
     }
