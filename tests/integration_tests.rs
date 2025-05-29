@@ -1260,7 +1260,10 @@ fn should_support_dup2_x1_opcode() {
 
 #[test]
 fn should_support_dup2_x2_opcode() {
-    assert_success("samples.opcodes.dup2_x2.Dup2_X2GeneratedExample", "214321\n");
+    assert_success(
+        "samples.opcodes.dup2_x2.Dup2_X2GeneratedExample",
+        "214321\n",
+    );
 }
 
 #[test]
