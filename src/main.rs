@@ -1,5 +1,6 @@
 mod cli;
 use crate::cli::argument_parser::group_args;
+use crate::cli::help::help_msg;
 use crate::cli::installer::{do_install, do_purge};
 use crate::cli::utils::resolve_std_dir;
 use clap::{Arg, ArgAction, Command};
@@ -18,7 +19,7 @@ fn main() {
                 .trailing_var_arg(true)
                 .allow_hyphen_values(true),
         )
-        .override_help(help())
+        .override_help(help_msg())
         .get_matches();
 
     let raw_args = matches
@@ -71,7 +72,7 @@ fn main() {
         Some(ep) => ep,
         None => {
             eprintln!("No entry point provided. Please specify the main class to run.");
-            eprintln!("{}", help());
+            eprintln!("{}", help_msg());
             process::exit(EXIT_FAILURE);
         }
     };
@@ -91,22 +92,4 @@ fn main() {
     };
 
     process::exit(exit_code)
-}
-
-fn help() -> &'static str {
-    r#"Usage: rusty-jvm [options] <mainclass> [args...]
-
-Options:
-    -D<name>=<value>  Set a system property
-    -X<option>        JVM options
-    -XX:<option>      Advanced JVM options
-    --<option>        Java launcher options
-    -<option>         Java standard options
-    -h, --help        Show this help message
-    
-Installation options:
-    --install         Download and install standard libraries
-    --purge           Remove all installed standard libraries
-    --yes             Automatically say "yes" to prompts
-"#
 }

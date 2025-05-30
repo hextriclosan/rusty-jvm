@@ -6,7 +6,7 @@ use std::{env, fs, iter};
 const PATH: &str = "tests/test_data";
 
 #[derive(PartialEq)]
-enum ExecutionResult {
+pub enum ExecutionResult {
     Success,
     Failure,
 }
@@ -85,7 +85,8 @@ fn assert_success_with_args_with_stderr(
     expected_stdout: &str,
     expected_stderr: &str,
 ) {
-    assert_with_args_with_stderr(
+    assert_with_all_args(
+        &[],
         entry,
         arguments,
         expected_stdout,
@@ -100,7 +101,8 @@ fn assert_failure_with_args_with_stderr(
     expected_stdout: &str,
     expected_stderr: &str,
 ) {
-    assert_with_args_with_stderr(
+    assert_with_all_args(
+        &[],
         entry,
         arguments,
         expected_stdout,
@@ -109,7 +111,8 @@ fn assert_failure_with_args_with_stderr(
     )
 }
 
-fn assert_with_args_with_stderr(
+pub fn assert_with_all_args(
+    program_args: &[&str],
     entry: &str,
     arguments: &[&str],
     expected_stdout: &str,
@@ -121,7 +124,10 @@ fn assert_with_args_with_stderr(
     #[cfg(target_os = "windows")]
     let expected_stderr = to_windows(expected_stderr);
 
-    let args = iter::once(entry)
+    let args = program_args
+        .iter()
+        .copied()
+        .chain(iter::once(entry))
         .chain(arguments.iter().copied())
         .collect::<Vec<_>>();
     let assert = get_command(&args).assert();
