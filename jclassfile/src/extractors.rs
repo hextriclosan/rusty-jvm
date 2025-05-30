@@ -1,6 +1,5 @@
-use crate::error::Error;
 use crate::error::ErrorKind::Io;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use cesu8::from_java_cesu8;
 use num_traits::Num;
 use std::array::TryFromSliceError;

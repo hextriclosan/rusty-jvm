@@ -1,9 +1,8 @@
 mod cli;
 use crate::cli::argument_parser::group_args;
-use clap::{Arg, ArgAction, Command};
-
 use crate::cli::installer::{do_install, do_purge};
 use crate::cli::utils::resolve_std_dir;
+use clap::{Arg, ArgAction, Command};
 use rusty_jvm::VM;
 use std::process;
 
