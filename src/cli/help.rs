@@ -11,7 +11,7 @@ Options:
 
 Installation options:
     --install         Download and install standard libraries
-    --purge           Remove all installed standard libraries
+    --purge           Remove all versions of rusty-jvm installed standard libraries
     --yes             Automatically say "yes" to prompts
 "#
 }
