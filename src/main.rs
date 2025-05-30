@@ -3,7 +3,7 @@ use crate::cli::argument_parser::group_args;
 use crate::cli::installer::{do_install, do_purge};
 use crate::cli::utils::resolve_std_dir;
 use clap::{Arg, ArgAction, Command};
-use rusty_jvm::VM;
+use rusty_jvm::run;
 use std::process;
 
 const EXIT_SUCCESS: i32 = 0;
@@ -76,7 +76,7 @@ fn main() {
         }
     };
 
-    let exit_code = match VM::run(
+    let exit_code = match run(
         entry_point,
         parsed.system_properties().clone(),
         &parsed.program_args(),
