@@ -7,6 +7,7 @@ mod method_area;
 mod properties;
 mod stack;
 mod system_native;
+mod validation;
 
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
@@ -17,6 +18,7 @@ use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
+use crate::vm::validation::{validate_class_name, validate_std_dir};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
@@ -29,6 +31,9 @@ pub fn run(
     program_args: &[String],
     std_dir: &str,
 ) -> Result<()> {
+    validate_class_name(main_class_name)?;
+    validate_std_dir(std_dir)?;
+
     init_system_properties(system_properties)?;
 
     prelude(std_dir)?;
