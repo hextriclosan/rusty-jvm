@@ -1,5 +1,6 @@
 mod cli;
 use crate::cli::argument_parser::group_args;
+use crate::cli::help::help;
 use crate::cli::installer::{do_install, do_purge};
 use crate::cli::utils::resolve_std_dir;
 use clap::{Arg, ArgAction, Command};
@@ -91,22 +92,4 @@ fn main() {
     };
 
     process::exit(exit_code)
-}
-
-fn help() -> &'static str {
-    r#"Usage: rusty-jvm [options] <mainclass> [args...]
-
-Options:
-    -D<name>=<value>  Set a system property
-    -X<option>        JVM options
-    -XX:<option>      Advanced JVM options
-    --<option>        Java launcher options
-    -<option>         Java standard options
-    -h, --help        Show this help message
-    
-Installation options:
-    --install         Download and install standard libraries
-    --purge           Remove all installed standard libraries
-    --yes             Automatically say "yes" to prompts
-"#
 }
