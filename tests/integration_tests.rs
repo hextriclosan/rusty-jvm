@@ -346,8 +346,9 @@ upcasting(): [10, 20, 30]
 
 use crate::utils::{
     assert_failure, assert_failure_with_stderr, assert_file, assert_success_with_args,
-    assert_success_with_stderr, get_file_separator, get_os_name, get_output,
+    assert_success_with_stderr, assert_with_all_args, get_file_separator, get_os_name, get_output,
     get_output_with_raw_args, get_path_separator, is_bigendian, line_ending, map_library_name,
+    ExecutionResult,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -1842,5 +1843,32 @@ fn should_print_info_about_unhandled_exception() {
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun1(UnhandledExceptionExample.java:9)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.main(UnhandledExceptionExample.java:5)
 "#,
+    );
+}
+
+#[test]
+fn should_print_help_message() {
+    let expected_help = r#"Usage: rusty-jvm [options] <mainclass> [args...]
+
+Options:
+    -D<name>=<value>  Set a system property
+    -X<option>        JVM options
+    -XX:<option>      Advanced JVM options
+    --<option>        Java launcher options
+    -<option>         Java standard options
+    -h, --help        Show this help message
+
+Installation options:
+    --install         Download and install standard libraries
+    --purge           Remove all installed standard libraries
+    --yes             Automatically say "yes" to prompts
+"#;
+    assert_with_all_args(
+        &["--help"],
+        "",
+        &[],
+        expected_help,
+        "",
+        ExecutionResult::Success,
     );
 }

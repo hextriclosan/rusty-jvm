@@ -1,6 +1,6 @@
 mod cli;
 use crate::cli::argument_parser::group_args;
-use crate::cli::help::help;
+use crate::cli::help::help_msg;
 use crate::cli::installer::{do_install, do_purge};
 use crate::cli::utils::resolve_std_dir;
 use clap::{Arg, ArgAction, Command};
@@ -19,7 +19,7 @@ fn main() {
                 .trailing_var_arg(true)
                 .allow_hyphen_values(true),
         )
-        .override_help(help())
+        .override_help(help_msg())
         .get_matches();
 
     let raw_args = matches
@@ -72,7 +72,7 @@ fn main() {
         Some(ep) => ep,
         None => {
             eprintln!("No entry point provided. Please specify the main class to run.");
-            eprintln!("{}", help());
+            eprintln!("{}", help_msg());
             process::exit(EXIT_FAILURE);
         }
     };

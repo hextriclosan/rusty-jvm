@@ -1,4 +1,4 @@
-pub fn help() -> &'static str {
+pub fn help_msg() -> &'static str {
     r#"Usage: rusty-jvm [options] <mainclass> [args...]
 
 Options:
@@ -8,7 +8,7 @@ Options:
     --<option>        Java launcher options
     -<option>         Java standard options
     -h, --help        Show this help message
-    
+
 Installation options:
     --install         Download and install standard libraries
     --purge           Remove all installed standard libraries
