@@ -26,8 +26,7 @@ It provides robust support for handling Java type and method descriptors while l
 use crate::TypeDescriptor::*;
 use std::fmt;
 use std::fmt::Display;
-use std::str::Chars;
-use std::str::FromStr;
+use std::str::{Chars, FromStr};
 use thiserror::Error;
 
 /// Custom error types for descriptor parsing.

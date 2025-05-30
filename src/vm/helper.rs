@@ -1,0 +1,105 @@
+use crate::vm::error::{Error, Result};
+use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::stack_value::StackValue;
+use jdescriptor::TypeDescriptor;
+
+pub fn i32toi64(high: i32, low: i32) -> i64 {
+    let high_converted = (high as i64) << 32;
+    let low_converted = low as u32/*to prevent sign extension*/ as i64;
+
+    high_converted | low_converted
+}
+
+pub fn i64_to_vec(value: i64) -> Vec<i32> {
+    let low = value as i32;
+    let high = (value >> 32) as i32;
+
+    vec![high, low]
+}
+
+pub fn vec_to_i64(value: &[i32]) -> i64 {
+    match value.len() {
+        1 => value[0] as i64,
+        2 => i32toi64(value[0], value[1]),
+        _ => panic!("Invalid value length: {}", value.len()),
+    }
+}
+
+pub fn clazz_ref(class_name: &str) -> Result<i32> {
+    with_method_area(|area| {
+        let clazz_ref = area.load_reflection_class(class_name)?;
+        Ok::<i32, Error>(clazz_ref)
+    })
+}
+
+pub fn get_length(type_descriptor: &TypeDescriptor) -> Result<i32> {
+    match type_descriptor {
+        TypeDescriptor::Byte
+        | TypeDescriptor::Char
+        | TypeDescriptor::Integer
+        | TypeDescriptor::Short
+        | TypeDescriptor::Boolean
+        | TypeDescriptor::Float
+        | TypeDescriptor::Array(_, _)
+        | TypeDescriptor::Object(_) => Ok(1),
+        TypeDescriptor::Long | TypeDescriptor::Double => Ok(2),
+        TypeDescriptor::Void => Err(Error::new_execution("Void type doesn't have a length")),
+    }
+}
+
+pub fn default_value(type_descriptor: &TypeDescriptor) -> Result<Vec<i32>> {
+    match type_descriptor {
+        TypeDescriptor::Byte
+        | TypeDescriptor::Char
+        | TypeDescriptor::Integer
+        | TypeDescriptor::Short
+        | TypeDescriptor::Boolean => Ok(vec![0]),
+        TypeDescriptor::Float => Ok(0.0f32.to_vec()),
+        TypeDescriptor::Long => Ok(vec![0, 0]),
+        TypeDescriptor::Double => Ok(0.0f64.to_vec()),
+        TypeDescriptor::Array(_, _) => Ok(vec![0]),
+        TypeDescriptor::Object(_) => Ok(vec![0]),
+        TypeDescriptor::Void => Err(Error::new_execution("Void type doesn't have a value")),
+    }
+}
+
+pub fn argument_length(args: &[TypeDescriptor]) -> Result<i32> {
+    args.iter().map(get_length).sum()
+}
+
+pub fn strip_nest_host(class_name: &str) -> Option<&str> {
+    class_name.find('$').map(|index| &class_name[..index])
+}
+
+pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
+    let class_of_array = "java/lang/String";
+    let class_of_array = format!("[L{class_of_array};");
+    let length = props.len() as i32;
+    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
+
+    for (index, prop) in props.iter().enumerate() {
+        let string_ref = StringPoolHelper::get_string(prop.to_string())?;
+        with_heap_write_lock(|heap| {
+            heap.set_array_value(array_ref, index as i32, vec![string_ref])
+        })?
+    }
+
+    Ok(array_ref)
+}
+
+#[cfg(unix)]
+pub fn get_fd(fd_ref: i32) -> Result<i32> {
+    with_heap_read_lock(|heap| {
+        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?;
+        Ok::<i32, Error>(raw[0])
+    })
+}
+#[cfg(windows)]
+pub fn get_handle(fd_ref: i32) -> Result<i64> {
+    with_heap_read_lock(|heap| {
+        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
+        Ok::<i64, Error>(vec_to_i64(&raw))
+    })
+}

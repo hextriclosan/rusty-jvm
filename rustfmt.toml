@@ -1,1 +1,4 @@
 max_width = 99
+group_imports = "One"
+imports_granularity = "Module"
+reorder_imports = true

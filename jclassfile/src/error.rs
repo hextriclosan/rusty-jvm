@@ -1,6 +1,7 @@
 use crate::error::ErrorKind::{InvalidInput, Io};
+use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
-use std::{error::Error as StdError, io, result};
+use std::{io, result};
 
 pub(crate) type Result<T> = result::Result<T, Error>;
 
