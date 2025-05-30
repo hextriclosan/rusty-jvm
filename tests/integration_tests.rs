@@ -1861,7 +1861,7 @@ Options:
 
 Installation options:
     --install         Download and install standard libraries
-    --purge           Remove all versions of rusty-jvm installed standard libraries
+    --purge           Remove all versions of installed rusty-jvm standard libraries
     --yes             Automatically say "yes" to prompts
 "#;
     assert_with_all_args(
