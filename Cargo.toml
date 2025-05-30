@@ -49,3 +49,4 @@ nix = { version = "0.30.0", features = ["fs"] }
 assert_cmd = "2.0.17"
 regex = "1.11.1"
 mockall = "0.13.1"
+tempfile = "3.20.0"
