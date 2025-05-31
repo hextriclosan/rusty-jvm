@@ -52,31 +52,36 @@ fn handle_normal(parsed: ParsedArguments) -> Result<i32, String> {
         ));
     }
 
-    let std_dir = resolve_std_dir().map_err(|err| {
-        format!("Error resolving standard library directory: {}", err)
-    })?;
+    let std_dir = resolve_std_dir()
+        .map_err(|err| format!("Error resolving standard library directory: {}", err))?;
 
     let std_dir = std_dir.ok_or_else(|| {
         r#"Standard library directory was not found. You can either:
 - Run the installation command: rusty-jvm --install
 - Set the RUSTY_LIB_DIR environment variable to the path of the standard libraries
 "#
-            .to_string()
+        .to_string()
     })?;
 
-    run(&parsed, &std_dir).map(|()| EXIT_SUCCESS).map_err(|err| {
-        if err.is_exception_thrown() {
-            String::new() // no error message needed for exceptions since it already handled by the VM
-        } else {
-            format!("VM execution failed: {}", err)
-        }
-    })
+    run(&parsed, &std_dir)
+        .map(|()| EXIT_SUCCESS)
+        .map_err(|err| {
+            if err.is_exception_thrown() {
+                String::new() // no error message needed for exceptions since it already handled by the VM
+            } else {
+                format!("VM execution failed: {}", err)
+            }
+        })
 }
 
 fn handle_install(yes: bool) -> Result<i32, String> {
-    do_install(yes).map(|()| EXIT_SUCCESS).map_err(|err| format!("Installation failed: {}", err))
+    do_install(yes)
+        .map(|()| EXIT_SUCCESS)
+        .map_err(|err| format!("Installation failed: {}", err))
 }
 
 fn handle_purge(yes: bool) -> Result<i32, String> {
-    do_purge(yes).map(|()| EXIT_SUCCESS).map_err(|err| format!("Purge failed: {}", err))
+    do_purge(yes)
+        .map(|()| EXIT_SUCCESS)
+        .map_err(|err| format!("Purge failed: {}", err))
 }
