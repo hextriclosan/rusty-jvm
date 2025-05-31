@@ -29,7 +29,7 @@ fn main() {
         .collect::<Vec<_>>();
 
     let exit_code = handle_execution(raw_args.into()).unwrap_or_else(|msg| {
-        eprint!("{msg}");
+        eprintln!("{msg}");
         EXIT_FAILURE
     });
 
