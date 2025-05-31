@@ -1863,12 +1863,12 @@ Installation options:
     --purge           Remove all versions of installed rusty-jvm standard libraries
     --yes             Automatically say "yes" to prompts
 "#;
-    assert_with_all_args(
+    utils::assert_with_all_args(
         &["--help"],
         "",
         &[],
         expected_stdout,
         "",
-        ExecutionResult::Success,
+        utils::ExecutionResult::Success,
     );
 }
