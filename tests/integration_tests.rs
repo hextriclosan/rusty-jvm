@@ -346,9 +346,8 @@ upcasting(): [10, 20, 30]
 
 use crate::utils::{
     assert_failure, assert_failure_with_stderr, assert_file, assert_success_with_args,
-    assert_success_with_stderr, assert_with_all_args, get_file_separator, get_os_name, get_output,
+    assert_success_with_stderr, get_file_separator, get_os_name, get_output,
     get_output_with_raw_args, get_path_separator, is_bigendian, line_ending, map_library_name,
-    ExecutionResult,
 };
 use regex::Regex;
 use serde_json::Value;
