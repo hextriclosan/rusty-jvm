@@ -4,7 +4,6 @@ use crate::vm::system_native::properties_provider::properties::{
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| {
@@ -57,7 +56,7 @@ static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> =
 pub static OVERRIDDEN_PLATFORM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
 pub static OVERRIDDEN_VM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
 
-pub fn init_system_properties(system_properties: HashMap<String, String>) -> Result<()> {
+pub fn init_system_properties(system_properties: IndexMap<String, String>) -> Result<()> {
     let mut overridden_platform_props = deep_clone(&DEFAULT_PLATFORM_PROPERTIES);
     let mut overridden_vm_props = deep_clone(&DEFAULT_VM_PROPERTIES);
 
@@ -98,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_init_system_properties() {
-        let system_properties = HashMap::from([
+        let system_properties = IndexMap::from([
             ("os.name".to_string(), "new_os_name".to_string()),
             ("java.home".to_string(), "new_java_home".to_string()),
             ("other.property".to_string(), "other_value".to_string()),

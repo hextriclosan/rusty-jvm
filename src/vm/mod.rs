@@ -19,29 +19,33 @@ use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::{validate_class_name, validate_std_dir};
-use std::collections::HashMap;
+use crate::ParsedArguments;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
-pub fn run(
-    main_class_name: &str,
-    system_properties: HashMap<String, String>,
-    program_args: &[String],
-    std_dir: &str,
-) -> Result<()> {
+/// Launches the Rusty Java Virtual Machine with the given arguments.
+///
+/// This function initializes the JVM, loads the specified main class, and invokes its `main` method.
+///
+/// # Arguments
+///
+/// * `parsed_args` - The parsed command-line arguments, including the entry point class and program arguments.
+/// * `std_dir` - The path to the standard library directory containing core Java classes.
+pub fn run(parsed_args: &ParsedArguments, std_dir: &str) -> Result<()> {
+    let main_class_name = parsed_args.entry_point();
     validate_class_name(main_class_name)?;
     validate_std_dir(std_dir)?;
 
-    init_system_properties(system_properties)?;
+    init_system_properties(parsed_args.system_properties().clone())?;
 
     prelude(std_dir)?;
 
     let internal_name = &main_class_name.replace('.', "/");
     StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
 
-    let args_array_ref = create_array_of_strings(program_args)?;
+    let args_array_ref = create_array_of_strings(parsed_args.program_args())?;
     Executor::invoke_static_method(
         internal_name,
         "main:([Ljava/lang/String;)V",
