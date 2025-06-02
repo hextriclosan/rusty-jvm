@@ -9,11 +9,11 @@
 
 ## Introduction
 
-Writing a JVM has long been a dream of mine, so I decided to give it a try—combining my curiosity about how suitable Rust is for such a task with my desire to see how far I could push it.
-I'm not the first to explore this idea — [this project][rjvm-articles] is a well-known and easily searchable example — but unlike that project, I aim to create a JVM capable of running as much Java code as possible.
-I didn’t expect to get this far.
+Writing a JVM has long been a dream of mine, so I decided to give it a try combining my curiosity about how suitable Rust is for such a task with my desire to see how far I could push it.
+I'm not the first to explore this idea [this project][rjvm-articles] is a well-known and easily searchable example but unlike that project, I aim to create a JVM capable of running as much Java code as possible.
+I have to say, I didn’t expect to get this far.
 Java code is run in interpreted mode, meaning the JVM reads and executes bytecode instructions directly without compiling them to native code, so please don't expect high performance.
-There is no dependency on any existing JVM implementation—everything related to Java is implemented from scratch.
+There is no dependency on any existing JVM implementation everything related to Java is implemented from scratch.
 One major feature that’s still missing is garbage collection. That’s the next big milestone.
 
 ## Implemented Key Features
