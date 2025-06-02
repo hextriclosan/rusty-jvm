@@ -3,7 +3,7 @@
 ## What's Changed
 * Added support for opcodes: `nop`, `dup2_x1`, `dup2_x2`, `swap`, `frem`, `fneg`, `dneg`, `d2f`, `goto_w`
 * Added option for installing and removing standard library classes
-* Library API refactored
+* Refactored Library API
 
 
 # 0.1.0
