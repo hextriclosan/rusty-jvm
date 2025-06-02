@@ -1,3 +1,43 @@
+//! # Rusty JVM
+//!
+//! A JVM interpreter written in Rust from scratch — no dependency on existing JVMs.
+//!
+//! `rusty-jvm` executes Java bytecode in interpreted mode and aims to support as much of the Java language as possible.
+//! Currently supports a range of Java language features up to Java 23 (excluding GC and lambdas for now).
+//!
+//! ## Features
+//! Refer to the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/main/README.md#implemented-key-features)
+//!
+//! ## Usage Modes
+//!
+//! The binary supports three main modes, based on CLI arguments:
+//!
+//! - (default) Runs a Java class file with an entry point.
+//! - `--install` – Installs standard libraries (used by the VM).
+//! - `--purge` – Removes installed standard libraries.
+//!
+//! ## Example
+//! ### Installing core libraries
+//! ```bash
+//! rusty-jvm --install
+//! ```
+//! ### Creating a simple Java program
+//! ###### Windows
+//! ```bash
+//! echo public class Hello { public static void main(String[] args) { System.out.println("Hello, world!"); } } > Hello.java
+//! ```
+//! ###### Unix-like systems
+//! ```bash
+//! echo 'public class Hello { public static void main(String[] args) { System.out.println("Hello, world!"); } }' > Hello.java
+//! ```
+//! ### Compiling the Java program (current supported version is Java 23)
+//! ```bash
+//! javac Hello.java
+//! ```
+//! ### Running the compiled Java program with Rusty JVM
+//! ```bash
+//! rusty-jvm Hello
+//! ```
 mod vm;
 use derive_new::new;
 use getset::Getters;
