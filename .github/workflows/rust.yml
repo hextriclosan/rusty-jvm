@@ -60,9 +60,9 @@ jobs:
         run: |
           cargo check --workspace --verbose
           cargo build --workspace --verbose
-          #cargo run --verbose -- --install --yes
+          cargo run --verbose -- --install --yes
           cargo test --workspace --verbose
-          #cargo run --verbose -- --purge --yes
+          cargo run --verbose -- --purge --yes
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
