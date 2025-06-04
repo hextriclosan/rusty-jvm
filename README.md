@@ -50,9 +50,10 @@ Ensure the following are set up:
 
 - A machine running **Windows**, **macOS**, or **Linux**
 - **Rust** installed and configured
-- The **Java standard library classes**, prepared by either:
-  - Running the installation command: `rusty-jvm --install`
-  - Setting the `RUSTY_LIB_DIR` environment variable to the path of the standard library (recommended: the [lib](lib) directory in this repository)
+- The **Java standard library classes**, required via **one** of the following:
+    - Run the installation command: `rusty-jvm --install`
+    - **OR** set the `RUSTY_LIB_DIR` environment variable to the path of the standard library  
+      (recommended: the [lib](lib) directory in this repository)
 
 ### Example Program
 
