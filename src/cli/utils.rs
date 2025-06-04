@@ -15,7 +15,8 @@ pub fn resolve_std_dir() -> Result<Option<String>, Box<dyn std::error::Error>> {
 }
 
 fn resolve_data_dir() -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let lib_dir = current_version_data_dir()?;
+    let data_dir = current_version_data_dir()?;
+    let lib_dir = data_dir.join("lib");
     dir_non_empty(&lib_dir).and_then(|non_empty| {
         if non_empty {
             Ok(Some(lib_dir.display().to_string()))
@@ -27,8 +28,8 @@ fn resolve_data_dir() -> Result<Option<String>, Box<dyn std::error::Error>> {
 
 pub fn current_version_data_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let data_dir = data_dir()?;
-    let lib_dir = data_dir.join(format!("v{}", VERSION)).join("lib");
-    Ok(lib_dir)
+    let versioned_data_dir = data_dir.join(format!("v{}", VERSION));
+    Ok(versioned_data_dir)
 }
 
 pub fn data_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {

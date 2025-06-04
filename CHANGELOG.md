@@ -1,3 +1,10 @@
+# 0.2.1
+
+## What's Changed
+* Rework installation
+* Polishing readme
+
+
 # 0.2.0
 
 ## What's Changed
