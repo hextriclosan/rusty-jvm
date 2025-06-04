@@ -19,7 +19,7 @@ use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::{validate_class_name, validate_std_dir};
-use crate::ParsedArguments;
+use crate::Arguments;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -33,7 +33,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 ///
 /// * `parsed_args` - The parsed command-line arguments, including the entry point class and program arguments.
 /// * `std_dir` - The path to the standard library directory containing core Java classes.
-pub fn run(parsed_args: &ParsedArguments, std_dir: &str) -> Result<()> {
+pub fn run(parsed_args: &Arguments, std_dir: &str) -> Result<()> {
     let main_class_name = parsed_args.entry_point();
     validate_class_name(main_class_name)?;
     validate_std_dir(std_dir)?;

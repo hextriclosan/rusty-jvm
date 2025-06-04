@@ -4,7 +4,7 @@ use crate::cli::help::help_msg;
 use crate::cli::installer::{do_install, do_purge};
 use crate::cli::utils::resolve_std_dir;
 use clap::{Arg, ArgAction, Command};
-use rusty_jvm::{run, ParsedArguments};
+use rusty_jvm::{run, Arguments};
 use std::process;
 
 const EXIT_SUCCESS: i32 = 0;
@@ -44,7 +44,7 @@ fn handle_execution(mode: ExecutionMode) -> Result<i32, String> {
     }
 }
 
-fn handle_normal(parsed: ParsedArguments) -> Result<i32, String> {
+fn handle_normal(parsed: Arguments) -> Result<i32, String> {
     if parsed.entry_point().is_empty() {
         return Err(format!(
             "No entry point provided. Please specify the main class to run.\n{}",
