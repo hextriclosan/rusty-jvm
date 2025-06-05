@@ -38,14 +38,14 @@ fn main() {
 
 fn handle_execution(mode: ExecutionMode) -> Result<i32, String> {
     match mode {
-        ExecutionMode::Normal(parsed) => handle_normal(parsed),
+        ExecutionMode::Normal(args) => handle_normal(args),
         ExecutionMode::Install(yes) => handle_install(yes),
         ExecutionMode::Purge(yes) => handle_purge(yes),
     }
 }
 
-fn handle_normal(parsed: Arguments) -> Result<i32, String> {
-    if parsed.entry_point().is_empty() {
+fn handle_normal(arguments: Arguments) -> Result<i32, String> {
+    if arguments.entry_point().is_empty() {
         return Err(format!(
             "No entry point provided. Please specify the main class to run.\n{}",
             help_msg()
@@ -63,7 +63,7 @@ fn handle_normal(parsed: Arguments) -> Result<i32, String> {
         .to_string()
     })?;
 
-    run(&parsed, &std_dir)
+    run(&arguments, &std_dir)
         .map(|()| EXIT_SUCCESS)
         .map_err(|err| {
             if err.is_exception_thrown() {

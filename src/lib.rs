@@ -46,7 +46,7 @@ pub use vm::run;
 
 #[derive(PartialEq, Debug, new, Getters, Default)]
 #[get = "pub"]
-/// Represents the parsed command-line arguments for the Java program.
+/// Represents the command-line arguments for the Java program.
 pub struct Arguments {
     /// The entry point for the Java program.  
     /// This may be empty when running in install or purge mode.

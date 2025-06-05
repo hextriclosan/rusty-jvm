@@ -345,7 +345,7 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_failure, assert_failure_with_stderr, assert_file, assert_success_with_args,
+    assert_failure, assert_file, assert_success_with_args,
     assert_success_with_stderr, get_file_separator, get_os_name, get_output,
     get_output_with_raw_args, get_path_separator, is_bigendian, line_ending, map_library_name,
 };
@@ -1825,7 +1825,7 @@ This is another error output.
 #[cfg(not(windows))] // todo: fix this test on Windows
 #[test]
 fn should_print_info_about_unhandled_exception() {
-    assert_failure_with_stderr(
+    crate::utils::assert_failure_with_stderr(
         "samples.javacore.unhandledexception.UnhandledExceptionExample",
         r#""#,
         r#"Exception in thread "system" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5

@@ -12,7 +12,7 @@ pub(crate) enum ExecutionMode {
     Purge(bool),
 }
 
-/// Converts a vector of raw command-line arguments into a `ParsedArguments` instance.
+/// Converts a vector of raw command-line arguments into an `ExecutionMode`.
 impl From<Vec<String>> for ExecutionMode {
     fn from(raw_args: Vec<String>) -> Self {
         let mut java_standard_options = Vec::new();
