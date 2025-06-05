@@ -1,18 +1,18 @@
 use indexmap::IndexMap;
-use rusty_jvm::ParsedArguments;
+use rusty_jvm::Arguments;
 
 #[derive(PartialEq, Debug)]
 /// Represents the mode in which the Java program is running.
 pub(crate) enum ExecutionMode {
     /// Normal mode, used for running the Java program.
-    Normal(ParsedArguments),
+    Normal(Arguments),
     /// Install mode, used for installing the Java program.
     Install(bool),
     /// Purge mode, used for uninstalling the Java program.
     Purge(bool),
 }
 
-/// Converts a vector of raw command-line arguments into a `ParsedArguments` instance.
+/// Converts a vector of raw command-line arguments into an `ExecutionMode`.
 impl From<Vec<String>> for ExecutionMode {
     fn from(raw_args: Vec<String>) -> Self {
         let mut java_standard_options = Vec::new();
@@ -55,7 +55,7 @@ impl From<Vec<String>> for ExecutionMode {
         } else if is_purge_mode(&java_launcher_options) {
             ExecutionMode::Purge(is_yes(&java_launcher_options))
         } else {
-            ExecutionMode::Normal(ParsedArguments::new(
+            ExecutionMode::Normal(Arguments::new(
                 entry_point,
                 program_args,
                 java_standard_options,
@@ -107,7 +107,7 @@ mod tests {
         ];
 
         let parsed: ExecutionMode = raw_args.into();
-        let expected = ExecutionMode::Normal(ParsedArguments::new(
+        let expected = ExecutionMode::Normal(Arguments::new(
             "MainClass".to_string(),
             vec!["arg1".to_string(), "arg2".to_string()],
             vec!["-version".to_string()],
@@ -134,7 +134,7 @@ mod tests {
         ];
 
         let parsed: ExecutionMode = raw_args.into();
-        let expected = ExecutionMode::Normal(ParsedArguments::new(
+        let expected = ExecutionMode::Normal(Arguments::new(
             "".to_string(),
             vec![],
             vec!["-version".to_string()],
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn test_empty_args() {
         let parsed: ExecutionMode = vec![].into();
-        let expected = ExecutionMode::Normal(ParsedArguments::new(
+        let expected = ExecutionMode::Normal(Arguments::new(
             "".to_string(),
             vec![],
             vec![],

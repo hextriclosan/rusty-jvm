@@ -44,10 +44,10 @@ use getset::Getters;
 use indexmap::IndexMap;
 pub use vm::run;
 
-#[derive(PartialEq, Debug, new, Getters)]
+#[derive(PartialEq, Debug, new, Getters, Default)]
 #[get = "pub"]
-/// Represents the parsed command-line arguments for the Java program.
-pub struct ParsedArguments {
+/// Represents the command-line arguments for the Java program.
+pub struct Arguments {
     /// The entry point for the Java program.  
     /// This may be empty when running in install or purge mode.
     entry_point: String,
@@ -63,4 +63,18 @@ pub struct ParsedArguments {
     jvm_options: Vec<String>,
     /// Advanced JVM options (e.g., `-XX:+UseG1GC`).
     advanced_jvm_options: Vec<String>,
+}
+
+impl Arguments {
+    /// Creates a new `Arguments` instance with the specified entry point.
+    /// # Arguments
+    /// * `entry_point` - The entry point for the Java program.
+    /// # Returns
+    /// A new `Arguments` instance with the specified entry point and default values for other fields.
+    pub fn new_with_entry_point(entry_point: String) -> Self {
+        Self {
+            entry_point,
+            ..Default::default()
+        }
+    }
 }
