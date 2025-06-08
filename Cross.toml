@@ -1,0 +1,6 @@
+[target.s390x-unknown-linux-gnu]
+env.passthrough = [
+    "HOME",
+    "CARGO_TERM_COLOR",
+    "RUST_LOG",
+]
