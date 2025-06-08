@@ -4,3 +4,9 @@ env.passthrough = [
     "CARGO_TERM_COLOR",
     "RUST_LOG",
 ]
+
+env.volumes = [
+    # Mount the host's home directory ($HOME) to the same path inside the container.
+    # On GitHub runners, $HOME is /home/runner, so this maps /home/runner -> /home/runner.
+    "$HOME:$HOME",
+]
