@@ -118,10 +118,10 @@ jobs:
           # 2. Set XDG_DATA_HOME to the path that is valid INSIDE the container.
           echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
 
-      # (Optional) Add this step for debugging to confirm the directory is visible inside the container
-      - name: DEBUG - Verify directory in container
-        if: always() # Run even if previous steps fail
-        run: cross run --target s390x-unknown-linux-gnu -- sh -c 'echo "--- Listing /project directory inside container ---" && ls -la /project'
+#      # (Optional) Add this step for debugging to confirm the directory is visible inside the container
+#      - name: DEBUG - Verify directory in container
+#        if: always() # Run even if previous steps fail
+#        run: cross run --target s390x-unknown-linux-gnu -- sh -c 'echo "--- Listing /project directory inside container ---" && ls -la /project'
 
       - name: Run tests on s390x (Big Endian)
         shell: bash
