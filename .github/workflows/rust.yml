@@ -111,12 +111,17 @@ jobs:
       - name: Create temporary data directory for cross-compilation
         shell: bash
         run: |
-          # Create a temporary directory inside the workspace, which is mounted into the container
-          TEMP_DATA_DIR="${{ github.workspace }}/.tmp-xdg-data"
-          mkdir -p "$TEMP_DATA_DIR"
+          # 1. Create the directory on the HOST. This is correct.
+          #    This will appear at /project/.tmp-xdg-data inside the container.
+          mkdir -p "${{ github.workspace }}/.tmp-xdg-data"
+          
+          # 2. Set XDG_DATA_HOME to the path that is valid INSIDE the container.
+          echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
 
-          # Set the XDG_DATA_HOME env var for subsequent steps in this job
-          echo "XDG_DATA_HOME=$TEMP_DATA_DIR" >> $GITHUB_ENV
+      # (Optional) Add this step for debugging to confirm the directory is visible inside the container
+      - name: DEBUG - Verify directory in container
+        if: always() # Run even if previous steps fail
+        run: cross run --target s390x-unknown-linux-gnu -- sh -c 'echo "--- Listing /project directory inside container ---" && ls -la /project'
 
       - name: Run tests on s390x (Big Endian)
         shell: bash
