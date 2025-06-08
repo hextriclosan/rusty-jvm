@@ -51,7 +51,15 @@ fn download() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         .build()?;
 
     let response = client.get(target_url).send()?;
-    println!("Download finished with status: {}", response.status());
+    let status_code = response.status();
+    println!("Download finished with status: {status_code}");
+    if !status_code.is_success() {
+        return Err(format!(
+            "Failed to download libraries: {}",
+            status_code
+        )
+        .into());
+    }
     Ok(response.bytes()?.to_vec())
 }
 
