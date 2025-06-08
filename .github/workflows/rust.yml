@@ -55,14 +55,10 @@ jobs:
             cargo-${{ runner.os }}-
             cargo-
 
-      - name: Run checks, build, and test
+      - name: Install java core libraries
         shell: bash
         run: |
-          cargo check --workspace --verbose
-          cargo build --workspace --verbose
           cargo run --verbose -- --install --yes
-          cargo test --workspace --verbose
-          cargo run --verbose -- --purge --yes
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
@@ -77,6 +73,11 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+      - name: Uninstall java core libraries
+        shell: bash
+        run: |
+          cargo run --verbose -- --purge --yes
 
   test-on-s390x:
     name: build (linux big-endian)
@@ -107,7 +108,16 @@ jobs:
         shell: bash
         run: cargo install cross
 
+      - name: Create temporary data directory for cross-compilation
+        shell: bash
+        run: |
+          mkdir -p "${{ github.workspace }}/.tmp-xdg-data"
+          echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
+
       - name: Run tests on s390x (Big Endian)
         shell: bash
         run: |
-          cross test --workspace --target s390x-unknown-linux-gnu -- --test-threads=8
+          set -e
+          cross run --target s390x-unknown-linux-gnu --verbose -- --install --yes
+          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+          cross run --target s390x-unknown-linux-gnu --verbose -- --purge --yes
