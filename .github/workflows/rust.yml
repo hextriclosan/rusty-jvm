@@ -108,6 +108,16 @@ jobs:
         shell: bash
         run: cargo install cross
 
+      - name: Create temporary data directory for cross-compilation
+        shell: bash
+        run: |
+          # Create a temporary directory inside the workspace, which is mounted into the container
+          TEMP_DATA_DIR="${{ github.workspace }}/.tmp-xdg-data"
+          mkdir -p "$TEMP_DATA_DIR"
+
+          # Set the XDG_DATA_HOME env var for subsequent steps in this job
+          echo "XDG_DATA_HOME=$TEMP_DATA_DIR" >> $GITHUB_ENV
+
       - name: Run tests on s390x (Big Endian)
         shell: bash
         run: |
