@@ -1,13 +1,4 @@
 [target.s390x-unknown-linux-gnu]
 env.passthrough = [
-    "HOME",
-    "CARGO_TERM_COLOR",
-    "RUST_LOG",
     "XDG_DATA_HOME",
 ]
-
-#env.volumes = [
-#    # Mount the host's home directory ($HOME) to the same path inside the container.
-#    # On GitHub runners, $HOME is /home/runner, so this maps /home/runner -> /home/runner.
-#    "$HOME:$HOME",
-#]
