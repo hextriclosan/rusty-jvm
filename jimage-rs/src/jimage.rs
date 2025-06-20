@@ -109,12 +109,13 @@ impl JImage {
         }
     }
 
+    /// Computes a hash code for a given string using a seed value.
     fn hash_code(string: &str, seed: i32) -> Result<i32> {
-        let mut useed = seed as u32;
+        let mut current_hash  = seed as u32;
         for &byte in string.as_bytes() {
-            useed = useed.overflowing_mul(HASH_MULTIPLIER).0 ^ byte as u32;
+            current_hash = current_hash.overflowing_mul(HASH_MULTIPLIER).0 ^ byte as u32;
         }
-        Ok((useed & 0x7FFFFFFF) as i32)
+        Ok((current_hash & 0x7FFFFFFF) as i32)
     }
 
     fn redirect_value(&self, index: i32) -> Result<i32> {
