@@ -138,10 +138,10 @@ impl JImage {
         Ok(value)
     }
 
-    fn attributes(&self, index: i32) -> Result<Vec<u64>> {
+    fn attributes(&self, index: i32) -> Result<[u64; 8]> {
         let offset = self.header.attributes(index as usize);
 
-        let mut attributes = vec![0u64; 8];
+        let mut attributes = [0u64; 8];
         let mut pos = offset;
         loop {
             let value = &self.mmap[pos];
@@ -162,7 +162,7 @@ impl JImage {
         Ok(attributes)
     }
 
-    fn get_resource(&self, attributes: &Vec<u64>) -> Result<Option<Cow<[u8]>>> {
+    fn get_resource(&self, attributes: &[u64; 8]) -> Result<Option<Cow<[u8]>>> {
         let offset = attributes[AttributeKind::OFFSET as usize] as usize;
         let compressed_size = attributes[AttributeKind::COMPRESSED as usize] as usize;
         let uncompressed_size = attributes[AttributeKind::UNCOMPRESSED as usize] as usize;
@@ -184,7 +184,7 @@ impl JImage {
 
     /// Verify the attributes of the resource.
     /// Full path format: /{module}/{parent}/{base}.{extension}
-    fn verify(&self, attributes: &Vec<u64>, full_name: &str) -> Result<bool> {
+    fn verify(&self, attributes: &[u64; 8], full_name: &str) -> Result<bool> {
         let parts_to_check = [
             (AttributeKind::MODULE, "/"),
             (AttributeKind::PARENT, "/"),

@@ -23,8 +23,8 @@ enum Commands {
 struct ExtractArgs {
     /// The full path of the resource to extract from the jimage
     /// (e.g., "/java.base/java/lang/String.class")
-    #[arg(long, short = 'f', value_name = "RESOURCE_PATH")]
-    file: String,
+    #[arg(long, short = 'r', value_name = "RESOURCE_PATH")]
+    resource_path: String,
 
     /// Path to the jimage file (typically `<JDK_HOME>/lib/modules`)
     #[arg(value_name = "JIMAGE_PATH", required = true)]
@@ -36,7 +36,7 @@ fn main() {
 
     match &cli.command {
         Commands::Extract(args) => {
-            extract_resource(&args.jimage_path, &args.file).unwrap_or_else(|err| {
+            extract_resource(&args.jimage_path, &args.resource_path).unwrap_or_else(|err| {
                 eprintln!("Error extracting resource: {}", err);
                 std::process::exit(1);
             });

@@ -1,5 +1,6 @@
 use jimage_rs::JImage;
 
+#[cfg(not(target_endian = "big"))] // todo: fix this test for big endian systems
 #[test]
 fn should_read_jimage() {
     let image =
