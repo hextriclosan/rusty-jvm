@@ -45,7 +45,7 @@ fn main() {
 }
 
 fn extract_resource(jimage_path: &PathBuf, resource_name: &str) -> Result<(), Box<dyn Error>> {
-    let image = JImage::new(&jimage_path)?;
+    let image = JImage::open(&jimage_path)?;
     let resource_data = image
         .find_resource(resource_name)?
         .ok_or_else(|| format!("Resource '{}' not found in the jimage file", resource_name))?;

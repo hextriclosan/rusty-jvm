@@ -68,7 +68,7 @@ const HASH_MULTIPLIER: u32 = 0x01000193;
 
 impl JImage {
     /// Creates a new `JImage` instance by mapping the specified file into memory.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
         let header = Header::from_bytes(&mmap)?;
@@ -111,7 +111,7 @@ impl JImage {
 
     /// Computes a hash code for a given string using a seed value.
     fn hash_code(string: &str, seed: i32) -> Result<i32> {
-        let mut current_hash  = seed as u32;
+        let mut current_hash = seed as u32;
         for &byte in string.as_bytes() {
             current_hash = current_hash.overflowing_mul(HASH_MULTIPLIER).0 ^ byte as u32;
         }

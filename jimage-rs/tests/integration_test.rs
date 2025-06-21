@@ -4,7 +4,7 @@ use jimage_rs::JImage;
 #[test]
 fn should_read_jimage() {
     let image =
-        JImage::new("tests/test_data/jimages/lib/modules").expect("Failed to read jimage file");
+        JImage::open("tests/test_data/jimages/lib/modules").expect("Failed to read jimage file");
 
     let actual_resource = image
         .find_resource("/java.base/resource.txt")
