@@ -10,7 +10,7 @@ A fast and efficient Rust library for working with `jimage` files used by the Ja
 `jimage-rs` is a Rust library and command-line utility for reading and extracting resources from Java image files (`jimage`).
 
 `jimage` is a file format used by the Java Virtual Machine (JVM) to store class files and other resources in a compressed format. It is typically found in the `lib/modules` directory of a Java installation.
-The format was developed as part of [Project Jigsaw][project-jigsaw] ([JEP-220][jep-220]) is used to store the Java Platform Module System (JPMS) modules.
+The format was developed as part of [Project Jigsaw][project-jigsaw] ([JEP-220][jep-220]) and is used in Java Platform Module System (JPMS).
 
 This crate: 
  - is implemented from scratch
