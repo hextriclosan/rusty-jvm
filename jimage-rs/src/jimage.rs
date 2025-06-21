@@ -67,7 +67,7 @@ impl TryFrom<u8> for AttributeKind {
 const HASH_MULTIPLIER: u32 = 0x01000193;
 
 impl JImage {
-    /// Creates a new `JImage` instance by mapping the specified file into memory.
+    /// Opens the specified file and memory-maps it to create a `JImage` instance.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };

@@ -1,6 +1,6 @@
-# jimage-rs
+jimage-rs
 ===
-A fast and efficient Rust library for dealing with Java image files.
+A fast and efficient Rust library for dealing with `jimage` files of Java Platform Module System.
 
 [![Crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
@@ -9,7 +9,7 @@ A fast and efficient Rust library for dealing with Java image files.
 ## Introduction
 `jimage-rs` is a Rust library and command-line utility for reading and extracting resources from Java image files (`jimage`).
 
-`jimage` is a file format uses by the Java Virtual Machine (JVM) to store class files and other resources in a compressed format. It is typically found in the `lib/modules` directory of a Java installation.
+`jimage` is a file format used by the Java Virtual Machine (JVM) to store class files and other resources in a compressed format. It is typically found in the `lib/modules` directory of a Java installation.
 The file format developed in the scope of [Project Jigsaw][project-jigsaw] ([JEP-220][jep-220]) is used to store the Java Platform Module System (JPMS) modules.
 
 This crate: 
@@ -21,9 +21,22 @@ This crate:
 Sample code of extracting resources from a jimage file:
 
 ```rust
-let path = format!("{}/lib/modules", env::var("JAVA_HOME").unwrap());
-let jimage = JImage::open(path).unwrap();
-let resource = jimage.find_resource("/java.base/java/lang/String.class");
+use std::env;
+use std::path::PathBuf;
+use jimage_rs::JImage;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let path = PathBuf::from(env::var("JAVA_HOME")?)
+        .join("lib")
+        .join("modules");
+    let jimage = JImage::open(path)?;
+    match jimage.find_resource("/java.base/java/lang/String.class")? {
+        Some(resource) => println!("Resource found: {:?}", resource),
+        None => println!("Resource not found"),
+    }
+
+    Ok(())
+}
 ```
 
 ### CLI

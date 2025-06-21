@@ -1,16 +1,23 @@
 //! # jimage-rs
-//! A fast and efficient implementation from scratch of Rust library for dealing with Java Modular System (`jimage`) files.
+//! A fast and efficient Rust library for dealing with `jimage` files of Java Platform Module System.
 //! ## Example
 //! ```rust
-//! use std::env;
-//! use jimage_rs::JImage;
+//!use std::env;
+//!use std::path::PathBuf;
+//!use jimage_rs::JImage;
 //!
-//! fn main() {
-//!     let path = format!("{}/lib/modules", env::var("JAVA_HOME").unwrap());
-//!     let jimage = JImage::open(path).unwrap();
-//!     let resource = jimage.find_resource("/java.base/java/lang/String.class");
-//!     println!("Resource: {:?}", resource);
-//! }
+//!fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!    let path = PathBuf::from(env::var("JAVA_HOME")?)
+//!        .join("lib")
+//!        .join("modules");
+//!    let jimage = JImage::open(path)?;
+//!    match jimage.find_resource("/java.base/java/lang/String.class")? {
+//!        Some(resource) => println!("Resource found: {:?}", resource),
+//!        None => println!("Resource not found"),
+//!    }
+//!
+//!    Ok(())
+//!}
 //! ```
 mod bytes_utils;
 pub mod error;
