@@ -2,6 +2,15 @@
 name = "jimage-rs"
 version = "0.0.1"
 edition = "2021"
+description = "A fast and efficient Rust library for working with jimage files used by the Java Platform Module System."
+documentation = "https://docs.rs/jimage-rs"
+homepage = "https://github.com/hextriclosan/rusty-jvm"
+repository = "https://github.com/hextriclosan/rusty-jvm"
+readme = "README.md"
+keywords = ["jvm", "java", "jimage", "jigsaw"]
+categories = ["command-line-utilities", "parser-implementations"]
+license = "MIT"
+exclude = ["tests/**"]
 
 workspace = ".."
 
