@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.github.hextriclosan.rustyjvm.jimage'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += [
+            '--add-modules', 'jdk.jlink',
+            '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.internal=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.builder=ALL-UNNAMED'
+    ]
+}
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs += [
+            '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.internal=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.builder=ALL-UNNAMED'
+    ]
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
