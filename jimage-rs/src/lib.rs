@@ -1,5 +1,5 @@
 //! # jimage-rs
-//! A fast and efficient Rust library for dealing with `jimage` files of Java Platform Module System.
+//! A fast and efficient Rust library for working with `jimage` files used by the Java Platform Module System.
 //! ## Example
 //! ```rust
 //!use std::env;
