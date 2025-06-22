@@ -119,4 +119,4 @@ jobs:
           CROSS_IMAGE: "cross-s390x-java:latest"
         run: |
           set -e
-          cross test --target s390x-unknown-linux-gnu -- sh -c 'export JAVA_HOME=/opt/java; cargo test --workspace --verbose -- --test-threads=8'
+          cross run --target s390x-unknown-linux-gnu -- sh -c 'export JAVA_HOME=/opt/java; cargo test --workspace --verbose -- --test-threads=8'
