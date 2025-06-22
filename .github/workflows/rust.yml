@@ -88,9 +88,6 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
         with:
@@ -107,12 +104,9 @@ jobs:
         shell: bash
         run: cargo install cross
 
-      # Step 2: Build a custom Docker image for cross-compilation that includes Java.
       - name: Build custom cross-compilation image
         run: docker build -t cross-s390x-java ./.github/docker/s390x
 
-      # Step 3: Run tests using the custom image.
-      # The CROSS_IMAGE env var tells `cross` which Docker image to use.
       - name: Run tests on s390x (Big Endian)
         shell: bash
         run: |
