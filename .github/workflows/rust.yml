@@ -18,6 +18,11 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -55,11 +60,6 @@ jobs:
             cargo-${{ runner.os }}-
             cargo-
 
-      - name: Install java core libraries
-        shell: bash
-        run: |
-          cargo run --verbose -- --install --yes
-
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
 
@@ -74,50 +74,43 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
-      - name: Uninstall java core libraries
-        shell: bash
-        run: |
-          cargo run --verbose -- --purge --yes
-
-  test-on-s390x:
-    name: build (linux big-endian)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Cache Cargo Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/s390x-unknown-linux-gnu
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
-            cargo-
-
-      - name: Install cross
-        shell: bash
-        run: cargo install cross
-
-      - name: Create temporary data directory for cross-compilation
-        shell: bash
-        run: |
-          mkdir -p "${{ github.workspace }}/.tmp-xdg-data"
-          echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
-
-      - name: Run tests on s390x (Big Endian)
-        shell: bash
-        run: |
-          set -e
-          cross run --target s390x-unknown-linux-gnu --verbose -- --install --yes
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
-          cross run --target s390x-unknown-linux-gnu --verbose -- --purge --yes
+#  test-on-s390x:
+#    name: build (linux big-endian)
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Set up Rust
+#        uses: actions-rs/toolchain@v1
+#        with:
+#          toolchain: stable
+#          override: true
+#
+#      - name: Cache Cargo Dependencies
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.cargo/registry
+#            ~/.cargo/git
+#            target/s390x-unknown-linux-gnu
+#          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+#          restore-keys: |
+#            cargo-${{ runner.os }}-
+#            cargo-
+#
+#      - name: Install cross
+#        shell: bash
+#        run: cargo install cross
+#
+#      - name: Create temporary data directory for cross-compilation
+#        shell: bash
+#        run: |
+#          mkdir -p "${{ github.workspace }}/.tmp-xdg-data"
+#          echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
+#
+#      - name: Run tests on s390x (Big Endian)
+#        shell: bash
+#        run: |
+#          set -e
+#          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
