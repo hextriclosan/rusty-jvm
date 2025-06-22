@@ -103,6 +103,13 @@ jobs:
             cargo-${{ runner.os }}-
             cargo-
 
+      - name: Create temporary data directory for cross-compilation
+        shell: bash
+        run: |
+          mkdir -p "${{ github.workspace }}/.tmp-xdg-data"
+          echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
+          echo "JAVA_HOME=/opt/java" >> $GITHUB_ENV
+
       - name: Install cross
         shell: bash
         run: cargo install cross
@@ -119,4 +126,4 @@ jobs:
           CROSS_IMAGE: "cross-s390x-java:latest"
         run: |
           set -e
-          cross run --target s390x-unknown-linux-gnu -- sh -c 'export JAVA_HOME=/opt/java; cargo test --workspace --verbose -- --test-threads=8'
+          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8

@@ -1,4 +1,5 @@
 [target.s390x-unknown-linux-gnu]
 env.passthrough = [
     "XDG_DATA_HOME",
+    "JAVA_HOME"
 ]
