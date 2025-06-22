@@ -18,8 +18,9 @@ use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
-use crate::vm::validation::{validate_class_name, validate_std_dir};
+use crate::vm::validation::validate_class_name;
 use crate::Arguments;
+use std::path::Path;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -33,14 +34,13 @@ use tracing_subscriber::{fmt, EnvFilter};
 ///
 /// * `arguments` - The arguments for the Java program.
 /// * `std_dir` - The path to the standard library directory containing core Java classes.
-pub fn run(arguments: &Arguments, std_dir: &str) -> Result<()> {
+pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     let main_class_name = arguments.entry_point();
     validate_class_name(main_class_name)?;
-    validate_std_dir(std_dir)?;
 
     init_system_properties(arguments.system_properties().clone())?;
 
-    prelude(std_dir)?;
+    prelude(java_home)?;
 
     let internal_name = &main_class_name.replace('.', "/");
     StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
@@ -53,10 +53,10 @@ pub fn run(arguments: &Arguments, std_dir: &str) -> Result<()> {
     )
 }
 
-fn prelude(std_dir: &str) -> Result<()> {
+fn prelude(java_home: &Path) -> Result<()> {
     init_logger()?;
 
-    MethodArea::init(&std_dir)?;
+    MethodArea::init(java_home)?;
 
     init()?;
 

@@ -4,6 +4,7 @@ use crate::vm::stack::stack::Stack;
 use crate::vm::stack::stack_value::StackValue;
 use derive_new::new;
 use std::collections::BTreeMap;
+use std::fmt::Display;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
@@ -242,7 +243,7 @@ impl StackFrame {
     pub fn push<T: StackValue>(&mut self, stack_value: T) -> Result<()> {
         stack_value
             .push_onto(self)
-            .map_err(|e| Error::new_execution(&format!("Reason: {e}; Current Frame: {self:?}")))
+            .map_err(|e| Error::new_execution(&format!("Reason: {e}; Current Frame: {self}")))
     }
 
     pub fn pop<T: StackValue>(&mut self) -> T {
@@ -290,5 +291,23 @@ impl StackFrame {
     /// Returns the exception program counter (ex_pc) if it is set, otherwise returns the current program counter (pc).
     pub fn ex_pc(&self) -> usize {
         self.ex_pc.unwrap_or(self.pc)
+    }
+}
+
+impl Display for StackFrame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r#"StackFrame {{ method_name: "{}", pc: {}, ex_pc: {:?}, locals: {:?}, operand_stack: {:?}, bytecode_ref: {:?}, current_class_name: "{}", line_numbers: {:?}, exception_table: {:?} }}"#,
+            self.method_name,
+            self.pc,
+            self.ex_pc,
+            self.locals,
+            self.operand_stack,
+            self.bytecode_ref,
+            self.current_class_name,
+            self.line_numbers,
+            self.exception_table,
+        )
     }
 }

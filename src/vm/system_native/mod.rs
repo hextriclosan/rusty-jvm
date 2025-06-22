@@ -12,6 +12,7 @@ mod object_offset;
 mod platform_file;
 pub(crate) mod platform_file_dispatcher;
 pub(crate) mod platform_native_dispatcher;
+pub(crate) mod platform_specific_files;
 pub(crate) mod properties_provider;
 pub(crate) mod reflect_array;
 pub(crate) mod reflecton;

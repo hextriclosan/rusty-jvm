@@ -1,11 +1,10 @@
 mod cli;
-use crate::cli::execution_mode::ExecutionMode;
+use crate::cli::argument_parser::into_args;
 use crate::cli::help::help_msg;
-use crate::cli::installer::{do_install, do_purge};
-use crate::cli::utils::resolve_std_dir;
 use clap::{Arg, ArgAction, Command};
 use rusty_jvm::{run, Arguments};
-use std::process;
+use std::path::PathBuf;
+use std::{env, process};
 
 const EXIT_SUCCESS: i32 = 0;
 const EXIT_FAILURE: i32 = 1;
@@ -28,7 +27,7 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<_>>();
 
-    let exit_code = handle_execution(raw_args.into()).unwrap_or_else(|msg| {
+    let exit_code = handle_execution(into_args(raw_args)).unwrap_or_else(|msg| {
         eprintln!("{msg}");
         EXIT_FAILURE
     });
@@ -36,15 +35,7 @@ fn main() {
     process::exit(exit_code);
 }
 
-fn handle_execution(mode: ExecutionMode) -> Result<i32, String> {
-    match mode {
-        ExecutionMode::Normal(args) => handle_normal(args),
-        ExecutionMode::Install(yes) => handle_install(yes),
-        ExecutionMode::Purge(yes) => handle_purge(yes),
-    }
-}
-
-fn handle_normal(arguments: Arguments) -> Result<i32, String> {
+fn handle_execution(arguments: Arguments) -> Result<i32, String> {
     if arguments.entry_point().is_empty() {
         return Err(format!(
             "No entry point provided. Please specify the main class to run.\n{}",
@@ -52,18 +43,10 @@ fn handle_normal(arguments: Arguments) -> Result<i32, String> {
         ));
     }
 
-    let std_dir = resolve_std_dir()
-        .map_err(|err| format!("Error resolving standard library directory: {}", err))?;
+    let java_home = env::var("JAVA_HOME")
+        .map_err(|_| "JAVA_HOME environment variable is not set".to_string())?;
 
-    let std_dir = std_dir.ok_or_else(|| {
-        r#"Standard library directory was not found. You can either:
-- Run the installation command: rusty-jvm --install
-- Set the RUSTY_LIB_DIR environment variable to the path of the standard libraries
-"#
-        .to_string()
-    })?;
-
-    run(&arguments, &std_dir)
+    run(&arguments, &PathBuf::from(java_home))
         .map(|()| EXIT_SUCCESS)
         .map_err(|err| {
             if err.is_exception_thrown() {
@@ -72,16 +55,4 @@ fn handle_normal(arguments: Arguments) -> Result<i32, String> {
                 format!("VM execution failed: {}", err)
             }
         })
-}
-
-fn handle_install(yes: bool) -> Result<i32, String> {
-    do_install(yes)
-        .map(|()| EXIT_SUCCESS)
-        .map_err(|err| format!("Installation failed: {}", err))
-}
-
-fn handle_purge(yes: bool) -> Result<i32, String> {
-    do_purge(yes)
-        .map(|()| EXIT_SUCCESS)
-        .map_err(|err| format!("Purge failed: {}", err))
 }
