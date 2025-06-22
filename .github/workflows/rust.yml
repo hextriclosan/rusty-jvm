@@ -103,13 +103,6 @@ jobs:
             cargo-${{ runner.os }}-
             cargo-
 
-      - name: Create temporary data directory for cross-compilation
-        shell: bash
-        run: |
-          mkdir -p "${{ github.workspace }}/.tmp-xdg-data"
-          echo "XDG_DATA_HOME=/project/.tmp-xdg-data" >> $GITHUB_ENV
-          echo "JAVA_HOME=/opt/java" >> $GITHUB_ENV
-
       - name: Install cross
         shell: bash
         run: cargo install cross
@@ -122,8 +115,6 @@ jobs:
       # The CROSS_IMAGE env var tells `cross` which Docker image to use.
       - name: Run tests on s390x (Big Endian)
         shell: bash
-        env:
-          CROSS_IMAGE: "cross-s390x-java:latest"
         run: |
           set -e
           cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8

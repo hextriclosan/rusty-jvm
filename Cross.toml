@@ -1,11 +1,5 @@
 [target.s390x-unknown-linux-gnu]
-env.passthrough = [
-    "XDG_DATA_HOME",
-    "JAVA_HOME"
-]
-# Tell `cross` to use the custom Docker image we build in the CI pipeline.
+# Tell `cross` to use the custom Docker image that build in the CI pipeline.
 image = "cross-s390x-java:latest"
-
 # Tell `cross` to run this command inside the container's shell
-# right before executing any cargo command for this target.
 pre-run = "export JAVA_HOME=/opt/java"
