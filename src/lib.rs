@@ -8,19 +8,8 @@
 //! ## Features
 //! Refer to the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/main/README.md#implemented-key-features)
 //!
-//! ## Usage Modes
+//! ## Usage
 //!
-//! The binary supports three main modes, based on CLI arguments:
-//!
-//! - (default) Runs a Java class file with an entry point.
-//! - `--install` – Installs standard libraries (used by the VM).
-//! - `--purge` – Removes installed standard libraries.
-//!
-//! ## Example
-//! ### Installing core libraries
-//! ```bash
-//! rusty-jvm --install
-//! ```
 //! ### Creating a simple Java program
 //! ###### Windows
 //! ```bash

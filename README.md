@@ -36,11 +36,7 @@ See [integration tests](tests/test_data) for broader examples of supported Java 
 ## Java Standard Library Classes
 
 This project uses Java standard library classes based on *OpenJDK JDK 23 General-Availability Release*.
-The source code and class files are located in the [lib](lib) directory of this repository.  
-They are distributed under the [GNU GPLv2 with Classpath Exception](lib/LICENSE).
-OpenJDK produces OS-specific distributions of these classes.  
-For simplicity, this project includes modified (under GPLv2+CE) versions usable across **Windows**, **macOS**, and **Linux**.
-You can still use original OpenJDK classes, but ensure they're compiled for the OS on which you're running `rusty-jvm`.
+In order to run Java code, you need to have JDK 23 installed on your machine and set up the `JAVA_HOME` environment variable.
 
 ## Getting Started
 
@@ -49,11 +45,8 @@ You can still use original OpenJDK classes, but ensure they're compiled for the 
 Ensure the following are set up:
 
 - A machine running **Windows**, **macOS**, or **Linux**
+- **JDK** installed and configured (JDK 23 is recommended)
 - **Rust** installed and configured
-- The **Java standard library classes**, required via **one** of the following:
-    - Run the installation command: `rusty-jvm --install`
-    - **OR** set the `RUSTY_LIB_DIR` environment variable to the path of the standard library  
-      (recommended: the [lib](lib) directory in this repository)
 
 ### Example Program
 
@@ -156,8 +149,6 @@ Group attack power is 57
 
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
-
-Standard library classes in [lib](lib) directory are distributed under the [GNU GPLv2 with Classpath Exception](lib/LICENSE).
 
 [//]: # (links)
 [platforms-image]: https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-blue

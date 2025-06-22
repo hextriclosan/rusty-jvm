@@ -2,6 +2,7 @@ use crate::vm::error::ErrorKind::{
     ClassFile, ConstantPool, ExceptionThrown, Execution, Io, Native,
 };
 use jdescriptor::DescriptorError;
+use jimage_rs::error::JImageError;
 use std::error::Error as StdError;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
@@ -98,6 +99,12 @@ impl From<FromUtf16Error> for Error {
 impl From<DescriptorError> for Error {
     fn from(error: DescriptorError) -> Self {
         Error::new_execution(&format!("DescriptorError: {error}"))
+    }
+}
+
+impl From<JImageError> for Error {
+    fn from(error: JImageError) -> Self {
+        Error::new_execution(&format!("JImageError: {error}"))
     }
 }
 

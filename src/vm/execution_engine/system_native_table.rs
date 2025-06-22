@@ -587,6 +587,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             open_process_token_wrp, open_thread_token_wrp, remove_directory0_wrp,
             set_end_of_file_wrp,
         };
+        use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
 
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
@@ -666,16 +667,20 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         );
 
         table.insert(
-            "sun/nio/ch/WindowsFileDispatcherImpl:allocationGranularity0:()J",
+            "sun/nio/ch/FileDispatcherImpl:allocationGranularity0:()J",
             Basic(allocation_granularity0_wrp),
         );
         table.insert(
-            "sun/nio/ch/WindowsFileDispatcherImpl:maxDirectTransferSize0:()I", // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
+            "sun/nio/ch/FileDispatcherImpl:maxDirectTransferSize0:()I", // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
             Basic(|_args| Ok(vec![i32::MAX - 1])),
         );
         table.insert(
-            "sun/nio/ch/WindowsFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
+            "sun/nio/ch/FileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
             WithMutStackFrames(windows_file_dispatcher_write0_wrp),
+        );
+        table.insert(
+            "sun/io/Win32ErrorMode:setErrorMode:(J)J",
+            Basic(set_error_mode_wrp),
         );
     }
 
@@ -743,10 +748,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
 
     #[cfg(target_os = "linux")]
     {
-        table.insert(
-            "sun/nio/ch/LinuxFileDispatcherImpl:init0:()V",
-            Basic(void_stub),
-        );
+        table.insert("sun/nio/ch/FileDispatcherImpl:init0:()V", Basic(void_stub));
     }
 }
 

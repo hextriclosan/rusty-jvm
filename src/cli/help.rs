@@ -8,10 +8,5 @@ Options:
     --<option>        Java launcher options
     -<option>         Java standard options
     -h, --help        Show this help message
-
-Installation options:
-    --install         Download and install standard libraries
-    --purge           Remove all versions of installed rusty-jvm standard libraries
-    --yes             Automatically say "yes" to prompts
 "#
 }

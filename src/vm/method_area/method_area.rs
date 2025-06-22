@@ -15,6 +15,7 @@ use jclassfile::class_file::{parse, ClassFile};
 use jclassfile::fields::{FieldFlags, FieldInfo};
 use jclassfile::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
+use jimage_rs::jimage::JImage;
 use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
@@ -36,7 +37,7 @@ where
 
 #[derive(Debug)]
 pub(crate) struct MethodArea {
-    std_dir: String,
+    jimage: JImage,
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
@@ -45,22 +46,23 @@ pub(crate) struct MethodArea {
 }
 
 impl MethodArea {
-    pub(crate) fn init(std_dir: &str) -> Result<()> {
+    pub(crate) fn init(java_home: &Path) -> Result<()> {
         METHOD_AREA
-            .set(MethodArea::new(std_dir))
+            .set(MethodArea::new(java_home)?)
             .map_err(|_| Error::new_execution("MethodArea already initialized"))
     }
 
-    fn new(std_dir: &str) -> Self {
+    fn new(java_home: &Path) -> Result<Self> {
+        let modules = java_home.join("lib").join("modules");
         let synthetic_classes = Self::generate_synthetic_classes();
-        Self {
-            std_dir: std_dir.to_string(),
+        Ok(Self {
+            jimage: JImage::open(modules)?,
             loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::default(),
             ldc_resolution_manager: LdcResolutionManager::default(),
             system_thread_id: OnceCell::new(),
             system_thread_group_id: OnceCell::new(),
-        }
+        })
     }
 
     pub(crate) fn get(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
@@ -114,19 +116,24 @@ impl MethodArea {
     }
 
     fn load_class_file(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
-        let paths = vec![
-            Path::new(&self.std_dir)
-                .join(fully_qualified_class_name)
-                .with_extension("class"),
-            Path::new(fully_qualified_class_name).with_extension("class"),
-        ];
+        let maybe_std_file = format!("/java.base/{}.class", fully_qualified_class_name);
+        if let Some(res) = self
+            .jimage
+            .find_resource(&maybe_std_file)
+            .map_err(|jimage_error| Error::new_execution(&jimage_error.to_string()))?
+        {
+            match self.try_parse(&res) {
+                Ok(Some(java_class)) => return Ok(java_class),
+                Ok(None) => {}
+                Err(e) => return Err(e),
+            };
+        }
 
-        paths
-            .iter()
-            .find_map(|file_name| self.try_open_and_parse(file_name).transpose())
-            .transpose()?
+        self.try_open_and_parse(&Path::new(fully_qualified_class_name).with_extension("class"))?
             .ok_or_else(|| {
-                Error::new_execution(&format!("error opening file {fully_qualified_class_name}"))
+                Error::new_execution(&format!(
+                    "error opening class file {fully_qualified_class_name}"
+                ))
             })
     }
 
@@ -139,6 +146,10 @@ impl MethodArea {
         let mut buff = Vec::new();
         file.read_to_end(&mut buff)?;
 
+        self.try_parse(&buff)
+    }
+
+    fn try_parse(&self, buff: &[u8]) -> Result<Option<Arc<JavaClass>>> {
         let class_file = parse(&buff)?;
 
         self.to_java_class(class_file)
