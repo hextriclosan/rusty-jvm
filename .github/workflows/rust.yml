@@ -21,7 +21,8 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'corretto'
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Checkout repository
         uses: actions/checkout@v4
