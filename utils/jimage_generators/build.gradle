@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group = 'com.github.hextriclosan.rustyjvm.jimage'
@@ -9,29 +10,31 @@ repositories {
     mavenCentral()
 }
 
+application {
+    mainClass = 'com.github.hextriclosan.rustyjvm.jimage.JImageBuilder'
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += [
             '--add-modules', 'jdk.jlink',
             '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.plugin=ALL-UNNAMED',
             '--add-exports', 'jdk.jlink/jdk.tools.jlink.internal=ALL-UNNAMED',
-            '--add-exports', 'jdk.jlink/jdk.tools.jlink.builder=ALL-UNNAMED'
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.internal.plugins=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.builder=ALL-UNNAMED',
     ]
 }
 
 tasks.withType(JavaExec).configureEach {
     jvmArgs += [
             '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.plugin=ALL-UNNAMED',
             '--add-exports', 'jdk.jlink/jdk.tools.jlink.internal=ALL-UNNAMED',
+            '--add-exports', 'jdk.jlink/jdk.tools.jlink.internal.plugins=ALL-UNNAMED',
             '--add-exports', 'jdk.jlink/jdk.tools.jlink.builder=ALL-UNNAMED'
     ]
 }
 
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
-
-test {
-    useJUnitPlatform()
+    implementation 'info.picocli:picocli:4.7.7'
 }
