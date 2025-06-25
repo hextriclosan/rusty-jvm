@@ -13,6 +13,6 @@ javac --patch-module java.base=. -d mods --module-source-path src -m java.base
 To build the `lib/modules` file:
 
 ```bash
-cd ../../utils/jimage_generators
+cd ../../../utils/jimage_generators
 ./gradlew run
 ```

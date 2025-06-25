@@ -1,0 +1,20 @@
+# Enforce LF for all text files
+* text eol=lf
+
+# Force LF for known cross-platform files
+*.rs text eol=lf
+*.toml text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.txt text eol=lf
+
+# Prevent line ending conversion for binary files
+*.png binary
+*.jpg binary
+*.exe binary
+*.dll binary
+*.wasm binary
+*.class binary
+*.jimage binary
