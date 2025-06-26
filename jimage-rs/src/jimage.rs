@@ -120,12 +120,12 @@ impl JImage {
 
     fn redirect_value(&self, index: i32) -> Result<i32> {
         let offset = self.header.redirect(index as usize);
-        read_integer(&self.mmap, offset)
+        read_integer(&self.mmap, offset, self.header.flipped())
     }
 
     fn offset_value(&self, index: i32) -> Result<i32> {
         let offset = self.header.offset(index as usize);
-        read_integer(&self.mmap, offset)
+        read_integer(&self.mmap, offset, self.header.flipped())
     }
 
     fn get_string(&self, index: usize) -> Result<&str> {

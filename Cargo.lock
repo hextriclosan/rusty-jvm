@@ -404,6 +404,7 @@ dependencies = [
  "flate2",
  "memchr",
  "memmap2",
+ "rstest",
  "thiserror",
 ]
 

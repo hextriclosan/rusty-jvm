@@ -1,6 +1,7 @@
 use assert_matches::assert_matches;
 use jimage_rs::error::JImageError;
 use jimage_rs::JImage;
+use rstest::rstest;
 use std::borrow::Cow;
 use std::path::PathBuf;
 
@@ -10,32 +11,11 @@ const WITHOUT_EXT_EXPECTED: &[u8] =
     include_bytes!("test_data/mods/java.base/java/lang/without_ext");
 const HANK_EXPECTED: &[u8] = include_bytes!("test_data/mods/java.base/java/lang/hank.txt");
 
-#[cfg(not(target_endian = "big"))] // todo: fix this test for big endian systems
-#[test]
-fn should_read_uncompressed_little_endian_jimage() {
-    let image = JImage::open("tests/test_data/lib/non-compressed_little-endian.jimage")
-        .expect("Failed to read jimage file");
-
-    let without_parent_actual = image.find_resource("/java.base/without_parent.txt");
-    let without_ext_actual = image.find_resource("/java.base/java/lang/without_ext");
-    let hank_actual = image.find_resource("/java.base/java/lang/hank.txt");
-
-    assert_matches!(
-        without_parent_actual,
-        Ok(Some(Cow::Borrowed(WITHOUT_PARENT_EXPECTED)))
-    );
-    assert_matches!(
-        without_ext_actual,
-        Ok(Some(Cow::Borrowed(WITHOUT_EXT_EXPECTED)))
-    );
-    assert_matches!(hank_actual, Ok(Some(Cow::Borrowed(HANK_EXPECTED))));
-}
-
-#[cfg(not(target_endian = "little"))] // todo: merge me with prevoius test
-#[test]
-fn should_read_uncompressed_big_endian_jimage() {
-    let image = JImage::open("tests/test_data/lib/non-compressed_big-endian.jimage")
-        .expect("Failed to read jimage file");
+#[rstest]
+#[case::non_compressed_little_endian("tests/test_data/lib/non-compressed_little-endian.jimage")]
+#[case::non_compressed_big_endian("tests/test_data/lib/non-compressed_big-endian.jimage")]
+fn should_read_jimages(#[case] path: &str) {
+    let image = JImage::open(path).expect("Failed to read jimage file");
 
     let without_parent_actual = image.find_resource("/java.base/without_parent.txt");
     let without_ext_actual = image.find_resource("/java.base/java/lang/without_ext");

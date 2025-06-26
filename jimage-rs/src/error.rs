@@ -1,3 +1,4 @@
+use std::array::TryFromSliceError;
 use thiserror::Error;
 
 /// Represents errors that can occur while working with JImage files.
@@ -22,3 +23,9 @@ pub enum JImageError {
 
 /// Type alias for a Result type that uses JImageError for error handling.
 pub type Result<T> = std::result::Result<T, JImageError>;
+
+impl From<TryFromSliceError> for JImageError {
+    fn from(value: TryFromSliceError) -> Self {
+        JImageError::Internal(value.to_string())
+    }
+}

@@ -33,23 +33,27 @@ pub(crate) struct Header {
     location_bytes: u32,
     string_bytes: u32,
     table_length_in_bytes: usize,
+    flipped: bool,
 }
 
 impl Header {
     const SIZE: usize = 28;
     pub(crate) fn from_bytes(raw_header: &[u8]) -> Result<Self> {
         const MAGIC: u32 = 0xCAFEDADA;
+        const FLIPPED_MAGIC: u32 = 0xDADAFECA;
         const SUPPORTED_MAJOR_VER: u16 = 1;
         const SUPPORTED_MINOR_VER: u16 = 0;
 
         let mut pos = 0usize;
 
-        let magic = read_integer_mut(raw_header, &mut pos)?;
-        if magic != MAGIC {
-            return Err(JImageError::Magic(magic));
-        }
+        let magic = read_integer_mut(raw_header, &mut pos, false)?;
+        let flipped = match magic {
+            MAGIC => false,
+            FLIPPED_MAGIC => true,
+            _ => return Err(JImageError::Magic(magic)),
+        };
 
-        let version_pair: u32 = read_integer_mut(raw_header, &mut pos)?;
+        let version_pair: u32 = read_integer_mut(raw_header, &mut pos, flipped)?;
         let major_version = (version_pair >> 16) as u16;
         let minor_version = (version_pair & 0xFFFF) as u16;
         if major_version != SUPPORTED_MAJOR_VER || minor_version != SUPPORTED_MINOR_VER {
@@ -59,11 +63,11 @@ impl Header {
             });
         }
 
-        let flags = read_integer_mut(raw_header, &mut pos)?;
-        let resource_count = read_integer_mut(raw_header, &mut pos)?;
-        let table_length = read_integer_mut(raw_header, &mut pos)?;
-        let location_bytes = read_integer_mut(raw_header, &mut pos)?;
-        let string_bytes = read_integer_mut(raw_header, &mut pos)?;
+        let flags = read_integer_mut(raw_header, &mut pos, flipped)?;
+        let resource_count = read_integer_mut(raw_header, &mut pos, flipped)?;
+        let table_length = read_integer_mut(raw_header, &mut pos, flipped)?;
+        let location_bytes = read_integer_mut(raw_header, &mut pos, flipped)?;
+        let string_bytes = read_integer_mut(raw_header, &mut pos, flipped)?;
 
         Ok(Self {
             magic,
@@ -75,6 +79,7 @@ impl Header {
             location_bytes,
             string_bytes,
             table_length_in_bytes: table_length as usize * 4,
+            flipped,
         })
     }
 
@@ -120,5 +125,9 @@ impl Header {
 
     pub fn data(&self, pos_byte: usize) -> usize {
         self.data_begins_at() + pos_byte
+    }
+
+    pub fn flipped(&self) -> bool {
+        self.flipped
     }
 }
