@@ -187,9 +187,9 @@ impl JImage {
             let resource_header = ResourceHeader::from_bytes(compressed_data)?;
 
             let from = start + ResourceHeader::SIZE;
-            let to = from + resource_header.resource_size() as usize;
-            let payload = &self.mmap[from..to];
-            let mut zlib_decoder = flate2::read::ZlibDecoder::new(payload);
+            let to = from + resource_header.compressed_size() as usize;
+            let compressed_payload = &self.mmap[from..to];
+            let mut zlib_decoder = flate2::read::ZlibDecoder::new(compressed_payload);
             let mut uncompressed_payload = vec![0u8; resource_header.uncompressed_size() as usize];
             zlib_decoder
                 .read_exact(&mut uncompressed_payload)

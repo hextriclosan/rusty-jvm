@@ -3,7 +3,7 @@ use crate::error::{JImageError, Result};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ResourceHeader {
-    resource_size: u64,
+    compressed_size: u64,
     uncompressed_size: u64,
     decompressor_name_offset: u32,
     decompressor_config_offset: u32,
@@ -26,14 +26,14 @@ impl ResourceHeader {
             other => return Err(JImageError::Magic { magic: other }),
         };
 
-        let size = read_integer_mut(raw_header, &mut pos, flipped)?;
+        let compressed_size = read_integer_mut(raw_header, &mut pos, flipped)?;
         let uncompressed_size = read_integer_mut(raw_header, &mut pos, flipped)?;
         let decompressor_name_offset = read_integer_mut(raw_header, &mut pos, flipped)?;
         let decompressor_config_offset = read_integer_mut(raw_header, &mut pos, flipped)?;
         let is_terminal = raw_header[pos];
 
         Ok(Self {
-            resource_size: size,
+            compressed_size,
             uncompressed_size,
             decompressor_name_offset,
             decompressor_config_offset,
@@ -42,8 +42,8 @@ impl ResourceHeader {
         })
     }
 
-    pub fn resource_size(&self) -> u64 {
-        self.resource_size
+    pub fn compressed_size(&self) -> u64 {
+        self.compressed_size
     }
 
     pub fn uncompressed_size(&self) -> u64 {
