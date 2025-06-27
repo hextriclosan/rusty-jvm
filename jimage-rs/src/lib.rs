@@ -23,4 +23,5 @@ mod bytes_utils;
 pub mod error;
 mod header;
 pub mod jimage;
+mod resource_header;
 pub use jimage::JImage;

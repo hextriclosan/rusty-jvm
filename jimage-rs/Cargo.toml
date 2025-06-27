@@ -18,7 +18,7 @@ workspace = ".."
 memmap2 = "0.9.5"
 memchr = "2.7.5"
 flate2 = "1.1.2"
-thiserror = "2.0.12"
+snafu = "0.8.6"
 clap = { version = "4.5.40", features = ["derive"] }
 
 [dev-dependencies]
