@@ -35,6 +35,8 @@ pub enum JImageError {
         #[snafu(source)]
         source: std::io::Error,
     },
+    #[snafu(display("Unsupported decompressor: {decompressor_name}"))]
+    UnsupportedDecompressor { decompressor_name: String },
     #[snafu(display("Internal error: {value}"))]
     Internal { value: String },
 }

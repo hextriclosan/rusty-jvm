@@ -65,6 +65,7 @@ impl TryFrom<u8> for AttributeKind {
 }
 
 const HASH_MULTIPLIER: u32 = 0x01000193;
+const SUPPORTED_DECOMPRESSOR: &str = "zip";
 
 impl JImage {
     /// Opens the specified file and memory-maps it to create a `JImage` instance.
@@ -185,6 +186,14 @@ impl JImage {
         } else {
             let compressed_data = &self.mmap[start..start + compressed_size];
             let resource_header = ResourceHeader::from_bytes(compressed_data)?;
+
+            let decompressor_name_offset = resource_header.decompressor_name_offset();
+            let decompressor_name = self.get_string(decompressor_name_offset as usize)?;
+            if decompressor_name != SUPPORTED_DECOMPRESSOR {
+                return Err(JImageError::UnsupportedDecompressor {
+                    decompressor_name: decompressor_name.to_string(),
+                });
+            }
 
             let from = start + ResourceHeader::SIZE;
             let to = from + resource_header.compressed_size() as usize;

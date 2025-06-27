@@ -49,4 +49,8 @@ impl ResourceHeader {
     pub fn uncompressed_size(&self) -> u64 {
         self.uncompressed_size
     }
+
+    pub fn decompressor_name_offset(&self) -> u32 {
+        self.decompressor_name_offset
+    }
 }
