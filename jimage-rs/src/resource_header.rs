@@ -23,7 +23,11 @@ impl ResourceHeader {
         let flipped = match read_integer_mut(raw_header, &mut pos, false)? {
             MAGIC => false,
             FLIPPED_MAGIC => true,
-            other => return Err(JImageError::Magic { magic: other }),
+            non_valid_magic => {
+                return Err(JImageError::Magic {
+                    magic: non_valid_magic,
+                })
+            }
         };
 
         let compressed_size = read_integer_mut(raw_header, &mut pos, flipped)?;
