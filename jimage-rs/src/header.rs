@@ -24,7 +24,6 @@ use crate::error::{JImageError, Result};
 /// Represents the header of a jimage file.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Header {
-    magic: u32,
     major_version: u16,
     minor_version: u16,
     flags: u32,
@@ -46,11 +45,14 @@ impl Header {
 
         let mut pos = 0usize;
 
-        let magic = read_integer_mut(raw_header, &mut pos, false)?;
-        let flipped = match magic {
+        let flipped = match read_integer_mut(raw_header, &mut pos, false)? {
             MAGIC => false,
             FLIPPED_MAGIC => true,
-            _ => return Err(JImageError::Magic(magic)),
+            non_valid_magic => {
+                return Err(JImageError::Magic {
+                    magic: non_valid_magic,
+                })
+            }
         };
 
         let version_pair: u32 = read_integer_mut(raw_header, &mut pos, flipped)?;
@@ -70,7 +72,6 @@ impl Header {
         let string_bytes = read_integer_mut(raw_header, &mut pos, flipped)?;
 
         Ok(Self {
-            magic,
             major_version,
             minor_version,
             flags,

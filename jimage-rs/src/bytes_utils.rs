@@ -59,3 +59,10 @@ impl ReadFromBytes for u32 {
         Ok(u32::from_ne_bytes(arr))
     }
 }
+
+impl ReadFromBytes for u64 {
+    fn read(bytes: &[u8]) -> Result<Self> {
+        let arr: [u8; Self::SIZE] = bytes.try_into()?;
+        Ok(u64::from_ne_bytes(arr))
+    }
+}

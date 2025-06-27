@@ -1,13 +1,14 @@
 use crate::bytes_utils::read_integer;
-use crate::error::{JImageError, Result};
+use crate::error::{DecompressionSnafu, IoSnafu, JImageError, Result, Utf8Snafu};
 use crate::header::Header;
+use crate::resource_header::ResourceHeader;
 use memchr::memchr;
 use memmap2::Mmap;
+use snafu::ResultExt;
 use std::borrow::Cow;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-
 /* JImage File Structure
 
     /------------------------------\
@@ -54,10 +55,9 @@ impl TryFrom<u8> for AttributeKind {
 
     fn try_from(value: u8) -> Result<Self> {
         if value >= AttributeKind::COUNT as u8 {
-            Err(JImageError::Internal(format!(
-                "Invalid attribute kind: {}",
-                value
-            )))
+            Err(JImageError::Internal {
+                value: format!("Invalid attribute kind: {}", value),
+            })
         } else {
             unsafe { Ok(std::mem::transmute(value)) }
         }
@@ -65,12 +65,19 @@ impl TryFrom<u8> for AttributeKind {
 }
 
 const HASH_MULTIPLIER: u32 = 0x01000193;
+const SUPPORTED_DECOMPRESSOR: &str = "zip";
 
 impl JImage {
     /// Opens the specified file and memory-maps it to create a `JImage` instance.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path)?;
-        let mmap = unsafe { Mmap::map(&file)? };
+        let file = File::open(path.as_ref()).context(IoSnafu {
+            path: path.as_ref().to_path_buf(),
+        })?;
+        let mmap = unsafe {
+            Mmap::map(&file).context(IoSnafu {
+                path: path.as_ref().to_path_buf(),
+            })?
+        };
         let header = Header::from_bytes(&mmap)?;
 
         Ok(Self { mmap, header })
@@ -131,10 +138,13 @@ impl JImage {
     fn get_string(&self, index: usize) -> Result<&str> {
         let offset = self.header.strings(index);
         let string_slice = &self.mmap[offset..];
-        let len = memchr(0, string_slice).ok_or(JImageError::Internal(format!(
-            "Failed to find null-terminator in string starting from {offset}"
-        )))?;
-        let value = std::str::from_utf8(&self.mmap[offset..offset + len])?;
+        let len = memchr(0, string_slice).ok_or(JImageError::Internal {
+            value: format!("Failed to find null-terminator in string starting from {offset}"),
+        })?;
+        let slice = &self.mmap[offset..offset + len];
+        let value = std::str::from_utf8(slice).context(Utf8Snafu {
+            invalid_data: slice.to_vec(),
+        })?;
 
         Ok(value)
     }
@@ -175,11 +185,26 @@ impl JImage {
             )))
         } else {
             let compressed_data = &self.mmap[start..start + compressed_size];
-            let mut zlib_decoder = flate2::read::ZlibDecoder::new(compressed_data);
-            let mut uncompressed_data = vec![0u8; uncompressed_size];
-            zlib_decoder.read_exact(&mut uncompressed_data)?;
+            let resource_header = ResourceHeader::from_bytes(compressed_data)?;
 
-            Ok(Some(Cow::Owned(uncompressed_data)))
+            let decompressor_name_offset = resource_header.decompressor_name_offset();
+            let decompressor_name = self.get_string(decompressor_name_offset as usize)?;
+            if decompressor_name != SUPPORTED_DECOMPRESSOR {
+                return Err(JImageError::UnsupportedDecompressor {
+                    decompressor_name: decompressor_name.to_string(),
+                });
+            }
+
+            let from = start + ResourceHeader::SIZE;
+            let to = from + resource_header.compressed_size() as usize;
+            let compressed_payload = &self.mmap[from..to];
+            let mut zlib_decoder = flate2::read::ZlibDecoder::new(compressed_payload);
+            let mut uncompressed_payload = vec![0u8; resource_header.uncompressed_size() as usize];
+            zlib_decoder
+                .read_exact(&mut uncompressed_payload)
+                .context(DecompressionSnafu)?;
+
+            Ok(Some(Cow::Owned(uncompressed_payload)))
         }
     }
 
@@ -218,9 +243,9 @@ impl JImage {
 
     fn get_attribute_value(&self, pos: usize, len: u8) -> Result<u64> {
         if !(1..=8).contains(&len) {
-            return Err(JImageError::Internal(format!(
-                "Invalid attribute length: {len}"
-            )));
+            return Err(JImageError::Internal {
+                value: format!("Invalid attribute length: {len}"),
+            });
         }
 
         let mut value = 0u64;

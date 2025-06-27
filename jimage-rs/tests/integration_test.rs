@@ -2,7 +2,6 @@ use assert_matches::assert_matches;
 use jimage_rs::error::JImageError;
 use jimage_rs::JImage;
 use rstest::rstest;
-use std::borrow::Cow;
 use std::path::PathBuf;
 
 const WITHOUT_PARENT_EXPECTED: &[u8] =
@@ -14,6 +13,8 @@ const HANK_EXPECTED: &[u8] = include_bytes!("test_data/mods/java.base/java/lang/
 #[rstest]
 #[case::non_compressed_little_endian("tests/test_data/lib/non-compressed_little-endian.jimage")]
 #[case::non_compressed_big_endian("tests/test_data/lib/non-compressed_big-endian.jimage")]
+#[case::compressed_little_endian("tests/test_data/lib/compressed_little-endian.jimage")]
+#[case::compressed_big_endian("tests/test_data/lib/compressed_big-endian.jimage")]
 fn should_read_jimages(#[case] path: &str) {
     let image = JImage::open(path).expect("Failed to read jimage file");
 
@@ -21,15 +22,12 @@ fn should_read_jimages(#[case] path: &str) {
     let without_ext_actual = image.find_resource("/java.base/java/lang/without_ext");
     let hank_actual = image.find_resource("/java.base/java/lang/hank.txt");
 
-    assert_matches!(
-        without_parent_actual,
-        Ok(Some(Cow::Borrowed(WITHOUT_PARENT_EXPECTED)))
+    assert_eq!(
+        without_parent_actual.unwrap().unwrap(),
+        WITHOUT_PARENT_EXPECTED
     );
-    assert_matches!(
-        without_ext_actual,
-        Ok(Some(Cow::Borrowed(WITHOUT_EXT_EXPECTED)))
-    );
-    assert_matches!(hank_actual, Ok(Some(Cow::Borrowed(HANK_EXPECTED))));
+    assert_eq!(without_ext_actual.unwrap().unwrap(), WITHOUT_EXT_EXPECTED);
+    assert_eq!(hank_actual.unwrap().unwrap(), HANK_EXPECTED);
 }
 
 #[test]
@@ -50,5 +48,5 @@ fn should_return_error_if_magic_is_non_valid() {
         0xEFBEADDE
     };
 
-    assert_matches!(result, Err(JImageError::Magic ( magic )) if magic == non_valid_magic);
+    assert_matches!(result, Err(JImageError::Magic { magic }) if magic == non_valid_magic);
 }

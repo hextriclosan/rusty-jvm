@@ -26,7 +26,7 @@ struct ExtractArgs {
     #[arg(long, short = 'r', value_name = "RESOURCE_PATH")]
     resource_path: String,
 
-    /// Path to the jimage file (typically `<JDK_HOME>/lib/modules`)
+    /// Path to the jimage file (typically `<JAVA_HOME>/lib/modules`)
     #[arg(value_name = "JIMAGE_PATH", required = true)]
     jimage_path: PathBuf,
 }
