@@ -1,3 +1,10 @@
+# 0.3.0
+
+## What's Changed
+* Integrated the `jimage-rs` crate for reading JDK image files
+* Replaced bundled classes with core library classes from the installed JDK
+
+
 # 0.2.1
 
 ## What's Changed

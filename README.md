@@ -35,8 +35,8 @@ See [integration tests](tests/test_data) for broader examples of supported Java 
 
 ## Java Standard Library Classes
 
-This project uses Java standard library classes based on *OpenJDK JDK 23 General-Availability Release*.
-In order to run Java code, you need to have JDK 23 installed on your machine and set up the `JAVA_HOME` environment variable.
+This project relies on standard library classes from the *OpenJDK JDK 23 General Availability Release*.
+To run the Java code, you must have JDK 23 installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
 
 ## Getting Started
 
@@ -45,7 +45,7 @@ In order to run Java code, you need to have JDK 23 installed on your machine and
 Ensure the following are set up:
 
 - A machine running **Windows**, **macOS**, or **Linux**
-- **JDK** installed and configured (JDK 23 is recommended)
+- **JDK** installed and configured (OpenJDK 23 is recommended)
 - **Rust** installed and configured
 
 ### Example Program
@@ -54,8 +54,6 @@ This Java program calculates the total attack power of a group of game units.
 It uses abstract classes, interfaces, and polymorphism to showcase rusty-jvm's capabilities.
 
 ```java
-package game;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -134,7 +132,7 @@ class ControlGroup implements Unit {
 
 2. Run it using rusty-jvm:
    ```sh
-   cargo run -- game.Demo
+   cargo run -- Demo
    ```
 
 ### Expected Output
