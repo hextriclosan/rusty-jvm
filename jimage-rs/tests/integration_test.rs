@@ -41,12 +41,11 @@ fn should_return_error_if_file_does_not_exist() {
 #[test]
 fn should_return_error_if_magic_is_non_valid() {
     let result = JImage::open("tests/test_data/lib/non-valid-magic.jimage");
+    assert_matches!(result, Err(JImageError::Magic { magic }) if magic == [0xDE, 0xAD, 0xBE, 0xEF]);
+}
 
-    let non_valid_magic = if cfg!(target_endian = "little") {
-        0xDEADBEEF
-    } else {
-        0xEFBEADDE
-    };
-
-    assert_matches!(result, Err(JImageError::Magic { magic }) if magic == non_valid_magic);
+#[test]
+fn should_return_error_if_impossible_to_read() {
+    let result = JImage::open("tests/test_data/lib/empty.jimage");
+    assert_matches!(result, Err(JImageError::RawRead { from, to }) if from == 0 && to == 4);
 }

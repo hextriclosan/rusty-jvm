@@ -64,6 +64,12 @@ impl TryFrom<u8> for AttributeKind {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Endianness {
+    Big,
+    Little,
+}
+
 const HASH_MULTIPLIER: u32 = 0x01000193;
 const SUPPORTED_DECOMPRESSOR: &str = "zip";
 
@@ -127,12 +133,12 @@ impl JImage {
 
     fn redirect_value(&self, index: i32) -> Result<i32> {
         let offset = self.header.redirect(index as usize);
-        read_integer(&self.mmap, offset, self.header.flipped())
+        read_integer(&self.mmap, offset, self.header.endianness())
     }
 
     fn offset_value(&self, index: i32) -> Result<i32> {
         let offset = self.header.offset(index as usize);
-        read_integer(&self.mmap, offset, self.header.flipped())
+        read_integer(&self.mmap, offset, self.header.endianness())
     }
 
     fn get_string(&self, index: usize) -> Result<&str> {

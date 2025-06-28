@@ -6,8 +6,8 @@ use std::path::PathBuf;
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub))]
 pub enum JImageError {
-    #[snafu(display("File is not a valid jimage. Found magic: {magic:#010x}"))]
-    Magic { magic: u32 },
+    #[snafu(display("File is not a valid jimage. Found magic: {magic:02x?}"))]
+    Magic { magic: [u8; 4] },
     #[snafu(display("Unsupported jimage version: {major_version}.{minor_version}"))]
     Version {
         major_version: u16,
