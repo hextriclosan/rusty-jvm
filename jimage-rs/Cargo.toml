@@ -1,6 +1,6 @@
 [package]
 name = "jimage-rs"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 description = "A fast and efficient Rust library for working with jimage files used by the Java Platform Module System."
 documentation = "https://docs.rs/jimage-rs"
