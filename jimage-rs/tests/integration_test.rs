@@ -41,7 +41,7 @@ fn should_return_error_if_file_does_not_exist() {
 #[test]
 fn should_return_error_if_magic_is_non_valid() {
     let result = JImage::open("tests/test_data/lib/non-valid-magic.jimage");
-    assert_matches!(result, Err(JImageError::Magic { magic }) if magic == [0xDE, 0xAD, 0xBE, 0xEF]);
+    assert_matches!(result, Err(JImageError::Magic { magic, context }) if magic == [0xDE, 0xAD, 0xBE, 0xEF] && context == "header");
 }
 
 #[test]

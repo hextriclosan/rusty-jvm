@@ -1,6 +1,6 @@
 use crate::error::{JImageError, Result};
 use crate::jimage::Endianness;
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use byteorder::ByteOrder;
 
 pub(crate) fn read_integer<T: ReadFromBytes>(
     bytes: &[u8],
@@ -43,33 +43,34 @@ pub(crate) trait ReadFromBytes: Sized {
 }
 
 macro_rules! define_detect_endianness {
-    ($fn_name:ident, $magic:expr) => {
+    ($fn_name:ident, $magic:expr, $label:expr) => {
         pub fn $fn_name(bytes: &[u8]) -> Result<Endianness> {
             use byteorder::{BigEndian, LittleEndian};
+            const LEN: usize = 4;
             let magic_bytes = bytes
-                .get(..4)
-                .ok_or(JImageError::RawRead { from: 0, to: 4 })?;
+                .get(..LEN)
+                .ok_or(JImageError::RawRead { from: 0, to: LEN })?;
             if LittleEndian::read_u32(magic_bytes) == $magic {
                 Ok(Endianness::Little)
             } else if BigEndian::read_u32(magic_bytes) == $magic {
                 Ok(Endianness::Big)
             } else {
                 Err(JImageError::Magic {
-                    magic: magic_bytes
-                        .try_into()
-                        .map_err(|_| JImageError::RawRead { from: 0, to: 4 })?,
+                    magic: magic_bytes.try_into().unwrap_or([0; LEN]),
+                    context: $label,
                 })
             }
         }
     };
 }
-define_detect_endianness!(detect_endianness_header, 0xCAFEDADA);
-define_detect_endianness!(detect_endianness_resource, 0xCAFEFAFA);
+define_detect_endianness!(detect_endianness_header, 0xCAFEDADA, "header");
+define_detect_endianness!(detect_endianness_resource, 0xCAFEFAFA, "resource");
 
 macro_rules! impl_read_from_bytes {
     ($t:ty, $read_fn:ident, $size:expr) => {
         impl ReadFromBytes for $t {
             fn read(bytes: &[u8], endianness: &Endianness) -> Result<Self> {
+                use byteorder::{BigEndian, LittleEndian};
                 if bytes.len() < $size {
                     return Err(JImageError::Internal {
                         value: format!("not enough bytes for {}", stringify!($t)),
