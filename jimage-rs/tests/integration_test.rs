@@ -46,6 +46,6 @@ fn should_return_error_if_magic_is_non_valid() {
 
 #[test]
 fn should_return_error_if_impossible_to_read() {
-    let result = JImage::open("tests/test_data/lib/empty.jimage");
+    let result = JImage::open("tests/test_data/lib/3bytes-file.jimage");
     assert_matches!(result, Err(JImageError::RawRead { from, to }) if from == 0 && to == 4);
 }
