@@ -1,5 +1,6 @@
-use crate::bytes_utils::read_integer_mut;
+use crate::bytes_utils::{detect_endianness_header, read_integer_mut};
 use crate::error::{JImageError, Result};
+use crate::jimage::Endianness;
 
 /* JImage File Header Structure
 
@@ -24,7 +25,6 @@ use crate::error::{JImageError, Result};
 /// Represents the header of a jimage file.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Header {
-    magic: u32,
     major_version: u16,
     minor_version: u16,
     flags: u32,
@@ -33,23 +33,19 @@ pub(crate) struct Header {
     location_bytes: u32,
     string_bytes: u32,
     table_length_in_bytes: usize,
+    endianness: Endianness,
 }
 
 impl Header {
     const SIZE: usize = 28;
     pub(crate) fn from_bytes(raw_header: &[u8]) -> Result<Self> {
-        const MAGIC: u32 = 0xCAFEDADA;
         const SUPPORTED_MAJOR_VER: u16 = 1;
         const SUPPORTED_MINOR_VER: u16 = 0;
 
-        let mut pos = 0usize;
+        let endianness = detect_endianness_header(raw_header)?;
 
-        let magic = read_integer_mut(raw_header, &mut pos)?;
-        if magic != MAGIC {
-            return Err(JImageError::Magic(magic));
-        }
-
-        let version_pair: u32 = read_integer_mut(raw_header, &mut pos)?;
+        let mut pos = 4usize;
+        let version_pair: u32 = read_integer_mut(raw_header, &mut pos, &endianness)?;
         let major_version = (version_pair >> 16) as u16;
         let minor_version = (version_pair & 0xFFFF) as u16;
         if major_version != SUPPORTED_MAJOR_VER || minor_version != SUPPORTED_MINOR_VER {
@@ -59,14 +55,13 @@ impl Header {
             });
         }
 
-        let flags = read_integer_mut(raw_header, &mut pos)?;
-        let resource_count = read_integer_mut(raw_header, &mut pos)?;
-        let table_length = read_integer_mut(raw_header, &mut pos)?;
-        let location_bytes = read_integer_mut(raw_header, &mut pos)?;
-        let string_bytes = read_integer_mut(raw_header, &mut pos)?;
+        let flags = read_integer_mut(raw_header, &mut pos, &endianness)?;
+        let resource_count = read_integer_mut(raw_header, &mut pos, &endianness)?;
+        let table_length = read_integer_mut(raw_header, &mut pos, &endianness)?;
+        let location_bytes = read_integer_mut(raw_header, &mut pos, &endianness)?;
+        let string_bytes = read_integer_mut(raw_header, &mut pos, &endianness)?;
 
         Ok(Self {
-            magic,
             major_version,
             minor_version,
             flags,
@@ -75,6 +70,7 @@ impl Header {
             location_bytes,
             string_bytes,
             table_length_in_bytes: table_length as usize * 4,
+            endianness,
         })
     }
 
@@ -120,5 +116,9 @@ impl Header {
 
     pub fn data(&self, pos_byte: usize) -> usize {
         self.data_begins_at() + pos_byte
+    }
+
+    pub fn endianness(&self) -> &Endianness {
+        &self.endianness
     }
 }
