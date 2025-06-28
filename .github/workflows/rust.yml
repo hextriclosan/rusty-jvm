@@ -114,4 +114,4 @@ jobs:
         shell: bash
         run: |
           set -e
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=16
+          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=4
