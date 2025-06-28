@@ -22,7 +22,7 @@ derive-new = "0.7.0"
 once_cell = "1.21.3"
 jclassfile = "0.2.0"
 jdescriptor = "0.2.0"
-jimage-rs = "0.0.1"
+jimage-rs = "0.0.2"
 indexmap = { version = "2.9.0" , features = ["serde"]}
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
