@@ -5,6 +5,8 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  schedule:
+    - cron: '*/15 * * * *'  # Runs daily at 03:00 UTC
 
 env:
   CARGO_TERM_COLOR: always
@@ -52,6 +54,7 @@ jobs:
           fail_ci_if_error: true
 
   test-on-s390x:
+    if: github.event_name == 'schedule'
     name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
     steps:
@@ -70,7 +73,9 @@ jobs:
           cache-targets: "s390x-unknown-linux-gnu"
 
       - name: Install cross
-        run: cargo install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
 
       - name: Build custom cross-compilation image
         run: docker build -t cross-s390x-java .github/docker/s390x
