@@ -44,7 +44,7 @@ fn handle_execution(arguments: Arguments) -> Result<i32, String> {
     }
 
     let java_home = env::var("JAVA_HOME")
-        .map_err(|_| "JAVA_HOME environment variable is not set".to_string())?;
+        .map_err(|_| "The JAVA_HOME environment variable is not set.\nSet JAVA_HOME to an existing JDK 23 directory.".to_string())?;
 
     run(&arguments, &PathBuf::from(java_home))
         .map(|()| EXIT_SUCCESS)
