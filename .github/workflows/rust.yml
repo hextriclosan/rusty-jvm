@@ -52,7 +52,7 @@ jobs:
           fail_ci_if_error: true
 
   test-on-s390x:
-    name: build (linux big-endian)
+    name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
