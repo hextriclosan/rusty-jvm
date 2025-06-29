@@ -8,67 +8,43 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '23'
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          components: rustfmt, clippy
-          override: true
+          components: clippy, rustfmt
 
-      - name: List GitHub caches
-        run: gh cache list
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.8
-
-      - name: Set env for sccache
-        shell: bash
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-
-      - name: Cache Cargo Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-            ${{ env.SCCACHE_PATH }}
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
-            cargo-
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
-      - name: Generate code coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: Run tests with coverage
+        run: cargo llvm-cov --locked --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        if: success()
         uses: codecov/codecov-action@v5
         with:
           files: lcov.info
@@ -76,42 +52,28 @@ jobs:
           fail_ci_if_error: true
 
   test-on-s390x:
-    name: build (linux big-endian)
+    name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Cache Cargo Dependencies
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/s390x-unknown-linux-gnu
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
-            cargo-
+          cache-targets: "s390x-unknown-linux-gnu"
 
       - name: Install cross
-        shell: bash
         run: cargo install cross
 
       - name: Build custom cross-compilation image
-        run: docker build -t cross-s390x-java ./.github/docker/s390x
+        run: docker build -t cross-s390x-java .github/docker/s390x
 
       - name: Run tests on s390x (Big Endian)
-        shell: bash
-        run: |
-          set -e
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+        run: cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
