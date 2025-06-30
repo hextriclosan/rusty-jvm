@@ -55,7 +55,7 @@ jobs:
           fail_ci_if_error: true
 
   test-on-s390x:
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
     steps:
