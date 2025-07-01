@@ -2,6 +2,7 @@
 name = "rusty-jvm"
 version = "0.3.0"
 edition = "2021"
+rust-version = "1.80"
 description = "An implementation of a Java Virtual Machine (JVM)."
 documentation = "https://docs.rs/rusty-jvm"
 homepage = "https://github.com/hextriclosan/rusty-jvm"

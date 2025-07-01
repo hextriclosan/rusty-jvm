@@ -2,6 +2,7 @@
 name = "jdescriptor"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.61"
 authors = ["Igor Rudenko <iostream64@gmail.com>"]
 description = "Java Bytecode Descriptor Parser for Rust"
 license = "MIT"

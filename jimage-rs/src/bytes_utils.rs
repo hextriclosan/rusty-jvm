@@ -38,7 +38,7 @@ fn read_integer_internal<T: ReadFromBytes>(
 }
 
 pub(crate) trait ReadFromBytes: Sized {
-    const SIZE: usize = size_of::<Self>();
+    const SIZE: usize = std::mem::size_of::<Self>();
     fn read(bytes: &[u8], endianness: &Endianness) -> Result<Self>;
 }
 
