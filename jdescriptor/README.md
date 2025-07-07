@@ -8,12 +8,6 @@
 
 Effortlessly parse and manipulate Java bytecode descriptors in Rust. 
 This crate provides a **lightweight, efficient, and easy-to-use** solution for working with Java class, field, and method descriptors.
-To use it, add the following lines to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-jdescriptor = "0.2.0"
-```
 
 ## Why Use This Crate?
 ✅ **Parse Java Method Signatures** – Extract return types, parameters, and more from JVM bytecode descriptors.<br>
