@@ -5,7 +5,6 @@ use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
-use derive_new::new;
 use getset::Getters;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
@@ -19,10 +18,10 @@ type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
 #[derive(Debug, Getters)]
 pub(crate) struct JavaClass {
-    methods: Methods,
-    fields_info: FieldsInfo,
-    static_fields: FieldsValue,
-    instance_fields_template: FieldsValue,
+    methods: IndexMap<String, Arc<JavaMethod>>,
+    fields_info: IndexMap<String, FieldInfo>,
+    static_fields: IndexMap<String, Arc<FieldValue>>,
+    instance_fields_template: IndexMap<String, FieldValue>,
     cpool_helper: CPoolHelper,
     this_class_name: String,
     #[get = "pub"]
@@ -74,27 +73,12 @@ impl Default for InnerState {
     }
 }
 
-#[derive(Debug, new)]
-pub(crate) struct Methods {
-    method_by_signature: IndexMap<String, Arc<JavaMethod>>,
-}
-
-#[derive(Debug, new)]
-pub(crate) struct FieldsInfo {
-    pub(crate) field_info_by_name: IndexMap<String, FieldInfo>,
-}
-
-#[derive(Debug, new)]
-pub(crate) struct FieldsValue {
-    pub(crate) field_value_by_name: IndexMap<String, Arc<FieldValue>>,
-}
-
 impl JavaClass {
     pub fn new(
-        methods: Methods,
-        fields_info: FieldsInfo,
-        static_fields: FieldsValue,
-        instance_fields_template: FieldsValue,
+        methods: IndexMap<String, Arc<JavaMethod>>,
+        fields_info: IndexMap<String, FieldInfo>,
+        static_fields: IndexMap<String, Arc<FieldValue>>,
+        instance_fields_template: IndexMap<String, FieldValue>,
         cpool_helper: CPoolHelper,
         this_class_name: &str,
         parent: Option<String>,
@@ -149,23 +133,19 @@ impl JavaClass {
 
     pub fn static_field(&self, field_name: &str) -> Option<Arc<FieldValue>> {
         self.static_fields
-            .field_value_by_name
             .get(field_name)
             .map(|field| Arc::clone(field))
     }
 
     pub fn field_info(&self, field_name: &str) -> Option<&FieldInfo> {
-        self.fields_info.field_info_by_name.get(field_name)
+        self.fields_info.get(field_name)
     }
 
     pub fn instance_field_descriptor(
         &self,
         instance_field_name_type: &str,
     ) -> Option<&TypeDescriptor> {
-        let field_info = self
-            .fields_info
-            .field_info_by_name
-            .get(instance_field_name_type)?;
+        let field_info = self.fields_info.get(instance_field_name_type)?;
 
         Some(field_info.type_descriptor())
     }
@@ -176,23 +156,16 @@ impl JavaClass {
         type_descriptor: TypeDescriptor,
         flags: u16,
     ) -> Result<Option<FieldInfo>> {
-        self.instance_fields_template.field_value_by_name.insert(
-            name.clone(),
-            Arc::new(FieldValue::new(type_descriptor.clone())?),
-        );
+        self.instance_fields_template
+            .insert(name.clone(), FieldValue::new(type_descriptor.clone())?);
 
         Ok(self
             .fields_info
-            .field_info_by_name
             .insert(name, FieldInfo::new(type_descriptor, flags)))
     }
 
-    pub fn default_value_instance_fields(&self) -> Result<IndexMap<FieldNameType, FieldValue>> {
-        self.instance_fields_template
-            .field_value_by_name
-            .iter()
-            .map(|(name, field_value)| Ok((name.clone(), field_value.as_ref().clone())))
-            .collect()
+    pub fn default_value_instance_fields(&self) -> IndexMap<FieldNameType, FieldValue> {
+        self.instance_fields_template.clone()
     }
 
     pub fn this_class_name(&self) -> &str {
@@ -216,22 +189,17 @@ impl JavaClass {
     }
 
     pub fn get_static_field_offset(&self, field_name: &str) -> Result<i64> {
-        let offset = self
-            .static_fields
-            .field_value_by_name
-            .get_index_of(field_name)
-            .ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "Failed to get static field offset by name {field_name}"
-                ))
-            })?;
+        let offset = self.static_fields.get_index_of(field_name).ok_or_else(|| {
+            Error::new_execution(&format!(
+                "Failed to get static field offset by name {field_name}"
+            ))
+        })?;
         Ok(offset as i64)
     }
 
     pub fn get_static_field_by_offset(&self, offset: i64) -> Result<Arc<FieldValue>> {
         let (_field_name, field_value) = self
             .static_fields
-            .field_value_by_name
             .get_index(offset as usize)
             .ok_or_else(|| {
                 Error::new_execution(&format!("Failed to get static field by offset {offset}"))
@@ -260,13 +228,11 @@ impl JavaClass {
 
     pub fn get_method_full(&self, full_signature: &str) -> Option<(usize, Arc<JavaMethod>)> {
         self.methods
-            .method_by_signature
             .get_full(full_signature)
             .map(|(index, _key, method)| (index, Arc::clone(method)))
             .or_else(|| {
                 // we have not found the method by full signature, let's treat it as polymorphic signature method and try to find it by method name only
                 self.methods
-                    .method_by_signature
                     .get_full(full_signature.split(':').next()?)
                     .map(|(index, _key, method)| (index, Arc::clone(method)))
             })
@@ -290,7 +256,6 @@ impl JavaClass {
 
     pub fn get_method_by_index(&self, method_index: i64) -> Result<Arc<JavaMethod>> {
         self.methods
-            .method_by_signature
             .get_index(method_index as usize)
             .and_then(|(_key, method)| Some(Arc::clone(&method)))
             .ok_or_else(|| {
@@ -300,7 +265,6 @@ impl JavaClass {
 
     pub fn get_methods(&self) -> Vec<Arc<JavaMethod>> {
         self.methods
-            .method_by_signature
             .iter()
             .map(|(_, v)| Arc::clone(v))
             .collect::<Vec<_>>()
