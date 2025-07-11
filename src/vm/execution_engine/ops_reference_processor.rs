@@ -7,6 +7,7 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{argument_length, get_length};
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
+use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
@@ -46,13 +47,18 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
-            let (len, fields_class_name, field_ref) = {
-                let (fields_class_name, field_ref) = with_method_area(|method_area| {
-                    method_area.lookup_for_static_field(&class_name, &field_name)
-                })?;
-                let len = get_length(field_ref.type_descriptor())?;
-                (len, fields_class_name, field_ref)
-            };
+            let (len, fields_class_name, field_value) = with_method_area(|method_area| {
+                let (fields_class_name, field_value) =
+                    method_area.lookup_for_static_field(&class_name, &field_name)?;
+
+                let jc = method_area.get(&fields_class_name)?;
+                let field_info = jc
+                    .field_info(&field_name)
+                    .ok_or(Error::new_execution("Error getting field info"))?;
+                let len = get_length(field_info.type_descriptor())?;
+
+                Ok::<(i32, String, Arc<FieldValue>), Error>((len, fields_class_name, field_value))
+            })?;
 
             StaticInit::initialize(&fields_class_name)?;
 
@@ -61,7 +67,7 @@ pub(crate) fn process(
                 value.push(stack_frame.pop());
             }
 
-            field_ref.set_raw_value(value.clone())?;
+            field_value.set_raw_value(value.clone())?;
 
             stack_frame.incr_pc();
             trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");

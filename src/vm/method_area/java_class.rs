@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::java_instance::{ClassName, FieldNameType};
 use crate::vm::method_area::cpool_helper::CPoolHelper;
-use crate::vm::method_area::field::Field;
+use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
@@ -20,8 +20,9 @@ type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 #[derive(Debug, Getters)]
 pub(crate) struct JavaClass {
     methods: Methods,
-    static_fields: Fields,
-    non_static_field_properties: FieldProperties,
+    fields_info: FieldsInfo,
+    static_fields: FieldsValue,
+    instance_fields_template: FieldsValue,
     cpool_helper: CPoolHelper,
     this_class_name: String,
     #[get = "pub"]
@@ -33,7 +34,7 @@ pub(crate) struct JavaClass {
     #[get = "pub"]
     static_fields_init_state: Arc<ReentrantMutex<InitState>>,
 
-    instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, Field>>>,
+    instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
     #[get = "pub"]
     declaring_class: Option<String>,
@@ -79,27 +80,21 @@ pub(crate) struct Methods {
 }
 
 #[derive(Debug, new)]
-pub(crate) struct Fields {
-    pub(crate) field_by_name: IndexMap<String, Arc<Field>>,
-}
-
-#[derive(Debug, new, Getters)]
-#[get = "pub"]
-pub(crate) struct FieldProperty {
-    type_descriptor: TypeDescriptor,
-    flags: u16,
+pub(crate) struct FieldsInfo {
+    pub(crate) field_info_by_name: IndexMap<String, FieldInfo>,
 }
 
 #[derive(Debug, new)]
-pub(crate) struct FieldProperties {
-    pub(crate) properties_by_name: IndexMap<String, FieldProperty>,
+pub(crate) struct FieldsValue {
+    pub(crate) field_value_by_name: IndexMap<String, Arc<FieldValue>>,
 }
 
 impl JavaClass {
     pub fn new(
         methods: Methods,
-        static_fields: Fields,
-        non_static_field_properties: FieldProperties,
+        fields_info: FieldsInfo,
+        static_fields: FieldsValue,
+        instance_fields_template: FieldsValue,
         cpool_helper: CPoolHelper,
         this_class_name: &str,
         parent: Option<String>,
@@ -117,8 +112,9 @@ impl JavaClass {
 
         Self {
             methods,
+            fields_info,
             static_fields,
-            non_static_field_properties,
+            instance_fields_template,
             cpool_helper,
             this_class_name: this_class_name.to_string(),
             external_name,
@@ -151,24 +147,27 @@ impl JavaClass {
         self.access_flags & INTERFACE != 0
     }
 
-    pub fn static_field(&self, field_name: &str) -> Result<Option<Arc<Field>>> {
-        Ok(self
-            .static_fields
-            .field_by_name
+    pub fn static_field(&self, field_name: &str) -> Option<Arc<FieldValue>> {
+        self.static_fields
+            .field_value_by_name
             .get(field_name)
-            .map(|field| Arc::clone(field)))
+            .map(|field| Arc::clone(field))
+    }
+
+    pub fn field_info(&self, field_name: &str) -> Option<&FieldInfo> {
+        self.fields_info.field_info_by_name.get(field_name)
     }
 
     pub fn instance_field_descriptor(
         &self,
         instance_field_name_type: &str,
     ) -> Option<&TypeDescriptor> {
-        let field_property = self
-            .non_static_field_properties
-            .properties_by_name
+        let field_info = self
+            .fields_info
+            .field_info_by_name
             .get(instance_field_name_type)?;
 
-        Some(field_property.type_descriptor())
+        Some(field_info.type_descriptor())
     }
 
     pub fn put_instance_field_descriptor(
@@ -176,17 +175,23 @@ impl JavaClass {
         name: String,
         type_descriptor: TypeDescriptor,
         flags: u16,
-    ) -> Option<FieldProperty> {
-        self.non_static_field_properties
-            .properties_by_name
-            .insert(name, FieldProperty::new(type_descriptor, flags))
+    ) -> Result<Option<FieldInfo>> {
+        self.instance_fields_template.field_value_by_name.insert(
+            name.clone(),
+            Arc::new(FieldValue::new(type_descriptor.clone())?),
+        );
+
+        Ok(self
+            .fields_info
+            .field_info_by_name
+            .insert(name, FieldInfo::new(type_descriptor, flags)))
     }
 
-    pub fn default_value_instance_fields(&self) -> Result<IndexMap<FieldNameType, Field>> {
-        self.non_static_field_properties
-            .properties_by_name
+    pub fn default_value_instance_fields(&self) -> Result<IndexMap<FieldNameType, FieldValue>> {
+        self.instance_fields_template
+            .field_value_by_name
             .iter()
-            .map(|(name, property)| Ok((name.clone(), Field::try_from(property)?)))
+            .map(|(name, field_value)| Ok((name.clone(), field_value.as_ref().clone())))
             .collect()
     }
 
@@ -213,7 +218,7 @@ impl JavaClass {
     pub fn get_static_field_offset(&self, field_name: &str) -> Result<i64> {
         let offset = self
             .static_fields
-            .field_by_name
+            .field_value_by_name
             .get_index_of(field_name)
             .ok_or_else(|| {
                 Error::new_execution(&format!(
@@ -223,15 +228,15 @@ impl JavaClass {
         Ok(offset as i64)
     }
 
-    pub fn get_static_field_by_offset(&self, offset: i64) -> Result<Arc<Field>> {
-        let (_field_name, field) = self
+    pub fn get_static_field_by_offset(&self, offset: i64) -> Result<Arc<FieldValue>> {
+        let (_field_name, field_value) = self
             .static_fields
-            .field_by_name
+            .field_value_by_name
             .get_index(offset as usize)
             .ok_or_else(|| {
                 Error::new_execution(&format!("Failed to get static field by offset {offset}"))
             })?;
-        Ok(Arc::clone(&field))
+        Ok(Arc::clone(&field_value))
     }
 
     pub fn get_field_name_by_offset(&self, offset: i64) -> Result<(String, String)> {
@@ -303,7 +308,7 @@ impl JavaClass {
 
     pub fn instance_fields_hierarchy(
         &self,
-    ) -> Result<&IndexMap<ClassName, IndexMap<FieldNameType, Field>>> {
+    ) -> Result<&IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>> {
         self.instance_fields_hierarchy.get_or_try_init(|| {
             let mut instance_fields_hierarchy = IndexMap::new();
             with_method_area(|area| {

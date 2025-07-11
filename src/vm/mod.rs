@@ -82,10 +82,10 @@ fn init_logger() -> Result<()> {
 fn init() -> Result<()> {
     StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
     let lc = with_method_area(|area| area.get("jdk/internal/misc/UnsafeConstants"))?;
-    let big_endian = lc.static_field("BIG_ENDIAN")?.unwrap();
+    let big_endian = lc.static_field("BIG_ENDIAN").unwrap();
     big_endian.set_raw_value(vec![if is_bigendian() { 1 } else { 0 }])?;
 
-    let address_size0 = lc.static_field("ADDRESS_SIZE0")?.unwrap();
+    let address_size0 = lc.static_field("ADDRESS_SIZE0").unwrap();
     address_size0.set_raw_value(vec![8])?;
 
     StaticInit::initialize("java/lang/reflect/AccessibleObject")?;
@@ -117,7 +117,7 @@ fn put_synthetic_instance_field(
             field_name.to_string(),
             str::parse(type_descriptor)?,
             flags,
-        )
+        )?
     };
     match result {
         Some(field_property) => Err(Error::new_execution(&format!(

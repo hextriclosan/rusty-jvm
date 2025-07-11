@@ -3,7 +3,7 @@ use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::vm::method_area::field::Field;
+use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -161,7 +161,7 @@ fn prepare_field(
 fn prepare_static_field(
     member_name: &MemberName,
     method_args: &[i32],
-) -> Result<(Arc<Field>, Vec<i32>)> {
+) -> Result<(Arc<FieldValue>, Vec<i32>)> {
     let args = method_args.to_vec();
     let class_name = member_name.class_name();
 

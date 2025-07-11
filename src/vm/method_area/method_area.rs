@@ -1,12 +1,11 @@
+use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
-use crate::vm::method_area::field::Field;
-use crate::vm::method_area::java_class::{
-    FieldProperties, FieldProperty, Fields, JavaClass, Methods,
-};
+use crate::vm::method_area::field::FieldValue;
+use crate::vm::method_area::java_class::{FieldsInfo, FieldsValue, JavaClass, Methods};
 use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack;
@@ -193,8 +192,8 @@ impl MethodArea {
             .collect::<Result<IndexSet<String>>>()?;
 
         let methods = Self::get_methods(&class_file.methods(), &cpool_helper, &class_name)?;
-        let (non_static_field_descriptors, static_fields) =
-            Self::get_field_descriptors(&class_file.fields(), &cpool_helper)?;
+        let (fields_info, static_fields, instance_fields_template) =
+            Self::get_fields(&class_file.fields(), &cpool_helper)?;
 
         let access_flags = class_file.access_flags().bits();
 
@@ -213,8 +212,9 @@ impl MethodArea {
             class_name.clone(),
             Arc::new(JavaClass::new(
                 methods,
+                fields_info,
                 static_fields,
-                non_static_field_descriptors,
+                instance_fields_template,
                 cpool_helper,
                 &class_name,
                 super_class_name,
@@ -329,10 +329,11 @@ impl MethodArea {
         Ok(Methods::new(method_by_signature))
     }
 
-    fn get_field_descriptors(
+    fn get_fields(
         field_infos: &[FieldInfo],
         cpool_helper: &CPoolHelper,
-    ) -> Result<(FieldProperties, Fields)> {
+    ) -> Result<(FieldsInfo, FieldsValue, FieldsValue)> {
+        let mut fields_info = IndexMap::new();
         let mut non_static_field_properties = IndexMap::new();
         let mut static_field_by_name = IndexMap::new();
         for field_info in field_infos.iter() {
@@ -354,18 +355,23 @@ impl MethodArea {
             })?;
 
             let flags = field_info.access_flags();
+            fields_info.insert(
+                field_name.clone(),
+                vm::method_area::field::FieldInfo::new(descriptor.clone(), flags.bits()),
+            );
             if flags.contains(FieldFlags::ACC_STATIC) {
                 static_field_by_name
-                    .insert(field_name, Arc::new(Field::new(descriptor, flags.bits())?));
+                    .insert(field_name.clone(), Arc::new(FieldValue::new(descriptor)?));
             } else {
                 non_static_field_properties
-                    .insert(field_name, FieldProperty::new(descriptor, flags.bits()));
+                    .insert(field_name, Arc::new(FieldValue::new(descriptor)?));
             }
         }
 
         Ok((
-            FieldProperties::new(non_static_field_properties),
-            Fields::new(static_field_by_name),
+            FieldsInfo::new(fields_info),
+            FieldsValue::new(static_field_by_name),
+            FieldsValue::new(non_static_field_properties),
         ))
     }
 
@@ -373,7 +379,7 @@ impl MethodArea {
         &self,
         class_name: &str,
         field_name: &str,
-    ) -> Result<(String, Arc<Field>)> {
+    ) -> Result<(String, Arc<FieldValue>)> {
         let rc = self.get(class_name)?;
 
         if rc.is_interface() {
@@ -388,8 +394,8 @@ impl MethodArea {
         rc: &Arc<JavaClass>,
         class_name: &str,
         field_name: &str,
-    ) -> Result<(String, Arc<Field>)> {
-        match rc.static_field(field_name)? {
+    ) -> Result<(String, Arc<FieldValue>)> {
+        match rc.static_field(field_name) {
             Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
             None => match rc.parent() {
                 Some(parent_class_name) => {
@@ -407,8 +413,8 @@ impl MethodArea {
         rc: &Arc<JavaClass>,
         class_name: &str,
         field_name: &str,
-    ) -> Result<(String, Arc<Field>)> {
-        match rc.static_field(field_name)? {
+    ) -> Result<(String, Arc<FieldValue>)> {
+        match rc.static_field(field_name) {
             Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
             None => {
                 let interfaces = rc.interfaces();
@@ -511,7 +517,7 @@ impl MethodArea {
     pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
         &self,
         class_name: &str,
-        instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
+        instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
     ) -> Result<()> {
         let rc = self.get(class_name)?;
         if let Some(parent_class_name) = rc.parent().as_ref() {
@@ -568,8 +574,9 @@ impl MethodArea {
         const ABSTRACT: u16 = 0x00000400;
         Arc::new(JavaClass::new(
             Methods::new(IndexMap::new()),
-            Fields::new(IndexMap::new()),
-            FieldProperties::new(IndexMap::new()),
+            FieldsInfo::new(IndexMap::new()),
+            FieldsValue::new(IndexMap::new()),
+            FieldsValue::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
             class_name,
             None,
@@ -588,8 +595,9 @@ impl MethodArea {
         const ABSTRACT: u16 = 0x00000400;
         Arc::new(JavaClass::new(
             Methods::new(IndexMap::new()),
-            Fields::new(IndexMap::new()),
-            FieldProperties::new(IndexMap::new()),
+            FieldsInfo::new(IndexMap::new()),
+            FieldsValue::new(IndexMap::new()),
+            FieldsValue::new(IndexMap::new()),
             CPoolHelper::new(&Vec::new()),
             array_class_name,
             Some("java/lang/Object".to_string()),
