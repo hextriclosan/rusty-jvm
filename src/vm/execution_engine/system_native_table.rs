@@ -6,10 +6,11 @@ use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::class::{
     class_init_class_name_wrp, class_is_instance_wrp, for_name0_wrp, get_constant_pool_wrp,
-    get_declared_constructors0_wrp, get_declared_methods0_wrp, get_declaring_class0_wrp,
-    get_enclosing_method0_wrp, get_interfaces0_wrp, get_modifiers_wrp, get_nest_host0_wrp,
-    get_primitive_class_wrp, get_raw_annotations_wrp, get_simple_binary_name0_wrp,
-    get_superclass_wrp, is_array_wrp, is_assignable_from_wrp, is_interface_wrp, is_primitive_wrp,
+    get_declared_constructors0_wrp, get_declared_fields0_wrp, get_declared_methods0_wrp,
+    get_declaring_class0_wrp, get_enclosing_method0_wrp, get_interfaces0_wrp, get_modifiers_wrp,
+    get_nest_host0_wrp, get_primitive_class_wrp, get_raw_annotations_wrp,
+    get_simple_binary_name0_wrp, get_superclass_wrp, is_array_wrp, is_assignable_from_wrp,
+    is_interface_wrp, is_primitive_wrp,
 };
 use crate::vm::system_native::class_loader::{define_class0_wrp, find_bootstrap_class_wrp};
 use crate::vm::system_native::constant_pool::{
@@ -137,6 +138,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Class:getDeclaringClass0:()Ljava/lang/Class;",
         Basic(get_declaring_class0_wrp),
+    );
+    table.insert(
+        "java/lang/Class:getDeclaredFields0:(Z)[Ljava/lang/reflect/Field;",
+        Basic(get_declared_fields0_wrp),
     );
     table.insert(
         "java/lang/Class:getDeclaredMethods0:(Z)[Ljava/lang/reflect/Method;",

@@ -193,7 +193,7 @@ impl MethodArea {
 
         let methods = Self::get_methods(&class_file.methods(), &cpool_helper, &class_name)?;
         let (fields_info, static_fields, instance_fields_template) =
-            Self::get_fields(&class_file.fields(), &cpool_helper)?;
+            Self::get_fields(&class_file.fields(), &cpool_helper, &class_name)?;
 
         let access_flags = class_file.access_flags().bits();
 
@@ -332,8 +332,9 @@ impl MethodArea {
     fn get_fields(
         field_infos: &[FieldInfo],
         cpool_helper: &CPoolHelper,
+        class_name: &str,
     ) -> Result<(
-        IndexMap<String, vm::method_area::field::FieldInfo>,
+        IndexMap<String, Arc<vm::method_area::field::FieldInfo>>,
         IndexMap<String, Arc<FieldValue>>,
         IndexMap<String, FieldValue>,
     )> {
@@ -361,7 +362,12 @@ impl MethodArea {
             let flags = field_info.access_flags();
             fields_info.insert(
                 field_name.clone(),
-                vm::method_area::field::FieldInfo::new(descriptor.clone(), flags.bits()),
+                Arc::new(vm::method_area::field::FieldInfo::new(
+                    descriptor.clone(),
+                    flags.bits(),
+                    class_name.to_string(),
+                    field_name.clone(),
+                )),
             );
             if flags.contains(FieldFlags::ACC_STATIC) {
                 static_field_by_name

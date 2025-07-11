@@ -117,6 +117,7 @@ fn put_synthetic_instance_field(
             field_name.to_string(),
             str::parse(type_descriptor)?,
             flags,
+            class_name,
         )?
     };
     match result {

@@ -231,6 +231,31 @@ fn get_declaring_class0(clazz_ref: i32) -> Result<i32> {
     declaring_class_ref
 }
 
+pub(crate) fn get_declared_fields0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let class_ref = args[0];
+    let methods_ref = get_declared_fields(class_ref)?;
+    Ok(vec![methods_ref])
+}
+
+fn get_declared_fields(class_ref: i32) -> Result<i32> {
+    let jc = with_method_area(|method_area| {
+        let class_name = method_area.get_from_reflection_table(class_ref)?;
+        method_area.get(&class_name)
+    })?;
+
+    let fields_info = jc.get_fields_info();
+    let fields_info_ref = fields_info
+        .iter()
+        .map(|field_info| field_info.reflection_ref())
+        .collect::<Result<Vec<_>>>()?;
+
+    let result_ref = with_heap_write_lock(|heap| {
+        heap.create_array_with_values("[Ljava/lang/reflect/Field;", &fields_info_ref)
+    });
+
+    Ok(result_ref)
+}
+
 pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let class_ref = args[0];
     let methods_ref = get_declared_methods(class_ref)?;

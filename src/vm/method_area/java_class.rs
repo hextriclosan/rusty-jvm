@@ -19,7 +19,7 @@ type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 #[derive(Debug, Getters)]
 pub(crate) struct JavaClass {
     methods: IndexMap<String, Arc<JavaMethod>>,
-    fields_info: IndexMap<String, FieldInfo>,
+    fields_info: IndexMap<String, Arc<FieldInfo>>,
     static_fields: IndexMap<String, Arc<FieldValue>>,
     instance_fields_template: IndexMap<String, FieldValue>,
     cpool_helper: CPoolHelper,
@@ -76,7 +76,7 @@ impl Default for InnerState {
 impl JavaClass {
     pub fn new(
         methods: IndexMap<String, Arc<JavaMethod>>,
-        fields_info: IndexMap<String, FieldInfo>,
+        fields_info: IndexMap<String, Arc<FieldInfo>>,
         static_fields: IndexMap<String, Arc<FieldValue>>,
         instance_fields_template: IndexMap<String, FieldValue>,
         cpool_helper: CPoolHelper,
@@ -137,7 +137,7 @@ impl JavaClass {
             .map(|field| Arc::clone(field))
     }
 
-    pub fn field_info(&self, field_name: &str) -> Option<&FieldInfo> {
+    pub fn field_info(&self, field_name: &str) -> Option<&Arc<FieldInfo>> {
         self.fields_info.get(field_name)
     }
 
@@ -155,13 +155,20 @@ impl JavaClass {
         name: String,
         type_descriptor: TypeDescriptor,
         flags: u16,
-    ) -> Result<Option<FieldInfo>> {
+        class_name: &str,
+    ) -> Result<Option<Arc<FieldInfo>>> {
         self.instance_fields_template
             .insert(name.clone(), FieldValue::new(type_descriptor.clone())?);
 
-        Ok(self
-            .fields_info
-            .insert(name, FieldInfo::new(type_descriptor, flags)))
+        Ok(self.fields_info.insert(
+            name.clone(),
+            Arc::new(FieldInfo::new(
+                type_descriptor,
+                flags,
+                class_name.to_string(),
+                name,
+            )),
+        ))
     }
 
     pub fn default_value_instance_fields(&self) -> IndexMap<FieldNameType, FieldValue> {
@@ -263,10 +270,17 @@ impl JavaClass {
             })
     }
 
+    pub fn get_fields_info(&self) -> Vec<Arc<FieldInfo>> {
+        self.fields_info
+            .values()
+            .map(|v| Arc::clone(v))
+            .collect::<Vec<_>>()
+    }
+
     pub fn get_methods(&self) -> Vec<Arc<JavaMethod>> {
         self.methods
-            .iter()
-            .map(|(_, v)| Arc::clone(v))
+            .values()
+            .map(|v| Arc::clone(v))
             .collect::<Vec<_>>()
     }
 

@@ -1869,3 +1869,85 @@ Options:
         utils::ExecutionResult::Success,
     );
 }
+
+#[test]
+fn should_support_getting_declared_fields() {
+    assert_success(
+        "samples.reflection.trivial.declaredfields.DeclaredFieldsExample",
+        r#"Class: samples.reflection.trivial.declaredfields.Examinee
+Information about field: publicField
+------------------------------------------------
+String representation: public int samples.reflection.trivial.declaredfields.Examinee.publicField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: public
+Type: int
+Is Synthetic: false
+
+Information about field: protectedField
+------------------------------------------------
+String representation: protected java.lang.String samples.reflection.trivial.declaredfields.Examinee.protectedField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: protected
+Type: class java.lang.String
+Is Synthetic: false
+
+Information about field: privateField
+------------------------------------------------
+String representation: private double samples.reflection.trivial.declaredfields.Examinee.privateField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: private
+Type: double
+Is Synthetic: false
+
+Information about field: packagePrivateFinalField
+------------------------------------------------
+String representation: final int[] samples.reflection.trivial.declaredfields.Examinee.packagePrivateFinalField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: final
+Type: class [I
+Is Synthetic: false
+
+Information about field: staticFinalField
+------------------------------------------------
+String representation: static final java.lang.String samples.reflection.trivial.declaredfields.Examinee.staticFinalField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: static final
+Type: class java.lang.String
+Is Synthetic: false
+
+Information about field: staticNonFinalField
+------------------------------------------------
+String representation: static java.util.Map samples.reflection.trivial.declaredfields.Examinee.staticNonFinalField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: static
+Type: interface java.util.Map
+Is Synthetic: false
+
+Information about field: transientField
+------------------------------------------------
+String representation: transient java.lang.String samples.reflection.trivial.declaredfields.Examinee.transientField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: transient
+Type: class java.lang.String
+Is Synthetic: false
+
+Class: samples.reflection.trivial.declaredfields.Examinee$MyInner
+Information about field: i
+------------------------------------------------
+String representation: int samples.reflection.trivial.declaredfields.Examinee$MyInner.i
+Class: class samples.reflection.trivial.declaredfields.Examinee$MyInner
+Modifiers: 
+Type: int
+Is Synthetic: false
+
+Information about field: this$0
+------------------------------------------------
+String representation: final samples.reflection.trivial.declaredfields.Examinee samples.reflection.trivial.declaredfields.Examinee$MyInner.this$0
+Class: class samples.reflection.trivial.declaredfields.Examinee$MyInner
+Modifiers: final
+Type: class samples.reflection.trivial.declaredfields.Examinee
+Is Synthetic: true
+
+"#,
+    );
+}
