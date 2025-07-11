@@ -63,14 +63,14 @@ fn resolve_static_field(member_name: &mut MemberName) -> Result<i32> {
     let static_field_name = member_name.name();
 
     let jc = with_method_area(|area| area.get(class_name))?;
-    let static_filed = jc.static_field(static_field_name)?.ok_or_else(|| {
+    let field_info = jc.field_info(static_field_name).ok_or_else(|| {
         Error::new_execution(&format!(
             "Static field not found: {class_name}:{static_field_name}"
         ))
     })?; // todo throw NoSuchFieldError if field not found
 
     let current_flags = member_name.flags();
-    let flags_to_enrich_with = static_filed.flags() as i32;
+    let flags_to_enrich_with = field_info.flags() as i32;
     let enriched_flags = current_flags | flags_to_enrich_with;
     member_name.propagate_flags(enriched_flags)?;
 

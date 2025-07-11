@@ -1,24 +1,29 @@
 use crate::vm::error::Result;
 use crate::vm::helper::default_value;
-use crate::vm::method_area::java_class::FieldProperty;
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 use jdescriptor::TypeDescriptor;
 use serde::Serialize;
 use std::sync::RwLock;
 
-#[derive(Debug, Serialize)]
-pub(crate) struct Field {
+#[derive(Debug, Serialize, new, Getters, CopyGetters)]
+pub(crate) struct FieldInfo {
+    #[get = "pub"]
     type_descriptor: TypeDescriptor,
-    value: RwLock<Vec<i32>>,
+    #[get_copy = "pub"]
     flags: u16,
 }
 
-impl Field {
-    pub fn new(type_descriptor: TypeDescriptor, flags: u16) -> Result<Self> {
+#[derive(Debug, Serialize)]
+pub(crate) struct FieldValue {
+    value: RwLock<Vec<i32>>,
+}
+
+impl FieldValue {
+    pub fn new(type_descriptor: TypeDescriptor) -> Result<Self> {
         let value = default_value(&type_descriptor)?;
         Ok(Self {
-            type_descriptor,
             value: RwLock::new(value),
-            flags,
         })
     }
 
@@ -32,40 +37,12 @@ impl Field {
         let guard = self.value.read()?;
         Ok(guard.clone())
     }
-
-    pub fn type_descriptor(&self) -> &TypeDescriptor {
-        &self.type_descriptor
-    }
-
-    pub fn flags(&self) -> u16 {
-        self.flags
-    }
 }
 
-impl TryFrom<&FieldProperty> for Field {
-    type Error = crate::vm::error::Error;
-
-    fn try_from(property: &FieldProperty) -> Result<Field> {
-        let value = default_value(&property.type_descriptor())?;
-        Ok(Field {
-            type_descriptor: property.type_descriptor().clone(),
-            value: RwLock::new(value),
-            flags: *property.flags(),
-        })
-    }
-}
-
-impl Clone for Field {
+impl Clone for FieldValue {
     fn clone(&self) -> Self {
         Self {
-            type_descriptor: self.type_descriptor.clone(),
-            value: RwLock::new(
-                self.value
-                    .read()
-                    .expect("error getting lock to clone field")
-                    .clone(),
-            ),
-            flags: self.flags,
+            value: RwLock::new(self.value.read().unwrap().clone()),
         }
     }
 }

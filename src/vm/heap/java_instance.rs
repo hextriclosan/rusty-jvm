@@ -1,5 +1,5 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::method_area::field::Field;
+use crate::vm::method_area::field::FieldValue;
 use derive_new::new;
 use indexmap::IndexMap;
 use serde::Serialize;
@@ -10,7 +10,7 @@ pub type FieldNameType = String;
 #[derive(Debug, Serialize, Clone, new)]
 pub(crate) struct JavaInstance {
     instance_name: String,
-    fields: IndexMap<ClassName, IndexMap<FieldNameType, Field>>,
+    fields: IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -194,7 +194,7 @@ impl JavaInstance {
         &self,
         starting_from_class_name: &str,
         field_name_type: &str,
-    ) -> Option<&Field> {
+    ) -> Option<&FieldValue> {
         match self.fields.get_index_of(starting_from_class_name) {
             Some(start_index) => self
                 .fields
@@ -210,7 +210,7 @@ impl JavaInstance {
         &mut self,
         starting_from_class_name: &str,
         field_name_type: &str,
-    ) -> Option<&mut Field> {
+    ) -> Option<&mut FieldValue> {
         match self.fields.get_index_of(starting_from_class_name) {
             Some(start_index) => self
                 .fields
