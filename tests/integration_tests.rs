@@ -1636,7 +1636,7 @@ exiting main
 }
 
 #[test]
-#[ignore = "implement Class.getDeclaredFields0(...)"]
+#[ignore = "implement Native method jdk/internal/misc/Unsafe:objectFieldOffset0:(Ljava/lang/reflect/Field;)J"]
 fn should_return_random_number() {
     assert_success("samples.javautil.random.RandomExample", "666\n");
 }
@@ -1875,12 +1875,21 @@ fn should_support_getting_declared_fields() {
     assert_success(
         "samples.reflection.trivial.declaredfields.DeclaredFieldsExample",
         r#"Class: samples.reflection.trivial.declaredfields.Examinee
+All declared fields:
 Information about field: publicField
 ------------------------------------------------
 String representation: public int samples.reflection.trivial.declaredfields.Examinee.publicField
 Class: class samples.reflection.trivial.declaredfields.Examinee
 Modifiers: public
 Type: int
+Is Synthetic: false
+
+Information about field: publicStaticField
+------------------------------------------------
+String representation: public static java.lang.Object samples.reflection.trivial.declaredfields.Examinee.publicStaticField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: public static
+Type: class java.lang.Object
 Is Synthetic: false
 
 Information about field: protectedField
@@ -1931,7 +1940,25 @@ Modifiers: transient
 Type: class java.lang.String
 Is Synthetic: false
 
+Public only fields:
+Information about field: publicField
+------------------------------------------------
+String representation: public int samples.reflection.trivial.declaredfields.Examinee.publicField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: public
+Type: int
+Is Synthetic: false
+
+Information about field: publicStaticField
+------------------------------------------------
+String representation: public static java.lang.Object samples.reflection.trivial.declaredfields.Examinee.publicStaticField
+Class: class samples.reflection.trivial.declaredfields.Examinee
+Modifiers: public static
+Type: class java.lang.Object
+Is Synthetic: false
+
 Class: samples.reflection.trivial.declaredfields.Examinee$MyInner
+All declared fields:
 Information about field: i
 ------------------------------------------------
 String representation: int samples.reflection.trivial.declaredfields.Examinee$MyInner.i
@@ -1948,6 +1975,7 @@ Modifiers: final
 Type: class samples.reflection.trivial.declaredfields.Examinee
 Is Synthetic: true
 
+Public only fields:
 "#,
     );
 }

@@ -98,8 +98,8 @@ impl FieldInfo {
         let type_ref = clazz_ref(&descr)?;
 
         let modifiers = self.flags as i32;
-        let trusted_final = 0; // we don't support final fields yet
-        let slot = 0; // we don't support slots yet
+        let trusted_final = 0; // we don't support this yet
+        let slot = 0; // we don't support this yet
         let signature_ref = 0; // todo https://github.com/hextriclosan/rusty-jvm/issues/386
         let annotations = 0; // todo https://github.com/hextriclosan/rusty-jvm/issues/386
 
