@@ -110,13 +110,13 @@ impl MemberName {
     }
 
     // This method returns ref to an array of 2 elements: Object[] {Long vmindex, Object vmtarget}
-    pub fn get_member_vm_info(&self, member_name_ref: i32) -> Result<i32> {
+    pub fn get_member_vm_info(&self) -> Result<i32> {
         let reference_kind = self.reference_kind();
         let array_ref = with_heap_write_lock(|heap| heap.create_array("[Ljava/lang/Object;", 2))?;
         // vmindex it is an index of the method in the vtable, HotSpot uses negative value for methods that don't need dynamic dispatch
-        // We don't have vtable (yet), thus we use -1 for all methods that are not either of virtual or interface
+        // We don't have vtable (yet), thus we use -2 for all methods that are not either of virtual or interface
         let vmindex = match reference_kind {
-            REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => -1,
+            REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => -2,
             _ => 0,
         } as i64;
         let args = vec![vmindex.into()];
@@ -129,7 +129,7 @@ impl MemberName {
 
         let vmtarget = match reference_kind {
             REF_getField | REF_getStatic | REF_putField | REF_putStatic => self.type_obj_ref(),
-            _ => member_name_ref,
+            _ => self.member_name_ref,
         };
 
         with_heap_write_lock(|heap| heap.set_array_value(array_ref, 0, vec![long_instance_ref]))?;

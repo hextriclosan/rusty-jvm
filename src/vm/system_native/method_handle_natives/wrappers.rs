@@ -75,6 +75,6 @@ pub(crate) fn method_handle_natives_get_member_vm_info_wrp(args: &[i32]) -> Resu
     // returns {vmindex,vmtarget}
     let member_name_ref = args[0];
     let member_name = MemberName::new(member_name_ref)?;
-    let array_ref = member_name.get_member_vm_info(member_name_ref)?;
+    let array_ref = member_name.get_member_vm_info()?;
     Ok(vec![array_ref])
 }
