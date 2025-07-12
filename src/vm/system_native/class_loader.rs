@@ -5,7 +5,8 @@ use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-static COUNTER: AtomicU32 = AtomicU32::new(0);
+pub(crate) const SYNTH_CLASS_DELIM: char = '#';
+static COUNTER: AtomicU32 = AtomicU32::new(1);
 
 pub(crate) fn define_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let class_loader_ref = args[0];
@@ -46,7 +47,7 @@ fn define_class0(
     _class_data_ref: i32,
 ) -> Result<i32> {
     let name = format!(
-        "{}/{}",
+        "{}{SYNTH_CLASS_DELIM}0x{:016X}",
         get_utf8_string_by_ref(name_ref)?,
         increment_counter()
     );

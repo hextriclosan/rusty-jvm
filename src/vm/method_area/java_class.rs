@@ -4,8 +4,7 @@ use crate::vm::method_area::cpool_helper::CPoolHelper;
 use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
-use getset::Getters;
+use getset::{CopyGetters, Getters};
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
@@ -16,18 +15,23 @@ use std::sync::Arc;
 const INTERFACE: u16 = 0x00000200;
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, CopyGetters)]
 pub(crate) struct JavaClass {
     methods: IndexMap<String, Arc<JavaMethod>>,
     fields_info: IndexMap<String, Arc<FieldInfo>>,
     static_fields: IndexMap<String, Arc<FieldValue>>,
     instance_fields_template: IndexMap<String, FieldValue>,
+    #[get = "pub"]
     cpool_helper: CPoolHelper,
+    #[get = "pub"]
     this_class_name: String,
     #[get = "pub"]
     external_name: String,
+    #[get = "pub"]
     parent: Option<String>,
+    #[get = "pub"]
     interfaces: IndexSet<String>,
+    #[get_copy = "pub"]
     access_flags: u16,
 
     #[get = "pub"]
@@ -80,7 +84,8 @@ impl JavaClass {
         static_fields: IndexMap<String, Arc<FieldValue>>,
         instance_fields_template: IndexMap<String, FieldValue>,
         cpool_helper: CPoolHelper,
-        this_class_name: &str,
+        this_class_name: String,
+        external_name: String,
         parent: Option<String>,
         interfaces: IndexSet<String>,
         access_flags: u16,
@@ -89,18 +94,13 @@ impl JavaClass {
         enclosing_method: Option<(String, String, String)>,
         source_file: Option<String>,
     ) -> Self {
-        let external_name = PRIMITIVE_TYPE_BY_CODE
-            .get(this_class_name)
-            .map(|name| name.to_string())
-            .unwrap_or_else(|| this_class_name.replace("/", "."));
-
         Self {
             methods,
             fields_info,
             static_fields,
             instance_fields_template,
             cpool_helper,
-            this_class_name: this_class_name.to_string(),
+            this_class_name,
             external_name,
             parent,
             interfaces,
@@ -113,18 +113,6 @@ impl JavaClass {
             enclosing_method,
             source_file,
         }
-    }
-
-    pub fn cpool_helper(&self) -> &CPoolHelper {
-        &self.cpool_helper
-    }
-
-    pub fn parent(&self) -> &Option<String> {
-        &self.parent
-    }
-
-    pub fn interfaces(&self) -> &IndexSet<String> {
-        &self.interfaces
     }
 
     pub fn is_interface(&self) -> bool {
@@ -173,14 +161,6 @@ impl JavaClass {
 
     pub fn default_value_instance_fields(&self) -> IndexMap<FieldNameType, FieldValue> {
         self.instance_fields_template.clone()
-    }
-
-    pub fn this_class_name(&self) -> &str {
-        &self.this_class_name
-    }
-
-    pub fn access_flags(&self) -> u16 {
-        self.access_flags
     }
 
     pub fn get_field_offset(&self, fully_qualified_field_name: &str) -> Result<i64> {

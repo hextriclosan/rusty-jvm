@@ -9,6 +9,7 @@ use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack;
+use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
 use indexmap::{IndexMap, IndexSet};
 use jclassfile::class_file::{parse, ClassFile};
 use jclassfile::fields::{FieldFlags, FieldInfo};
@@ -104,7 +105,8 @@ impl MethodArea {
         }
 
         let class_file = parse(bytecode)?;
-        let (_, java_class) = self.to_java_class(class_file)?;
+        let (internal, external) = derive_internal_and_external_names(fully_qualified_class_name);
+        let (_, java_class) = self.to_java_class(class_file, internal, external)?;
         self.loaded_classes.write()?.insert(
             fully_qualified_class_name.to_string(),
             Arc::clone(&java_class),
@@ -151,13 +153,8 @@ impl MethodArea {
     fn try_parse(&self, buff: &[u8]) -> Result<Option<Arc<JavaClass>>> {
         let class_file = parse(&buff)?;
 
-        self.to_java_class(class_file)
-            .map(|(_, java_class)| Ok(Some(java_class)))?
-    }
-
-    fn to_java_class(&self, class_file: ClassFile) -> Result<(String, Arc<JavaClass>)> {
+        // todo: add and use handy wrapper_getter here
         let cpool_helper = CPoolHelper::new(class_file.constant_pool());
-
         let this_class_index = class_file.this_class();
         let class_name = cpool_helper
             .get_class_name(this_class_index)
@@ -166,6 +163,19 @@ impl MethodArea {
                     "Error getting class_name by index={this_class_index}"
                 ))
             })?;
+
+        let (internal, external) = derive_internal_and_external_names(&class_name);
+        self.to_java_class(class_file, internal, external)
+            .map(|(_, java_class)| Ok(Some(java_class)))?
+    }
+
+    fn to_java_class(
+        &self,
+        class_file: ClassFile,
+        class_name: String,
+        external_name: String,
+    ) -> Result<(String, Arc<JavaClass>)> {
+        let cpool_helper = CPoolHelper::new(class_file.constant_pool());
 
         let super_class_index = class_file.super_class();
         let super_class_name = if super_class_index > 0 {
@@ -216,7 +226,8 @@ impl MethodArea {
                 static_fields,
                 instance_fields_template,
                 cpool_helper,
-                &class_name,
+                class_name,
+                external_name,
                 super_class_name,
                 interface_names,
                 access_flags,
@@ -581,13 +592,16 @@ impl MethodArea {
         const PUBLIC: u16 = 0x00000001;
         const FINAL: u16 = 0x00000010;
         const ABSTRACT: u16 = 0x00000400;
+
+        let (internal, external) = derive_internal_and_external_names(class_name);
         Arc::new(JavaClass::new(
             IndexMap::new(),
             IndexMap::new(),
             IndexMap::new(),
             IndexMap::new(),
             CPoolHelper::new(&Vec::new()),
-            class_name,
+            internal,
+            external,
             None,
             IndexSet::new(),
             PUBLIC | FINAL | ABSTRACT,
@@ -602,13 +616,16 @@ impl MethodArea {
         const PUBLIC: u16 = 0x00000001;
         const FINAL: u16 = 0x00000010;
         const ABSTRACT: u16 = 0x00000400;
+
+        let (internal, external) = derive_internal_and_external_names(array_class_name);
         Arc::new(JavaClass::new(
             IndexMap::new(),
             IndexMap::new(),
             IndexMap::new(),
             IndexMap::new(),
             CPoolHelper::new(&Vec::new()),
-            array_class_name,
+            internal,
+            external,
             Some("java/lang/Object".to_string()),
             IndexSet::from([
                 "java/lang/Cloneable".to_string(),
@@ -703,5 +720,86 @@ impl MethodArea {
         cpool_helper: &CPoolHelper,
     ) -> Option<String> {
         attributes_helper.get_source_file(cpool_helper)
+    }
+}
+
+/// Takes a raw name like "my/package/MyClass#0xABCDEF"
+/// Returns (internal_name, external_name)
+///
+/// Examples:
+///     "my/package/MyClass#0xABCDEF" -> ("my/package/MyClass/0xABCDEF", "my.package.MyClass/0xABCDEF")
+///     "I" -> ("I", "int")
+///     "my/package/MyClass" -> ("my/package/MyClass", "my.package.MyClass")
+fn derive_internal_and_external_names(raw: &str) -> (String, String) {
+    if let Some(external_name) = PRIMITIVE_TYPE_BY_CODE.get(raw) {
+        // Check if the raw name is a primitive type
+        let internal = raw.to_string();
+        let external = external_name.to_string();
+        (internal, external)
+    } else if let Some(pos) = raw.rfind(SYNTH_CLASS_DELIM) {
+        // Check for synthetic class delimiter
+        let (base, suffix) = raw.split_at(pos);
+        let suffix = &suffix[1..];
+
+        let internal = format!("{}/{}", base, suffix);
+        let external = format!("{}/{}", base.replace('/', "."), suffix);
+
+        (internal, external)
+    } else {
+        // Just ordinary class name
+        let internal = raw.to_string();
+        let external = raw.replace('/', ".");
+        (internal, external)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derive_internal_and_external_names_with_primitive_type() {
+        let result = derive_internal_and_external_names("I");
+        assert_eq!(result, ("I".to_string(), "int".to_string()));
+    }
+
+    #[test]
+    fn derive_internal_and_external_names_with_synthetic_class_delim() {
+        let result = derive_internal_and_external_names(
+            "java/lang/invoke/LambdaForm$MH#0x0000000000000002",
+        );
+        assert_eq!(
+            result,
+            (
+                "java/lang/invoke/LambdaForm$MH/0x0000000000000002".to_string(),
+                "java.lang.invoke.LambdaForm$MH/0x0000000000000002".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn derive_internal_and_external_names_without_synthetic_class_delim() {
+        let result = derive_internal_and_external_names(
+            "java/util/concurrent/ConcurrentHashMap$CollectionView",
+        );
+        assert_eq!(
+            result,
+            (
+                "java/util/concurrent/ConcurrentHashMap$CollectionView".to_string(),
+                "java.util.concurrent.ConcurrentHashMap$CollectionView".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn derive_internal_and_external_names_with_arrays() {
+        let result = derive_internal_and_external_names("[Ljava/lang/Class;");
+        assert_eq!(
+            result,
+            (
+                "[Ljava/lang/Class;".to_string(),
+                "[Ljava.lang.Class;".to_string()
+            )
+        );
     }
 }
