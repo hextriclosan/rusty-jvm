@@ -53,7 +53,7 @@ use crate::vm::system_native::unsafe_::{
     get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
     get_reference_volatile_wrp, get_short_wrp, object_field_offset_1_wrp, put_byte_wrp,
     put_char_wrp, put_reference_volatile_wrp, put_reference_wrp, set_memory0_wrp,
-    should_be_initialized0_wrp,
+    should_be_initialized0_wrp, static_field_base0_wrp, static_field_offset_0_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -194,6 +194,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:objectFieldOffset1:(Ljava/lang/Class;Ljava/lang/String;)J",
         Basic(object_field_offset_1_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:staticFieldOffset0:(Ljava/lang/reflect/Field;)J",
+        Basic(static_field_offset_0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:staticFieldBase0:(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
+        Basic(static_field_base0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetInt:(Ljava/lang/Object;JII)Z",

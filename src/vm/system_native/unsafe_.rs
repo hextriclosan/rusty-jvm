@@ -4,7 +4,10 @@ use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::system_native::object_offset::offset_utils::object_field_offset_by_refs;
+use crate::vm::system_native::object_offset::offset_utils::{
+    object_field_offset_by_refs, static_field_offset_by_names,
+};
+use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
 use std::ptr::{copy, read};
 
@@ -27,6 +30,53 @@ pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> Result<Vec<i32>> {
 }
 fn object_field_offset_1(class_ref: i32, string_ref: i32) -> Result<i64> {
     object_field_offset_by_refs(class_ref, string_ref)
+}
+
+pub(crate) fn static_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let field_ref = args[1];
+    let offset = static_field_offset_0(field_ref)?;
+
+    let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
+    let low = (offset & 0xFFFFFFFF) as i32;
+
+    Ok(vec![high, low])
+}
+fn static_field_offset_0(field_ref: i32) -> Result<i64> {
+    let (class_ref, field_name_ref) = with_heap_read_lock(|heap| {
+        let class_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
+        let field_name_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "name")?[0];
+
+        Ok::<(i32, i32), Error>((class_ref, field_name_ref))
+    })?;
+
+    let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
+    let field_name = get_utf8_string_by_ref(field_name_ref)?;
+
+    static_field_offset_by_names(&class_name, &field_name)
+}
+
+pub(crate) fn static_field_base0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let field_ref = args[1];
+    let base_ref = static_field_base0(field_ref)?;
+
+    Ok(vec![base_ref])
+}
+fn static_field_base0(field_ref: i32) -> Result<i32> {
+    let clazz_ref = with_heap_read_lock(|heap| {
+        let clazz_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
+
+        Ok::<i32, Error>(clazz_ref)
+    })?;
+
+    let class_name = with_method_area(|area| area.get_from_reflection_table(clazz_ref))?;
+    let class_ref = with_method_area(|area| area.load_reflection_class(class_name.as_str()))?;
+
+    Ok(class_ref)
 }
 
 pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -281,10 +331,18 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
         if class_name.starts_with("[") {
             heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![ref_value])
         } else {
-            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            if class_name == "java/lang/Class" {
+                // Special case for java/lang/Class<T>, in fact it is modification of static field of T
+                let t_name = with_method_area(|area| area.get_from_reflection_table(obj_ref))?;
+                let t_jc = with_method_area(|area| area.get(t_name.as_str()))?;
+                let static_field = t_jc.get_static_field_by_offset(offset)?;
+                static_field.set_raw_value(vec![ref_value])
+            } else {
+                let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+                let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
-            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
+                heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
+            }
         }
     })
 }
