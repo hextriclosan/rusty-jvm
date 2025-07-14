@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 const INTERFACE: u16 = 0x00000200;
 
-const STATIC_FIELDS_SART: i64 = i32::MAX as i64;
+const STATIC_FIELDS_START: i64 = i32::MAX as i64;
 
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
@@ -184,12 +184,12 @@ impl JavaClass {
                 "Failed to get static field offset by name {field_name}"
             ))
         })?;
-        let real_offset = STATIC_FIELDS_SART + offset as i64;
+        let real_offset = STATIC_FIELDS_START + offset as i64;
         Ok(real_offset)
     }
 
     pub fn get_static_field_by_offset(&self, offset: i64) -> Result<Arc<FieldValue>> {
-        let real_offset = offset - STATIC_FIELDS_SART; // adjust offset to match the index in static_fields
+        let real_offset = offset - STATIC_FIELDS_START; // adjust offset to match the index in static_fields
         let (_field_name, field_value) = self
             .static_fields
             .get_index(real_offset as usize)
