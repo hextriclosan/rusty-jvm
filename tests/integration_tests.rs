@@ -549,6 +549,11 @@ examinees[1] got by offset is `two`: true
 examinees[1] updated by offset and set to `three`: true
 examinees[1] was not updated and remains the same: true
 one.field4 updated by offset to: FIELD4_PUT_REFERENCE_VOLATILE
+Examinee.staticField as java.lang.reflect.Field: static java.lang.String samples.jdkinternal.unsafe.trivial.Examinee.staticField
+staticFieldBase: class samples.jdkinternal.unsafe.trivial.Examinee
+Current static value: staticFieldValue
+New value set via putReference(...): staticFieldNewValue
+State restored. Static value is now: staticFieldValue
 "#,
             if is_bigendian() { 1 } else { 0 }
         ),

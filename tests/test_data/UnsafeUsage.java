@@ -3,6 +3,8 @@
 package samples.jdkinternal.unsafe.trivial;
 
 import jdk.internal.misc.Unsafe;
+
+import java.lang.reflect.Field;
 import java.util.Arrays;
 
 public class UnsafeUsage {
@@ -15,7 +17,10 @@ public class UnsafeUsage {
         compareAndSetReference();
         compareAndSetLong();
         getReferenceAcquire();
+        // modifyClassFieldValue(); uncomment me after Class<Integer> become materialized instance in rusty-jvm
+        setStaticField();
     }
+
 
     private static void isBigEndian() {
         int isBigEndian = U.isBigEndian() ? 1 : 0;
@@ -110,11 +115,50 @@ public class UnsafeUsage {
         U.putReferenceVolatile(one, stringFieldOffset, "FIELD4_PUT_REFERENCE_VOLATILE");
         System.out.println("one.field4 updated by offset to: " + one.field4); // FIELD4_PUT_REFERENCE_VOLATILE
     }
+
+    private static void modifyClassFieldValue() throws NoSuchFieldException {
+        Class<?> classAsInstance = Integer.class;
+        String originalName = classAsInstance.getName();
+        String newName = "java.lang.Positron";
+        Field nameField = Class.class.getDeclaredField("name");
+        long fieldOffset = U.objectFieldOffset(nameField);
+        System.out.println("Integer.class.name offset: " + fieldOffset);
+        boolean updated = U.compareAndSetReference(classAsInstance, fieldOffset, originalName, newName);
+
+        if (updated) {
+            System.out.println("Class<Integer>.name update new value is " + Integer.class.getName());
+
+            // IMPORTANT: Restore the original name to keep the JVM stable.
+            U.putReference(classAsInstance, fieldOffset, originalName);
+            System.out.println("State restored. Name is now: " + Integer.class.getName());
+        } else {
+            System.out.println("FAILURE: Could not modify Class<Integer>.name.");
+        }
+    }
+
+    private static void setStaticField() throws NoSuchFieldException {
+        String originalStaticValue = Examinee.staticField;
+        String newStaticValue = "staticFieldNewValue";
+
+        Field staticField = Examinee.class.getDeclaredField("staticField");
+        System.out.println("Examinee.staticField as java.lang.reflect.Field: " + staticField);
+        long staticFieldOffset = U.staticFieldOffset(staticField);
+        Object staticFieldBase = U.staticFieldBase(staticField);
+        System.out.println("staticFieldBase: " + staticFieldBase);
+
+        System.out.println("Current static value: " + Examinee.staticField);
+        U.putReference(staticFieldBase, staticFieldOffset, newStaticValue);
+        System.out.println("New value set via putReference(...): " + Examinee.staticField);
+
+        U.putReference(staticFieldBase, staticFieldOffset, originalStaticValue);
+        System.out.println("State restored. Static value is now: " + Examinee.staticField);
+    }
 }
 
 class Examinee {
     int field1 = 10;
     int field2 = 20;
+    static String staticField = "staticFieldValue";
     int field3 = 30;
     String field4 = "FIELD4";
     long field5 = 42_949_672_980L/*h=10,l=20*/;
