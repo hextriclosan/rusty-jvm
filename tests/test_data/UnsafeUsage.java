@@ -1,109 +1,114 @@
-// javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED -d . UnsafeUsage.java
+// javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED -XDstringConcat=inline -d . UnsafeUsage.java
 // java --add-exports java.base/jdk.internal.misc=ALL-UNNAMED samples.jdkinternal.unsafe.trivial.UnsafeUsage
 package samples.jdkinternal.unsafe.trivial;
 
 import jdk.internal.misc.Unsafe;
-
 import java.util.Arrays;
 
 public class UnsafeUsage {
+    private static final Unsafe U = Unsafe.getUnsafe();
 
-    public static void main(String[] args) {
-        Unsafe unsafe = Unsafe.getUnsafe();
+    public static void main(String[] args) throws Exception {
+        isBigEndian();
+        allocateUninitializedArray();
+        compareAndSetInt();
+        compareAndSetReference();
+        compareAndSetLong();
+        getReferenceAcquire();
+    }
 
-        int isBigEndian = unsafe.isBigEndian() ? 1 : 0;
-        System.out.print("isBigEndian: ");
-        System.out.println(isBigEndian);
+    private static void isBigEndian() {
+        int isBigEndian = U.isBigEndian() ? 1 : 0;
+        System.out.println("isBigEndian: " + isBigEndian);
+    }
 
-        var bytes = (byte[]) unsafe.allocateUninitializedArray(byte.class, 3);
-        System.out.print("bytes: ");
-        System.out.println(Arrays.toString(bytes));
+    private static void allocateUninitializedArray() {
+        var bytes = (byte[]) U.allocateUninitializedArray(byte.class, 3);
+        System.out.println("bytes: " + Arrays.toString(bytes));
+    }
 
+    private static void compareAndSetInt() {
         String intFieldName = new String(new char[]{'f', 'i', 'e', 'l', 'd', '3'});
-        long intFieldOffset = unsafe.objectFieldOffset(Examinee.class, intFieldName);
+        long intFieldOffset = U.objectFieldOffset(Examinee.class, intFieldName);
 
         Examinee examinee = new Examinee();
-        Object intFieldValue = unsafe.getIntVolatile(examinee, intFieldOffset);
-        System.out.print("examinee.field3 value got by offset is: ");
-        System.out.println(intFieldValue);
+        Object intFieldValue = U.getIntVolatile(examinee, intFieldOffset);
+        System.out.println("examinee.field3 value got by offset is: " + intFieldValue);
 
-        boolean updated = unsafe.compareAndSetInt(examinee, intFieldOffset, 30, 40);
+        boolean updated = U.compareAndSetInt(examinee, intFieldOffset, 30, 40);
         if (updated) {
-            System.out.print("examinee.field3 updated by offset: ");
-            System.out.println(examinee.field3); // 40
+            System.out.println("examinee.field3 updated by offset: " + examinee.field3); // 40
         }
 
-        updated = unsafe.compareAndSetInt(examinee, intFieldOffset, 30, 50);
+        updated = U.compareAndSetInt(examinee, intFieldOffset, 30, 50);
         if (!updated) {
-            System.out.print("examinee.field3 was not updated: ");
-            System.out.println(examinee.field3); // 40
+            System.out.println("examinee.field3 was not updated: " + examinee.field3); // 40
         }
+    }
 
-        long stringFieldOffset = unsafe.objectFieldOffset(Examinee.class, "field4");
-        Object stringFieldValue = unsafe.getReferenceVolatile(examinee, stringFieldOffset);
-        System.out.print("examinee.field4 value got by offset is: ");
-        System.out.println(stringFieldValue);
+    private static void compareAndSetLong() {
+        long longFieldOffset = U.objectFieldOffset(Examinee.class, "field5");
+        Examinee examinee = new Examinee();
+        long longFieldValue = U.getLongVolatile(examinee, longFieldOffset);
+        System.out.println("examinee.field5 value got by offset is: " + longFieldValue);
 
-        updated = unsafe.compareAndSetReference(examinee, stringFieldOffset, "FIELD4", "FIELD4_UPDATED");
+        boolean updated = U.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 128_849_018_920L);
         if (updated) {
-            System.out.print("examinee.field4 updated by offset: ");
-            System.out.println(examinee.field4); // FIELD4_UPDATED
+            System.out.println("examinee.field5 updated by offset: " + examinee.field5); // 128_849_018_920L
         }
 
-        updated = unsafe.compareAndSetReference(examinee, stringFieldOffset, "FIELD4", "FIELD4_UPDATED_EVEN_MORE");
+        updated = U.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 1L);
         if (!updated) {
-            System.out.print("examinee.field4 was not updated: ");
-            System.out.println(examinee.field4); // FIELD4_UPDATED
+            System.out.println("examinee.field5 was not updated: " + examinee.field5); // 128_849_018_920L
         }
+    }
 
-        long longFieldOffset = unsafe.objectFieldOffset(Examinee.class, "field5");
-        long longFieldValue = unsafe.getLongVolatile(examinee, longFieldOffset);
-        System.out.print("examinee.field5 value got by offset is: ");
-        System.out.println(longFieldValue);
+    private static void compareAndSetReference() {
+        long stringFieldOffset = U.objectFieldOffset(Examinee.class, "field4");
+        Examinee examinee = new Examinee();
+        Object stringFieldValue = U.getReferenceVolatile(examinee, stringFieldOffset);
+        System.out.println("examinee.field4 value got by offset is: " + stringFieldValue);
 
-        updated = unsafe.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 128_849_018_920L);
+        boolean updated = U.compareAndSetReference(examinee, stringFieldOffset, "FIELD4", "FIELD4_UPDATED");
         if (updated) {
-            System.out.print("examinee.field5 updated by offset: ");
-            System.out.println(examinee.field5); // 128_849_018_920L
+            System.out.println("examinee.field4 updated by offset: " + examinee.field4); // FIELD4_UPDATED
         }
 
-        updated = unsafe.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 1L);
+        updated = U.compareAndSetReference(examinee, stringFieldOffset, "FIELD4", "FIELD4_UPDATED_EVEN_MORE");
         if (!updated) {
-            System.out.print("examinee.field5 was not updated: ");
-            System.out.println(examinee.field5); // 128_849_018_920L
+            System.out.println("examinee.field4 was not updated: " + examinee.field4); // FIELD4_UPDATED
         }
+    }
 
+    private static void getReferenceAcquire() {
         Examinee one = new Examinee();
         Examinee two = new Examinee();
         Examinee three = new Examinee();
         Examinee[] examinees = new Examinee[]{one, two, three};
         int index = 1;
-        int arrayBaseOffset = unsafe.arrayBaseOffset(Examinee[].class);
-        int scale = unsafe.arrayIndexScale(Examinee[].class);
+        int arrayBaseOffset = U.arrayBaseOffset(Examinee[].class);
+        int scale = U.arrayIndexScale(Examinee[].class);
         if ((scale & (scale - 1)) != 0) {
             throw new RuntimeException("array index scale not a power of two");
         }
         int arrayShift = 31 - Integer.numberOfLeadingZeros(scale);
         long offset = ((long) index << arrayShift) + arrayBaseOffset;
-        Examinee item = (Examinee) unsafe.getReferenceAcquire(examinees, offset);
-        System.out.print("examinees[1] got by offset is `two`: ");
-        System.out.println(item == two);
+        Examinee item = (Examinee) U.getReferenceAcquire(examinees, offset);
+        System.out.println("examinees[1] got by offset is `two`: " + (item == two));
 
-        updated = unsafe.compareAndSetReference(examinees, offset, two, three);
+        boolean updated = U.compareAndSetReference(examinees, offset, two, three);
         if (updated) {
-            System.out.print("examinees[1] updated by offset and set to `three`: ");
-            System.out.println(examinees[1] == three);
+            System.out.println("examinees[1] updated by offset and set to `three`: " + (examinees[1] == three));
         }
 
-        updated = unsafe.compareAndSetReference(examinees, offset, two, one);
+        updated = U.compareAndSetReference(examinees, offset, two, one);
         if (!updated) {
-            System.out.print("examinees[1] was not updated and remains the same: ");
-            System.out.println(examinees[1] == three);
+            System.out.println("examinees[1] was not updated and remains the same: " + (examinees[1] == three));
         }
 
-        unsafe.putReferenceVolatile(one, stringFieldOffset, "FIELD4_PUT_REFERENCE_VOLATILE");
-        System.out.print("one.field4 updated by offset to: ");
-        System.out.println(one.field4); // FIELD4_PUT_REFERENCE_VOLATILE
+        long stringFieldOffset = U.objectFieldOffset(Examinee.class, "field4");
+        U.putReferenceVolatile(one, stringFieldOffset, "FIELD4_PUT_REFERENCE_VOLATILE");
+        System.out.println("one.field4 updated by offset to: " + one.field4); // FIELD4_PUT_REFERENCE_VOLATILE
     }
 }
 
