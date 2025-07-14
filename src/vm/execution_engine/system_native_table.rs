@@ -51,9 +51,10 @@ use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_set_int_wrp,
     compare_and_set_long_wrp, copy_memory0_wrp, ensure_class_initialized0_wrp, get_byte_wrp,
     get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
-    get_reference_volatile_wrp, get_short_wrp, object_field_offset_1_wrp, put_byte_wrp,
-    put_char_wrp, put_reference_volatile_wrp, put_reference_wrp, set_memory0_wrp,
-    should_be_initialized0_wrp, static_field_base0_wrp, static_field_offset_0_wrp,
+    get_reference_volatile_wrp, get_short_wrp, object_field_offset_0_wrp,
+    object_field_offset_1_wrp, put_byte_wrp, put_char_wrp, put_reference_volatile_wrp,
+    put_reference_wrp, set_memory0_wrp, should_be_initialized0_wrp, static_field_base0_wrp,
+    static_field_offset_0_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -190,6 +191,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:arrayBaseOffset0:(Ljava/lang/Class;)I",
         Basic(|_args: &[i32]| Ok(vec![0])),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:objectFieldOffset0:(Ljava/lang/reflect/Field;)J",
+        Basic(object_field_offset_0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:objectFieldOffset1:(Ljava/lang/Class;Ljava/lang/String;)J",

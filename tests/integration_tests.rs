@@ -1641,7 +1641,6 @@ exiting main
 }
 
 #[test]
-#[ignore = "implement Native method jdk/internal/misc/Unsafe:objectFieldOffset0:(Ljava/lang/reflect/Field;)J"]
 fn should_return_random_number() {
     assert_success("samples.javautil.random.RandomExample", "666\n");
 }

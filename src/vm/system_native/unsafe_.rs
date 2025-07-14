@@ -5,7 +5,7 @@ use crate::vm::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::object_offset::offset_utils::{
-    object_field_offset_by_refs, static_field_offset_by_names,
+    object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
@@ -15,6 +15,32 @@ use std::ptr::{copy, read};
 enum ValueType {
     Char,
     Byte,
+}
+
+pub(crate) fn object_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let field_ref = args[1];
+    let offset = object_field_offset_0(field_ref)?;
+
+    let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
+    let low = (offset & 0xFFFFFFFF) as i32;
+
+    Ok(vec![high, low])
+}
+fn object_field_offset_0(field_ref: i32) -> Result<i64> {
+    let (class_ref, field_name_ref) = with_heap_read_lock(|heap| {
+        let class_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
+        let field_name_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "name")?[0];
+
+        Ok::<(i32, i32), Error>((class_ref, field_name_ref))
+    })?;
+
+    let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
+    let field_name = get_utf8_string_by_ref(field_name_ref)?;
+
+    object_field_offset_by_names(&class_name, &field_name)
 }
 
 pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> Result<Vec<i32>> {
