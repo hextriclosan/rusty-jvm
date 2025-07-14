@@ -18,7 +18,7 @@ public class UnsafeUsage {
         compareAndSetLong();
         getReferenceAcquire();
         // modifyClassFieldValue(); uncomment me after Class<Integer> become materialized instance in rusty-jvm
-        setStaticField();
+        getSetStaticField();
     }
 
 
@@ -136,18 +136,16 @@ public class UnsafeUsage {
         }
     }
 
-    private static void setStaticField() throws NoSuchFieldException {
-        String originalStaticValue = Examinee.staticField;
-        String newStaticValue = "staticFieldNewValue";
-
+    private static void getSetStaticField() throws NoSuchFieldException {
         Field staticField = Examinee.class.getDeclaredField("staticField");
         System.out.println("Examinee.staticField as java.lang.reflect.Field: " + staticField);
         long staticFieldOffset = U.staticFieldOffset(staticField);
         Object staticFieldBase = U.staticFieldBase(staticField);
         System.out.println("staticFieldBase: " + staticFieldBase);
 
-        System.out.println("Current static value: " + Examinee.staticField);
-        U.putReference(staticFieldBase, staticFieldOffset, newStaticValue);
+        Object originalStaticValue = U.getReference(staticFieldBase, staticFieldOffset);
+        System.out.println("Current static value: " + originalStaticValue);
+        U.putReference(staticFieldBase, staticFieldOffset, "staticFieldNewValue");
         System.out.println("New value set via putReference(...): " + Examinee.staticField);
 
         U.putReference(staticFieldBase, staticFieldOffset, originalStaticValue);

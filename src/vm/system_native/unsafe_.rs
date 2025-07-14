@@ -160,9 +160,19 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
             heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)
         })?
     } else {
-        let jc = with_method_area(|area| area.get(class_name.as_str()))?;
-        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
-        with_heap_read_lock(|heap| heap.get_object_field_value(obj_ref, &class_name, &field_name))?
+        if class_name == "java/lang/Class" {
+            // Special case for java/lang/Class<T>, in fact it is getting of static field of T
+            let t_name = with_method_area(|area| area.get_from_reflection_table(obj_ref))?;
+            let t_jc = with_method_area(|area| area.get(t_name.as_str()))?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            static_field.raw_value()?
+        } else {
+            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            with_heap_read_lock(|heap| {
+                heap.get_object_field_value(obj_ref, &class_name, &field_name)
+            })?
+        }
     };
 
     Ok(raw_value[0])
