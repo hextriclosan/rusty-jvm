@@ -15,6 +15,8 @@ use crate::vm::system_native::method_handle_natives::offsets::{
 use std::sync::Arc;
 
 const DIRECT_METHOD_HANDLE: &'static str = "java/lang/invoke/DirectMethodHandle";
+const BOUND_METHOD_HANDLE: &'static str = "java/lang/invoke/BoundMethodHandle";
+const MUTABLE_CALL_SITE: &'static str = "java/lang/invoke/MutableCallSite";
 
 pub fn invoke_exact(
     handle_ref: i32,
@@ -22,13 +24,34 @@ pub fn invoke_exact(
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
     let handle_name = with_heap_read_lock(|heap| heap.get_instance_name(handle_ref))?;
-    if !handle_name.starts_with(DIRECT_METHOD_HANDLE) {
-        // so far we support only DirectMethodHandle
-        return Err(Error::new_execution(&format!(
-            "error invoking exact: handle: {handle_name} is not DirectMethodHandle",
-        )));
+    if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
+        return direct_method_handle_invocation(
+            handle_ref,
+            method_args,
+            stack_frames,
+            &handle_name,
+        );
+    } else if handle_name.starts_with(BOUND_METHOD_HANDLE) {
+        return bound_method_handle_invocation(
+            handle_ref,
+            method_args,
+            stack_frames,
+            &handle_name,
+        );
+    } else if handle_name == MUTABLE_CALL_SITE {
+        // todo: ends with CallSite?
+        return mutable_call_site_invocation(handle_ref, method_args, stack_frames, &handle_name);
     }
 
+    unimplemented!("invoke_exact: handle: {} is not supported", handle_name)
+}
+
+fn direct_method_handle_invocation(
+    handle_ref: i32,
+    method_args: &[i32],
+    stack_frames: &mut StackFrames,
+    handle_name: &String,
+) -> Result<()> {
     let member_name_ref = with_heap_read_lock(|heap| {
         heap.get_object_field_value(handle_ref, &handle_name, "member")
     })?[0];
@@ -52,6 +75,40 @@ pub fn invoke_exact(
         REF_putStatic => invoke_exact_put_static_field(&member_name, method_args),
         _ => unimplemented!("reference_kind: {:?}", reference_kind),
     }
+}
+
+fn bound_method_handle_invocation(
+    handle_ref: i32,
+    method_args: &[i32],
+    stack_frames: &mut StackFrames,
+    handle_name: &String,
+) -> Result<()> {
+    if handle_name == "java/lang/invoke/BoundMethodHandle$Species_LL" {
+        let _arg_l0 = with_heap_read_lock(|heap| {
+            heap.get_object_field_value(handle_ref, handle_name, "argL0")
+        })?[0];
+        let arg_l1 = with_heap_read_lock(|heap| {
+            heap.get_object_field_value(handle_ref, handle_name, "argL1")
+        })?[0];
+
+        return invoke_exact(arg_l1, method_args, stack_frames);
+    }
+
+    unimplemented!("bound_method_handle_invocation: {}", handle_name)
+}
+
+fn mutable_call_site_invocation(
+    mutable_call_site_ref: i32,
+    method_args: &[i32],
+    stack_frames: &mut StackFrames,
+    handle_name: &String,
+) -> Result<()> {
+    let target_ref = with_heap_read_lock(|heap| {
+        // todo: get with getTarget() getter
+        heap.get_object_field_value(mutable_call_site_ref, handle_name, "target")
+    })?[0];
+
+    invoke_exact(target_ref, method_args, stack_frames)
 }
 
 fn invoke_exact_method(
