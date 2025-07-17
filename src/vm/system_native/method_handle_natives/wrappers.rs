@@ -51,7 +51,10 @@ pub(crate) fn method_handle_invoke_wrp(
     args: &[i32],
     stack_frames: &mut StackFrames,
 ) -> Result<Vec<i32>> {
-    method_handle_invoke_exact_wrp(args, stack_frames) // TODO: implement real invoke
+    // The invoke method should handle type conversions and argument adaptations that invokeExact does not perform,
+    // making this a temporary placeholder that could cause incorrect behavior.
+    // TODO: implement real invoke
+    method_handle_invoke_exact_wrp(args, stack_frames)
 }
 
 pub(crate) fn method_handle_natives_static_field_offset_wrp(args: &[i32]) -> Result<Vec<i32>> {
