@@ -26,10 +26,11 @@ use crate::vm::system_native::io_file_system::{
 };
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
-    method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp,
+    method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
     method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
     method_handle_natives_object_field_offset_wrp, method_handle_natives_resolve_wrp,
     method_handle_natives_static_field_base_wrp, method_handle_natives_static_field_offset_wrp,
+    set_call_site_target_normal_wrp,
 };
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
@@ -480,12 +481,20 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(method_handle_natives_get_member_vm_info_wrp),
     );
     table.insert(
+        "java/lang/invoke/MethodHandleNatives:setCallSiteTargetNormal:(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
+        Basic(set_call_site_target_normal_wrp),
+    );
+    table.insert(
         "java/lang/invoke/MethodHandle:invokeExact", // this is a normalized polymorphic signature
         WithMutStackFrames(method_handle_invoke_exact_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandle:invokeBasic", // this is a normalized polymorphic signature
         WithMutStackFrames(method_handle_invoke_basic_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandle:invoke", // this is a normalized polymorphic signature
+        WithMutStackFrames(method_handle_invoke_wrp),
     );
     table.insert(
         "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",

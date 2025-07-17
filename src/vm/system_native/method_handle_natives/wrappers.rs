@@ -1,4 +1,5 @@
 use crate::vm::error::Result;
+use crate::vm::heap::heap::with_heap_write_lock;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -46,6 +47,16 @@ pub(crate) fn method_handle_natives_object_field_offset_wrp(args: &[i32]) -> Res
     Ok(i64_to_vec(offset))
 }
 
+pub(crate) fn method_handle_invoke_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    // The invoke method should handle type conversions and argument adaptations that invokeExact does not perform,
+    // making this a temporary placeholder that could cause incorrect behavior.
+    // TODO: implement real invoke
+    method_handle_invoke_exact_wrp(args, stack_frames)
+}
+
 pub(crate) fn method_handle_natives_static_field_offset_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_name_ref = args[0];
     let offset = get_static_field_offset(member_name_ref)?;
@@ -77,4 +88,24 @@ pub(crate) fn method_handle_natives_get_member_vm_info_wrp(args: &[i32]) -> Resu
     let member_name = MemberName::new(member_name_ref)?;
     let array_ref = member_name.get_member_vm_info()?;
     Ok(vec![array_ref])
+}
+
+pub(crate) fn set_call_site_target_normal_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let call_site_ref = args[0];
+    let method_handle_ref = args[1];
+
+    set_call_site_target_normal(call_site_ref, method_handle_ref)?;
+
+    Ok(vec![])
+}
+fn set_call_site_target_normal(call_site_ref: i32, method_handle_ref: i32) -> Result<()> {
+    with_heap_write_lock(|heap| {
+        let call_site_name = heap.get_instance_name(call_site_ref)?;
+        heap.set_object_field_value(
+            call_site_ref,
+            &call_site_name,
+            "target",
+            vec![method_handle_ref],
+        )
+    })
 }
