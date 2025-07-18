@@ -1,6 +1,6 @@
 # Tracing Method Handles in Rusty JVM
 
-These properties are internal debugging flags for the Java implementation of [Dynamically Typed Languages][Dynamically Typed Languages].
+These properties are internal debugging flags for the Java implementation of [Dynamically Typed Languages].
 
 ### Tracing properties
 
