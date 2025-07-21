@@ -1346,7 +1346,7 @@ fn should_support_unsafe_put_reference_volatile() {
 }
 
 // This test class is put to java.lang package for calling package-private method
-// It's not so nice but bad test is better than no test
+// It's not so nice but a bad test is better than no test
 #[test]
 fn should_support_system_get_constant_pool() {
     assert_success(

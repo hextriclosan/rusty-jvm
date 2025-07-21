@@ -2,7 +2,7 @@
 // java --patch-module java.base=. java.lang.ConstantPoolExample
 
 // This test is put to java.lang package for calling package-private method
-// It's not so nice but bad test is better than no test
+// It's not so nice but a bad test is better than no test
 package java.lang;
 
 import jdk.internal.reflect.ConstantPool;
