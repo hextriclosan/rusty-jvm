@@ -1982,3 +1982,8 @@ Public only fields:
 "#,
     );
 }
+
+#[test]
+fn should_support_string_concat_helper() {
+    assert_success("java.lang.StringConcatHelperExample", "abc\n");
+}
