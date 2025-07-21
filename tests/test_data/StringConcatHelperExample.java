@@ -11,6 +11,17 @@ public class StringConcatHelperExample {
         System.out.println(concat("a", "b", "c"));
     }
 
+    /**
+     * Concatenates the given objects into a single string.
+     * <p>
+     * This method is a test helper that mimics the internal usage of
+     * {@code StringConcatHelper}. It converts
+     * each object to a string, calculates the required buffer size, and
+     * constructs the final concatenated string using {@code StringConcatHelper}.
+     *
+     * @param objs the objects to concatenate
+     * @return the concatenated string
+     */
     private static String concat(Object... objs) {
         String[] toConcat = new String[objs.length];
         for (int i = 0; i < objs.length; i++) {
