@@ -61,8 +61,9 @@ fn define_class0(
         .map(|v| v[0] as u8)
         .collect();
 
-    with_method_area(|method_area| method_area.create_metaclass(&name, &byte_code))?;
-    let clazz_ref = clazz_ref(&name);
+    let (internal_name, _external_name) =
+        with_method_area(|method_area| method_area.create_metaclass(&name, &byte_code))?;
+    let clazz_ref = clazz_ref(&internal_name);
 
     clazz_ref
 }
