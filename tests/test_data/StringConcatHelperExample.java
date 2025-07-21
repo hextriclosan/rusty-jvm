@@ -5,7 +5,7 @@
 // It's not so nice but a bad test is better than no test
 package java.lang;
 
-// This example mimics the way StringConcatFactory uses StringConcatHelper
+// This example mimics the way StringConcatFactory uses StringConcatHelper internally.
 public class StringConcatHelperExample {
     public static void main(String[] args) {
         System.out.println(concat("a", "b", "c"));
