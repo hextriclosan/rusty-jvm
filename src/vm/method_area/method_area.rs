@@ -99,21 +99,22 @@ impl MethodArea {
         &self,
         fully_qualified_class_name: &str,
         bytecode: &[u8],
-    ) -> Result<()> {
-        if let Some(_) = self.loaded_classes.read()?.get(fully_qualified_class_name) {
-            return Ok(());
+    ) -> Result<(String, String)> {
+        let (internal, external) = derive_internal_and_external_names(fully_qualified_class_name);
+
+        if let Some(jc) = self.loaded_classes.read()?.get(&internal) {
+            return Ok((jc.this_class_name().clone(), jc.external_name().clone()));
         }
 
         let class_file = parse(bytecode)?;
-        let (internal, external) = derive_internal_and_external_names(fully_qualified_class_name);
-        let (_, java_class) = self.to_java_class(class_file, internal, external)?;
-        self.loaded_classes.write()?.insert(
-            fully_qualified_class_name.to_string(),
-            Arc::clone(&java_class),
-        );
+        let (_, java_class) =
+            self.to_java_class(class_file, internal.clone(), external.clone())?;
+        self.loaded_classes
+            .write()?
+            .insert(internal.clone(), Arc::clone(&java_class));
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
-        Ok(())
+        Ok((internal, external))
     }
 
     fn load_class_file(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
