@@ -1995,3 +1995,28 @@ fn should_support_string_concat_factory() {
         "abc\n",
     );
 }
+
+#[test]
+fn should_support_bootstrap_method_invoker() {
+    assert_success(
+        "java.lang.invoke.BootstrapMethodInvokerExample",
+        r#"--- Simulating `invokedynamic` for concat('a','b','c') ---
+--- Calling BootstrapMethodInvoker.invoke directly ---
+CallSite's Dynamic Invoker: MethodHandle(String,String,String)String
+--- Executing the final linked MethodHandle ---
+Result of invokeExact("a", "b", "c"): abc
+
+--- Simulating `invokedynamic` for custom bootstrap method ---
+[BSM]: customBootstrap called!
+  > invokedName: myCustomAdd
+  > invokedType: (int,int)int
+  > Linking to target: MethodHandle(int,int)int
+Executing add(10, 20)
+Custom BSM Result: 30
+
+--- Simulating `invokedynamic` for lambda expression ---
+Executing lambda body: format('User', 123)
+Lambda Result: User-123
+"#,
+    );
+}
