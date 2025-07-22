@@ -1987,3 +1987,11 @@ Public only fields:
 fn should_support_string_concat_helper() {
     assert_success("java.lang.StringConcatHelperExample", "abc\n");
 }
+
+#[test]
+fn should_support_string_concat_factory() {
+    assert_success(
+        "samples.reflection.stringconcat.StringConcatFactoryExample",
+        "abc\n",
+    );
+}
