@@ -22,7 +22,7 @@ const DIRECT_METHOD_HANDLE: &'static str = "java/lang/invoke/DirectMethodHandle"
 const BOUND_METHOD_HANDLE: &'static str = "java/lang/invoke/BoundMethodHandle";
 const MUTABLE_CALL_SITE: &'static str = "java/lang/invoke/MutableCallSite";
 
-static PRINT_SPECIES: Lazy<bool> = Lazy::new(|| env::var("PRINT_SPECIES").is_ok());
+static DEBUG_SPECIES_PRINTING: Lazy<bool> = Lazy::new(|| env::var("DEBUG_SPECIES_PRINTING").is_ok());
 
 pub fn invoke_exact(
     handle_ref: i32,
@@ -89,7 +89,7 @@ fn bound_method_handle_invocation(
     stack_frames: &mut StackFrames,
     handle_name: &String,
 ) -> Result<()> {
-    if *PRINT_SPECIES {
+    if *DEBUG_SPECIES_PRINTING  {
         print_species(handle_ref, 0)?;
     }
 
@@ -170,7 +170,7 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
                     let long = vec_to_i64(&raw);
                     eprintln!("{ind}  long={long}")
                 }
-                _ => unimplemented!(),
+                _ => todo!("print_species: handle_name: {handle_name} type: {type_} is not implemented yet"),
             }
         }
     } else if handle_name == "java/lang/invoke/MethodType" {
