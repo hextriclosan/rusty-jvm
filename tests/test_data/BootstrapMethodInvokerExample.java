@@ -5,7 +5,6 @@
 // It's not so nice but a bad test is better than no test
 package java.lang.invoke;
 
-import java.util.Arrays;
 import java.util.function.BiFunction;
 
 public class BootstrapMethodInvokerExample {
@@ -77,9 +76,10 @@ public class BootstrapMethodInvokerExample {
     private static void customBootstrapMethod() throws Throwable {
         System.out.println("--- Simulating `invokedynamic` for custom bootstrap method ---");
 
-        MethodHandle bsm = LOOKUP.findStatic(BootstrapMethodInvokerExample.class, "customBootstrap", MethodType.methodType(CallSite.class, MethodHandles.Lookup.class, String.class, MethodType.class));
-        MethodType invokedType = MethodType.methodType(int.class, int.class, int.class);
+        MethodType bootstrapMethodType = MethodType.methodType(CallSite.class, MethodHandles.Lookup.class, String.class, MethodType.class);
+        MethodHandle bsm = LOOKUP.findStatic(BootstrapMethodInvokerExample.class, "customBootstrap", bootstrapMethodType);
 
+        MethodType invokedType = MethodType.methodType(int.class, int.class, int.class);
         CallSite cs = BootstrapMethodInvoker.invoke(CallSite.class, bsm, "myCustomAdd", invokedType, null, BootstrapMethodInvokerExample.class);
         MethodHandle invoker = cs.dynamicInvoker();
         int result = (int) invoker.invokeExact(10, 20);
@@ -114,16 +114,16 @@ public class BootstrapMethodInvokerExample {
     private static void lambdaExpression() throws Throwable {
         System.out.println("--- Simulating `invokedynamic` for lambda expression ---");
         MethodHandles.Lookup lookup = MethodHandles.lookup();
-        MethodHandle bsm = lookup.findStatic(LambdaMetafactory.class, "metafactory",
-                MethodType.methodType(
-                        CallSite.class,             // The return type of the BSM
-                        MethodHandles.Lookup.class, // The lookup object
-                        String.class,               // The name of the method to invoke
-                        MethodType.class,           // The method type of the invoked method
-                        MethodType.class,           // The type of the factory method
-                        MethodHandle.class,         // The method handle to the implementation method
-                        MethodType.class            // The "instantiated" type of the lambda (the type we want to create)
-                ));
+        MethodType metafactoryMethodType = MethodType.methodType(
+                CallSite.class,             // The return type of the BSM
+                MethodHandles.Lookup.class, // The lookup object
+                String.class,               // The name of the method to invoke
+                MethodType.class,           // The method type of the invoked method
+                MethodType.class,           // The type of the factory method
+                MethodHandle.class,         // The method handle to the implementation method
+                MethodType.class            // The "instantiated" type of the lambda (the type we want to create)
+        );
+        MethodHandle bsm = lookup.findStatic(LambdaMetafactory.class, "metafactory", metafactoryMethodType);
 
         // The type of the factory method we are creating. It takes no args and returns a BiFunction.
         MethodType invokedType = MethodType.methodType(BiFunction.class);
@@ -132,7 +132,8 @@ public class BootstrapMethodInvokerExample {
         // 1. The signature of the functional interface method: (Object, Object) -> Object
         MethodType samMethodType = MethodType.methodType(Object.class, Object.class, Object.class);
         // 2. A handle to the implementation method.
-        MethodHandle implMethod = lookup.findStatic(BootstrapMethodInvokerExample.class, "format", MethodType.methodType(String.class, String.class, Integer.class));
+        MethodType formatMethodType = MethodType.methodType(String.class, String.class, Integer.class);
+        MethodHandle implMethod = lookup.findStatic(BootstrapMethodInvokerExample.class, "format", formatMethodType);
         // 3. The "instantiated" type of the lambda: (String, Integer) -> String
         MethodType instantiatedMethodType = MethodType.methodType(String.class, String.class, Integer.class);
 
