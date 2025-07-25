@@ -11,10 +11,11 @@ use tracing::{span, trace, Level};
 pub(crate) struct Engine {}
 
 impl Engine {
-    pub(crate) fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<()> {
+    pub(crate) fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<Vec<i32>> {
         trace!("@@@ Entering execute: {reason}");
 
         let mut stack_frames = StackFrames::new(vec![initial_stack_frame]);
+        let mut last_value = vec![];
         while !stack_frames.is_empty() {
             let (class, code, pc, line_numbers) = {
                 let frame = stack_frames
@@ -54,7 +55,7 @@ impl Engine {
                     ops_comparison_processor::process(code, &mut stack_frames)?;
                 }
                 167u8..=177u8 => {
-                    ops_control_processor::process(code, &mut stack_frames)?;
+                    last_value = ops_control_processor::process(code, &mut stack_frames)?;
                 }
                 178u8..=195u8 => {
                     ops_reference_processor::process(code, &class, &mut stack_frames)?;
@@ -66,6 +67,6 @@ impl Engine {
             }
         }
 
-        Ok(())
+        Ok(last_value)
     }
 }

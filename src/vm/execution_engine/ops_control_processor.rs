@@ -6,7 +6,8 @@ use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
 use tracing::trace;
 
-pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
+pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let mut last_value = vec![];
     match code {
         GOTO => {
             let stack_frame = last_frame_mut(stack_frames)?;
@@ -64,12 +65,13 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
 
             trace!("TABLESWITCH -> offset={offset}, from={from}, to={to}");
         }
-        IRETURN => perform_return::<i32>(stack_frames, "IRETURN")?,
-        LRETURN => perform_return::<i64>(stack_frames, "LRETURN")?,
-        FRETURN => perform_return::<f32>(stack_frames, "FRETURN")?,
-        DRETURN => perform_return::<f64>(stack_frames, "DRETURN")?,
-        ARETURN => perform_return::<i32>(stack_frames, "ARETURN")?,
+        IRETURN => last_value = perform_return::<i32>(stack_frames, "IRETURN")?,
+        LRETURN => last_value = perform_return::<i64>(stack_frames, "LRETURN")?,
+        FRETURN => last_value = perform_return::<f32>(stack_frames, "FRETURN")?,
+        DRETURN => last_value = perform_return::<f64>(stack_frames, "DRETURN")?,
+        ARETURN => last_value = perform_return::<i32>(stack_frames, "ARETURN")?,
         RETURN => {
+            last_value = vec![];
             stack_frames.exit_frame();
             trace!("RETURN");
         }
@@ -81,13 +83,13 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(last_value)
 }
 
 fn perform_return<T: StackValue + Copy + Display>(
     stack_frames: &mut StackFrames,
     name: &str,
-) -> Result<()> {
+) -> Result<Vec<i32>> {
     let stack_frame = last_frame_mut(stack_frames)?;
     let result: T = stack_frame.pop();
 
@@ -98,5 +100,5 @@ fn perform_return<T: StackValue + Copy + Display>(
     next_frame.push(result)?;
 
     trace!("{name} -> {result}");
-    Ok(())
+    Ok(result.to_vec())
 }

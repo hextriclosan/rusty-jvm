@@ -47,7 +47,7 @@ fn handle_execution(arguments: Arguments) -> Result<i32, String> {
         .map_err(|_| "The JAVA_HOME environment variable is not set.\nSet JAVA_HOME to an existing JDK 23 directory.".to_string())?;
 
     run(&arguments, &PathBuf::from(java_home))
-        .map(|()| EXIT_SUCCESS)
+        .map(|_ret_value| EXIT_SUCCESS)
         .map_err(|err| {
             if err.is_exception_thrown() {
                 String::new() // no error message needed for exceptions since it already handled by the VM

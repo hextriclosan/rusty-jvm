@@ -34,7 +34,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 ///
 /// * `arguments` - The arguments for the Java program.
 /// * `std_dir` - The path to the standard library directory containing core Java classes.
-pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
+pub fn run(arguments: &Arguments, java_home: &Path) -> Result<Vec<i32>> {
     let main_class_name = arguments.entry_point();
     validate_class_name(main_class_name)?;
 

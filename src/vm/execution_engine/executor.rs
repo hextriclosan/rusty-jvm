@@ -14,7 +14,7 @@ impl Executor {
         class_name: &str,
         method_name: &str,
         args: &[StackValueKind],
-    ) -> Result<()> {
+    ) -> Result<Vec<i32>> {
         Self::exec(class_name, method_name, args, None)
     }
 
@@ -26,7 +26,7 @@ impl Executor {
         method_name: &str,
         instance_ref: i32,
         args: &[StackValueKind],
-    ) -> Result<()> {
+    ) -> Result<Vec<i32>> {
         let new_args = {
             let mut new_args = Vec::with_capacity(args.len() + 1);
             new_args.push(instance_ref.into());
@@ -96,7 +96,7 @@ impl Executor {
         method_name: &str,
         args: &[StackValueKind],
         detailed_reason: Option<&str>,
-    ) -> Result<()> {
+    ) -> Result<Vec<i32>> {
         let java_class = with_method_area(|area| area.get(class_name))?;
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
