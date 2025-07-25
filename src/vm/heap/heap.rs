@@ -58,7 +58,7 @@ impl Heap {
     ) -> Result<()> {
         if objectref == 0 {
             return Err(Error::new_execution(&format!(
-                "error setting field value: {class_name} in null"
+                "error setting field value: {class_name} to null-object"
             ))); // throw an appropriate exception here
         }
 
@@ -78,7 +78,7 @@ impl Heap {
     ) -> Result<Vec<i32>> {
         if objectref == 0 {
             return Err(Error::new_execution(&format!(
-                "error setting field value: {class_name} in null"
+                "error getting field value: {class_name} from null-object"
             ))); // throw an appropriate exception here
         }
 
