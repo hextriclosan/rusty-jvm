@@ -13,7 +13,7 @@ pub trait CPoolHelperTrait {
     fn get_string(&self, index: u16) -> Option<String>;
     fn get_long(&self, index: u16) -> Option<i64>;
     fn get_utf8(&self, index: u16) -> Option<String>;
-    fn get_full_field_info(&self, index: u16) -> Option<(String, String)>;
+    fn get_full_field_info(&self, index: u16) -> Option<(String, String, String)>;
     fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)>;
     fn get_full_interfacemethodref_info(&self, index: u16) -> Option<(String, String, String)>;
     fn get_name_and_type(&self, index: u16) -> Option<(String, String)>;
@@ -172,7 +172,7 @@ impl CPoolHelperTrait for CPoolHelper {
         }
     }
 
-    fn get_full_field_info(&self, index: u16) -> Option<(String, String)> {
+    fn get_full_field_info(&self, index: u16) -> Option<(String, String, String)> {
         let (class_index, name_and_type_index) = match self.get(CPoolType::Fieldref, index)? {
             ConstantPool::Fieldref {
                 class_index,
@@ -182,9 +182,9 @@ impl CPoolHelperTrait for CPoolHelper {
         }?;
 
         let class_name = self.get_class_name(*class_index)?;
-        let (field_name, _) = self.get_name_and_type(*name_and_type_index)?;
+        let (field_name, descriptor_name) = self.get_name_and_type(*name_and_type_index)?;
 
-        Some((class_name, field_name))
+        Some((class_name, field_name, descriptor_name))
     }
 
     fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)> {
@@ -268,10 +268,22 @@ impl CPoolHelperTrait for CPoolHelper {
             _ => None,
         }?;
 
-        let (class_name, method_name, method_descriptor) =
-            self.get_full_method_info(reference_index)?;
+        let (class_name, name, descriptor) = match reference_kind {
+            1..=4 => {
+                self.get_full_field_info(reference_index)? // For Fieldref
+            }
+            5..=8 => {
+                self.get_full_method_info(reference_index)? // For Methodref, InterfaceMethodref
+            }
+            9 => {
+                self.get_full_method_info(reference_index)? // For InterfaceMethodref
+            }
+            _ => {
+                return None; // Unsupported reference kind todo: consider returning an error
+            }
+        };
 
-        Some((reference_kind, class_name, method_name, method_descriptor))
+        Some((reference_kind, class_name, name, descriptor))
     }
 
     fn get_method_type(&self, index: u16) -> Option<String> {
@@ -518,7 +530,11 @@ mod tests {
 
         let actual = resolver.get_full_field_info(3);
         assert_eq!(
-            Some(("TheClass".to_string(), "theField".to_string(),)),
+            Some((
+                "TheClass".to_string(),
+                "theField".to_string(),
+                "I".to_string()
+            )),
             actual
         );
     }
@@ -735,9 +751,56 @@ mod tests {
             Utf8 {
                 value: "()V".to_string(),
             },
+            MethodHandle {
+                reference_kind: 3,
+                reference_index: 9,
+            },
+            Fieldref {
+                class_index: 3,
+                name_and_type_index: 10,
+            },
+            NameAndType {
+                name_index: 11,
+                descriptor_index: 12,
+            },
+            Utf8 {
+                value: "theField".to_string(),
+            },
+            Utf8 {
+                value: "I".to_string(),
+            },
+            MethodHandle {
+                reference_kind: 9,
+                reference_index: 14,
+            },
+            InterfaceMethodref {
+                class_index: 3,
+                name_and_type_index: 15,
+            },
+            NameAndType {
+                name_index: 16,
+                descriptor_index: 17,
+            },
+            Utf8 {
+                value: "theInterfaceMethod".to_string(),
+            },
+            Utf8 {
+                value: "()I".to_string(),
+            },
         ]);
 
-        let actual = resolver.get_method_handle(1);
+        let actual_field_info = resolver.get_method_handle(8);
+        assert_eq!(
+            Some((
+                3,
+                "SomeClass".to_string(),
+                "theField".to_string(),
+                "I".to_string()
+            )),
+            actual_field_info
+        );
+
+        let actual_method_info = resolver.get_method_handle(1);
         assert_eq!(
             Some((
                 6,
@@ -745,7 +808,18 @@ mod tests {
                 "theMethod".to_string(),
                 "()V".to_string()
             )),
-            actual
+            actual_method_info
+        );
+
+        let actual_interfacemethod_info = resolver.get_method_handle(13);
+        assert_eq!(
+            Some((
+                9,
+                "SomeClass".to_string(),
+                "theInterfaceMethod".to_string(),
+                "()I".to_string()
+            )),
+            actual_interfacemethod_info
         );
     }
 
