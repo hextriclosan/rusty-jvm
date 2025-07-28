@@ -503,12 +503,12 @@ fn get_field_info(
     let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
     let cpool_helper = rc.cpool_helper();
 
-    let (class_name, field_name) = cpool_helper
+    let (class_name, field_name, _) = cpool_helper
         .get_full_field_info(fieldref_constpool_index)
         .ok_or_else(|| {
-            Error::new_constant_pool(&format!(
-                "Error getting full field info by index {fieldref_constpool_index}"
-            ))
-        })?;
+        Error::new_constant_pool(&format!(
+            "Error getting full field info by index {fieldref_constpool_index}"
+        ))
+    })?;
     Ok((class_name, field_name))
 }
