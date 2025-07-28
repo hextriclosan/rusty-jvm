@@ -272,11 +272,8 @@ impl CPoolHelperTrait for CPoolHelper {
             1..=4 => {
                 self.get_full_field_info(reference_index)? // For Fieldref
             }
-            5..=8 => {
+            5..=9 => {
                 self.get_full_method_info(reference_index)? // For Methodref, InterfaceMethodref
-            }
-            9 => {
-                self.get_full_method_info(reference_index)? // For InterfaceMethodref
             }
             _ => {
                 return None; // Unsupported reference kind todo: consider returning an error
