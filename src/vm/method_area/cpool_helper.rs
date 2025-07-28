@@ -17,6 +17,9 @@ pub trait CPoolHelperTrait {
     fn get_full_method_info(&self, index: u16) -> Option<(String, String, String)>;
     fn get_full_interfacemethodref_info(&self, index: u16) -> Option<(String, String, String)>;
     fn get_name_and_type(&self, index: u16) -> Option<(String, String)>;
+    fn get_invoke_dynamic(&self, index: u16) -> Option<(u16, String, String)>;
+    fn get_method_handle(&self, index: u16) -> Option<(u8, String, String, String)>;
+    fn get_method_type(&self, index: u16) -> Option<String>;
 }
 
 #[derive(Debug)]
@@ -240,14 +243,53 @@ impl CPoolHelperTrait for CPoolHelper {
 
         Some((name, descriptor))
     }
+
+    fn get_invoke_dynamic(&self, index: u16) -> Option<(u16, String, String)> {
+        let (bootstrap_method_attr_index, name_and_type_index) =
+            match self.get(CPoolType::InvokeDynamic, index)? {
+                ConstantPool::InvokeDynamic {
+                    bootstrap_method_attr_index,
+                    name_and_type_index,
+                } => Some((*bootstrap_method_attr_index, *name_and_type_index)),
+                _ => None,
+            }?;
+
+        let (method_name, method_descriptor) = self.get_name_and_type(name_and_type_index)?;
+
+        Some((bootstrap_method_attr_index, method_name, method_descriptor))
+    }
+
+    fn get_method_handle(&self, index: u16) -> Option<(u8, String, String, String)> {
+        let (reference_kind, reference_index) = match self.get(CPoolType::MethodHandle, index)? {
+            ConstantPool::MethodHandle {
+                reference_kind,
+                reference_index,
+            } => Some((*reference_kind, *reference_index)),
+            _ => None,
+        }?;
+
+        let (class_name, method_name, method_descriptor) =
+            self.get_full_method_info(reference_index)?;
+
+        Some((reference_kind, class_name, method_name, method_descriptor))
+    }
+
+    fn get_method_type(&self, index: u16) -> Option<String> {
+        let utf8_index = match self.get(CPoolType::MethodType, index)? {
+            ConstantPool::MethodType { descriptor_index } => Some(descriptor_index),
+            _ => None,
+        }?;
+
+        self.get_utf8(*utf8_index)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use jclassfile::constant_pool::ConstantPool::{
-        Class, Double, Empty, Fieldref, Float, Integer, InterfaceMethodref, Long, Methodref,
-        NameAndType, String, Utf8,
+        Class, Double, Empty, Fieldref, Float, Integer, InterfaceMethodref, InvokeDynamic, Long,
+        MethodHandle, MethodType, Methodref, NameAndType, String, Utf8,
     };
 
     #[test]
@@ -641,5 +683,85 @@ mod tests {
 
         let actual = resolver.get_string(1);
         assert_eq!(Some("int".to_string()), actual)
+    }
+
+    #[test]
+    fn should_return_invoke_dynamic() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            InvokeDynamic {
+                bootstrap_method_attr_index: 42,
+                name_and_type_index: 2,
+            },
+            NameAndType {
+                name_index: 3,
+                descriptor_index: 4,
+            },
+            Utf8 {
+                value: "fn".to_string(),
+            },
+            Utf8 {
+                value: "()V".to_string(),
+            },
+        ]);
+
+        let actual = resolver.get_invoke_dynamic(1);
+        assert_eq!(Some((42, "fn".to_string(), "()V".to_string())), actual);
+    }
+
+    #[test]
+    fn should_return_method_handle() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            MethodHandle {
+                reference_kind: 6,
+                reference_index: 2,
+            },
+            Methodref {
+                class_index: 3,
+                name_and_type_index: 5,
+            },
+            Class { name_index: 4 },
+            Utf8 {
+                value: "SomeClass".to_string(),
+            },
+            NameAndType {
+                name_index: 6,
+                descriptor_index: 7,
+            },
+            Utf8 {
+                value: "theMethod".to_string(),
+            },
+            Utf8 {
+                value: "()V".to_string(),
+            },
+        ]);
+
+        let actual = resolver.get_method_handle(1);
+        assert_eq!(
+            Some((
+                6,
+                "SomeClass".to_string(),
+                "theMethod".to_string(),
+                "()V".to_string()
+            )),
+            actual
+        );
+    }
+
+    #[test]
+    fn should_return_method_type() {
+        let resolver = CPoolHelper::new(&vec![
+            Empty,
+            MethodType {
+                descriptor_index: 2,
+            },
+            Utf8 {
+                value: "()V".to_string(),
+            },
+        ]);
+
+        let actual = resolver.get_method_type(1);
+        assert_eq!(Some("()V".to_string()), actual)
     }
 }
