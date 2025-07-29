@@ -3,6 +3,7 @@ use crate::vm::error::ErrorKind::{
 };
 use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
+use num_enum::TryFromPrimitiveError;
 use std::error::Error as StdError;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
@@ -117,6 +118,12 @@ impl From<serde_json::Error> for Error {
 impl<T> From<PoisonError<T>> for Error {
     fn from(error: PoisonError<T>) -> Self {
         Error::new_execution(&format!("PoisonError: {error}"))
+    }
+}
+
+impl<T: num_enum::TryFromPrimitive> From<TryFromPrimitiveError<T>> for Error {
+    fn from(value: TryFromPrimitiveError<T>) -> Self {
+        Error::new_execution(&format!("TryFromPrimitiveError: {value}"))
     }
 }
 

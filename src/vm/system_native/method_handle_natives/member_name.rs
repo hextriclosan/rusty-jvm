@@ -164,9 +164,5 @@ fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
     let kind_mask = 0x0F000000u32 >> kind_shift;
     let result = (flags as u32 >> kind_shift) & kind_mask;
 
-    ReferenceKind::try_from(result as u8).map_err(|e| {
-        Error::new_execution(&format!(
-            "error converting flags {flags} to ReferenceKind: {e}"
-        ))
-    })
+    Ok(ReferenceKind::try_from(result as u8)?)
 }
