@@ -1,73 +1,98 @@
-package samples.inheritance.interfaces.compositepattern;
+package samples.patterns.composite;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class CompositePattern {
     public static void main(String[] args) {
-        Composite outerComposite = new Composite();
-        outerComposite.addUnit(new Zealot());
-        outerComposite.addUnit(new Zealot());
-        outerComposite.addUnit(new DarkTemplar());
-        outerComposite.addUnit(new DarkTemplar());
+        Unit eliteSquad = new UnitGroup(new Assassin(), new Archer());
+        Unit namelessSquad = new UnitGroup(
+                new Unit() {
+                    @Override
+                    public int damage() {
+                        return 2;
+                    }
+                },
+                new AbstractUnit() {
+                    @Override
+                    protected String phrase() {
+                        return "Where am I?";
+                    }
 
-        Composite innerComposite = new Composite();
-        innerComposite.addUnit(new Zealot());
-        innerComposite.addUnit(new Unit() {
-            @Override
-            public int attack() {
-                return 7;
-            }
-        });
-        innerComposite.addUnit(new DarkTemplar());
+                    @Override
+                    public int damage() {
+                        return 1;
+                    }
+                });
 
-        outerComposite.addUnit(innerComposite);
-
-        int result = outerComposite.attack();
-        System.out.println(result);
+        Unit army = new UnitGroup(eliteSquad, namelessSquad);
+        System.out.println("Army attack power is " + army.damage());
     }
 }
 
 interface Unit {
-    int attack();
+    int damage();
 }
 
-class Zealot implements Unit {
+abstract class AbstractUnit implements Unit {
+    public AbstractUnit() {
+        System.out.println(getIntroMessage());
+    }
+
+    protected String getName() {
+        String name = getClass().getSimpleName();
+        return !name.isEmpty() ? name : "Unnamed Unit";
+    }
+
+    protected abstract String phrase();
+
+    private String getIntroMessage() {
+        return getName() + ": " + phrase();
+    }
+}
+
+class Assassin extends AbstractUnit {
     @Override
-    public int attack() {
-        return 11;
-    }
-}
-
-class DarkTemplar implements Unit {
-    @Override
-    public int attack() {
-        return 220;
-    }
-}
-
-class Composite implements Unit {
-
-    private final List<Unit> units;
-
-    public Composite() {
-        units = new ArrayList<>();
-    }
-
-    public void addUnit(Unit unit) {
-        units.add(unit);
+    public int damage() {
+        return 45;
     }
 
     @Override
-    public int attack() {
-        int attackPower = 0;
+    protected String phrase() {
+        return "Target acquired.";
+    }
+}
 
+class Archer extends AbstractUnit {
+    @Override
+    public int damage() {
+        return 12;
+    }
+
+    @Override
+    protected String phrase() {
+        return "Ready to fire.";
+    }
+}
+
+class UnitGroup implements Unit {
+    private final List<Unit> units = new ArrayList<>();
+
+    public UnitGroup(Unit... units) {
+        addUnits(units);
+    }
+
+    public void addUnits(Unit... units) {
+        this.units.addAll(Arrays.asList(units));
+    }
+
+    @Override
+    public int damage() {
+        int totalDamage = 0;
         for (Unit unit : units) {
-            if (unit != null) {
-                attackPower += unit.attack();
-            }
+            totalDamage += unit.damage();
         }
-
-        return attackPower;
+        return totalDamage;
     }
 }

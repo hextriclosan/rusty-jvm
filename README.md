@@ -60,7 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Composite {
+public class CompositePattern {
     public static void main(String[] args) {
         Unit eliteSquad = new UnitGroup(new Assassin(), new Archer());
         Unit namelessSquad = new UnitGroup(
@@ -158,12 +158,12 @@ class UnitGroup implements Unit {
 
 1. Compile the program using the Java compiler:
    ```sh
-   javac -d . Composite.java
+   javac -d . CompositePattern.java
    ```
 
 2. Run it using rusty-jvm:
    ```sh
-   cargo run -- samples.patterns.composite.Composite
+   cargo run -- samples.patterns.composite.CompositePattern
    ```
 
 ### Expected Output
