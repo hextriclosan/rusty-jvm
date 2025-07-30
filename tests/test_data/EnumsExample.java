@@ -6,7 +6,7 @@ import java.util.Arrays;
 public class EnumsExample {
     public static void main(String[] args) {
         print("FormatStyle values", Arrays.toString(FormatStyle.values()));
-        FormatStyle medium = FormatStyle.MEDIUM; // fixme: use FormatStyle.valueOf("MEDIUM"); after fixing Native Call Error: Native method jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object; not found\n"
+        FormatStyle medium = FormatStyle.valueOf("MEDIUM");
         print("FormatStyle.MEDIUM name", medium.name());
         print("FormatStyle.MEDIUM ordinal", medium.ordinal());
 
