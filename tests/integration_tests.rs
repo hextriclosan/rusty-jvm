@@ -903,6 +903,7 @@ fn should_check_if_class_is_enum() {
         r#"Is TimeUnit enum: true
 Is TimeUnit enum: true
 Is String enum: false
+Is TimeUnit enum: true
 Is TimeUnit[] enum: false
 Is Runnable enum: false
 Is int enum: false
