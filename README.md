@@ -54,23 +54,36 @@ This Java program calculates the total attack power of a group of game units.
 It uses abstract classes, interfaces, and polymorphism to showcase rusty-jvm's capabilities.
 
 ```java
+package samples.patterns.composite;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Demo {
+public class CompositePattern {
     public static void main(String[] args) {
-        ControlGroup controlGroup = new ControlGroup();
-        controlGroup.addUnits(new Zealot(), new DarkTemplar(), new Unit() {
-            @Override
-            public int damage() {
-                return 4;
-            }
-        });
+        Unit eliteSquad = new UnitGroup(new Assassin(), new Archer());
+        Unit namelessSquad = new UnitGroup(
+                new Unit() {
+                    @Override
+                    public int damage() {
+                        return 2;
+                    }
+                },
+                new AbstractUnit() {
+                    @Override
+                    protected String phrase() {
+                        return "Where am I?";
+                    }
 
-        int groupAttackPower = controlGroup.damage();
-        System.out.print("Group attack power is ");
-        System.out.println(groupAttackPower);
+                    @Override
+                    public int damage() {
+                        return 1;
+                    }
+                });
+
+        Unit army = new UnitGroup(eliteSquad, namelessSquad);
+        System.out.println("Army attack power is " + army.damage());
     }
 }
 
@@ -80,45 +93,63 @@ interface Unit {
 
 abstract class AbstractUnit implements Unit {
     public AbstractUnit() {
-        System.out.println(say());
+        System.out.println(getIntroMessage());
     }
-    protected abstract String say();
+
+    protected String getName() {
+        String name = getClass().getSimpleName();
+        return !name.isEmpty() ? name : "Unnamed Unit";
+    }
+
+    protected abstract String phrase();
+
+    private String getIntroMessage() {
+        return getName() + ": " + phrase();
+    }
 }
 
-class Zealot extends AbstractUnit {
-    @Override
-    public int damage() {
-        return 8;
-    }
-    @Override
-    public String say() {
-        return "We embrace the glory of battle!";
-    }
-}
-
-class DarkTemplar extends AbstractUnit {
+class Assassin extends AbstractUnit {
     @Override
     public int damage() {
         return 45;
     }
+
     @Override
-    public String say() {
-        return "Battle is upon us!";
+    protected String phrase() {
+        return "Target acquired.";
     }
 }
 
-class ControlGroup implements Unit {
+class Archer extends AbstractUnit {
+    @Override
+    public int damage() {
+        return 12;
+    }
+
+    @Override
+    protected String phrase() {
+        return "Ready to fire.";
+    }
+}
+
+class UnitGroup implements Unit {
     private final List<Unit> units = new ArrayList<>();
+
+    public UnitGroup(Unit... units) {
+        addUnits(units);
+    }
+
     public void addUnits(Unit... units) {
         this.units.addAll(Arrays.asList(units));
     }
+
     @Override
     public int damage() {
-        int totalAttackPower = 0;
+        int totalDamage = 0;
         for (Unit unit : units) {
-            totalAttackPower += unit.damage();
+            totalDamage += unit.damage();
         }
-        return totalAttackPower;
+        return totalDamage;
     }
 }
 ```
@@ -127,12 +158,12 @@ class ControlGroup implements Unit {
 
 1. Compile the program using the Java compiler:
    ```sh
-   javac -d . Demo.java
+   javac -d . CompositePattern.java
    ```
 
 2. Run it using rusty-jvm:
    ```sh
-   cargo run -- Demo
+   cargo run -- samples.patterns.composite.CompositePattern
    ```
 
 ### Expected Output
@@ -140,9 +171,10 @@ class ControlGroup implements Unit {
 If everything is set up correctly, you should see:
 
 ```
-We embrace the glory of battle!
-Battle is upon us!
-Group attack power is 57
+Assassin: Target acquired.
+Archer: Ready to fire.
+Unnamed Unit: Where am I?
+Army attack power is 60
 ```
 
 ## License

@@ -276,14 +276,6 @@ fn should_do_class_static_initialization_within_one_class() {
 }
 
 #[test]
-fn should_do_composite_pattern() {
-    assert_success(
-        "samples.inheritance.interfaces.compositepattern.CompositePattern",
-        "700\n",
-    );
-}
-
-#[test]
 fn should_do_extreme_stack_operations() {
     assert_success(
         "samples.arithmetics.extremestack.ints.ExtremeStackInt",
@@ -2033,6 +2025,18 @@ Custom BSM Result: 30
 --- Simulating `invokedynamic` for lambda expression ---
 Executing lambda body: format('User', 123)
 Lambda Result: User-123
+"#,
+    );
+}
+
+#[test]
+fn should_support_composite_pattern() {
+    assert_success(
+        "samples.patterns.composite.CompositePattern",
+        r#"Assassin: Target acquired.
+Archer: Ready to fire.
+Unnamed Unit: Where am I?
+Army attack power is 60
 "#,
     );
 }
