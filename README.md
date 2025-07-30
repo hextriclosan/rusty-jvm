@@ -145,11 +145,11 @@ class UnitGroup implements Unit {
 
     @Override
     public int damage() {
-        int totalAttackPower = 0;
+        int totalDamage = 0;
         for (Unit unit : units) {
-            totalAttackPower += unit.damage();
+            totalDamage += unit.damage();
         }
-        return totalAttackPower;
+        return totalDamage;
     }
 }
 ```
