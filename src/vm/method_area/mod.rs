@@ -1,4 +1,4 @@
-mod attributes_helper;
+pub(crate) mod attributes_helper;
 pub(crate) mod cpool_helper;
 pub(crate) mod field;
 pub(crate) mod instance_checker;

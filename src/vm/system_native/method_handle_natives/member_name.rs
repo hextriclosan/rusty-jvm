@@ -2,14 +2,14 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::system_native::method_handle_natives::member_name::ReferenceKind::{
+use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
+use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
+use crate::vm::system_native::method_handle_natives::types::ReferenceKind::{
     REF_getField, REF_getStatic, REF_invokeSpecial, REF_invokeStatic, REF_newInvokeSpecial,
     REF_putField, REF_putStatic,
 };
-use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use getset::{CopyGetters, Getters};
-use num_enum::TryFromPrimitive;
 
 const MEMBER_NAME: &'static str = "java/lang/invoke/MemberName";
 
@@ -28,21 +28,6 @@ pub struct MemberName {
     #[get_copy = "pub"]
     reference_kind: ReferenceKind,
     method: Option<ResolvedMethodName>,
-}
-
-#[allow(non_camel_case_types)]
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
-pub enum ReferenceKind {
-    REF_getField = 1,
-    REF_getStatic = 2,
-    REF_putField = 3,
-    REF_putStatic = 4,
-    REF_invokeVirtual = 5,
-    REF_invokeStatic = 6,
-    REF_invokeSpecial = 7,
-    REF_newInvokeSpecial = 8,
-    REF_invokeInterface = 9,
 }
 
 impl MemberName {

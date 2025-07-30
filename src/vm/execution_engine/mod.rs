@@ -1,6 +1,7 @@
 pub(crate) mod common;
 mod engine;
 pub(crate) mod executor;
+pub(crate) mod invoke_dynamic_runner;
 pub(crate) mod invoker;
 pub(crate) mod ldc_resolution_manager;
 pub(crate) mod opcode;

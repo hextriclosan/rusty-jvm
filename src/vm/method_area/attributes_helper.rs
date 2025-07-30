@@ -5,6 +5,7 @@ use getset::{CopyGetters, Getters};
 use jclassfile::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
 use std::collections::{HashMap, HashSet};
 
+#[derive(Debug)]
 pub struct AttributesHelper {
     data: HashMap<AttributeType, Attribute>,
 }

@@ -1,5 +1,7 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::execution_engine::invoke_dynamic_runner::InvokeDynamicRunner;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType};
+use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::cpool_helper::CPoolHelper;
 use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::JavaMethod;
@@ -27,6 +29,8 @@ pub(crate) struct JavaClass {
     #[get = "pub"]
     cpool_helper: CPoolHelper,
     #[get = "pub"]
+    attributes_helper: AttributesHelper,
+    #[get = "pub"]
     this_class_name: String,
     #[get = "pub"]
     external_name: String,
@@ -50,6 +54,8 @@ pub(crate) struct JavaClass {
     enclosing_method: Option<(String, String, String)>,
     #[get = "pub"]
     source_file: Option<String>,
+    #[get = "pub"]
+    invoke_dynamic_runner: InvokeDynamicRunner,
 }
 
 #[derive(Debug, Default)]
@@ -87,6 +93,7 @@ impl JavaClass {
         static_fields: IndexMap<String, Arc<FieldValue>>,
         instance_fields_template: IndexMap<String, FieldValue>,
         cpool_helper: CPoolHelper,
+        attributes_helper: AttributesHelper,
         this_class_name: String,
         external_name: String,
         parent: Option<String>,
@@ -103,6 +110,7 @@ impl JavaClass {
             static_fields,
             instance_fields_template,
             cpool_helper,
+            attributes_helper,
             this_class_name,
             external_name,
             parent,
@@ -115,6 +123,7 @@ impl JavaClass {
             annotations_raw,
             enclosing_method,
             source_file,
+            invoke_dynamic_runner: InvokeDynamicRunner::default(),
         }
     }
 
