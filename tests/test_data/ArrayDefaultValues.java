@@ -27,27 +27,16 @@ public class ArrayDefaultValues {
         float[][] float2DArray = new float[1][1];
 
         // Print default values
-        System.out.print("Default value in int array: ");
-        System.out.println(intArray[0]);
-        System.out.print("Default value in long array: ");
-        System.out.println(longArray[0]);
-        System.out.print("Default value in byte array: ");
-        System.out.println(byteArray[0]);
-        System.out.print("Default value in short array: ");
-        System.out.println(shortArray[0]);
-        System.out.print("Default value in float array: ");
-        System.out.println(floatArray[0]);
-        System.out.print("Default value in double array: ");
-        System.out.println(doubleArray[0]);
-        System.out.print("Default value in char array: ");
-        System.out.println((int)charArray[0]);
-        System.out.print("Default value in boolean array: ");
-        System.out.println(booleanArray[0]);
-        System.out.print("Default value in String array: ");
-        System.out.println(stringArray[0]);
-        System.out.print("Default value in 2D int array: ");
-        System.out.println(int2DArray[0][0]);
-        System.out.print("Default value in 2D float array: ");
-        System.out.println(float2DArray[0][0]);
+        System.out.println("Default value in int array: " + intArray[0]);
+        System.out.println("Default value in long array: " + longArray[0]);
+        System.out.println("Default value in byte array: " + byteArray[0]);
+        System.out.println("Default value in short array: " + shortArray[0]);
+        System.out.println("Default value in float array: " + floatArray[0]);
+        System.out.println("Default value in double array: " + doubleArray[0]);
+        System.out.println("Default value in char array: " + (int)charArray[0]);
+        System.out.println("Default value in boolean array: " + booleanArray[0]);
+        System.out.println("Default value in String array: " + stringArray[0]);
+        System.out.println("Default value in 2D int array: " + int2DArray[0][0]);
+        System.out.println("Default value in 2D float array: " + float2DArray[0][0]);
     }
 }

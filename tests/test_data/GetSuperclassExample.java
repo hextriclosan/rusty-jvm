@@ -48,10 +48,7 @@ public class GetSuperclassExample {
     }
 
     private static void printSuperclass(Class<?> clazz) {
-        System.out.print("Superclass of ");
-        System.out.print(clazz.getName());
-        System.out.print(": ");
-        System.out.println(clazz.getSuperclass());
+        System.out.println("Superclass of " + clazz.getName() + ": " + clazz.getSuperclass());
     }
 
     // Inner class

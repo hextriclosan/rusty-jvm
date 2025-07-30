@@ -28,8 +28,7 @@ public class TrivialUtilArrays {
     }
 
     private static void print(String msg, Object value) {
-        System.out.print(msg);
-        System.out.println(value);
+        System.out.println(msg + value);
     }
 
     private static void print(String msg, int[] arr) {

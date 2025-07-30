@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline -d . ChildFieldInParentBlockAccessedByParent.java
 package samples.staticinit.child_field_in_parent_block_accessed_by_parent;
 
 public class ChildFieldInParentBlockAccessedByParent {

@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline -d . ConstVsNonConstFieldsExample.java
 package samples.staticinit.const_vs_nonconst_fields;
 
 public class ConstVsNonConstFieldsExample {

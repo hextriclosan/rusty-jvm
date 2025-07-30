@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class  {
+public class VarArgsExample {
     public static void main(String[] args) {
         VarArgsExample varArgsExample = new VarArgsExample();
         List<Integer> list = new ArrayList<>();

@@ -19,13 +19,10 @@ public class GetInterfacesExample {
     }
 
     static void printInterfaces(Class<?> clazz) {
-        System.out.print("Interfaces implemented by ");
-        System.out.print(clazz.getName());
-        System.out.println(":");
+        System.out.println("Interfaces implemented by " + clazz.getName() + ":");
         Class<?>[] interfaces = clazz.getInterfaces();
         for (Class<?> iface : interfaces) {
-            System.out.print('\t');
-            System.out.println(iface.getName());
+            System.out.println('\t' + iface.getName());
         }
     }
 

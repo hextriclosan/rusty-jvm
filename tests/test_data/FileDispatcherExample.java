@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . FileDispatcherExample.java
 package samples.nio.filedispatcherexample;
 
 import java.io.IOException;

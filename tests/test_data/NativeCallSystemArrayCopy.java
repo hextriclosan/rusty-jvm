@@ -17,8 +17,7 @@ public class NativeCallSystemArrayCopy {
         int[] dest = {1, 2, 3, 4, 5, 6};
 
         System.arraycopy(src, 1, dest, 2, 3);
-        System.out.print("intArr(): ");
-        System.out.println(Arrays.toString(dest));
+        System.out.println("intArr(): " + Arrays.toString(dest));
     }
 
     private static void longArr() {
@@ -33,16 +32,14 @@ public class NativeCallSystemArrayCopy {
         long[] dest = {1, 2, 3, 4, 5, 6};
 
         System.arraycopy(src, 1, dest, 2, 3);
-        System.out.print("longArr(): ");
-        System.out.println(Arrays.toString(dest));
+        System.out.println("longArr(): " + Arrays.toString(dest));
     }
 
     private static void intArrOverlapping() {
         int[] arr = {10, 20, 30, 40, 50, 60};
 
         System.arraycopy(arr, 0, arr, 1, 5);
-        System.out.print("intArrOverlapping(): ");
-        System.out.println(Arrays.toString(arr));
+        System.out.println("intArrOverlapping(): " + Arrays.toString(arr));
     }
 
     private static void longArrOverlapping() {
@@ -55,8 +52,7 @@ public class NativeCallSystemArrayCopy {
                 472_446_402_680L/*h=110,l=120*/};
 
         System.arraycopy(arr, 0, arr, 1, 5);
-        System.out.print("longArrOverlapping(): ");
-        System.out.println(Arrays.toString(arr));
+        System.out.println("longArrOverlapping(): " + Arrays.toString(arr));
     }
 
     private static void upcasting() {
@@ -64,8 +60,7 @@ public class NativeCallSystemArrayCopy {
         Number[] dest = new Number[3];
 
         System.arraycopy(src, 0, dest, 0, dest.length);
-        System.out.print("upcasting(): ");
-        System.out.println(Arrays.toString(dest));
+        System.out.println("upcasting(): " + Arrays.toString(dest));
     }
 
     private static void downcasting() {

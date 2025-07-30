@@ -9,26 +9,16 @@ public class ArithmeticIntegralOverflow {
     }
 
     private static <T> void checkOverflow(T minValue, T maxValue, T one, T two, T minusOne, Operations<T> operations) {
-        System.out.print(minValue.getClass());
-        System.out.println(":");
-        System.out.print("add overflow: ");
-        System.out.println(operations.addOverflow(maxValue, one));
-        System.out.print("mul overflow: ");
-        System.out.println(operations.mulOverflow(maxValue, two));
-        System.out.print("div overflow: ");
-        System.out.println(operations.divOverflow(minValue, minusOne));
-        System.out.print("neg overflow: ");
-        System.out.println(operations.negOverflow(minValue));
-        System.out.print("rem overflow: ");
-        System.out.println(operations.remOverflow(minValue, minusOne));
-        System.out.print("shl overflow: ");
-        System.out.println(operations.shlOverflow(maxValue, 1));
-        System.out.print("shr overflow: ");
-        System.out.println(operations.shrOverflow(minValue, 1));
-        System.out.print("ushl overflow: ");
-        System.out.println(operations.uShlOverflow(minValue, 1));
-        System.out.print("sub overflow: ");
-        System.out.println(operations.subOverflow(minValue, one));
+        System.out.println(minValue.getClass() + ":");
+        System.out.println("add overflow: " + operations.addOverflow(maxValue, one));
+        System.out.println("mul overflow: " + operations.mulOverflow(maxValue, two));
+        System.out.println("div overflow: " + operations.divOverflow(minValue, minusOne));
+        System.out.println("neg overflow: " + operations.negOverflow(minValue));
+        System.out.println("rem overflow: " + operations.remOverflow(minValue, minusOne));
+        System.out.println("shl overflow: " + operations.shlOverflow(maxValue, 1));
+        System.out.println("shr overflow: " + operations.shrOverflow(minValue, 1));
+        System.out.println("ushl overflow: " + operations.uShlOverflow(minValue, 1));
+        System.out.println("sub overflow: " + operations.subOverflow(minValue, one));
         System.out.println();
     }
 

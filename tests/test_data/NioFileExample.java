@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . NioFileExample.java
 package samples.nio.niofileexample;
 
 import java.io.IOException;

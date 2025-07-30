@@ -1,4 +1,3 @@
-//javac -XDstringConcat=inline -d . InterfaceInitializationDoesNotInitializeSuperinterfaces.java
 package samples.staticinit.interfaceinitializationdoesnotinitializesuperinterfaces;
 
 public class InterfaceInitializationDoesNotInitializeSuperinterfaces {

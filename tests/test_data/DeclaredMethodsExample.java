@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . DeclaredMethodsExample.java
 package samples.reflection.trivial.declaredmethods;
 
 import java.io.IOError;

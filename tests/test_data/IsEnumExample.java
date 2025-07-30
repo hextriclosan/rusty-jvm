@@ -31,9 +31,6 @@ public class IsEnumExample {
     }
 
     private static void print(Class<?> clazz) {
-        System.out.print("Is ");
-        System.out.print(clazz.getSimpleName());
-        System.out.print(" enum: ");
-        System.out.println(clazz.isEnum());
+        System.out.println("Is " + clazz.getSimpleName() + " enum: " + clazz.isEnum());
     }
 }

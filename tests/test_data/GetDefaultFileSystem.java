@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . GetDefaultFileSystem.java
 package samples.filesystem.getdefaultfilesystem;
 
 import java.nio.file.FileSystem;

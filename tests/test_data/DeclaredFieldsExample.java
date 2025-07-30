@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . DeclaredFieldsExample.java
 package samples.reflection.trivial.declaredfields;
 
 import java.lang.reflect.Field;

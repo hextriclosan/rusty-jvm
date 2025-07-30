@@ -1,4 +1,4 @@
-// javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED -XDstringConcat=inline -d . UnsafeUsage.java
+// javac --add-exports java.base/jdk.internal.misc=ALL-UNNAMED -d . UnsafeUsage.java
 // java --add-exports java.base/jdk.internal.misc=ALL-UNNAMED samples.jdkinternal.unsafe.trivial.UnsafeUsage
 package samples.jdkinternal.unsafe.trivial;
 

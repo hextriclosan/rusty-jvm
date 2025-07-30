@@ -72,31 +72,22 @@ public class DeclaredConstructorsExample {
     }
 
     private static void printConstructorDetails(Constructor<?> constructor) {
-        //System.out.print("Constructor: ");
-        //System.out.println(constructor); // Native method jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object; not found
-        System.out.print("\tParameter types: ");
-        System.out.println(Arrays.toString(constructor.getParameterTypes()));
-        System.out.print("\tModifier: ");
-        System.out.println(Modifier.toString(constructor.getModifiers()));
-        System.out.print("\tThrows: ");
-        System.out.println(Arrays.toString(constructor.getExceptionTypes()));
-
+        //System.out.println("Constructor: " + constructor); // Native method jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object; not found
+        System.out.println("\tParameter types: " + Arrays.toString(constructor.getParameterTypes()));
+        System.out.println("\tModifier: " + Modifier.toString(constructor.getModifiers()));
+        System.out.println("\tThrows: " + Arrays.toString(constructor.getExceptionTypes()));
         //System.out.println(constructor.getAnnotatedReceiverType()); Native method java/lang/reflect/Executable:getTypeAnnotationBytes0:()[B not found
         //System.out.println(constructor.getAnnotatedReturnType()); Native method java/lang/reflect/Executable:getTypeAnnotationBytes0:()[B not found
-        System.out.print("\tDeclaring class: ");
-        System.out.println(constructor.getDeclaringClass());
+        System.out.println("\tDeclaring class: " + constructor.getDeclaringClass());
         //printArray(constructor.getGenericParameterTypes());
         //printArray(constructor.getGenericExceptionTypes());
-        System.out.print("\tName: ");
-        System.out.println(constructor.getName());
-        System.out.print("\tParameter count: ");
-        System.out.println(constructor.getParameterCount());
+        System.out.println("\tName: " + constructor.getName());
+        System.out.println("\tParameter count: " + constructor.getParameterCount());
     }
 
     private static void printArray(Object[] array) {
         for (Object obj : array) {
-            System.out.print(" - ");
-            System.out.println(obj);
+            System.out.println(" - " + obj);
         }
     }
 }
