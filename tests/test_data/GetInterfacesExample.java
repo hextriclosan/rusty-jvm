@@ -22,7 +22,7 @@ public class GetInterfacesExample {
         System.out.println("Interfaces implemented by " + clazz.getName() + ":");
         Class<?>[] interfaces = clazz.getInterfaces();
         for (Class<?> iface : interfaces) {
-            System.out.println('\t' + iface.getName());
+            System.out.println("\t" + iface.getName());
         }
     }
 
