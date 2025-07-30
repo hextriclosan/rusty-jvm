@@ -203,7 +203,6 @@ pub(crate) const INVOKEVIRTUAL: u8 = 182;
 pub(crate) const INVOKESPECIAL: u8 = 183;
 pub(crate) const INVOKESTATIC: u8 = 184;
 pub(crate) const INVOKEINTERFACE: u8 = 185;
-#[allow(dead_code)]
 pub(crate) const INVOKEDYNAMIC: u8 = 186;
 pub(crate) const NEW: u8 = 187;
 pub(crate) const NEWARRAY: u8 = 188;

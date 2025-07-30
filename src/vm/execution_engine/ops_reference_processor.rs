@@ -252,6 +252,24 @@ pub(crate) fn process(
             )?;
             trace!("INVOKEINTERFACE -> {exact_class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
         }
+        INVOKEDYNAMIC => {
+            store_ex_pc(stack_frames)?;
+            let stack_frame = last_frame_mut(stack_frames)?;
+            let invokedynamic_index = stack_frame.extract_two_bytes() as u16;
+            stack_frame.incr_pc();
+
+            let jc = with_method_area(|a| a.get(current_class_name))?;
+            let invoke_dynamic_runner = jc.invoke_dynamic_runner();
+            invoke_dynamic_runner
+                .run(stack_frames, current_class_name, invokedynamic_index)
+                .map_err(|e| {
+                    Error::new_execution(&format!(
+                        "Error running invokedynamic for index {invokedynamic_index}: {e}"
+                    ))
+                })?;
+
+            trace!("INVOKEDYNAMIC -> {current_class_name} on index {invokedynamic_index}");
+        }
         NEW => {
             let stack_frame = last_frame_mut(stack_frames)?;
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
@@ -437,7 +455,7 @@ pub(crate) fn process(
     Ok(())
 }
 
-fn prepare_invoke_context(
+pub fn prepare_invoke_context(
     stack_frames: &mut StackFrames,
     method_descriptor: &MethodDescriptor,
     use_self_ref: bool,

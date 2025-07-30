@@ -416,6 +416,22 @@ fn should_do_strings_concat_inline() {
 }
 
 #[test]
+fn should_support_advanced_strings_concat() {
+    assert_success(
+        "samples.javacore.strings.concat.advanced.StringConcatTest",
+        r#"Compile-time constant folding: Hello, World!
+Concatenation with primitives: Value: 42, Pi: 3.14, Flag: true, Letter: ☺
+Concatenation in loop: 01234
+Concatenation with null: null test
+Concatenation with custom object: Result: CustomObject
+Concatenation with final variables: foobar
+Concatenation with multiple plus: abcde
+Compile-time constant folding passed: true
+"#,
+    );
+}
+
+#[test]
 fn should_do_strings_cpool_advanced() {
     assert_success(
         "samples.javacore.strings.cpool.advanced.StringPoolAdvanced",

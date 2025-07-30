@@ -1,9 +1,9 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
-use crate::vm::system_native::method_handle_natives::member_name::ReferenceKind::*;
 use crate::vm::system_native::method_handle_natives::method_type::MethodType;
 use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
+use crate::vm::system_native::method_handle_natives::types::ReferenceKind::*;
 
 pub fn resolve(
     member_name_ref: i32,

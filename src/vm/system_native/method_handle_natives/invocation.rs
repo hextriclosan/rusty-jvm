@@ -9,11 +9,11 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
-use crate::vm::system_native::method_handle_natives::member_name::ReferenceKind::*;
 use crate::vm::system_native::method_handle_natives::method_type::MethodType;
 use crate::vm::system_native::method_handle_natives::offsets::{
     get_field_offset, get_static_field_offset,
 };
+use crate::vm::system_native::method_handle_natives::types::ReferenceKind::*;
 use once_cell::sync::Lazy;
 use std::env;
 use std::sync::Arc;
