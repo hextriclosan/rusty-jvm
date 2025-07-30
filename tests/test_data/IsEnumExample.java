@@ -14,8 +14,8 @@ public class IsEnumExample {
         print(String.class); // false
 
         // 4. Case: Anonymous subclass of Enum (simulated with reflection)
-//        Enum<?> anonymousEnum = Enum.valueOf(TimeUnit.class, "MINUTES"); // Native Call Error: Native method jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object; not found
-//        print(anonymousEnum.getClass()); // true
+       Enum<?> anonymousEnum = Enum.valueOf(TimeUnit.class, "MINUTES");
+       print(anonymousEnum.getClass()); // true
 
         // 5. Case: Array of enums
         print(TimeUnit[].class); // false
