@@ -1,5 +1,7 @@
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::stack::stack_frame::ExceptionTableRecord;
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 use jclassfile::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
 use std::collections::{HashMap, HashSet};
 
@@ -39,6 +41,24 @@ pub enum AttributeType {
     NestMembers,
     Record,
     PermittedSubclasses,
+}
+
+#[derive(Debug, PartialEq, new, Getters, CopyGetters)]
+pub(crate) struct BootstrapMethodInfo {
+    #[get_copy = "pub"]
+    pub ref_kind: u8,
+    #[get = "pub"]
+    pub class_name: String,
+    #[get = "pub"]
+    pub method_name: String,
+    #[get = "pub"]
+    pub method_descriptor: String,
+    #[get = "pub"]
+    pub bootstrap_arguments_cpool_indexes: Vec<u16>,
+    #[get = "pub"]
+    pub invoke_dynamic_method_name: String,
+    #[get = "pub"]
+    pub invoke_dynamic_method_descriptor: String,
 }
 
 impl From<&Attribute> for AttributeType {
@@ -183,6 +203,39 @@ impl AttributesHelper {
         }
     }
 
+    pub fn get_bootstrap_method<T: CPoolHelperTrait>(
+        &self,
+        cpool_helper: &T,
+        cpool_index: u16,
+    ) -> Option<BootstrapMethodInfo> {
+        let (
+            bootstrap_methods_index,
+            invoke_dynamic_method_name,
+            invoke_dynamic_method_descriptor,
+        ) = cpool_helper.get_invoke_dynamic(cpool_index)?;
+        let bootstrap_record = match self.data.get(&AttributeType::BootstrapMethods)? {
+            Attribute::BootstrapMethods { bootstrap_methods } => {
+                Some(&bootstrap_methods[bootstrap_methods_index as usize])
+            }
+            _ => None,
+        }?;
+
+        let bootstrap_method_ref = bootstrap_record.bootstrap_method_ref();
+        let (ref_kind, class_name, method_name, method_descriptor) =
+            cpool_helper.get_method_handle(bootstrap_method_ref)?;
+
+        let bootstrap_arguments_cpool_indexes = bootstrap_record.bootstrap_arguments();
+        Some(BootstrapMethodInfo::new(
+            ref_kind,
+            class_name,
+            method_name,
+            method_descriptor,
+            bootstrap_arguments_cpool_indexes.clone(),
+            invoke_dynamic_method_name,
+            invoke_dynamic_method_descriptor,
+        ))
+    }
+
     pub fn get_exception_indexes(&self) -> Option<Vec<u16>> {
         match self.data.get(&AttributeType::Exceptions)? {
             Attribute::Exceptions {
@@ -232,8 +285,8 @@ mod tests {
         Code, LineNumberTable, LocalVariableTable, MethodParameters,
     };
     use jclassfile::attributes::{
-        ExceptionRecord, LineNumberRecord, LocalVariableTableRecord, MethodParameterFlags,
-        MethodParameterRecord,
+        BootstrapMethodRecord, ExceptionRecord, LineNumberRecord, LocalVariableTableRecord,
+        MethodParameterFlags, MethodParameterRecord,
     };
     use std::collections::HashMap;
 
@@ -333,5 +386,57 @@ mod tests {
             Some("TestSourceFile.java".to_string()),
             attributes_helper.get_source_file(&mock)
         );
+    }
+
+    #[test]
+    fn should_return_bootstrap_method() {
+        let bootstrapmethod_ref = 42u16;
+        let bootstrap_arguments = vec![1000, 1001];
+        let bootstrapmethods_attribute = Attribute::BootstrapMethods {
+            bootstrap_methods: vec![
+                BootstrapMethodRecord::new(1, vec![2, 3]),
+                BootstrapMethodRecord::new(bootstrapmethod_ref, bootstrap_arguments.clone()),
+            ],
+        };
+        let attributes = vec![bootstrapmethods_attribute.clone()];
+        let attributes_helper = AttributesHelper::new(&attributes);
+
+        let invoke_dynamic_cpool_index = 1337u16;
+        let bootstrap_methods_index = 1;
+        let invoke_dynamic_method_name = "bootstrapMethod".to_string();
+        let invoke_dynamic_method_descriptor = "([Ljava/lang/Object;)V".to_string();
+        let mut mock = MockCPoolHelperTrait::new();
+        mock.expect_get_invoke_dynamic()
+            .withf(move |index| *index == invoke_dynamic_cpool_index)
+            .return_const(Some((
+                bootstrap_methods_index,
+                invoke_dynamic_method_name.clone(),
+                invoke_dynamic_method_descriptor.clone(),
+            )));
+
+        let reference_kind = 6;
+        let class_name = "class_name".to_string();
+        let name = "method_name".to_string();
+        let descriptor = "()V".to_string();
+        mock.expect_get_method_handle()
+            .withf(move |index| *index == bootstrapmethod_ref)
+            .return_const(Some((
+                reference_kind,
+                class_name.clone(),
+                name.clone(),
+                descriptor.clone(),
+            )));
+
+        let actual = attributes_helper.get_bootstrap_method(&mock, invoke_dynamic_cpool_index);
+        let expected = Some(BootstrapMethodInfo::new(
+            reference_kind,
+            class_name,
+            name,
+            descriptor,
+            bootstrap_arguments,
+            invoke_dynamic_method_name,
+            invoke_dynamic_method_descriptor,
+        ));
+        assert_eq!(expected, actual);
     }
 }
