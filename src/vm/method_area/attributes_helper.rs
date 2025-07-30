@@ -1,5 +1,7 @@
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::stack::stack_frame::ExceptionTableRecord;
+use derive_new::new;
+use getset::{CopyGetters, Getters};
 use jclassfile::attributes::{Attribute, InnerClassRecord, LineNumberRecord};
 use std::collections::{HashMap, HashSet};
 
@@ -39,6 +41,24 @@ pub enum AttributeType {
     NestMembers,
     Record,
     PermittedSubclasses,
+}
+
+#[derive(Debug, PartialEq, new, Getters, CopyGetters)]
+pub(crate) struct BootstrapMethodInfo {
+    #[get_copy = "pub"]
+    pub ref_kind: u8,
+    #[get = "pub"]
+    pub class_name: String,
+    #[get = "pub"]
+    pub method_name: String,
+    #[get = "pub"]
+    pub method_descriptor: String,
+    #[get = "pub"]
+    pub bootstrap_arguments_cpool_indexes: Vec<u16>,
+    #[get = "pub"]
+    pub invoke_dynamic_method_name: String,
+    #[get = "pub"]
+    pub invoke_dynamic_method_descriptor: String,
 }
 
 impl From<&Attribute> for AttributeType {
@@ -187,7 +207,7 @@ impl AttributesHelper {
         &self,
         cpool_helper: &T,
         cpool_index: u16,
-    ) -> Option<(u8, String, String, String, Vec<u16>, String, String)> {
+    ) -> Option<BootstrapMethodInfo> {
         let (
             bootstrap_methods_index,
             invoke_dynamic_method_name,
@@ -205,7 +225,7 @@ impl AttributesHelper {
             cpool_helper.get_method_handle(bootstrap_method_ref)?;
 
         let bootstrap_arguments_cpool_indexes = bootstrap_record.bootstrap_arguments();
-        Some((
+        Some(BootstrapMethodInfo::new(
             ref_kind,
             class_name,
             method_name,
@@ -408,7 +428,7 @@ mod tests {
             )));
 
         let actual = attributes_helper.get_bootstrap_method(&mock, invoke_dynamic_cpool_index);
-        let expected = Some((
+        let expected = Some(BootstrapMethodInfo::new(
             reference_kind,
             class_name,
             name,
