@@ -15,8 +15,6 @@ public class EnumsExample {
     }
 
     private static void print(String description, Object value) {
-        System.out.print(description);
-        System.out.print(": ");
-        System.out.println(value);
+        System.out.println(description + ": " + value);
     }
 }

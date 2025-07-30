@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . FileExample.java
 package samples.io.fileexample;
 
 import java.io.File;

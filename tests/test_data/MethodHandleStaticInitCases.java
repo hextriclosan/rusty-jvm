@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline -d . MethodHandleStaticInitCases.java
 package samples.staticinit.bymethodhandle;
 
 import java.lang.invoke.MethodHandle;

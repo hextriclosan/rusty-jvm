@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline -d . StaticFieldAccessFromParentExample.java
 package samples.staticinit.parentstaticfieldaccess;
 
 public class StaticFieldAccessFromParentExample {

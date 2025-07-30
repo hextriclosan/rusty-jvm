@@ -64,9 +64,7 @@ public class GetDeclaringClassExample {
     }
 
     private static void print(Class<?> clazz) {
-        System.out.print(clazz.getName());
-        System.out.print(": ");
-        System.out.println(clazz.getDeclaringClass());
+        System.out.println(clazz.getName() + ": " + clazz.getDeclaringClass());
     }
 
 }

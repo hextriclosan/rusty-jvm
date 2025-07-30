@@ -1,4 +1,3 @@
-// javac -XDstringConcat=inline  -d . ExceptionExample.java
 package samples.javacore.exceptionexample;
 
 import java.io.FileWriter;

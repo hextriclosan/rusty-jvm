@@ -8,8 +8,7 @@ public class ArrayClass {
     }
 
     private static void testArrayType(Class<?> clazz) {
-        System.out.print("Analyzing class: ");
-        System.out.println(clazz.getName());
+        System.out.println("Analyzing class: " + clazz.getName());
         System.out.println("----------------------------------------");
 
         while (clazz != null) {
@@ -23,13 +22,8 @@ public class ArrayClass {
     }
 
     private static void printClassDetails(Class<?> clazz) {
-        System.out.print("Class: ");
-        System.out.println(clazz);
-
-        System.out.print("  isPrimitive: ");
-        System.out.println(clazz.isPrimitive());
-
-        System.out.print("  isArray: ");
-        System.out.println(clazz.isArray());
+        System.out.println("Class: " + clazz);
+        System.out.println("  isPrimitive: " + clazz.isPrimitive());
+        System.out.println("  isArray: " + clazz.isArray());
     }
 }
