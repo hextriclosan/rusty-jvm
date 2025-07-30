@@ -2036,3 +2036,15 @@ Lambda Result: User-123
 "#,
     );
 }
+
+#[test]
+fn should_support_composite_pattern() {
+    assert_success(
+        "samples.patterns.composite.Composite",
+        r#"Assassin: Target acquired.
+Archer: Ready to fire.
+Unnamed Unit: Where am I?
+Army attack power is 60
+"#,
+    );
+}
