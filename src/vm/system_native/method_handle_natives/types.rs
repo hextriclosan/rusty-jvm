@@ -16,7 +16,7 @@ pub enum ReferenceKind {
     REF_invokeInterface = 9,
 }
 
-const CLASS_NAME: &'static str = "java/lang/invoke/MethodHandles$Lookup";
+const LOOKUP_CLASS_NAME: &'static str = "java/lang/invoke/MethodHandles$Lookup";
 
 impl ReferenceKind {
     pub fn to_findmethod_signature(
@@ -33,6 +33,6 @@ impl ReferenceKind {
                 )))
         };
 
-        Ok((CLASS_NAME, signature))
+        Ok((LOOKUP_CLASS_NAME, signature))
     }
 }

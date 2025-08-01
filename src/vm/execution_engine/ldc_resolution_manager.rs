@@ -115,6 +115,16 @@ impl LdcResolutionManager {
     }
 }
 
+/// Builds a reference to a `java.lang.invoke.MethodType` object from a method descriptor string.
+///
+/// # Arguments
+///
+/// * `descriptor` - A string slice representing the method descriptor (e.g., "(Ljava/lang/String;)V").
+///
+/// # Returns
+///
+/// Returns a `Result<i32>` containing the reference to the created `MethodType` object,
+/// or an error if the operation fails.
 // todo: consider separate cache for method type references
 pub fn build_methodtype_ref(descriptor: &str) -> Result<i32> {
     let string_ref = StringPoolHelper::get_string(descriptor.to_string())?;
@@ -126,6 +136,18 @@ pub fn build_methodtype_ref(descriptor: &str) -> Result<i32> {
     Ok(method_type_ref)
 }
 
+/// Resolves a method handle for a given method or field in the JVM.
+///
+/// # Parameters
+/// - `current_class_name`: The name of the class from which the resolution is initiated.
+/// - `reference_kind`: The kind of reference (e.g., method invocation, field access) as defined by `ReferenceKind`.
+/// - `class_name_to_lookup_in`: The name of the class in which to look up the method or field.
+/// - `method_or_field_to_lookup_for`: The name of the method or field to resolve.
+/// - `method_or_field_descriptor`: The descriptor string of the method or field (e.g., type signature).
+///
+/// # Returns
+/// Returns `Result<i32>` containing a reference to the resolved method handle object on success,
+/// or an error if the resolution fails.
 pub fn resolve_method_handle(
     current_class_name: &str,
     reference_kind: ReferenceKind,
