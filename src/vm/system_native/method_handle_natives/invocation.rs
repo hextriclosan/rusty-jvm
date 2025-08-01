@@ -81,7 +81,7 @@ fn direct_method_handle_invocation(
         REF_putField => invoke_exact_put_field(&member_name, method_args),
         REF_getStatic => invoke_exact_get_static_field(&member_name, method_args, stack_frames),
         REF_putStatic => invoke_exact_put_static_field(&member_name, method_args),
-        _ => unimplemented!("reference_kind: {:?}", reference_kind),
+        REF_invokeInterface => unimplemented!("reference_kind: {:?}", reference_kind),
     }
 }
 

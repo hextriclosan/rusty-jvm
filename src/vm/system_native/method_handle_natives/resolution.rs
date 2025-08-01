@@ -14,12 +14,10 @@ pub fn resolve(
     let mut member_name = MemberName::new(member_name_ref)?;
     let reference_kind = member_name.reference_kind();
     match reference_kind {
-        REF_invokeVirtual | REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => {
-            resolve_method(&mut member_name)
-        }
+        REF_invokeVirtual | REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial
+        | REF_invokeInterface => resolve_method(&mut member_name),
         REF_getField | REF_putField => Ok(member_name_ref),
         REF_getStatic | REF_putStatic => resolve_static_field(&mut member_name),
-        _ => unimplemented!("reference_kind: {:?}", reference_kind),
     }
 }
 
