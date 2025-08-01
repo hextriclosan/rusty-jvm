@@ -2041,3 +2041,11 @@ Army attack power is 60
 "#,
     );
 }
+
+#[test]
+fn should_support_lambdas() {
+    assert_success(
+        "samples.javacore.invokedynamic.lambda.LambdaExample",
+        "13\ninvoke dynamic\n",
+    );
+}

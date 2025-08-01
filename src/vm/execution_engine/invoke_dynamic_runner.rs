@@ -1,7 +1,9 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
+use crate::vm::execution_engine::ldc_resolution_manager::{
+    build_methodtype_ref, resolve_method_handle,
+};
 use crate::vm::execution_engine::ops_reference_processor::prepare_invoke_context;
-use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::clazz_ref;
@@ -179,16 +181,18 @@ impl InvokeDynamicRunner {
 
         let call_site_clazz = clazz_ref("java/lang/invoke/CallSite")?;
 
-        let method_handle_ref =
-            Self::resolve_bootstrap_method_handle(current_class_name, &bootstrap_info)?;
+        let method_handle_ref = resolve_method_handle(
+            current_class_name,
+            bootstrap_info.ref_kind(),
+            bootstrap_info.bootstrap_method_class(),
+            bootstrap_info.bootstrap_method_name(),
+            bootstrap_info.bootstrap_method_descriptor(),
+        )?;
 
         let method_name_ref =
             StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_name().clone())?;
-
-        let invoke_dynamic_method_descriptor_ref =
-            StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_descriptor().clone())?;
         let invoke_dynamic_method_type_ref =
-            Self::build_methodtype_ref(invoke_dynamic_method_descriptor_ref)?;
+            build_methodtype_ref(bootstrap_info.invoke_dynamic_descriptor())?;
 
         let current_clazz = clazz_ref(current_class_name)?;
 
@@ -201,58 +205,6 @@ impl InvokeDynamicRunner {
             current_clazz.into(),
         ];
         Ok(args)
-    }
-
-    fn resolve_bootstrap_method_handle(
-        current_class_name: &str,
-        bootstrap_info: &BootstrapInfo,
-    ) -> Result<i32> {
-        let new_lookup = Self::build_lookup_for_class(current_class_name)?;
-        let refc = clazz_ref(bootstrap_info.bootstrap_method_class())?;
-        let method_name_ref =
-            StringPoolHelper::get_string(bootstrap_info.bootstrap_method_name().clone())?;
-
-        let bootstrap_method_descriptor_str_ref =
-            StringPoolHelper::get_string(bootstrap_info.bootstrap_method_descriptor().clone())?;
-        let method_type_ref = Self::build_methodtype_ref(bootstrap_method_descriptor_str_ref)?;
-
-        let method_name = Self::methodname_by_ref_kind(bootstrap_info.ref_kind())?;
-        let method_handle_ref = Executor::invoke_non_static_method(
-            "java/lang/invoke/MethodHandles$Lookup",
-            method_name,
-            new_lookup,
-            &[refc.into(), method_name_ref.into(), method_type_ref.into()],
-        )?[0];
-        Ok(method_handle_ref)
-    }
-
-    fn build_methodtype_ref(string_ref: i32) -> Result<i32> {
-        let method_type_ref = Executor::invoke_static_method(
-            "java/lang/invoke/MethodType",
-            "fromMethodDescriptorString:(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;",
-            &[string_ref.into()],
-        )?[0];
-        Ok(method_type_ref)
-    }
-
-    fn build_lookup_for_class(current_class_name: &str) -> Result<i32> {
-        let jc_lookup = with_method_area(|a| a.get("java/lang/invoke/MethodHandles$Lookup"))?;
-        StaticInit::initialize_java_class(&jc_lookup)?;
-        let impl_lookup = jc_lookup
-            .static_field("IMPL_LOOKUP")
-            .ok_or(Error::new_execution("Error getting IMPL_LOOKUP field"))?;
-
-        let impl_lookup_ref = impl_lookup.raw_value()?[0];
-
-        let current_clazz = clazz_ref(current_class_name)?;
-
-        let new_lookup = Executor::invoke_non_static_method(
-            "java/lang/invoke/MethodHandles$Lookup",
-            "in:(Ljava/lang/Class;)Ljava/lang/invoke/MethodHandles$Lookup;",
-            impl_lookup_ref,
-            &[current_clazz.into()],
-        )?[0];
-        Ok(new_lookup)
     }
 
     fn extract_bootstrap_info(
@@ -271,16 +223,5 @@ impl InvokeDynamicRunner {
         })?;
 
         BootstrapInfo::try_from((bootstrap_method_info, current_class_name))
-    }
-
-    fn methodname_by_ref_kind(ref_kind: ReferenceKind) -> Result<&'static str> {
-        match ref_kind {
-            ReferenceKind::REF_invokeStatic =>
-                Ok("findStatic:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;"),
-            _ =>
-                Err(Error::new_execution(&format!(
-                    "Unsupported yet reference kind for invokedynamic: {ref_kind:?}"
-                )))
-        }
     }
 }

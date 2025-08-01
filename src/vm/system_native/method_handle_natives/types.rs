@@ -1,3 +1,4 @@
+use crate::vm::error::Error;
 use num_enum::TryFromPrimitive;
 
 #[allow(non_camel_case_types)]
@@ -13,4 +14,27 @@ pub enum ReferenceKind {
     REF_invokeSpecial = 7,
     REF_newInvokeSpecial = 8,
     REF_invokeInterface = 9,
+}
+
+const LOOKUP_CLASS_NAME: &str = "java/lang/invoke/MethodHandles$Lookup";
+
+impl ReferenceKind {
+    pub fn to_findmethod_signature(
+        &self,
+    ) -> crate::vm::error::Result<(&'static str, &'static str)> {
+        let signature = match &self {
+            ReferenceKind::REF_invokeStatic =>
+                "findStatic:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            ReferenceKind::REF_invokeInterface | ReferenceKind::REF_invokeVirtual =>
+                "findVirtual:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            ReferenceKind::REF_getField
+            | ReferenceKind::REF_getStatic
+            | ReferenceKind::REF_putField
+            | ReferenceKind::REF_putStatic
+            | ReferenceKind::REF_invokeSpecial
+            | ReferenceKind::REF_newInvokeSpecial => return Err(Error::new_execution(&format!("Unsupported yet reference kind for invokedynamic: {self:?}")))
+        };
+
+        Ok((LOOKUP_CLASS_NAME, signature))
+    }
 }
