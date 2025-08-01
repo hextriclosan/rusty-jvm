@@ -87,7 +87,7 @@ interface Unit {
 }
 
 abstract class AbstractUnit implements Unit {
-    public AbstractUnit() {
+    protected AbstractUnit() {
         System.out.println(getIntroMessage());
     }
 
