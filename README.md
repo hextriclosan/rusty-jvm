@@ -64,12 +64,7 @@ public class CompositePattern {
     public static void main(String[] args) {
         Unit eliteSquad = new UnitGroup(new Assassin(), new Archer());
         Unit namelessSquad = new UnitGroup(
-                new Unit() {
-                    @Override
-                    public int damage() {
-                        return 2;
-                    }
-                },
+                () -> 2,
                 new AbstractUnit() {
                     @Override
                     protected String phrase() {
@@ -145,11 +140,9 @@ class UnitGroup implements Unit {
 
     @Override
     public int damage() {
-        int totalDamage = 0;
-        for (Unit unit : units) {
-            totalDamage += unit.damage();
-        }
-        return totalDamage;
+        return units.stream()
+                .mapToInt(Unit::damage)
+                .sum();
     }
 }
 ```
