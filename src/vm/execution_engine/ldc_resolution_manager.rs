@@ -155,14 +155,14 @@ pub fn resolve_method_handle(
     method_or_field_to_lookup_for: &str,
     method_or_field_descriptor: &str,
 ) -> Result<i32> {
-    let (lookup_clas_name, method_name_lookup_for) = reference_kind.to_findmethod_signature()?;
+    let (lookup_class_name, method_name_lookup_for) = reference_kind.to_findmethod_signature()?;
     let new_lookup = build_lookup_for_class(current_class_name)?;
     let refc = clazz_ref(class_name_to_lookup_in)?;
     let method_name_ref = StringPoolHelper::get_string(method_or_field_to_lookup_for.to_string())?;
 
     let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
     let method_handle_ref = Executor::invoke_non_static_method(
-        lookup_clas_name,
+        lookup_class_name,
         method_name_lookup_for,
         new_lookup,
         &[refc.into(), method_name_ref.into(), method_type_ref.into()],

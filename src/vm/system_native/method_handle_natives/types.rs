@@ -16,7 +16,7 @@ pub enum ReferenceKind {
     REF_invokeInterface = 9,
 }
 
-const LOOKUP_CLASS_NAME: &'static str = "java/lang/invoke/MethodHandles$Lookup";
+const LOOKUP_CLASS_NAME: &str = "java/lang/invoke/MethodHandles$Lookup";
 
 impl ReferenceKind {
     pub fn to_findmethod_signature(
@@ -27,10 +27,7 @@ impl ReferenceKind {
                 "findStatic:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
             ReferenceKind::REF_invokeInterface | ReferenceKind::REF_invokeVirtual =>
                 "findVirtual:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
-            _ =>
-                return Err(Error::new_execution(&format!(
-                    "Unsupported yet reference kind for invokedynamic: {self:?}"
-                )))
+            ReferenceKind::REF_getField | ReferenceKind::REF_getStatic | ReferenceKind::REF_putField | ReferenceKind::REF_putStatic | ReferenceKind::REF_invokeSpecial | ReferenceKind::REF_newInvokeSpecial => return Err(Error::new_execution(&format!("Unsupported yet reference kind for invokedynamic: {self:?}")))
         };
 
         Ok((LOOKUP_CLASS_NAME, signature))
