@@ -27,7 +27,12 @@ impl ReferenceKind {
                 "findStatic:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
             ReferenceKind::REF_invokeInterface | ReferenceKind::REF_invokeVirtual =>
                 "findVirtual:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
-            ReferenceKind::REF_getField | ReferenceKind::REF_getStatic | ReferenceKind::REF_putField | ReferenceKind::REF_putStatic | ReferenceKind::REF_invokeSpecial | ReferenceKind::REF_newInvokeSpecial => return Err(Error::new_execution(&format!("Unsupported yet reference kind for invokedynamic: {self:?}")))
+            ReferenceKind::REF_getField
+            | ReferenceKind::REF_getStatic
+            | ReferenceKind::REF_putField
+            | ReferenceKind::REF_putStatic
+            | ReferenceKind::REF_invokeSpecial
+            | ReferenceKind::REF_newInvokeSpecial => return Err(Error::new_execution(&format!("Unsupported yet reference kind for invokedynamic: {self:?}")))
         };
 
         Ok((LOOKUP_CLASS_NAME, signature))

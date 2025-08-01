@@ -170,6 +170,20 @@ pub fn resolve_method_handle(
     Ok(method_handle_ref)
 }
 
+/// Constructs a new `java/lang/invoke/MethodHandles$Lookup` object for the specified class.
+///
+/// This function performs the following steps:
+/// 1. Retrieves the `MethodHandles$Lookup` class from the method area.
+/// 2. Ensures the class is initialized.
+/// 3. Accesses the static `IMPL_LOOKUP` field of the class.
+/// 4. Invokes the non-static `in` method on the `IMPL_LOOKUP` object, passing the target class.
+///
+/// # Parameters
+/// - `current_class_name`: The name of the class for which the lookup object should be constructed.
+///
+/// # Returns
+/// Returns `Result<i32>` containing a reference to the new `MethodHandles$Lookup` object on success,
+/// or an error if any step fails.
 fn build_lookup_for_class(current_class_name: &str) -> Result<i32> {
     let jc_lookup = with_method_area(|a| a.get("java/lang/invoke/MethodHandles$Lookup"))?;
     StaticInit::initialize_java_class(&jc_lookup)?;
