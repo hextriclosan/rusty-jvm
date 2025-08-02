@@ -44,7 +44,7 @@ pub struct Arguments {
     program_args: Vec<String>,
     /// The standard Java options (e.g., `-version`, `-help`).
     java_standard_options: Vec<String>,
-    /// The options passed to the Java launcher (e.g., `--install`, `--purge`).
+    /// The options passed to the Java launcher (e.g., `--dry-run`).
     java_launcher_options: Vec<String>,
     /// System properties set for the Java program (e.g., `-Dproperty=value`).
     system_properties: IndexMap<String, String>,
