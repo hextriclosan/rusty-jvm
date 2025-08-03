@@ -95,7 +95,7 @@ fn init() -> Result<()> {
     // create primordial ThreadGroup and Thread
     let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
     with_method_area(|area| area.set_system_thread_group_id(tg_obj_ref))?;
-    let string_obj_ref = StringPoolHelper::get_string("system".to_string())?; // refactor candidate B: introduce and use here common string creator, not string pool one
+    let string_obj_ref = StringPoolHelper::get_string("system")?; // refactor candidate B: introduce and use here common string creator, not string pool one
     let _thread_obj_ref =
         Executor::create_primordial_thread(&vec![tg_obj_ref.into(), string_obj_ref.into()])?;
 

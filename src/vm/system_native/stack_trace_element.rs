@@ -48,7 +48,7 @@ fn init_stack_trace_elements(
 
         let class_name_ref = {
             let external_name = jc.external_name();
-            StringPoolHelper::get_string(external_name.to_string())?
+            StringPoolHelper::get_string(external_name)?
         };
 
         let method_name_ref = {
@@ -57,12 +57,12 @@ fn init_stack_trace_elements(
             })?);
             let java_method = method_ref as *const JavaMethod;
             let method_name = unsafe { (*java_method).name() };
-            StringPoolHelper::get_string(method_name.to_string())?
+            StringPoolHelper::get_string(method_name)?
         };
 
         let file_name_ref = {
             let source_file = jc.source_file().as_deref().unwrap_or("Unknown");
-            StringPoolHelper::get_string(source_file.to_string())?
+            StringPoolHelper::get_string(source_file)?
         };
 
         let line_number = {

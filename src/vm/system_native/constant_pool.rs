@@ -23,7 +23,7 @@ fn get_utf8(oop_ref: i32, index: i32) -> Result<i32> {
             jc.this_class_name()
         ))
     })?;
-    let string_ref = StringPoolHelper::get_string(utf8)?;
+    let string_ref = StringPoolHelper::get_string(&utf8)?;
 
     Ok(string_ref)
 }

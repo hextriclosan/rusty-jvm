@@ -4,7 +4,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 
-pub fn throw_ioexception(message: String, stack_frames: &mut StackFrames) -> Result<()> {
+pub fn throw_ioexception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
     let message_ref = StringPoolHelper::get_string(message)?;
     let args = vec![StackValueKind::from(message_ref)];
     construct_exception_and_throw(
@@ -19,7 +19,7 @@ pub fn throw_ioexception(message: String, stack_frames: &mut StackFrames) -> Res
 
 pub fn throw_file_not_found_exception(
     path_ref: i32,
-    reason: String,
+    reason: &str,
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
     let reason_ref = StringPoolHelper::get_string(reason)?;

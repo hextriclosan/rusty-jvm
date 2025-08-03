@@ -114,7 +114,7 @@ pub(crate) fn system_map_library_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn map_library_name(name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let library_name = libloading::library_filename(name).into_string()?;
-    let library_name_ref = StringPoolHelper::get_string(library_name.to_string())?;
+    let library_name_ref = StringPoolHelper::get_string(&library_name)?;
 
     Ok(library_name_ref)
 }

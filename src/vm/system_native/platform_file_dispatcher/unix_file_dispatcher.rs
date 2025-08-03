@@ -37,7 +37,7 @@ fn write0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) -
             nix::errno::Errno::EAGAIN => IOS_UNAVAILABLE,
             nix::errno::Errno::EINTR => IOS_INTERRUPTED,
             _ => {
-                throw_ioexception("Write failed".to_string(), stack_frames)?;
+                throw_ioexception("Write failed", stack_frames)?;
                 return Err(Error::new_exception());
             }
         },
@@ -78,7 +78,7 @@ fn read0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) ->
             nix::errno::Errno::EAGAIN => IOS_UNAVAILABLE,
             nix::errno::Errno::EINTR => IOS_INTERRUPTED,
             _ => {
-                throw_ioexception("Read failed".to_string(), stack_frames)?;
+                throw_ioexception("Read failed", stack_frames)?;
                 return Err(Error::new_exception());
             }
         },
@@ -106,7 +106,7 @@ fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> Result<i64> {
         Ok(stat) => stat.st_size as i64,
         Err(errno) if matches!(errno, nix::errno::Errno::EINTR) => IOS_INTERRUPTED as i64,
         Err(errno) => {
-            throw_ioexception(format!("Size failed: {}", errno.to_string()), stack_frames)?;
+            throw_ioexception(&format!("Size failed: {}", errno.to_string()), stack_frames)?;
             return Err(Error::new_exception());
         }
     };

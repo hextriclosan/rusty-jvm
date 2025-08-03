@@ -158,7 +158,7 @@ fn init_class_name(class_ref: i32) -> Result<i32> {
         Ok::<String, Error>(string)
     })?;
 
-    let string_ref = StringPoolHelper::get_string(class_name)?;
+    let string_ref = StringPoolHelper::get_string(&class_name)?;
     Ok(string_ref)
 }
 
@@ -327,8 +327,8 @@ fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     })? {
         let class_name_ref =
             with_method_area(|method_area| method_area.load_reflection_class(&class_name))?;
-        let name_ref = StringPoolHelper::get_string(name)?;
-        let descriptor_ref = StringPoolHelper::get_string(descriptor)?;
+        let name_ref = StringPoolHelper::get_string(&name)?;
+        let descriptor_ref = StringPoolHelper::get_string(&descriptor)?;
 
         let array_ref = with_heap_write_lock(|heap| {
             heap.create_array_with_values(
@@ -387,7 +387,7 @@ fn get_simple_binary_name0(class_ref: i32) -> Result<i32> {
         .rsplit_once('$')
         .map(|(_, last_token)| last_token)
         .filter(|s| s.parse::<u64>().is_err())
-        .map(|s| StringPoolHelper::get_string(s.to_owned()))
+        .map(|s| StringPoolHelper::get_string(s))
         .unwrap_or(Ok(0));
     string_ref
 }

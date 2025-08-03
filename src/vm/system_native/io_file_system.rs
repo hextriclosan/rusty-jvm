@@ -21,7 +21,7 @@ fn canonicalize0(path_ref: i32) -> Result<i32> {
     let canonical_name = canonical_path.to_str().ok_or_else(|| {
         Error::new_execution(&format!("Failed to convert path {canonical_path:?}"))
     })?;
-    let canonical_name_ref = StringPoolHelper::get_string(canonical_name.to_string())?;
+    let canonical_name_ref = StringPoolHelper::get_string(canonical_name)?;
 
     Ok(canonical_name_ref)
 }

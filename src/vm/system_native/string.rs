@@ -61,5 +61,5 @@ pub(crate) fn intern_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn intern(reference: i32) -> Result<i32> {
     let string = get_utf8_string_by_ref(reference)?;
 
-    StringPoolHelper::get_string(string)
+    StringPoolHelper::get_string(&string)
 }

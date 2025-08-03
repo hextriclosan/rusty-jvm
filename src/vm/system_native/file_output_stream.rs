@@ -36,7 +36,7 @@ fn open0(
         Ok(file) => PlatformFile::set_raw_id(obj_ref, file),
         Err(e) => {
             let message = e.to_string();
-            throw_file_not_found_exception(file_name_ref, message, stack_frames)?;
+            throw_file_not_found_exception(file_name_ref, &message, stack_frames)?;
             Ok(())
         }
     }
