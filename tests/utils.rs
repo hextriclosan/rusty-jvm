@@ -137,9 +137,16 @@ pub fn assert_with_all_args(
         assert.failure()
     };
 
-    assert
-        .stdout(expected_stdout.to_string())
-        .stderr(expected_stderr.to_string());
+    let output = assert.get_output();
+    let actual_stdout =
+        String::from_utf8(output.stdout.clone()).expect("Failed to convert stdout to string");
+    let actual_stderr =
+        String::from_utf8(output.stderr.clone()).expect("Failed to convert stderr to string");
+
+    let actual_stdout = normalize_lambda(&actual_stdout);
+
+    assert_eq!(actual_stdout, expected_stdout.to_string());
+    assert_eq!(actual_stderr, expected_stderr.to_string());
 }
 
 pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected_stdout: &str) {
@@ -207,4 +214,10 @@ fn get_command(arguments: &[&str]) -> Command {
 #[cfg(target_os = "windows")]
 pub fn to_windows(input: &str) -> String {
     input.replace("\r\n", "\n").replace("\n", "\r\n")
+}
+
+/// `com.example.Example$$Lambda/0x000001f9ca001850` -> `com.example.Example$$Lambda/0x0000`
+fn normalize_lambda(to_strip: &str) -> String {
+    let re = regex::Regex::new(r"(\$\$Lambda/0x0000)[0-9a-fA-F]+").unwrap();
+    re.replace_all(to_strip, "$1").to_string()
 }
