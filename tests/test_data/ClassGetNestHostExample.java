@@ -18,10 +18,10 @@ public class ClassGetNestHostExample {
         print("InnerInterface", new InnerInterface() {
         }.getClass());
 
-//         var lambda1 = (Runnable) () -> {}; // Execution Error: Unknown reference opcode: 186
-//         print("A lambda 1", lambda1.getClass());
-//         var lambda2 = (Runnable) () -> {};
-//         print("A lambda 2", lambda2.getClass());
+        Runnable lambda1 = () -> {};
+        print("A lambda 1", lambda1.getClass());
+        Runnable lambda2 = () -> {};
+        print("A lambda 2", lambda2.getClass());
 
         print("String", String.class);
         print("int", int.class);

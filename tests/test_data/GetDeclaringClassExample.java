@@ -45,9 +45,8 @@ public class GetDeclaringClassExample {
         print(DeepNesting.Inner.DeepInner.class);
         print(deepInner.getClass());
 
-//         Runnable lambda = () -> {
-//         };
-//         print(lambda.getClass()); // Execution Error: Unknown reference opcode: 186
+        Runnable lambda = () -> {};
+        print(lambda.getClass());
     }
 
     private static void testStaticMethodInner() {

@@ -787,6 +787,7 @@ fn should_write_file_with_print_stream() {
 First Line
 Second Line
 Third Line
+This will go to the file instead of the console.
 Hello as raw bytes
 This is written immediately. This follows after flush.
 This is an example of chaining PrintStreams.
@@ -963,6 +964,7 @@ samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExampl
 samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting
 samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner$DeepInner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner
 samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner$DeepInner: class samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$DeepNesting$Inner
+samples.reflection.trivial.classgetdeclaringclassexample.GetDeclaringClassExample$$Lambda/0x0000: null
 "#,
     );
 }
@@ -1304,6 +1306,8 @@ fn should_work_with_method_handle() {
 (SampleClass)int - MethodHandle(SampleClass)int: 42
 ------- findStaticGetter / findStaticSetter (staticValue) -------
 ()int - MethodHandle()int: 500
+------- bindTo (String.length) -------
+()int - MethodHandle()int: 26
 "#,
     )
 }
@@ -1436,6 +1440,8 @@ InnerClass (class samples.reflection.trivial.classgetnesthostexample.ClassGetNes
 LocalClass (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$1LocalClass): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
 Runnable (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$1): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
 InnerInterface (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$2): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+A lambda 1 (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$$Lambda/0x0000): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
+A lambda 2 (class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample$$Lambda/0x0000): class samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample
 String (class java.lang.String): class java.lang.String
 int (int): int
 ClassGetNestHostExample[] (class [Lsamples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample;): class [Lsamples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample;
@@ -1455,6 +1461,8 @@ class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExamp
 class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$1 are nest mates: true
 class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$2 are nest mates: true
 class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$1 and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$2 are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$$Lambda/0x0000 are nest mates: true
+class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample$$Lambda/0x0000 are nest mates: true
 class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class java.lang.String are nest mates: false
 class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample and class [Lsamples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExample; are nest mates: false
 "#,

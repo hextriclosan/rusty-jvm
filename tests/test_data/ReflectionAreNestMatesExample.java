@@ -27,10 +27,10 @@ public class ReflectionAreNestMatesExample {
         print(thisClass, innerInterface);
         print(runnable, innerInterface);
 
-//         var lambda1 = (Runnable) () -> {}; // Execution Error: Unknown reference opcode: 186
-//         print(thisClass, lambda1.getClass());
-//         var lambda2 = (Runnable) () -> {};
-//         print(thisClass, lambda2.getClass());
+        Runnable lambda1 = () -> {};
+        print(thisClass, lambda1.getClass());
+        Runnable lambda2 = () -> {};
+        print(thisClass, lambda2.getClass());
 
         print(thisClass, String.class);
         print(thisClass, ReflectionAreNestMatesExample[].class);
