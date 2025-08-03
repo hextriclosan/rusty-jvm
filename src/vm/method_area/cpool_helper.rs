@@ -1,3 +1,4 @@
+use derive_new::new;
 use jclassfile::constant_pool::ConstantPool;
 use std::collections::HashMap;
 
@@ -9,7 +10,6 @@ pub trait CPoolHelperTrait {
     fn get_integer(&self, index: u16) -> Option<i32>;
     fn get_float(&self, index: u16) -> Option<f32>;
     fn get_double(&self, index: u16) -> Option<f64>;
-    fn get_class(&self, index: u16) -> Option<String>;
     fn get_string(&self, index: u16) -> Option<String>;
     fn get_long(&self, index: u16) -> Option<i64>;
     fn get_utf8(&self, index: u16) -> Option<String>;
@@ -26,6 +26,13 @@ pub trait CPoolHelperTrait {
 pub struct CPoolHelper {
     data: HashMap<CPoolType, HashMap<u16, ConstantPool>>,
     raw_cpool: Vec<ConstantPool>,
+    loaded_classname: Option<LoadedClassName>,
+}
+
+#[derive(Debug, new)]
+struct LoadedClassName {
+    index: u16,
+    name: String,
 }
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Copy)]
@@ -77,6 +84,23 @@ impl From<&ConstantPool> for CPoolType {
 
 impl CPoolHelper {
     pub fn new(cpool: &[ConstantPool]) -> Self {
+        Self::new_impl(cpool, None)
+    }
+    pub fn new_with_classname(
+        cpool: &[ConstantPool],
+        loaded_classname_index: u16,
+        loaded_classname: String,
+    ) -> Self {
+        Self::new_impl(
+            cpool,
+            Some(LoadedClassName::new(
+                loaded_classname_index,
+                loaded_classname,
+            )),
+        )
+    }
+
+    fn new_impl(cpool: &[ConstantPool], loaded_classname: Option<LoadedClassName>) -> Self {
         let mut data: HashMap<CPoolType, HashMap<u16, ConstantPool>> = HashMap::new();
 
         for (index, item) in cpool.iter().enumerate() {
@@ -88,6 +112,7 @@ impl CPoolHelper {
         Self {
             data,
             raw_cpool: cpool.to_vec(),
+            loaded_classname,
         }
     }
 
@@ -111,6 +136,14 @@ impl CPoolHelperTrait for CPoolHelper {
     }
 
     fn get_class_name(&self, index: u16) -> Option<String> {
+        // if current classname is requested, we return the name of the loaded class
+        // which might be different from the one in the constant pool (e.g. constant pool value `invokedynamic/lambda/LambdaExample$$Lambda` loaded as `invokedynamic/lambda/LambdaExample$$Lambda/0x0000000000000001`)
+        if let Some(lcn) = &self.loaded_classname {
+            if lcn.index == index {
+                return Some(lcn.name.clone());
+            }
+        }
+
         let name_index = match *self.get(CPoolType::Class, index)? {
             ConstantPool::Class { name_index } => name_index,
             _ => return None,
@@ -138,15 +171,6 @@ impl CPoolHelperTrait for CPoolHelper {
             ConstantPool::Double { value } => Some(*value),
             _ => None,
         }
-    }
-
-    fn get_class(&self, index: u16) -> Option<String> {
-        let name_index = match self.get(CPoolType::Class, index)? {
-            ConstantPool::Class { name_index } => Some(name_index),
-            _ => None,
-        }?;
-
-        self.get_utf8(*name_index)
     }
 
     fn get_string(&self, index: u16) -> Option<String> {
@@ -680,8 +704,29 @@ mod tests {
             },
         ]);
 
-        let actual = resolver.get_class(1);
+        let actual = resolver.get_class_name(1);
         assert_eq!(Some("java/lang/Byte".to_string()), actual)
+    }
+
+    #[test]
+    fn should_return_current_class_as_string() {
+        let resolver = CPoolHelper::new_with_classname(
+            &vec![
+                Empty,
+                Class { name_index: 2 },
+                Utf8 {
+                    value: "invokedynamic/lambda/LambdaExample$$Lambda".to_string(),
+                },
+            ],
+            1,
+            "invokedynamic/lambda/LambdaExample$$Lambda/0x0000000000000001".to_string(),
+        );
+
+        let actual = resolver.get_class_name(1);
+        assert_eq!(
+            Some("invokedynamic/lambda/LambdaExample$$Lambda/0x0000000000000001".to_string()),
+            actual
+        )
     }
 
     #[test]

@@ -176,7 +176,14 @@ impl MethodArea {
         class_name: String,
         external_name: String,
     ) -> Result<(String, Arc<JavaClass>)> {
-        let cpool_helper = CPoolHelper::new(class_file.constant_pool());
+        let constant_pool = class_file.constant_pool();
+        let loaded_classname_index = class_file.this_class();
+        let loaded_classname = class_name.clone();
+        let cpool_helper = CPoolHelper::new_with_classname(
+            constant_pool,
+            loaded_classname_index,
+            loaded_classname,
+        );
 
         let super_class_index = class_file.super_class();
         let super_class_name = if super_class_index > 0 {

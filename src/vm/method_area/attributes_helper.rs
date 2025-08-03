@@ -153,7 +153,7 @@ impl AttributesHelper {
                                 "any".to_string()
                             } else {
                                 cpool_helper
-                                    .get_class(rec.catch_type())
+                                    .get_class_name(rec.catch_type())
                                     .expect("Error getting class")
                                     .to_string()
                             },
@@ -349,7 +349,7 @@ mod tests {
 
         let mut mock = MockCPoolHelperTrait::new();
 
-        mock.expect_get_class()
+        mock.expect_get_class_name()
             .withf(|index| *index == 4)
             .return_const(Some("java/lang/Exception".to_string()));
 

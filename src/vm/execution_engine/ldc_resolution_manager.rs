@@ -39,7 +39,7 @@ impl LdcResolutionManager {
             Self::float_to_int(value)
         } else if let Some(value) = cpool_helper.get_string(cpoolindex) {
             StringPoolHelper::get_string(value)?
-        } else if let Some(class_name) = cpool_helper.get_class(cpoolindex) {
+        } else if let Some(class_name) = cpool_helper.get_class_name(cpoolindex) {
             self.load_reflection_class(&class_name)?
         } else if let Some(method_type) = cpool_helper.get_method_type(cpoolindex) {
             build_methodtype_ref(&method_type)?
