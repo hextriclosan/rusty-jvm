@@ -22,7 +22,7 @@ public class FileExample {
                 fileWriter.write("Hello, World!\n");
             }
         } else if ("--list".equals(operation)) {
-         String[] files = file.list(); // Native method java/io/WinNTFileSystem:createFileExclusively0:(Ljava/lang/String;)Z not found
+         String[] files = file.list();
          if (files != null) {
              for (String name : files) {
                  System.out.println(" - " + name);
