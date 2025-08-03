@@ -787,6 +787,7 @@ fn should_write_file_with_print_stream() {
 First Line
 Second Line
 Third Line
+This will go to the file instead of the console.
 Hello as raw bytes
 This is written immediately. This follows after flush.
 This is an example of chaining PrintStreams.

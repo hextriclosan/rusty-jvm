@@ -19,21 +19,22 @@ public class PrintStreamExample {
             ps.println("Third Line");
         }
 
-//         https://github.com/hextriclosan/rusty-jvm/issues/127
+//         https://github.com/hextriclosan/rusty-jvm/issues/127 // Native method jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object; not found
 //         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
 //             ps.printf("Hello %s, you are %d years old.%n", "Alice", 30);
 //         }
 
-//         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
-//             System.setOut(ps); // Redirects standard output to the file
-//             System.out.println("This will go to the file instead of the console.");
-//         }
+        try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
+            System.setOut(ps); // Redirects standard output to the file
+            System.out.println("This will go to the file instead of the console.");
+        }
 
         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
             ps.write("Hello as raw bytes".getBytes()); // Writes raw bytes
             ps.println();
         }
 
+//         Native Call Error: Native method jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object; not found
 //         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
 //             ps.println(new Person("John", 25));
 //         }
