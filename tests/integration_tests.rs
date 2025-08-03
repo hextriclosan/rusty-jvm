@@ -2046,6 +2046,14 @@ Army attack power is 60
 fn should_support_lambdas() {
     assert_success(
         "samples.javacore.invokedynamic.lambda.LambdaExample",
-        "13\ninvoke dynamic\n",
+        r#"13
+invoke dynamic
+Hello from method reference!
+Result: 15
+Result: 5
+Result: 50
+Result: 2
+Joined numbers: 1, 2, 3, 4
+"#,
     );
 }
