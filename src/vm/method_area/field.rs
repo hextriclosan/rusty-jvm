@@ -93,7 +93,7 @@ impl FieldInfo {
     fn construct_field(&self) -> Result<i32> {
         let declaring_class_ref = clazz_ref(&self.class_name)?;
 
-        let name_ref = StringPoolHelper::get_string(self.name.clone())?;
+        let name_ref = StringPoolHelper::get_string(&self.name)?;
         let descr = self.type_descriptor.to_string();
         let type_ref = clazz_ref(&descr)?;
 

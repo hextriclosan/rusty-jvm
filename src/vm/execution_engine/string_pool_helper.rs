@@ -5,13 +5,13 @@ use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 pub struct StringPoolHelper {}
 
 impl StringPoolHelper {
-    pub(crate) fn get_string(cpool_string: String) -> Result<i32> {
-        if let Some(value) = with_heap_read_lock(|heap| heap.get_const_string_ref(&cpool_string)) {
+    pub(crate) fn get_string(cpool_string: &str) -> Result<i32> {
+        if let Some(value) = with_heap_read_lock(|heap| heap.get_const_string_ref(cpool_string)) {
             return Ok(value);
         }
         // todo: possible race condition here
-        let string_ref = Self::create_string(&cpool_string)?;
-        with_heap_write_lock(|heap| heap.put_const_string_ref(&cpool_string, string_ref));
+        let string_ref = Self::create_string(cpool_string)?;
+        with_heap_write_lock(|heap| heap.put_const_string_ref(cpool_string, string_ref));
         Ok(string_ref)
     }
 

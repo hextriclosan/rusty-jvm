@@ -49,7 +49,7 @@ fn write0(
     let handle = get_handle(fd_ref)?;
     let handle = handle as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
-        throw_ioexception("Invalid handle".to_string(), stack_frames)?;
+        throw_ioexception("Invalid handle", stack_frames)?;
         return Err(Error::new_exception());
     }
 
@@ -74,7 +74,7 @@ fn write0(
 
     if result == 0 {
         let error_msg = get_last_error()?;
-        throw_ioexception(error_msg, stack_frames)?;
+        throw_ioexception(&error_msg, stack_frames)?;
         return Err(Error::new_exception());
     }
 

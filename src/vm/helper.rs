@@ -80,7 +80,7 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
     let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
 
     for (index, prop) in props.iter().enumerate() {
-        let string_ref = StringPoolHelper::get_string(prop.to_string())?;
+        let string_ref = StringPoolHelper::get_string(prop)?;
         with_heap_write_lock(|heap| {
             heap.set_array_value(array_ref, index as i32, vec![string_ref])
         })?

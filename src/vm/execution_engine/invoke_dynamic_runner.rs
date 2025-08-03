@@ -189,8 +189,7 @@ impl InvokeDynamicRunner {
             bootstrap_info.bootstrap_method_descriptor(),
         )?;
 
-        let method_name_ref =
-            StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_name().clone())?;
+        let method_name_ref = StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_name())?;
         let invoke_dynamic_method_type_ref =
             build_methodtype_ref(bootstrap_info.invoke_dynamic_descriptor())?;
 

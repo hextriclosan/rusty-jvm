@@ -488,7 +488,7 @@ fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> Result
     }
 
     let string = strip_string(&volume_name)?;
-    let string_ref = StringPoolHelper::get_string(string)?;
+    let string_ref = StringPoolHelper::get_string(&string)?;
 
     Ok(string_ref)
 }
@@ -537,8 +537,8 @@ fn get_volume_information0(
     let volume_name = strip_string(&volume_name)?;
     let filesystem_name = strip_string(&filesystem_name)?;
 
-    let volume_name_ref = StringPoolHelper::get_string(volume_name)?;
-    let filesystem_name_ref = StringPoolHelper::get_string(filesystem_name)?;
+    let volume_name_ref = StringPoolHelper::get_string(&volume_name)?;
+    let filesystem_name_ref = StringPoolHelper::get_string(&filesystem_name)?;
 
     with_heap_write_lock(|heap| {
         heap.set_object_field_value(
@@ -609,7 +609,7 @@ fn format_message(error_code: i32) -> Result<i32> {
     let message = &message[..msg_len as usize];
     let message = String::from_utf16(&message)?;
     let message = message.strip_suffix("\n\r.").unwrap_or(&message);
-    let string_ref = StringPoolHelper::get_string(message.to_string())?;
+    let string_ref = StringPoolHelper::get_string(message)?;
 
     Ok(string_ref)
 }

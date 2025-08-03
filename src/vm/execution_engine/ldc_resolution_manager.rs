@@ -38,7 +38,7 @@ impl LdcResolutionManager {
         } else if let Some(value) = cpool_helper.get_float(cpoolindex) {
             Self::float_to_int(value)
         } else if let Some(value) = cpool_helper.get_string(cpoolindex) {
-            StringPoolHelper::get_string(value)?
+            StringPoolHelper::get_string(&value)?
         } else if let Some(class_name) = cpool_helper.get_class_name(cpoolindex) {
             self.load_reflection_class(&class_name)?
         } else if let Some(method_type) = cpool_helper.get_method_type(cpoolindex) {
@@ -127,7 +127,7 @@ impl LdcResolutionManager {
 /// or an error if the operation fails.
 // todo: consider separate cache for method type references
 pub fn build_methodtype_ref(descriptor: &str) -> Result<i32> {
-    let string_ref = StringPoolHelper::get_string(descriptor.to_string())?;
+    let string_ref = StringPoolHelper::get_string(descriptor)?;
     let method_type_ref = Executor::invoke_static_method(
         "java/lang/invoke/MethodType",
         "fromMethodDescriptorString:(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;",
@@ -158,7 +158,7 @@ pub fn resolve_method_handle(
     let (lookup_class_name, method_name_lookup_for) = reference_kind.to_findmethod_signature()?;
     let new_lookup = build_lookup_for_class(current_class_name)?;
     let refc = clazz_ref(class_name_to_lookup_in)?;
-    let method_name_ref = StringPoolHelper::get_string(method_or_field_to_lookup_for.to_string())?;
+    let method_name_ref = StringPoolHelper::get_string(method_or_field_to_lookup_for)?;
 
     let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
     let method_handle_ref = Executor::invoke_non_static_method(

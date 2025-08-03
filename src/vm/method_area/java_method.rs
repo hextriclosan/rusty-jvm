@@ -136,8 +136,7 @@ impl JavaMethod {
         let declaring_class_ref = clazz_ref(self.class_name())?;
 
         let mut name_signature_split = self.name_signature.split(':'); //fixme: crete separate field with name of get it from here
-        let name_ref =
-            StringPoolHelper::get_string(name_signature_split.next().unwrap().to_string())?;
+        let name_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
 
         let parameter_type_clazz_refs = self
             .method_descriptor
@@ -173,8 +172,7 @@ impl JavaMethod {
 
         let slot = 0; // not used
 
-        let signature_ref =
-            StringPoolHelper::get_string(name_signature_split.next().unwrap().to_string())?;
+        let signature_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
 
         let annotations = self
             .annotations_raw
@@ -264,8 +262,7 @@ impl JavaMethod {
 
         let slot = 0; // not used
 
-        let signature_ref =
-            StringPoolHelper::get_string(name_signature_split.next().unwrap().to_string())?;
+        let signature_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
 
         let annotations = self
             .annotations_raw
