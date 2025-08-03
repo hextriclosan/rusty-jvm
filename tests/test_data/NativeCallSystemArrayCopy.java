@@ -9,7 +9,7 @@ public class NativeCallSystemArrayCopy {
         intArrOverlapping();
         longArrOverlapping();
         upcasting();
-        // downcasting(); https://github.com/hextriclosan/rusty-jvm/issues/175, https://github.com/hextriclosan/rusty-jvm/issues/176
+//         downcasting(); // https://github.com/hextriclosan/rusty-jvm/issues/175
     }
 
     private static void intArr() {
