@@ -33,8 +33,8 @@ public class MethodHandleExample {
         demonstrateFindGetterSetter(lookup);
         demonstrateFindStaticGetterSetter(lookup);
         //demonstrateFindVarHandle(lookup); // Native Call Error: Native method java/lang/invoke/VarHandle:set not found
-        //demonstrateFindStaticVarHandle(lookup); // Execution Error: error getting instance field value java/lang/invoke/MethodType.rtype
-        //demonstrateBindTo(lookup); // Native method java/lang/Class:isInstance:(Ljava/lang/Object;)Z not found
+        //demonstrateFindStaticVarHandle(lookup); // VM execution failed: Native Call Error: Native method java/lang/invoke/VarHandle:set not found
+        demonstrateBindTo(lookup);
     }
 
     private static void demonstrateFindStatic(MethodHandles.Lookup lookup) throws Throwable {

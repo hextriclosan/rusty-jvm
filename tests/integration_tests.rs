@@ -1305,6 +1305,8 @@ fn should_work_with_method_handle() {
 (SampleClass)int - MethodHandle(SampleClass)int: 42
 ------- findStaticGetter / findStaticSetter (staticValue) -------
 ()int - MethodHandle()int: 500
+------- bindTo (String.length) -------
+()int - MethodHandle()int: 26
 "#,
     )
 }
