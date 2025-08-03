@@ -2074,3 +2074,36 @@ Triple 6: 18
 "#,
     );
 }
+
+#[test]
+fn should_support_regex() {
+    assert_success(
+        "samples.regex.regexexample.RegexExample",
+        r#"Full match: support@example.com
+Username: support
+Domain: example.com
+---
+Full match: sales@example.org.
+Username: sales
+Domain: example.org.
+---
+Censored text: Contact us at [email hidden] or [email hidden]
+User: Alice
+  Email: alice@example.com
+  Username: alice
+  Domain: example.com
+  > Corporate email detected!
+
+User: Bob
+  Email: bob@EXAMPLE.org
+  Username: bob
+  Domain: EXAMPLE.org
+
+User: Carol
+  Email: carol@sub.example.co.uk
+  Username: carol
+  Domain: sub.example.co.uk
+
+"#,
+    );
+}
