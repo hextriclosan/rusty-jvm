@@ -352,13 +352,23 @@ fn should_do_native_call_on_system_current_time() {
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
     let expected_millis = since_the_epoch.as_millis() as i64;
+    let expected_nanos = since_the_epoch.as_nanos() as i64;
 
     let output = get_output("samples.nativecall.system.NativeCallSystemCurrentTimeMillis");
-    let actual_millis: i64 = output.trim().parse().expect("Not a number");
+    let json: Value = serde_json::from_str(&output).expect("Output is not valid JSON");
+
+    let actual_millis = json["currentTimeMillis"]
+        .as_i64()
+        .expect("currentTimeMillis is not an integer");
+    let actual_nanos = json["nanoTime"]
+        .as_i64()
+        .expect("nanoTime is not an integer");
 
     let timeout_mins = 10;
     let timeout_millis = Duration::from_secs(timeout_mins * 60).as_millis() as i64;
-    assert!((expected_millis..expected_millis + timeout_millis).contains(&actual_millis))
+    let timeout_nanos = Duration::from_secs(timeout_mins * 60).as_nanos() as i64;
+    assert!((expected_millis..expected_millis + timeout_millis).contains(&actual_millis));
+    assert!((expected_nanos..expected_nanos + timeout_nanos).contains(&actual_nanos));
 }
 
 #[test]
