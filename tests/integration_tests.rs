@@ -2107,3 +2107,19 @@ User: Carol
 "#,
     );
 }
+
+#[test]
+fn should_support_java_streams() {
+    assert_success(
+        "samples.javacore.streams.streamexamples.StreamExamples",
+        r#"a
+b
+c
+Even numbers: [0, 2, 4, 6, 8]
+Sum 1 to 5: 15
+Joined: a-b-c
+Flattened: [a, b, c, d, e]
+First 5 squares: [1, 4, 9, 16, 25]
+"#,
+    );
+}

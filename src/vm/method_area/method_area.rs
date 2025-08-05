@@ -342,6 +342,7 @@ impl MethodArea {
                     annotation_default_raw,
                     annotations_raw,
                     runtime_visible_annotations,
+                    method_by_signature.len() as i32, // God, forgive me, this is a hack to get the method index
                 )),
             );
         }
