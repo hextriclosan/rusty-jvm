@@ -28,6 +28,7 @@ pub(crate) struct JavaMethod {
     _annotation_default_raw: Option<Vec<u8>>,
     annotations_raw: Option<Vec<u8>>,
     runtime_visible_annotations: HashSet<String>,
+    slot: i32,
 }
 
 #[derive(Debug, new, Getters, CopyGetters)]
@@ -57,6 +58,7 @@ impl JavaMethod {
         _annotation_default_raw: Option<Vec<u8>>,
         annotations_raw: Option<Vec<u8>>,
         runtime_visible_annotations: HashSet<String>,
+        slot: i32,
     ) -> Self {
         Self {
             method_descriptor,
@@ -71,6 +73,7 @@ impl JavaMethod {
             _annotation_default_raw,
             annotations_raw,
             runtime_visible_annotations,
+            slot,
         }
     }
 
@@ -170,7 +173,7 @@ impl JavaMethod {
 
         let modifiers = self.access_flags;
 
-        let slot = 0; // not used
+        let slot = self.slot;
 
         let signature_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
 
