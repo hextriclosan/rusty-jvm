@@ -2115,11 +2115,14 @@ fn should_support_java_streams() {
         r#"a
 b
 c
+Lengths: [5, 3, 7]
 Even numbers: [0, 2, 4, 6, 8]
 Sum 1 to 5: 15
 Joined: a-b-c
+Grouped: {a=[apple, apricot], b=[banana, blueberry]}
 Flattened: [a, b, c, d, e]
 First 5 squares: [1, 4, 9, 16, 25]
+Custom collected: APPLE BANANA PEAR
 "#,
     );
 }
