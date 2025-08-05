@@ -161,11 +161,28 @@ pub fn resolve_method_handle(
     let method_name_ref = StringPoolHelper::get_string(method_or_field_to_lookup_for)?;
 
     let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
+    let args = match reference_kind {
+        ReferenceKind::REF_invokeStatic
+        | ReferenceKind::REF_invokeInterface
+        | ReferenceKind::REF_invokeVirtual => {
+            vec![refc.into(), method_name_ref.into(), method_type_ref.into()]
+        }
+        ReferenceKind::REF_newInvokeSpecial => vec![refc.into(), method_type_ref.into()],
+        ReferenceKind::REF_getField
+        | ReferenceKind::REF_getStatic
+        | ReferenceKind::REF_putField
+        | ReferenceKind::REF_putStatic
+        | ReferenceKind::REF_invokeSpecial => {
+            return Err(Error::new_execution(&format!(
+                "resolve_method_handle: Unsupported yet reference kind: {reference_kind:?}"
+            )))
+        }
+    };
     let method_handle_ref = Executor::invoke_non_static_method(
         lookup_class_name,
         method_name_lookup_for,
         new_lookup,
-        &[refc.into(), method_name_ref.into(), method_type_ref.into()],
+        &args,
     )?[0];
     Ok(method_handle_ref)
 }

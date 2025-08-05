@@ -1,52 +1,58 @@
 package samples.javacore.streams.streamexamples;
 
-import java.math.BigInteger;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.*;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class StreamExamples {
     public static void main(String[] args) {
         basicStream();
-        //mapExample(); // Execution Error: Unsupported yet reference kind for invokedynamic: REF_newInvokeSpecial
+        mapExample();
         filterExample();
         reduceExample();
         collectExample();
-        //groupByExample(); // Execution Error: Unsupported yet reference kind for invokedynamic: REF_newInvokeSpecial
+        groupByExample();
         flatMapExample();
         infiniteStreamExample();
-        //customCollectorExample(); // Execution Error: Unsupported yet reference kind for invokedynamic: REF_newInvokeSpecial
+        customCollectorExample();
         //parallelStreamExample(); // Native Call Error: Native method java/lang/System:nanoTime:()J not found
     }
 
     static void basicStream() {
-        Stream.of("a", "b", "c").forEach(System.out::println);
+        Stream.of("a", "b", "c")
+                .forEach(System.out::println);
     }
 
     static void mapExample() {
         List<String> names = List.of("Alice", "Bob", "Charlie");
         List<Integer> lengths = names.stream()
-                                     .map(String::length)
-                                     .collect(Collectors.toList());
+                .map(String::length)
+                .toList();
         System.out.println("Lengths: " + lengths);
     }
 
     static void filterExample() {
-        List<Integer> numbers = IntStream.range(0, 10).boxed().toList();
+        List<Integer> numbers = IntStream.range(0, 10)
+                .boxed()
+                .toList();
         List<Integer> even = numbers.stream()
-                                    .filter(n -> n % 2 == 0)
-                                    .toList();
+                .filter(n -> n % 2 == 0)
+                .toList();
         System.out.println("Even numbers: " + even);
     }
 
     static void reduceExample() {
-        int sum = IntStream.rangeClosed(1, 5).reduce(0, Integer::sum);
+        int sum = IntStream.rangeClosed(1, 5)
+                .reduce(0, Integer::sum);
         System.out.println("Sum 1 to 5: " + sum);
     }
 
     static void collectExample() {
         String result = Stream.of("a", "b", "c")
-                              .collect(Collectors.joining("-"));
+                .collect(Collectors.joining("-"));
         System.out.println("Joined: " + result);
     }
 
@@ -58,42 +64,38 @@ public class StreamExamples {
     }
 
     static void flatMapExample() {
-        List<List<String>> nested = List.of(
-                List.of("a", "b"),
-                List.of("c", "d"),
-                List.of("e")
-        );
+        List<List<String>> nested = List.of(List.of("a", "b"), List.of("c", "d"), List.of("e"));
         List<String> flattened = nested.stream()
-                                       .flatMap(List::stream)
-                                       .toList();
+                .flatMap(List::stream)
+                .toList();
         System.out.println("Flattened: " + flattened);
     }
 
     static void infiniteStreamExample() {
         List<Integer> squares = Stream.iterate(1, n -> n + 1)
-                                      .map(n -> n * n)
-                                      .limit(5)
-                                      .toList();
+                .map(n -> n * n)
+                .limit(5)
+                .toList();
         System.out.println("First 5 squares: " + squares);
     }
 
     static void customCollectorExample() {
         List<String> words = List.of("apple", "banana", "pear");
-        String upperJoined = words.stream().collect(
-                Collector.of(
+        String upperJoined = words.stream()
+                .collect(Collector.of(
                         StringBuilder::new,
                         (sb, s) -> sb.append(s.toUpperCase()).append(" "),
                         StringBuilder::append,
-                        StringBuilder::toString
-                )
-        );
+                        StringBuilder::toString));
         System.out.println("Custom collected: " + upperJoined.trim());
     }
 
     static void parallelStreamExample() {
-        List<Integer> numbers = IntStream.range(1, 10).boxed().toList();
+        List<Integer> numbers = IntStream.range(1, 10)
+                .boxed()
+                .toList();
         int product = numbers.parallelStream()
-                             .reduce(1, (a, b) -> a * b);
+                .reduce(1, (a, b) -> a * b);
         System.out.println("Product (parallel): " + product);
     }
 }
