@@ -1,22 +1,29 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::helper::i64_to_vec;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::object::identity_hashcode;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
 pub(crate) fn current_time_millis_wrp(_args: &[i32]) -> Result<Vec<i32>> {
     let millis = current_time_millis()?;
-
-    let high = ((millis >> 32) & 0xFFFFFFFF) as i32;
-    let low = (millis & 0xFFFFFFFF) as i32;
-
-    Ok(vec![high, low])
+    Ok(i64_to_vec(millis))
 }
 fn current_time_millis() -> Result<i64> {
     let now = std::time::SystemTime::now();
     let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
     Ok(since_the_epoch.as_millis() as i64)
+}
+
+pub(crate) fn nano_time_wrp(_args: &[i32]) -> Result<Vec<i32>> {
+    let nanos = nano_time()?;
+    Ok(i64_to_vec(nanos))
+}
+fn nano_time() -> Result<i64> {
+    let now = std::time::SystemTime::now();
+    let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
+    Ok(since_the_epoch.as_nanos() as i64)
 }
 
 pub(crate) fn arraycopy_wrp(args: &[i32]) -> Result<Vec<i32>> {
