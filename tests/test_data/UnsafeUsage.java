@@ -16,9 +16,13 @@ public class UnsafeUsage {
         compareAndSetInt();
         compareAndSetReference();
         compareAndSetLong();
+        compareAndExchangeLong();
         getReferenceAcquire();
         // modifyClassFieldValue(); uncomment me after Class<Integer> become materialized instance in rusty-jvm
         getSetStaticField();
+        putInt();
+        putIntVolatile();
+        putLong();
     }
 
 
@@ -58,14 +62,24 @@ public class UnsafeUsage {
         System.out.println("examinee.field5 value got by offset is: " + longFieldValue);
 
         boolean updated = U.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 128_849_018_920L);
-        if (updated) {
-            System.out.println("examinee.field5 updated by offset: " + examinee.field5); // 128_849_018_920L
-        }
+        System.out.println("compareAndSetLong on field examinee.field5: updated=" + updated + " currentValue=" + examinee.field5);
 
         updated = U.compareAndSetLong(examinee, longFieldOffset, 42_949_672_980L, 1L);
-        if (!updated) {
-            System.out.println("examinee.field5 was not updated: " + examinee.field5); // 128_849_018_920L
-        }
+        System.out.println("compareAndSetLong on field examinee.field5: updated=" + updated + " currentValue=" + examinee.field5);
+    }
+
+    private static void compareAndExchangeLong() {
+        long longFieldOffset = U.objectFieldOffset(Examinee.class, "field5");
+        Examinee examinee = new Examinee();
+        long longFieldValue = U.getLongVolatile(examinee, longFieldOffset);
+        System.out.println("examinee.field5 value got by offset is: " + longFieldValue);
+
+        long oldValue = U.compareAndExchangeLong(examinee, longFieldOffset, 42_949_672_980L, 128_849_018_920L);
+        System.out.println("compareAndExchangeLong on field examinee.field5: oldValue=" + oldValue + " currentValue=" + examinee.field5);
+
+
+        oldValue = U.compareAndExchangeLong(examinee, longFieldOffset, 42_949_672_980L, 1L);
+        System.out.println("compareAndExchangeLong on field examinee.field5: oldValue=" + oldValue + " currentValue=" + examinee.field5);
     }
 
     private static void compareAndSetReference() {
@@ -150,6 +164,36 @@ public class UnsafeUsage {
 
         U.putReference(staticFieldBase, staticFieldOffset, originalStaticValue);
         System.out.println("State restored. Static value is now: " + Examinee.staticField);
+    }
+
+    private static void putInt() {
+        long intFieldOffset = U.objectFieldOffset(Examinee.class, "field3");
+        Examinee examinee = new Examinee();
+        int intFieldValue = U.getIntVolatile(examinee, intFieldOffset);
+        System.out.println("examinee.field3 value got by offset is: " + intFieldValue);
+
+        U.putInt(examinee, intFieldOffset, 1337);
+        System.out.println("putInt on field examinee.field3: currentValue=" + examinee.field3);
+    }
+
+    private static void putIntVolatile() {
+        long intFieldOffset = U.objectFieldOffset(Examinee.class, "field3");
+        Examinee examinee = new Examinee();
+        int intFieldValue = U.getIntVolatile(examinee, intFieldOffset);
+        System.out.println("examinee.field3 value got by offset is: " + intFieldValue);
+
+        U.putIntVolatile(examinee, intFieldOffset, 1337);
+        System.out.println("putIntVolatile on field examinee.field3: currentValue=" + examinee.field3);
+    }
+
+    private static void putLong() {
+        long longFieldOffset = U.objectFieldOffset(Examinee.class, "field5");
+        Examinee examinee = new Examinee();
+        long longFieldValue = U.getLongVolatile(examinee, longFieldOffset);
+        System.out.println("examinee.field5 value got by offset is: " + longFieldValue);
+
+        U.putLong(examinee, longFieldOffset, 128_849_018_920L);
+        System.out.println("putInt on field examinee.field5: currentValue=" + examinee.field5);
     }
 }
 

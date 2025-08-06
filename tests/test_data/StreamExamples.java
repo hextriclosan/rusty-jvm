@@ -18,7 +18,7 @@ public class StreamExamples {
         flatMapExample();
         infiniteStreamExample();
         customCollectorExample();
-        //parallelStreamExample(); // Native Call Error: Native method java/lang/System:nanoTime:()J not found
+        parallelStreamExample();
     }
 
     static void basicStream() {
