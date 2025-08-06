@@ -580,7 +580,7 @@ putInt on field examinee.field3: currentValue=1337
 examinee.field3 value got by offset is: 30
 putIntVolatile on field examinee.field3: currentValue=1337
 examinee.field5 value got by offset is: 42949672980
-putInt on field examinee.field5: currentValue=128849018920
+putLong on field examinee.field5: currentValue=128849018920
 "#,
             if is_bigendian() { 1 } else { 0 }
         ),

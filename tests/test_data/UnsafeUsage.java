@@ -193,7 +193,7 @@ public class UnsafeUsage {
         System.out.println("examinee.field5 value got by offset is: " + longFieldValue);
 
         U.putLong(examinee, longFieldOffset, 128_849_018_920L);
-        System.out.println("putInt on field examinee.field5: currentValue=" + examinee.field5);
+        System.out.println("putLong on field examinee.field5: currentValue=" + examinee.field5);
     }
 }
 
