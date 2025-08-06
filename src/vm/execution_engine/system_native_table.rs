@@ -49,11 +49,12 @@ use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_pro
 use crate::vm::system_native::thread::current_thread_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::unsafe_::{
-    allocate_memory0_wrp, array_index_scale0_wrp, compare_and_set_int_wrp,
-    compare_and_set_long_wrp, copy_memory0_wrp, ensure_class_initialized0_wrp, get_byte_wrp,
-    get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
-    get_reference_volatile_wrp, get_short_wrp, object_field_offset_0_wrp,
-    object_field_offset_1_wrp, put_byte_wrp, put_char_wrp, put_reference_volatile_wrp,
+    allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
+    compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp,
+    ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
+    get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
+    object_field_offset_0_wrp, object_field_offset_1_wrp, put_byte_wrp, put_char_wrp,
+    put_int_volatile_wrp, put_int_wrp, put_long_wrp, put_reference_volatile_wrp,
     put_reference_wrp, set_memory0_wrp, should_be_initialized0_wrp, static_field_base0_wrp,
     static_field_offset_0_wrp,
 };
@@ -223,6 +224,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(compare_and_set_long_wrp),
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:compareAndExchangeLong:(Ljava/lang/Object;JJJ)J",
+        Basic(compare_and_exchange_long_wrp),
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:getReferenceVolatile:(Ljava/lang/Object;J)Ljava/lang/Object;",
         Basic(get_reference_volatile_wrp),
     );
@@ -274,6 +279,18 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:putByte:(Ljava/lang/Object;JB)V",
         Basic(put_byte_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putInt:(Ljava/lang/Object;JI)V",
+        Basic(put_int_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putIntVolatile:(Ljava/lang/Object;JI)V",
+        Basic(put_int_volatile_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putLong:(Ljava/lang/Object;JJ)V",
+        Basic(put_long_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:ensureClassInitialized0:(Ljava/lang/Class;)V",

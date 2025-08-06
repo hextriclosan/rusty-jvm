@@ -15,6 +15,8 @@ use std::ptr::{copy, read};
 enum ValueType {
     Char,
     Byte,
+    Int,
+    Long,
 }
 
 pub(crate) fn object_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -327,8 +329,28 @@ pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![result as i32])
 }
 fn compare_and_set_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<bool> {
+    let (updated, _old_value) = compare_and_x_long(obj_ref, offset, expected, x)?;
+    Ok(updated)
+}
+
+pub(crate) fn compare_and_exchange_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let expected = i32toi64(args[5], args[4]);
+    let x = i32toi64(args[7], args[6]);
+
+    let result = compare_and_exchange_long(obj_ref, offset, expected, x)?;
+    Ok(i64_to_vec(result))
+}
+fn compare_and_exchange_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<i64> {
+    let (_updated, old_value) = compare_and_x_long(obj_ref, offset, expected, x)?;
+    Ok(old_value)
+}
+
+fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<(bool, i64)> {
     if obj_ref == 0 {
-        return Ok(true); // not real implementation, just a placeholder for case when object is null
+        return Ok((true, 0)); // fixme: not real implementation, just a placeholder for case when object is null
     }
 
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
@@ -337,19 +359,17 @@ fn compare_and_set_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Res
 
     let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
-    let updated = with_heap_write_lock(|heap| {
+    with_heap_write_lock(|heap| {
         let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name)?;
-        let result = i32toi64(bytes[0], bytes[1]);
+        let old_value = i32toi64(bytes[0], bytes[1]);
 
-        if result == expected {
+        if old_value == expected {
             heap.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))?;
-            Ok::<bool, Error>(true)
+            Ok::<(bool, i64), Error>((true, old_value))
         } else {
-            Ok(false)
+            Ok((false, old_value))
         }
-    })?;
-
-    Ok(updated)
+    })
 }
 
 pub(crate) fn put_reference_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -395,25 +415,46 @@ pub(crate) fn put_byte_wrp(args: &[i32]) -> Result<Vec<i32>> {
     put_value_wrapper(args, ValueType::Byte)
 }
 
+pub(crate) fn put_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    put_value_wrapper(args, ValueType::Int)
+}
+
+pub(crate) fn put_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    put_int_wrp(args) // todo! make me volatile
+}
+
+pub(crate) fn put_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    put_value_wrapper(args, ValueType::Long)
+}
+
 fn put_value_wrapper(args: &[i32], value_type: ValueType) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
-    let value = args[4];
+    let value = match value_type {
+        ValueType::Byte | ValueType::Char | ValueType::Int => args[4] as i64,
+        ValueType::Long => i32toi64(args[5], args[4]),
+    };
 
     put_value(obj_ref, offset, value, value_type)?;
     Ok(vec![])
 }
 
-fn put_value(obj_ref: i32, offset: i64, value: i32, value_type: ValueType) -> Result<()> {
+fn put_value(obj_ref: i32, offset: i64, value: i64, value_type: ValueType) -> Result<()> {
     if obj_ref == 0 {
         match value_type {
             ValueType::Char => write_raw(offset, value as u16),
             ValueType::Byte => write_raw(offset, value as u8),
+            ValueType::Int => write_raw(offset, value as i32),
+            ValueType::Long => write_raw(offset, value),
         }
         Ok(())
     } else {
-        put_value_via_object(obj_ref, offset, value)
+        let raw_value = match value_type {
+            ValueType::Char | ValueType::Byte | ValueType::Int => vec![value as i32],
+            ValueType::Long => i64_to_vec(value),
+        };
+        put_value_via_object(obj_ref, offset, raw_value)
     }
 }
 
@@ -423,15 +464,15 @@ fn write_raw<T: Copy>(address: i64, value: T) {
     unsafe { copy(src, ptr, size_of::<T>()) };
 }
 
-fn put_value_via_object(obj_ref: i32, offset: i64, value: i32) -> Result<()> {
+fn put_value_via_object(obj_ref: i32, offset: i64, raw_value: Vec<i32>) -> Result<()> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     with_heap_write_lock(|heap| {
         if class_name.starts_with('[') {
-            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![value])
+            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value)
         } else {
             let jc = with_method_area(|area| area.get(&class_name))?;
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
-            heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![value])
+            heap.set_object_field_value(obj_ref, &class_name, &field_name, raw_value)
         }
     })
 }

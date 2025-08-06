@@ -561,8 +561,11 @@ examinee.field4 value got by offset is: FIELD4
 examinee.field4 updated by offset: FIELD4_UPDATED
 examinee.field4 was not updated: FIELD4_UPDATED
 examinee.field5 value got by offset is: 42949672980
-examinee.field5 updated by offset: 128849018920
-examinee.field5 was not updated: 128849018920
+compareAndSetLong on field examinee.field5: updated=true currentValue=128849018920
+compareAndSetLong on field examinee.field5: updated=false currentValue=128849018920
+examinee.field5 value got by offset is: 42949672980
+compareAndExchangeLong on field examinee.field5: oldValue=42949672980 currentValue=128849018920
+compareAndExchangeLong on field examinee.field5: oldValue=128849018920 currentValue=128849018920
 examinees[1] got by offset is `two`: true
 examinees[1] updated by offset and set to `three`: true
 examinees[1] was not updated and remains the same: true
@@ -572,6 +575,12 @@ staticFieldBase: class samples.jdkinternal.unsafe.trivial.Examinee
 Current static value: staticFieldValue
 New value set via putReference(...): staticFieldNewValue
 State restored. Static value is now: staticFieldValue
+examinee.field3 value got by offset is: 30
+putInt on field examinee.field3: currentValue=1337
+examinee.field3 value got by offset is: 30
+putIntVolatile on field examinee.field3: currentValue=1337
+examinee.field5 value got by offset is: 42949672980
+putLong on field examinee.field5: currentValue=128849018920
 "#,
             if is_bigendian() { 1 } else { 0 }
         ),
@@ -2133,6 +2142,7 @@ Grouped: {a=[apple, apricot], b=[banana, blueberry]}
 Flattened: [a, b, c, d, e]
 First 5 squares: [1, 4, 9, 16, 25]
 Custom collected: APPLE BANANA PEAR
+Product (parallel): 362880
 "#,
     );
 }
