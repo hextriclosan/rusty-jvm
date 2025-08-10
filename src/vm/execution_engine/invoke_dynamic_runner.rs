@@ -190,7 +190,7 @@ impl InvokeDynamicRunner {
         )?;
 
         let method_name_ref = StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_name())?;
-        let invoke_dynamic_method_type_ref = match bootstrap_info.ref_kind() {
+        let invoke_dynamic_methodtype_or_type_ref = match bootstrap_info.ref_kind() {
             ReferenceKind::REF_invokeStatic
             | ReferenceKind::REF_invokeInterface
             | ReferenceKind::REF_invokeVirtual => {
@@ -215,7 +215,7 @@ impl InvokeDynamicRunner {
             call_site_clazz.into(),
             method_handle_ref.into(),
             method_name_ref.into(),
-            invoke_dynamic_method_type_ref.into(),
+            invoke_dynamic_methodtype_or_type_ref.into(),
             arguments_ref.into(),
             current_clazz.into(),
         ];
