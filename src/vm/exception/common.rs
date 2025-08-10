@@ -55,6 +55,7 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i1
             &exception_name,
             pc,
             stack_frame.method_name(),
+            stack_frame.current_class_name(),
         )? {
             Some(exception_handler) => {
                 return Ok(exception_handler as i16);
