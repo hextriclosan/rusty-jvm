@@ -22,6 +22,7 @@ const DIRECT_METHOD_HANDLE: &'static str = "java/lang/invoke/DirectMethodHandle"
 const BOUND_METHOD_HANDLE: &'static str = "java/lang/invoke/BoundMethodHandle";
 const MUTABLE_CALL_SITE: &'static str = "java/lang/invoke/MutableCallSite";
 const AS_VARARGS_COLLECTOR: &'static str = "java/lang/invoke/MethodHandleImpl$AsVarargsCollector";
+const SIMPLE_METHOD_HANDLE: &'static str = "java/lang/invoke/SimpleMethodHandle";
 
 static DEBUG_SPECIES_PRINTING: Lazy<bool> =
     Lazy::new(|| env::var("DEBUG_SPECIES_PRINTING").is_ok());
@@ -39,7 +40,10 @@ pub fn invoke_exact(
             stack_frames,
             &handle_name,
         );
-    } else if handle_name.starts_with(BOUND_METHOD_HANDLE) || handle_name == AS_VARARGS_COLLECTOR {
+    } else if handle_name.starts_with(BOUND_METHOD_HANDLE)
+        || handle_name == AS_VARARGS_COLLECTOR
+        || handle_name == SIMPLE_METHOD_HANDLE
+    {
         return bound_method_handle_invocation(
             handle_ref,
             method_args,

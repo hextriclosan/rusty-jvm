@@ -1682,13 +1682,16 @@ fn should_return_random_number() {
 }
 
 #[test]
-#[ignore = "implement invokedynamic opcode"]
 fn should_work_with_records() {
     assert_success(
         "samples.javacore.recordexample.RecordExample",
-        r#"Rcd[first=10, second=20]
-200
-true"#,
+        r#"one: Rcd[first=10, second=20]
+two: Rcd[first=100, second=200]
+three: Rcd[first=10, second=20]
+hashOne: 330
+hashTwo: 3300
+hashThree: 330
+"#,
     );
 }
 
