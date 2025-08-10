@@ -360,6 +360,7 @@ pub(crate) fn process(
             trace!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
         }
         ATHROW => {
+            store_ex_pc(stack_frames)?;
             let throwable_ref = {
                 let stack_frame = last_frame_mut(stack_frames)?;
                 let throwable_ref: i32 = stack_frame.pop();
