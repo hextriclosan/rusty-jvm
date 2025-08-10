@@ -2149,3 +2149,11 @@ Product (parallel): 362880
 "#,
     );
 }
+
+#[test]
+fn should_rethrow_an_exception() {
+    assert_success(
+        "samples.javacore.rethrowloopexample.RethrowExample",
+        "Caught in main: java.lang.AssertionError: boom\n",
+    );
+}
