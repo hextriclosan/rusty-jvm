@@ -48,20 +48,21 @@ impl ExceptionTable {
         exception_name: &str,
         pc: u16,
         method_name: &str,
+        current_class_name: &str,
     ) -> Result<Option<u16>> {
         if self.table.is_empty() {
-            trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {method_name}");
+            trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
         }
         const FINALLY_MARK: &'static str = "any";
         for record in self.table.iter() {
-            trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
+            trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
             if pc < record.start_pc || pc >= record.end_pc {
                 continue;
             }
             let eligible = record.catch_type == FINALLY_MARK
                 || InstanceChecker::checkcast(exception_name, &record.catch_type)?;
             if eligible {
-                trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {method_name}");
+                trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
                 return Ok(Some(record.handler_pc));
             }
         }
