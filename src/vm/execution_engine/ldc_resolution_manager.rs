@@ -160,16 +160,22 @@ pub fn resolve_method_handle(
     let refc = clazz_ref(class_name_to_lookup_in)?;
     let method_name_ref = StringPoolHelper::get_string(method_or_field_to_lookup_for)?;
 
-    let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
     let args = match reference_kind {
         ReferenceKind::REF_invokeStatic
         | ReferenceKind::REF_invokeInterface
         | ReferenceKind::REF_invokeVirtual => {
+            let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
             vec![refc.into(), method_name_ref.into(), method_type_ref.into()]
         }
-        ReferenceKind::REF_newInvokeSpecial => vec![refc.into(), method_type_ref.into()],
-        ReferenceKind::REF_getField
-        | ReferenceKind::REF_getStatic
+        ReferenceKind::REF_newInvokeSpecial => {
+            let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
+            vec![refc.into(), method_type_ref.into()]
+        }
+        ReferenceKind::REF_getField => {
+            let field_type_ref = clazz_ref(&method_or_field_descriptor)?;
+            vec![refc.into(), method_name_ref.into(), field_type_ref.into()]
+        }
+        ReferenceKind::REF_getStatic
         | ReferenceKind::REF_putField
         | ReferenceKind::REF_putStatic
         | ReferenceKind::REF_invokeSpecial => {

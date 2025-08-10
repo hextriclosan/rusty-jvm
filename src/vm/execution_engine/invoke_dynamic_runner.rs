@@ -190,8 +190,24 @@ impl InvokeDynamicRunner {
         )?;
 
         let method_name_ref = StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_name())?;
-        let invoke_dynamic_method_type_ref =
-            build_methodtype_ref(bootstrap_info.invoke_dynamic_descriptor())?;
+        let invoke_dynamic_method_type_ref = match bootstrap_info.ref_kind() {
+            ReferenceKind::REF_invokeStatic
+            | ReferenceKind::REF_invokeInterface
+            | ReferenceKind::REF_invokeVirtual => {
+                build_methodtype_ref(bootstrap_info.invoke_dynamic_descriptor())
+            }
+            ReferenceKind::REF_getField => clazz_ref(bootstrap_info.invoke_dynamic_descriptor()),
+            ReferenceKind::REF_getStatic
+            | ReferenceKind::REF_putField
+            | ReferenceKind::REF_putStatic
+            | ReferenceKind::REF_invokeSpecial
+            | ReferenceKind::REF_newInvokeSpecial => {
+                return Err(Error::new_execution(&format!(
+                    "Unsupported yet reference kind for getting method/type ref: {:?}",
+                    bootstrap_info.ref_kind()
+                )))
+            }
+        }?;
 
         let current_clazz = clazz_ref(current_class_name)?;
 

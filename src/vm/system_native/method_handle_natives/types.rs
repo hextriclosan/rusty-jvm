@@ -29,7 +29,8 @@ impl ReferenceKind {
                 "findVirtual:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
             ReferenceKind::REF_newInvokeSpecial =>
                 "findConstructor:(Ljava/lang/Class;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
-            ReferenceKind::REF_getField
+            ReferenceKind::REF_getField =>
+                "findGetter:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             | ReferenceKind::REF_getStatic
             | ReferenceKind::REF_putField
             | ReferenceKind::REF_putStatic
