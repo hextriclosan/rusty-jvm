@@ -2172,3 +2172,17 @@ Updated Person: Person{name='Alice', age=25, hobbies=Swimming, Cycling}
 "#,
     );
 }
+
+#[test]
+fn should_support_class_get_declared_constructor() {
+    assert_success(
+        "samples.reflection.getdeclaredconstructorexample.GetDeclaredConstructorExample",
+        r#"Person() found: private samples.reflection.getdeclaredconstructorexample.Person()
+Created: John Doe (0) - Hobbies: []
+Person(String name, int age) found: private samples.reflection.getdeclaredconstructorexample.Person(java.lang.String)
+Created: Max (0) - Hobbies: []
+Person(String name, String[] hobbies) found: private samples.reflection.getdeclaredconstructorexample.Person(java.lang.String,java.lang.String[])
+Created: Deborah (0) - Hobbies: [Cycling, Cooking]
+"#,
+    );
+}

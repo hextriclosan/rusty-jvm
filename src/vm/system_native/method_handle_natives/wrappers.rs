@@ -9,7 +9,15 @@ use crate::vm::system_native::method_handle_natives::native_accessor::native_acc
 use crate::vm::system_native::method_handle_natives::offsets::{
     get_field_offset, get_static_field_offset,
 };
-use crate::vm::system_native::method_handle_natives::resolution::resolve;
+use crate::vm::system_native::method_handle_natives::resolution::{member_name_init, resolve};
+
+pub(crate) fn method_handle_natives_init_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let member_name_ref = args[0];
+    let obj_ref = args[1];
+    member_name_init(member_name_ref, obj_ref)?;
+
+    Ok(vec![])
+}
 
 pub(crate) fn method_handle_natives_resolve_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_mame_ref = args[0];

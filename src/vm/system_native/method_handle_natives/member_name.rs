@@ -137,6 +137,8 @@ fn load_method(member_name_ref: i32) -> Result<Option<ResolvedMethodName>> {
     Ok(Some(resolved_method_name))
 }
 
+const KIND_SHIFT: u32 = 24;
+const KIND_MASK: u32 = 0x0F;
 /**
  * Mimics MemberName.getReferenceKind():
  *  public byte getReferenceKind() {
@@ -145,9 +147,12 @@ fn load_method(member_name_ref: i32) -> Result<Option<ResolvedMethodName>> {
  * todo: use more strict and safe way to get reference kind
  */
 fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
-    let kind_shift = 24u32;
-    let kind_mask = 0x0F000000u32 >> kind_shift;
-    let result = (flags as u32 >> kind_shift) & kind_mask;
+    let result = (flags as u32 >> KIND_SHIFT) & KIND_MASK;
 
     Ok(ReferenceKind::try_from(result as u8)?)
+}
+
+pub fn set_reference_kind(flags: i32, reference_kind: ReferenceKind) -> i32 {
+    ((flags as u32 & !(KIND_MASK << KIND_SHIFT))
+        | ((reference_kind as u32 & KIND_MASK) << KIND_SHIFT)) as i32
 }

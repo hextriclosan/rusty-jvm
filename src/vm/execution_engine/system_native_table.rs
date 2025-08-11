@@ -28,9 +28,10 @@ use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
     method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
-    method_handle_natives_object_field_offset_wrp, method_handle_natives_resolve_wrp,
-    method_handle_natives_static_field_base_wrp, method_handle_natives_static_field_offset_wrp,
-    native_accessor_invoke0_wrp, set_call_site_target_normal_wrp,
+    method_handle_natives_init_wrp, method_handle_natives_object_field_offset_wrp,
+    method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
+    method_handle_natives_static_field_offset_wrp, native_accessor_invoke0_wrp,
+    set_call_site_target_normal_wrp,
 };
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
@@ -469,6 +470,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/reflect/Array:newArray:(Ljava/lang/Class;I)Ljava/lang/Object;",
         Basic(new_array_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/MethodHandleNatives:init:(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
+        Basic(method_handle_natives_init_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:resolve:(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
