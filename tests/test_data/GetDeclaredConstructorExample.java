@@ -31,7 +31,7 @@ public class GetDeclaredConstructorExample {
 //         Constructor<Person> ctor5 = Person.class.getDeclaredConstructor(String.class, int.class, String[].class); // fixme Execution Error: error opening class file java/lang/invoke/BoundMethodHandle$Species_LI
 //         System.out.println("Person(String name, int age, String[] hobbies) found: " + ctor5);
 //         ctor5.setAccessible(true);
-//         Person p5 = ctor4.newInstance("Michael", 42, new String[]{"Reading", "Hiking"});
+//         Person p5 = ctor5.newInstance("Michael", 42, new String[]{"Reading", "Hiking"});
 //         System.out.println("Created: " + p5);
     }
 }
