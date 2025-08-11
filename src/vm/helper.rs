@@ -2,6 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_value::StackValue;
 use jdescriptor::TypeDescriptor;
 
@@ -102,4 +103,24 @@ pub fn get_handle(fd_ref: i32) -> Result<i64> {
         let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
         Ok::<i64, Error>(vec_to_i64(&raw))
     })
+}
+
+pub fn decorate(type_name: String) -> String {
+    if PRIMITIVE_TYPE_BY_CODE.contains_key(type_name.as_str()) // primitive type B, C, D, F, I, J, S, Z, V
+        || (type_name.starts_with('[') && PRIMITIVE_TYPE_BY_CODE.contains_key(&type_name[1..])) // array of primitive types [B, [C, [D, [F, [I, [J, [S, [Z, [V
+        || ((type_name.starts_with('L') || type_name.starts_with('[')) && type_name.ends_with(';'))
+    // already decorated type Ljava/lang/String; or [Ljava/lang/String;
+    {
+        type_name
+    } else {
+        format!("L{};", type_name)
+    }
+}
+
+pub fn undecorate(type_name: &str) -> &str {
+    if type_name.starts_with('L') && type_name.ends_with(';') {
+        &type_name[1..type_name.len() - 1]
+    } else {
+        type_name
+    }
 }

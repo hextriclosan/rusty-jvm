@@ -2,6 +2,7 @@ use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
+use crate::vm::helper::undecorate;
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::method_area::field::FieldValue;
@@ -78,11 +79,7 @@ impl MethodArea {
             return Ok(arc);
         }
 
-        let fully_qualified_class_name = if fully_qualified_class_name.ends_with(";") {
-            &fully_qualified_class_name[1..fully_qualified_class_name.len() - 1]
-        } else {
-            fully_qualified_class_name
-        };
+        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
 
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;

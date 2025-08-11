@@ -1,4 +1,3 @@
-mod common;
 pub(crate) mod invocation;
 mod member_name;
 mod method_type;
