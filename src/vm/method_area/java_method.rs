@@ -2,7 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_write_lock;
-use crate::vm::helper::clazz_ref;
+use crate::vm::helper::{clazz_ref, undecorate};
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
@@ -139,13 +139,15 @@ impl JavaMethod {
         let declaring_class_ref = clazz_ref(self.class_name())?;
 
         let mut name_signature_split = self.name_signature.split(':'); //fixme: crete separate field with name of get it from here
-        let name_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
+        let name = name_signature_split.next().unwrap();
+        let name_ref = StringPoolHelper::get_string(name)?;
 
         let parameter_type_clazz_refs = self
             .method_descriptor
             .parameter_types()
             .iter()
             .map(|t| t.to_string())
+            .map(|t| undecorate(&t).to_string())
             .map(|t| clazz_ref(&t))
             .collect::<Result<Vec<_>>>()?;
         let parameter_type_refs = with_heap_write_lock(|heap| {

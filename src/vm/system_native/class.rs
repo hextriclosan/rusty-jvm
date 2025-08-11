@@ -3,7 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::vm::helper::strip_nest_host;
+use crate::vm::helper::{strip_nest_host, undecorate};
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
@@ -146,14 +146,10 @@ pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn init_class_name(class_ref: i32) -> Result<i32> {
     let class_name = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        let class_name = if class_name.starts_with('L') {
-            class_name[1..class_name.len() - 1].to_string()
-        } else {
-            class_name
-        };
-        let string = match method_area.get(&class_name) {
+        let class_name = undecorate(&class_name);
+        let string = match method_area.get(class_name) {
             Ok(result) => result.external_name().to_string(),
-            Err(_) => class_name.clone(),
+            Err(_) => class_name.to_string(),
         };
         Ok::<String, Error>(string)
     })?;

@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::helper::decorate;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::system_native::method_handle_natives::common::decorate;
 use getset::Getters;
 
 const METHOD_TYPE: &'static str = "java/lang/invoke/MethodType";
