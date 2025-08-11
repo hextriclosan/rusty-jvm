@@ -9,9 +9,9 @@ public class GetDeclaredMethodExample {
 //        Method ofMethod = Person.class.getDeclaredMethod("of", String.class, int.class, String[].class); // fixme Execution Error: error opening class file java/lang/invoke/BoundMethodHandle$Species_LI
 //        System.out.println("ofMethod found: " + ofMethod);
 //        Person person = (Person) ofMethod.invoke(null, "Alice", 25, new String[]{"Reading", "Hiking"});
-//        System.out.println("Person created: " + person);
 
         Person person = Person.of("Alice", 25, new String[]{"Reading", "Hiking"});
+        System.out.println("Person created: " + person);
 
         // Try a method without parameters
         Method ageMethod = Person.class.getDeclaredMethod("getAgeAsString");
