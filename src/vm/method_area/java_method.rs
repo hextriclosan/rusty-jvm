@@ -240,7 +240,7 @@ impl JavaMethod {
             .parameter_types()
             .iter()
             .map(|t| t.to_string())
-            .map(|t| clazz_ref(&t))
+            .map(|t| clazz_ref(undecorate(&t)))
             .collect::<Result<Vec<_>>>()?;
         let parameter_type_refs = with_heap_write_lock(|heap| {
             heap.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs)
@@ -264,7 +264,7 @@ impl JavaMethod {
 
         let modifiers = self.access_flags;
 
-        let slot = 0; // not used
+        let slot = self.slot;
 
         let signature_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
 
