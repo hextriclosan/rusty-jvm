@@ -22,6 +22,7 @@ const DIRECT_METHOD_HANDLE: &'static str = "java/lang/invoke/DirectMethodHandle"
 const BOUND_METHOD_HANDLE: &'static str = "java/lang/invoke/BoundMethodHandle";
 const MUTABLE_CALL_SITE: &'static str = "java/lang/invoke/MutableCallSite";
 const AS_VARARGS_COLLECTOR: &'static str = "java/lang/invoke/MethodHandleImpl$AsVarargsCollector";
+const COUNTING_WRAPPER: &'static str = "java/lang/invoke/MethodHandleImpl$CountingWrapper";
 const SIMPLE_METHOD_HANDLE: &'static str = "java/lang/invoke/SimpleMethodHandle";
 
 static DEBUG_SPECIES_PRINTING: Lazy<bool> =
@@ -43,6 +44,7 @@ pub fn invoke_exact(
     } else if handle_name.starts_with(BOUND_METHOD_HANDLE)
         || handle_name == AS_VARARGS_COLLECTOR
         || handle_name == SIMPLE_METHOD_HANDLE
+        || handle_name == COUNTING_WRAPPER
     {
         return bound_method_handle_invocation(
             handle_ref,

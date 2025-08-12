@@ -1691,6 +1691,8 @@ three: Rcd[first=10, second=20]
 hashOne: 330
 hashTwo: 3300
 hashThree: 330
+Rcd[first=10, second=20] equals Rcd[first=100, second=200]: false
+Rcd[first=10, second=20] equals Rcd[first=10, second=20]: true
 "#,
     );
 }

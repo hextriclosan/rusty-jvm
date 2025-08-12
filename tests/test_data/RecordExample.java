@@ -15,11 +15,11 @@ public class RecordExample {
         System.out.println("hashTwo: " + hashTwo);
         System.out.println("hashThree: " + hashThree);
 
-        //boolean oneEqTwo = one.equals(two); // Native method java/lang/invoke/MethodHandleNatives:init:(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V not found
-        //System.out.printf("%s equals %s: %b%n", one, two, oneEqTwo);
+        boolean oneEqTwo = one.equals(two);
+        System.out.printf("%s equals %s: %b%n", one, two, oneEqTwo);
 
-        //boolean oneEqThree = one.equals(three); // Native method java/lang/invoke/MethodHandleNatives:init:(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V not found
-        //System.out.printf("%s equals %s: %b%n", one, three, oneEqThree);
+        boolean oneEqThree = one.equals(three);
+        System.out.printf("%s equals %s: %b%n", one, three, oneEqThree);
     }
 }
 
