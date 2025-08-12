@@ -50,17 +50,17 @@ public class DeclaredConstructorsExample {
     }
 
     private static void printConstructorDetails(Constructor<?> constructor) {
-        System.out.println("Constructor:" + constructor);
-        System.out.println("  Parameter types:" + Arrays.toString(constructor.getParameterTypes()));
-        System.out.println("  Modifier:" + Modifier.toString(constructor.getModifiers()));
-        System.out.println("  Throws:" + Arrays.toString(constructor.getExceptionTypes()));
+        System.out.println("Constructor: " + constructor);
+        System.out.println("  Parameter types: " + Arrays.toString(constructor.getParameterTypes()));
+        System.out.println("  Modifier: " + Modifier.toString(constructor.getModifiers()));
+        System.out.println("  Throws: " + Arrays.toString(constructor.getExceptionTypes()));
         //System.out.println(constructor.getAnnotatedReceiverType()); //Native method java/lang/reflect/Executable:getTypeAnnotationBytes0:()[B not found
         //System.out.println(constructor.getAnnotatedReturnType()); //Native method java/lang/reflect/Executable:getTypeAnnotationBytes0:()[B not found
-        System.out.println("  Declaring class:" + constructor.getDeclaringClass());
+        System.out.println("  Declaring class: " + constructor.getDeclaringClass());
         //printArray(constructor.getGenericParameterTypes());
         //printArray(constructor.getGenericExceptionTypes());
-        System.out.println("  Name:" + constructor.getName());
-        System.out.println("  Parameter count:" + constructor.getParameterCount());
+        System.out.println("  Name: " + constructor.getName());
+        System.out.println("  Parameter count: " + constructor.getParameterCount());
     }
 
     private static void printArray(Object[] array) {

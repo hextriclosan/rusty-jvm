@@ -1059,66 +1059,66 @@ fn should_support_getting_declared_constructors() {
         "samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample",
         r#"Basic Example Constructors:
 --------------------------------
-Constructor:public samples.reflection.trivial.declaredconstructors.BasicExample()
-  Parameter types:[]
-  Modifier:public
-  Throws:[]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.BasicExample
-  Name:samples.reflection.trivial.declaredconstructors.BasicExample
-  Parameter count:0
+Constructor: public samples.reflection.trivial.declaredconstructors.BasicExample()
+  Parameter types: []
+  Modifier: public
+  Throws: []
+  Declaring class: class samples.reflection.trivial.declaredconstructors.BasicExample
+  Name: samples.reflection.trivial.declaredconstructors.BasicExample
+  Parameter count: 0
 --------------------------------
-Constructor:protected samples.reflection.trivial.declaredconstructors.BasicExample(int)
-  Parameter types:[int]
-  Modifier:protected
-  Throws:[]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.BasicExample
-  Name:samples.reflection.trivial.declaredconstructors.BasicExample
-  Parameter count:1
+Constructor: protected samples.reflection.trivial.declaredconstructors.BasicExample(int)
+  Parameter types: [int]
+  Modifier: protected
+  Throws: []
+  Declaring class: class samples.reflection.trivial.declaredconstructors.BasicExample
+  Name: samples.reflection.trivial.declaredconstructors.BasicExample
+  Parameter count: 1
 --------------------------------
-Constructor:private samples.reflection.trivial.declaredconstructors.BasicExample(java.lang.String)
-  Parameter types:[class java.lang.String]
-  Modifier:private
-  Throws:[]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.BasicExample
-  Name:samples.reflection.trivial.declaredconstructors.BasicExample
-  Parameter count:1
+Constructor: private samples.reflection.trivial.declaredconstructors.BasicExample(java.lang.String)
+  Parameter types: [class java.lang.String]
+  Modifier: private
+  Throws: []
+  Declaring class: class samples.reflection.trivial.declaredconstructors.BasicExample
+  Name: samples.reflection.trivial.declaredconstructors.BasicExample
+  Parameter count: 1
 Edge Case Example Constructors:
 --------------------------------
-Constructor:samples.reflection.trivial.declaredconstructors.EdgeCaseExample()
-  Parameter types:[]
-  Modifier:
-  Throws:[]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.EdgeCaseExample
-  Name:samples.reflection.trivial.declaredconstructors.EdgeCaseExample
-  Parameter count:0
+Constructor: samples.reflection.trivial.declaredconstructors.EdgeCaseExample()
+  Parameter types: []
+  Modifier: 
+  Throws: []
+  Declaring class: class samples.reflection.trivial.declaredconstructors.EdgeCaseExample
+  Name: samples.reflection.trivial.declaredconstructors.EdgeCaseExample
+  Parameter count: 0
 --------------------------------
-Constructor:public samples.reflection.trivial.declaredconstructors.EdgeCaseExample(java.lang.String) throws java.lang.IllegalArgumentException
-  Parameter types:[class java.lang.String]
-  Modifier:public
-  Throws:[class java.lang.IllegalArgumentException]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.EdgeCaseExample
-  Name:samples.reflection.trivial.declaredconstructors.EdgeCaseExample
-  Parameter count:1
+Constructor: public samples.reflection.trivial.declaredconstructors.EdgeCaseExample(java.lang.String) throws java.lang.IllegalArgumentException
+  Parameter types: [class java.lang.String]
+  Modifier: public
+  Throws: [class java.lang.IllegalArgumentException]
+  Declaring class: class samples.reflection.trivial.declaredconstructors.EdgeCaseExample
+  Name: samples.reflection.trivial.declaredconstructors.EdgeCaseExample
+  Parameter count: 1
 Handle Constructor Exceptions:
 No such constructor found: samples.reflection.trivial.declaredconstructors.EdgeCaseExample.<init>(java.lang.Float)
 Access Private Constructor:
-Constructor:private samples.reflection.trivial.declaredconstructors.BasicExample(java.lang.String)
-  Parameter types:[class java.lang.String]
-  Modifier:private
-  Throws:[]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.BasicExample
-  Name:samples.reflection.trivial.declaredconstructors.BasicExample
-  Parameter count:1
+Constructor: private samples.reflection.trivial.declaredconstructors.BasicExample(java.lang.String)
+  Parameter types: [class java.lang.String]
+  Modifier: private
+  Throws: []
+  Declaring class: class samples.reflection.trivial.declaredconstructors.BasicExample
+  Name: samples.reflection.trivial.declaredconstructors.BasicExample
+  Parameter count: 1
 Private instance created: BasicExample{}
 Anonymous Class Constructors:
 --------------------------------
-Constructor:samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1()
-  Parameter types:[]
-  Modifier:
-  Throws:[]
-  Declaring class:class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
-  Name:samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
-  Parameter count:0
+Constructor: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1()
+  Parameter types: []
+  Modifier: 
+  Throws: []
+  Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
+  Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
+  Parameter count: 0
 "#,
     );
 }
