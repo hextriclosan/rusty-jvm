@@ -77,6 +77,13 @@ pub(crate) fn find_bootstrap_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = &name.replace('.', "/");
+
+    // Check if the class is already loaded and exists
+    // If it does not exist, we return 0 (null reference)
+    if let Err(_) = with_method_area(|a| a.get(internal_name)) {
+        return Ok(0);
+    }
+
     clazz_ref(internal_name)
 }
 
