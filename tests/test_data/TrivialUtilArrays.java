@@ -16,10 +16,17 @@ public class TrivialUtilArrays {
         print("String: ", Arrays.toString(first));
         print("Copied: ", Arrays.copyOf(first, 5));
         print("Copied of range: ", Arrays.copyOfRange(first, 5, 10));
-        Arrays.fill(first, 1, 9, 42);
+        Arrays.fill(first, 1, 9, -42);
         print("Filled: ", first);
-        // Arrays.sort(first); // invokedynamic
-        // Arrays.parallelSort(first); Native method java/lang/Class:getDeclaredFields0:(Z)[Ljava/lang/reflect/Field; not found
+        Arrays.sort(first);
+        print("Sorted: ", first);
+        Arrays.parallelSort(first);
+
+        Integer[] third = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+        print("Integer[] third: ", third);
+        Arrays.sort(third, (a, b) -> Integer.compare(b, a)); // reverse order
+        print("Sorted Integer[] third in reverse order: ", third);
+
         Object[] first2d = new int[][]{{1, 2}, {3, 4}};
         Object[] second2d = new int[][]{{1, 2}, {3, 4}};
         print("Arrays are deep equals: ", Arrays.deepEquals(first2d, second2d));
@@ -32,6 +39,10 @@ public class TrivialUtilArrays {
     }
 
     private static void print(String msg, int[] arr) {
+        print(msg, Arrays.toString(arr));
+    }
+
+    private static void print(String msg, Integer[] arr) {
         print(msg, Arrays.toString(arr));
     }
 }

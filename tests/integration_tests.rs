@@ -705,7 +705,10 @@ List: [1, 2, 3]
 String: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 Copied: [10, 20, 30, 40, 50]
 Copied of range: [60, 70, 80, 90, 100]
-Filled: [10, 42, 42, 42, 42, 42, 42, 42, 42, 100]
+Filled: [10, -42, -42, -42, -42, -42, -42, -42, -42, 100]
+Sorted: [-42, -42, -42, -42, -42, -42, -42, -42, 10, 100]
+Integer[] third: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+Sorted Integer[] third in reverse order: [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 Arrays are deep equals: true
 Deep hash code: 32833
 Deep string: [[1, 2], [3, 4]]
