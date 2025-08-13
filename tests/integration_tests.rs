@@ -2291,8 +2291,9 @@ ageMethod found: private java.lang.String samples.reflection.getdeclaredmethod.P
 Age as String: 25
 formatNameMethod found: private java.lang.String samples.reflection.getdeclaredmethod.Person.formatName(java.lang.String)
 Result: Dr. Alice
+setAgeMethod found: public void samples.reflection.getdeclaredmethod.Person.setAge(int)
 setHobbiesMethod found: public void samples.reflection.getdeclaredmethod.Person.setHobbies(java.lang.String[])
-Updated Person: Person{name='Alice', age=25, hobbies=Swimming, Cycling}
+Updated Person: Person{name='Alice', age=30, hobbies=Swimming, Cycling}
 "#,
     );
 }
