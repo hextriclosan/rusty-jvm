@@ -2181,12 +2181,13 @@ fn should_rethrow_an_exception() {
 fn should_support_class_get_declared_method() {
     assert_success(
         "samples.reflection.getdeclaredmethod.GetDeclaredMethodExample",
-        r#"Person created: Person{name='Alice', age=25, hobbies=Reading, Hiking}
-ageMethod found: private java.lang.String samples.reflection.getdeclaredmethod.GetDeclaredMethodExample$Person.getAgeAsString()
+        r#"ofMethod found: public static samples.reflection.getdeclaredmethod.Person samples.reflection.getdeclaredmethod.Person.of(java.lang.String,int,java.lang.String[])
+Person created: Person{name='Alice', age=25, hobbies=Reading, Hiking}
+ageMethod found: private java.lang.String samples.reflection.getdeclaredmethod.Person.getAgeAsString()
 Age as String: 25
-formatNameMethod found: private java.lang.String samples.reflection.getdeclaredmethod.GetDeclaredMethodExample$Person.formatName(java.lang.String)
+formatNameMethod found: private java.lang.String samples.reflection.getdeclaredmethod.Person.formatName(java.lang.String)
 Result: Dr. Alice
-setHobbiesMethod found: public void samples.reflection.getdeclaredmethod.GetDeclaredMethodExample$Person.setHobbies(java.lang.String[])
+setHobbiesMethod found: public void samples.reflection.getdeclaredmethod.Person.setHobbies(java.lang.String[])
 Updated Person: Person{name='Alice', age=25, hobbies=Swimming, Cycling}
 "#,
     );
@@ -2200,8 +2201,12 @@ fn should_support_class_get_declared_constructor() {
 Created: John Doe (0) - Hobbies: []
 Person(String name, int age) found: private samples.reflection.getdeclaredconstructorexample.Person(java.lang.String)
 Created: Max (0) - Hobbies: []
+Person(String name, int age) found: private samples.reflection.getdeclaredconstructorexample.Person(java.lang.String,int)
+Created: Alice (30) - Hobbies: []
 Person(String name, String[] hobbies) found: private samples.reflection.getdeclaredconstructorexample.Person(java.lang.String,java.lang.String[])
 Created: Deborah (0) - Hobbies: [Cycling, Cooking]
+Person(String name, int age, String[] hobbies) found: private samples.reflection.getdeclaredconstructorexample.Person(java.lang.String,int,java.lang.String[])
+Created: Michael (42) - Hobbies: [Reading, Hiking]
 "#,
     );
 }
