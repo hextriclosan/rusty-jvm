@@ -24,10 +24,16 @@ public class GetDeclaredMethodExample {
         String result = (String) formatNameMethod.invoke(person, "Dr.");
         System.out.println("Result: " + result);
 
+        // Set age using a setter method
+        Method setAgeMethod = Person.class.getDeclaredMethod("setAge", int.class);
+        System.out.println("setAgeMethod found: " + setAgeMethod);
+        setAgeMethod.invoke(person, 30);
+
         // Set hobbies using a setter method
         Method setHobbiesMethod = Person.class.getDeclaredMethod("setHobbies", String[].class);
         System.out.println("setHobbiesMethod found: " + setHobbiesMethod);
         setHobbiesMethod.invoke(person, (Object) new String[]{"Swimming", "Cycling"});
+
         System.out.println("Updated Person: " + person);
     }
 }
@@ -57,6 +63,10 @@ class Person {
 
     public void setHobbies(String[] hobbies) {
         this.hobbies = hobbies;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
     }
 
     @Override
