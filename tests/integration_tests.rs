@@ -517,7 +517,111 @@ fn should_do_trivial_reflection() {
 fn should_do_trivial_reflection_with_primitives() {
     assert_success(
         "samples.reflection.trivial.synthetic.classes.SyntheticPrimitiveClasses",
-        "9369\n",
+        r#"==== int ====
+Name: int
+Type name: int
+Simple name: int
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Integer
+
+==== double ====
+Name: double
+Type name: double
+Simple name: double
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Double
+
+==== boolean ====
+Name: boolean
+Type name: boolean
+Simple name: boolean
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Boolean
+
+==== char ====
+Name: char
+Type name: char
+Simple name: char
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Character
+
+==== byte ====
+Name: byte
+Type name: byte
+Simple name: byte
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Byte
+
+==== short ====
+Name: short
+Type name: short
+Simple name: short
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Short
+
+==== long ====
+Name: long
+Type name: long
+Simple name: long
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Long
+
+==== float ====
+Name: float
+Type name: float
+Simple name: float
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Float
+
+==== void ====
+Name: void
+Type name: void
+Simple name: void
+Modifiers: 1041 (public abstract final)
+isPrimitive: true
+isSynthetic: false
+Package: null
+Declaring class: null
+Wrapper type: class java.lang.Void
+
+=== Proof of materialization ===
+c1 == c2: true
+System.identityHashCode(c1) == System.identityHashCode(c2): true
+Lookup by c2: Primitive int
+o.getClass(): class java.lang.Class
+"#,
     );
 }
 
