@@ -264,7 +264,7 @@ pub(crate) fn process(
                 .run(stack_frames, current_class_name, invokedynamic_index)
                 .map_err(|e| {
                     Error::new_execution(&format!(
-                        "Error running invokedynamic for index {invokedynamic_index}: {e}"
+                        "Error running invokedynamic for class {current_class_name} on index {invokedynamic_index}: {e}"
                     ))
                 })?;
 
