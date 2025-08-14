@@ -674,6 +674,8 @@ examinees[1] got by offset is `two`: true
 examinees[1] updated by offset and set to `three`: true
 examinees[1] was not updated and remains the same: true
 one.field4 updated by offset to: FIELD4_PUT_REFERENCE_VOLATILE
+Class<Integer>.name update new value is java.lang.Positron
+State restored. Name is now: java.lang.Integer
 Examinee.staticField as java.lang.reflect.Field: static java.lang.String samples.jdkinternal.unsafe.trivial.Examinee.staticField
 staticFieldBase: class samples.jdkinternal.unsafe.trivial.Examinee
 Current static value: staticFieldValue

@@ -3,6 +3,7 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::java_class::InnerState::Initialized;
+use crate::vm::method_area::java_class::STATIC_FIELDS_START;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::object_offset::offset_utils::{
     object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
@@ -387,7 +388,7 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
         if class_name.starts_with("[") {
             heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![ref_value])
         } else {
-            if class_name == "java/lang/Class" {
+            if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
                 // Special case for java/lang/Class<T>, in fact it is modification of static field of T
                 let t_name = with_method_area(|area| area.get_from_reflection_table(obj_ref))?;
                 let t_jc = with_method_area(|area| area.get(t_name.as_str()))?;
