@@ -18,13 +18,12 @@ public class UnsafeUsage {
         compareAndSetLong();
         compareAndExchangeLong();
         getReferenceAcquire();
-        // modifyClassFieldValue(); uncomment me after Class<Integer> become materialized instance in rusty-jvm
+        modifyClassFieldValue();
         getSetStaticField();
         putInt();
         putIntVolatile();
         putLong();
     }
-
 
     private static void isBigEndian() {
         int isBigEndian = U.isBigEndian() ? 1 : 0;
@@ -136,7 +135,6 @@ public class UnsafeUsage {
         String newName = "java.lang.Positron";
         Field nameField = Class.class.getDeclaredField("name");
         long fieldOffset = U.objectFieldOffset(nameField);
-        System.out.println("Integer.class.name offset: " + fieldOffset);
         boolean updated = U.compareAndSetReference(classAsInstance, fieldOffset, originalName, newName);
 
         if (updated) {

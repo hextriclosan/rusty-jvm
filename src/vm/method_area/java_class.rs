@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 const INTERFACE: u16 = 0x00000200;
 
-const STATIC_FIELDS_START: i64 = i32::MAX as i64;
+pub const STATIC_FIELDS_START: i64 = i32::MAX as i64;
 
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 

@@ -143,18 +143,23 @@ pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
 
     Ok(vec![string_ref])
 }
+/// Returns the class name for the given class reference.
+/// Updates Class.name field in the heap.
 fn init_class_name(class_ref: i32) -> Result<i32> {
     let class_name = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
         let class_name = undecorate(&class_name);
-        let string = match method_area.get(class_name) {
-            Ok(result) => result.external_name().to_string(),
-            Err(_) => class_name.to_string(),
-        };
-        Ok::<String, Error>(string)
+        let jc = method_area.get(class_name)?;
+        let class_name = jc.external_name();
+        Ok::<String, Error>(class_name.to_string())
     })?;
 
     let string_ref = StringPoolHelper::get_string(&class_name)?;
+
+    with_heap_write_lock(|heap| {
+        heap.set_object_field_value(class_ref, "java/lang/Class", "name", vec![string_ref])
+    })?;
+
     Ok(string_ref)
 }
 
