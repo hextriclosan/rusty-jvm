@@ -4,8 +4,9 @@ use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
 use indexmap::IndexMap;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fs::File;
 use std::sync::{LazyLock, RwLock};
-use tracing::trace;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 static HEAP: LazyLock<RwLock<Heap>> = LazyLock::new(RwLock::default);
 
@@ -209,7 +210,12 @@ impl Heap {
     #[allow(dead_code)]
     pub(crate) fn dump(&self) -> Result<()> {
         let json_string = serde_json::to_string(self)?;
-        trace!("HEAP DUMP: {json_string}");
+        let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+        File::create_new(format!("heap_dump_{ts}.json")).and_then(|mut file| {
+            use std::io::Write;
+            file.write_all(json_string.as_bytes())
+        })?;
+
         Ok(())
     }
 
