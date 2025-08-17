@@ -226,7 +226,9 @@ impl Heap {
                 }
                 _ => None,
             })
-            .ok_or_else(|| Error::new_execution(&format!("error getting array length by ref={arrayref}")))
+            .ok_or_else(|| {
+                Error::new_execution(&format!("error getting array length by ref={arrayref}"))
+            })
     }
 
     pub(crate) fn get_const_string_ref(&self, string: &str) -> Option<i32> {
