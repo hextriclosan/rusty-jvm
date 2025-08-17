@@ -1,7 +1,8 @@
+use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
+use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
-use indexmap::IndexMap;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
@@ -28,26 +29,13 @@ where
 
 #[derive(Debug, Serialize, Default)]
 pub(crate) struct Heap {
-    data: IndexMap<i32, HeapValue>,
+    data: AutoDashMapI32<HeapValue>,
     ref_by_stringvalue: HashMap<String, i32>,
 }
 
 impl Heap {
-    // todo: still possible race condition here
-    fn next_id(&self) -> i32 {
-        let last_key = if let Some((last_key, _)) = self.data.iter().last() {
-            *last_key
-        } else {
-            0
-        };
-
-        last_key + 1
-    }
-
     pub fn create_instance(&mut self, java_instance: JavaInstance) -> i32 {
-        let id = self.next_id();
-        self.data.insert(id, Object(java_instance));
-        id
+        self.data.insert_auto(Object(java_instance))
     }
 
     pub fn set_object_field_value(
@@ -63,12 +51,17 @@ impl Heap {
             ))); // throw an appropriate exception here
         }
 
-        if let Some(Object(instance)) = self.data.get_mut(&objectref) {
-            instance.set_field_value(class_name, field_name_type, value)?;
-            Ok(())
-        } else {
-            Err(Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
-        }
+        self.data.get_mut(objectref)
+            .and_then(|mut entry| {
+                match entry.value_mut() {
+                    Object(instance) => {
+                        instance.set_field_value(class_name, field_name_type, value.clone()).ok()?;
+                        Some(())
+                    },
+                    _ => None,
+                }
+            })
+            .ok_or_else(|| Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
     }
 
     pub fn get_object_field_value(
@@ -83,41 +76,46 @@ impl Heap {
             ))); // throw an appropriate exception here
         }
 
-        if let Some(Object(java_instance)) = self.data.get(&objectref) {
-            java_instance.get_field_value(class_name, field_name_type)
-        } else {
-            Err(Error::new_execution(&format!(
-                "error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}"
-            )))
-        }
+        self.data.get(objectref)
+            .and_then(|entry| {
+                match entry.value() {
+                    Object(java_instance) => {
+                        let ret = java_instance.get_field_value(class_name, field_name_type).ok()?;
+                        Some(ret)
+                    },
+                    _ => None,
+                }
+            })
+            .ok_or_else(|| Error::new_execution(&format!("error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}")))
     }
 
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {
-        self.data.get(&objectref).map_or_else(
-            || {
-                Err(Error::new_execution(&format!(
+        self.data
+            .get(objectref)
+            .and_then(|entry| match entry.value() {
+                Object(java_instance) => {
+                    let name = java_instance.instance_name().to_string();
+                    Some(name)
+                }
+                Arr(array) => {
+                    let name = array.type_name().to_string();
+                    Some(name)
+                }
+            })
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
                     "error getting object from heap by ref {objectref}"
-                )))
-            },
-            |obj| match obj {
-                Object(java_instance) => Ok(java_instance.instance_name().to_string()),
-                Arr(array) => Ok(array.type_name().to_string()),
-            },
-        )
+                ))
+            })
     }
 
-    pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> Result<i32> {
-        let id = self.next_id();
-        self.data.insert(id, Arr(Array::new(type_name, len)));
-
-        Ok(id)
+    pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> i32 {
+        self.data.insert_auto(Arr(Array::new(type_name, len)))
     }
 
     pub(crate) fn create_array_with_values(&mut self, type_name: &str, array: &[i32]) -> i32 {
-        let id = self.next_id();
         self.data
-            .insert(id, Arr(Array::new_with_values(type_name, array)));
-        id
+            .insert_auto(Arr(Array::new_with_values(type_name, array)))
     }
 
     pub(crate) fn get_entire_array(&self, array_ref: i32) -> Result<Array> {
@@ -126,27 +124,42 @@ impl Heap {
                 "NullPointerException: null array reference",
             )); //todo: throw an appropriate exception here
         }
-        if let Some(Arr(array)) = self.data.get(&array_ref) {
-            Ok(array.clone())
-        } else {
-            Err(Error::new_execution("error getting array"))
-        }
+        self.data
+            .get(array_ref)
+            .and_then(|entry| match entry.value() {
+                Arr(array) => {
+                    let cloned = array.clone();
+                    Some(cloned)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error getting array"))
     }
 
     pub(crate) fn set_entire_array(&mut self, array_ref: i32, array_val: Array) -> Result<()> {
-        if let Some(Arr(array)) = self.data.get_mut(&array_ref) {
-            array.set_entire_value(array_val)
-        } else {
-            Err(Error::new_execution("error getting array"))
-        }
+        self.data
+            .get_mut(array_ref)
+            .and_then(|mut entry| match entry.value_mut() {
+                Arr(array) => {
+                    array.set_entire_value(array_val).ok()?;
+                    Some(())
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error getting array"))
     }
 
     pub(crate) fn get_array_value(&self, arrayref: i32, index: i32) -> Result<Vec<i32>> {
-        if let Some(Arr(arr)) = self.data.get(&arrayref) {
-            arr.get_value(index)
-        } else {
-            Err(Error::new_execution("error getting array value from heap"))
-        }
+        self.data
+            .get(arrayref)
+            .and_then(|entry| match entry.value() {
+                Arr(arr) => {
+                    let value = arr.get_value(index).ok()?;
+                    Some(value)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error getting array value from heap"))
     }
 
     pub(crate) fn get_array_value_by_raw_offset(
@@ -155,11 +168,16 @@ impl Heap {
         offset: usize,
         len: usize,
     ) -> Result<Vec<i32>> {
-        if let Some(Arr(arr)) = self.data.get(&arrayref) {
-            arr.get_value_by_raw_offset(offset, len)
-        } else {
-            Err(Error::new_execution("error getting array value from heap"))
-        }
+        self.data
+            .get(arrayref)
+            .and_then(|entry| match entry.value() {
+                Arr(arr) => {
+                    let value = arr.get_value_by_raw_offset(offset, len).ok()?;
+                    Some(value)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error getting array value from heap"))
     }
 
     pub(crate) fn set_array_value(
@@ -168,11 +186,16 @@ impl Heap {
         index: i32,
         value: Vec<i32>,
     ) -> Result<()> {
-        if let Some(Arr(arr)) = self.data.get_mut(&arrayref) {
-            arr.set_value(index, value)
-        } else {
-            Err(Error::new_execution("error setting array value"))
-        }
+        self.data
+            .get_mut(arrayref)
+            .and_then(|mut entry| match entry.value_mut() {
+                Arr(arr) => {
+                    arr.set_value(index, value).ok()?;
+                    Some(())
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error setting array value"))
     }
 
     pub(crate) fn set_array_value_by_raw_offset(
@@ -181,21 +204,31 @@ impl Heap {
         offset: usize,
         value: Vec<i32>,
     ) -> Result<()> {
-        if let Some(Arr(arr)) = self.data.get_mut(&arrayref) {
-            arr.set_array_value_by_raw_offset(offset, value)
-        } else {
-            Err(Error::new_execution("error setting array value"))
-        }
+        self.data
+            .get_mut(arrayref)
+            .and_then(|mut entry| match entry.value_mut() {
+                Arr(arr) => {
+                    arr.set_array_value_by_raw_offset(offset, value).ok()?;
+                    Some(())
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error setting array value"))
     }
 
     pub(crate) fn get_array_len(&self, arrayref: i32) -> Result<i32> {
-        if let Some(Arr(arr)) = self.data.get(&arrayref) {
-            Ok(arr.get_length())
-        } else {
-            Err(Error::new_execution(&format!(
-                "error getting array length by ref={arrayref}"
-            )))
-        }
+        self.data
+            .get(arrayref)
+            .and_then(|entry| match entry.value() {
+                Arr(arr) => {
+                    let len = arr.get_length();
+                    Some(len)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| {
+                Error::new_execution(&format!("error getting array length by ref={arrayref}"))
+            })
     }
 
     pub(crate) fn get_const_string_ref(&self, string: &str) -> Option<i32> {
@@ -219,21 +252,28 @@ impl Heap {
         Ok(())
     }
 
-    pub(crate) fn clone_instance(&mut self, objectref: i32) -> Result<Vec<i32>> {
-        if let Some(Object(instance)) = self.data.get(&objectref) {
-            let new_instance = instance.clone();
-            let new_instance_ref = self.create_instance(new_instance);
-            Ok(vec![new_instance_ref])
-        } else if let Some(Arr(array)) = self.data.get(&objectref) {
-            let new_array = array.clone();
-            let new_array_ref =
-                self.create_array(new_array.type_name(), new_array.get_length())?;
-            self.set_entire_array(new_array_ref, new_array)?;
-            Ok(vec![new_array_ref])
-        } else {
-            Err(Error::new_execution(&format!(
-                "error cloning object with ref {objectref}"
-            )))
-        }
+    pub(crate) fn clone_instance(&mut self, objectref: i32) -> Result<i32> {
+        let cloned_heap_value = {
+            self.data
+                .get(objectref)
+                .and_then(|entry| Some(entry.value().clone()))
+                .ok_or_else(|| {
+                    Error::new_execution(&format!(
+                        "error getting object by ref {objectref} for cloning"
+                    ))
+                })
+        }?;
+
+        let cloned_ref = match cloned_heap_value {
+            Object(new_instance) => self.create_instance(new_instance),
+            Arr(new_array) => {
+                let new_array_ref =
+                    self.create_array(new_array.type_name(), new_array.get_length());
+                self.set_entire_array(new_array_ref, new_array)?;
+                new_array_ref
+            }
+        };
+
+        Ok(cloned_ref)
     }
 }

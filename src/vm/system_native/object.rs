@@ -26,7 +26,7 @@ pub(crate) fn clone_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![cloned_obj_ref])
 }
 fn clone(obj_ref: i32) -> Result<i32> {
-    let cloned_obj_ref = with_heap_write_lock(|heap| heap.clone_instance(obj_ref))?[0];
+    let cloned_obj_ref = with_heap_write_lock(|heap| heap.clone_instance(obj_ref))?;
 
     Ok(cloned_obj_ref)
 }

@@ -166,8 +166,7 @@ impl InvokeDynamicRunner {
     ) -> Result<[StackValueKind; 6]> {
         let arguments_ref = with_heap_write_lock(|heap| {
             let bootstrap_args = bootstrap_info.bootstrap_args();
-            let array_ref =
-                heap.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32)?;
+            let array_ref = heap.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32);
 
             bootstrap_args
                 .iter()
