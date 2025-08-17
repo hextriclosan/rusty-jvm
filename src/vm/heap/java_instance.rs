@@ -160,7 +160,7 @@ impl Array {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub(crate) enum HeapValue {
     Object(JavaInstance),
     Arr(Array),

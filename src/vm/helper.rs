@@ -78,7 +78,7 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
     let class_of_array = "java/lang/String";
     let class_of_array = format!("[L{class_of_array};");
     let length = props.len() as i32;
-    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
+    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
 
     for (index, prop) in props.iter().enumerate() {
         let string_ref = StringPoolHelper::get_string(prop)?;

@@ -17,5 +17,6 @@ fn new_array(component_type_clazz_ref: i32, length: i32) -> Result<i32> {
     })?;
     let decorated = decorate(class_name);
     let decorated_array = format!("[{decorated}");
-    with_heap_write_lock(|heap| heap.create_array(&decorated_array, length))
+    let arr_ref = with_heap_write_lock(|heap| heap.create_array(&decorated_array, length));
+    Ok(arr_ref)
 }

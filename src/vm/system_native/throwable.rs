@@ -36,12 +36,12 @@ fn fill_in_stack_trace(throwable_ref: i32, stack_frames: &StackFrames) -> Result
     let depth = stack_elements.len() as i32;
 
     with_heap_write_lock(|heap| {
-        let backtrace_ref = heap.create_array("[Ljava/lang/Object;", 4)?;
+        let backtrace_ref = heap.create_array("[Ljava/lang/Object;", 4);
 
-        let class_array_ref = heap.create_array("[Ljava/lang/Class;", depth)?;
-        let method_array_ref = heap.create_array("[J", depth)?;
-        let line_array_ref = heap.create_array("[I", depth)?;
-        let tag_array_ref = heap.create_array("[I", depth)?;
+        let class_array_ref = heap.create_array("[Ljava/lang/Class;", depth);
+        let method_array_ref = heap.create_array("[J", depth);
+        let line_array_ref = heap.create_array("[I", depth);
+        let tag_array_ref = heap.create_array("[I", depth);
 
         heap.set_array_value(backtrace_ref, 0, vec![class_array_ref])?;
         heap.set_array_value(backtrace_ref, 1, vec![method_array_ref])?;

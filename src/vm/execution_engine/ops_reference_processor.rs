@@ -320,7 +320,7 @@ pub(crate) fn process(
 
             let length = stack_frame.pop();
 
-            let arrayref = with_heap_write_lock(|heap| heap.create_array(type_name, length))?;
+            let arrayref = with_heap_write_lock(|heap| heap.create_array(type_name, length));
             stack_frame.push(arrayref)?;
 
             stack_frame.incr_pc();
@@ -342,8 +342,7 @@ pub(crate) fn process(
                     ))
                 })?;
             let class_of_array = format!("[L{class_of_array};");
-            let arrayref =
-                with_heap_write_lock(|heap| heap.create_array(&class_of_array, length))?;
+            let arrayref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
             stack_frame.push(arrayref)?;
 
             stack_frame.incr_pc();

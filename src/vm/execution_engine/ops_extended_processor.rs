@@ -112,7 +112,7 @@ fn create_n_array(dimensions: &[i32], signature: &str, current_level: usize) -> 
     let current_length = dimensions[current_level];
     let current_signature = &signature[current_level..];
     let arrayref =
-        with_heap_write_lock(|heap| heap.create_array(current_signature, current_length))?;
+        with_heap_write_lock(|heap| heap.create_array(current_signature, current_length));
 
     if current_level < dimensions.len() - 1 {
         for i in 0..current_length {
