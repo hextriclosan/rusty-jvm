@@ -193,9 +193,9 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "crc32fast"
-version = "1.4.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a97769d94ddab943e4510d138150169a2758b5ef3eb191a9ee688de3e23ef7b3"
+checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
 dependencies = [
  "cfg-if",
 ]
@@ -913,6 +913,7 @@ dependencies = [
  "assert_cmd",
  "bitflags",
  "clap",
+ "crc32fast",
  "dashmap",
  "derive-new",
  "getset",
@@ -921,6 +922,7 @@ dependencies = [
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
+ "miniz_oxide",
  "mockall",
  "murmur3",
  "nix",

@@ -59,6 +59,15 @@ use crate::vm::system_native::unsafe_::{
     put_reference_wrp, set_memory0_wrp, should_be_initialized0_wrp, static_field_base0_wrp,
     static_field_offset_0_wrp,
 };
+use crate::vm::system_native::zip::crc32::java_util_zip_crc32_updatebytes0_wrp;
+use crate::vm::system_native::zip::deflater::{
+    java_util_zip_deflater_deflate_bytes_bytes_wrp, java_util_zip_deflater_end_wrp,
+    java_util_zip_deflater_init_wrp,
+};
+use crate::vm::system_native::zip::inflater::{
+    java_util_zip_inflater_end_wrp, java_util_zip_inflater_inflate_bytes_bytes_wrp,
+    java_util_zip_inflater_init_wrp, java_util_zip_inflater_initids_wrp,
+};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
@@ -412,6 +421,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert("java/lang/Thread:registerNatives:()V", Basic(void_stub));
     table.insert(
+        "java/lang/Thread:holdsLock:(Ljava/lang/Object;)Z",
+        Basic(|_args: &[i32]| Ok(vec![1])),
+    ); // todo: implement this properly
+    table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
         Basic(|_args: &[i32]| {
             Ok(vec![0, 1]) // it's always 1L, for spawning new threads real one should be incremented
@@ -620,6 +633,38 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
         Basic(native_accessor_invoke0_wrp),
+    );
+    table.insert(
+        "java/util/zip/Deflater:init:(IIZ)J",
+        Basic(java_util_zip_deflater_init_wrp),
+    );
+    table.insert(
+        "java/util/zip/Deflater:deflateBytesBytes:(J[BII[BIIII)J",
+        Basic(java_util_zip_deflater_deflate_bytes_bytes_wrp),
+    );
+    table.insert(
+        "java/util/zip/Deflater:end:(J)V",
+        Basic(java_util_zip_deflater_end_wrp),
+    );
+    table.insert(
+        "java/util/zip/Inflater:initIDs:()V",
+        Basic(java_util_zip_inflater_initids_wrp),
+    );
+    table.insert(
+        "java/util/zip/Inflater:init:(Z)J",
+        Basic(java_util_zip_inflater_init_wrp),
+    );
+    table.insert(
+        "java/util/zip/Inflater:inflateBytesBytes:(J[BII[BII)J",
+        Basic(java_util_zip_inflater_inflate_bytes_bytes_wrp),
+    );
+    table.insert(
+        "java/util/zip/Inflater:end:(J)V",
+        Basic(java_util_zip_inflater_end_wrp),
+    );
+    table.insert(
+        "java/util/zip/CRC32:updateBytes0:(I[BII)I",
+        Basic(java_util_zip_crc32_updatebytes0_wrp),
     );
 
     platform_specific(&mut table);

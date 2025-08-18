@@ -1,0 +1,1 @@
+pub const DEFAULT_WINDOW_BITS: i32 = 15;
