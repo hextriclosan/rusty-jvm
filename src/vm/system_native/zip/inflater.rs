@@ -62,9 +62,12 @@ fn inflater_inflate_bytes_bytes(
     output_off: i32,
     output_len: i32,
 ) -> Result<i64> {
-    let mut entry = REGISTRY
-        .get_mut(addr)
-        .ok_or_else(|| Error::new_execution("ouch"))?;
+    let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
+        Error::new_execution(&format!(
+            "Inflater not found in registry for address: {}",
+            addr
+        ))
+    })?;
     let inflate_state = entry.value_mut();
 
     let stream_result = with_heap_write_lock(|h| {

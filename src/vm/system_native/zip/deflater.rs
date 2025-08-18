@@ -72,9 +72,12 @@ fn deflater_deflate_bytes_bytes(
     output_len: i32,
     flush: i32,
 ) -> Result<i64> {
-    let mut entry = REGISTRY
-        .get_mut(addr)
-        .ok_or_else(|| Error::new_execution("ouch"))?;
+    let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
+        Error::new_execution(&format!(
+            "Deflater not found in registry for address: {}",
+            addr
+        ))
+    })?;
     let comp = entry.value_mut();
 
     let stream_result = with_heap_write_lock(|h| {
