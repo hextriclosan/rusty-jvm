@@ -3,6 +3,7 @@ use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
+use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
@@ -134,6 +135,50 @@ impl Heap {
                 _ => None,
             })
             .ok_or_else(|| Error::new_execution("error getting array"))
+    }
+
+    pub(crate) fn get_entire_raw_data(
+        &self,
+        array_ref: i32,
+    ) -> Result<MappedRef<i32, HeapValue, Vec<u8>>> {
+        if array_ref == 0 {
+            return Err(Error::new_execution(
+                "NullPointerException: null array reference",
+            )); //todo: throw an appropriate exception here
+        }
+
+        self.data
+            .get(array_ref)
+            .and_then(|entry| match entry.value() {
+                Arr(_) => Some(Ref::map(entry, |value| match value {
+                    Arr(arr) => arr.raw_data(),
+                    _ => unreachable!("already checked that this is an array"),
+                })),
+                Object(_) => None,
+            })
+            .ok_or_else(|| Error::new_execution(&format!("instance is not an array: {array_ref}")))
+    }
+
+    pub(crate) fn get_entire_raw_data_mut(
+        &mut self,
+        array_ref: i32,
+    ) -> Result<MappedRefMut<i32, HeapValue, Vec<u8>>> {
+        if array_ref == 0 {
+            return Err(Error::new_execution(
+                "NullPointerException: null array reference",
+            )); //todo: throw an appropriate exception here
+        }
+
+        self.data
+            .get_mut(array_ref)
+            .and_then(|entry| match entry.value() {
+                Arr(_) => Some(RefMut::map(entry, |value| match value {
+                    Arr(arr) => arr.raw_data_mut(),
+                    _ => unreachable!("already checked that this is an array"),
+                })),
+                Object(_) => None,
+            })
+            .ok_or_else(|| Error::new_execution(&format!("instance is not an array: {array_ref}")))
     }
 
     pub(crate) fn set_entire_array(&mut self, array_ref: i32, array_val: Array) -> Result<()> {

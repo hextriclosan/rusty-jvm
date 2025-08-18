@@ -2320,3 +2320,19 @@ Created: Michael (42) - Hobbies: [Reading, Hiking]
 "#,
     );
 }
+
+#[test]
+fn should_support_compression_decompression() {
+    assert_success(
+        "samples.zlib.zlibexample.ZlibExample",
+        r#"Original size: 35000 bytes
+Original CRC32: 639401744
+=== Wrapped DEFLATE ===
+Level -1, Compressed size: 82, Compression ratio: 0.2342857142857143%, Decompressed CRC32: 639401744, Correct: true
+Level 9, Compressed size: 82, Compression ratio: 0.2342857142857143%, Decompressed CRC32: 639401744, Correct: true
+=== Raw DEFLATE (nowrap=true) ===
+Level -1, Compressed size: 76, Compression ratio: 0.21714285714285714%, Decompressed CRC32: 639401744, Correct: true
+Level 9, Compressed size: 76, Compression ratio: 0.21714285714285714%, Decompressed CRC32: 639401744, Correct: true
+"#,
+    );
+}

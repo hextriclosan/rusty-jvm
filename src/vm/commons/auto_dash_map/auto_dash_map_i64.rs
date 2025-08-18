@@ -3,25 +3,25 @@ use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use serde::ser::SerializeMap;
 use serde::Serialize;
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 
 #[derive(Debug)]
-pub struct AutoDashMapI32<V> {
-    map: DashMap<i32, V>,
-    counter: Arc<AtomicI32>,
+pub struct AutoDashMapI64<V> {
+    map: DashMap<i64, V>,
+    counter: Arc<AtomicI64>,
 }
 
-impl<V> Default for AutoDashMapI32<V> {
+impl<V> Default for AutoDashMapI64<V> {
     fn default() -> Self {
         Self {
             map: DashMap::default(),
-            counter: Arc::new(AtomicI32::default()),
+            counter: Arc::new(AtomicI64::default()),
         }
     }
 }
 
-impl<V> Serialize for AutoDashMapI32<V>
+impl<V> Serialize for AutoDashMapI64<V>
 where
     V: Serialize,
 {
@@ -38,13 +38,13 @@ where
     }
 }
 
-impl<V> AutoDashMap<V> for AutoDashMapI32<V> {
-    type Key = i32;
+impl<V> AutoDashMap<V> for AutoDashMapI64<V> {
+    type Key = i64;
 
     fn new(start_from: Self::Key) -> Self {
         Self {
             map: DashMap::new(),
-            counter: Arc::new(AtomicI32::new(start_from)),
+            counter: Arc::new(AtomicI64::new(start_from)),
         }
     }
 
@@ -70,12 +70,13 @@ impl<V> AutoDashMap<V> for AutoDashMapI32<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
     use serde_json;
     use serde_json::json;
 
     #[test]
     fn should_create_default_map() {
-        let map = AutoDashMapI32::default();
+        let map = AutoDashMapI64::default();
         let key1 = map.insert_auto("value0");
         let key2 = map.insert_auto("value1");
         assert_eq!(key1, 0);
@@ -84,16 +85,16 @@ mod tests {
 
     #[test]
     fn should_insert_entry() {
-        let map = AutoDashMapI32::new(1000);
+        let map = AutoDashMapI64::new(i64::MIN);
         let key1 = map.insert_auto("value1000");
         let key2 = map.insert_auto("value1001");
-        assert_eq!(key1, 1000);
-        assert_eq!(key2, 1001);
+        assert_eq!(key1, i64::MIN);
+        assert_eq!(key2, i64::MIN + 1);
     }
 
     #[test]
     fn should_return_const_value() {
-        let map = AutoDashMapI32::new(1000);
+        let map = AutoDashMapI64::new(i64::MIN);
         let key = map.insert_auto("value1000");
         let value = map.get(key).unwrap();
         assert_eq!(*value, "value1000");
@@ -101,7 +102,7 @@ mod tests {
 
     #[test]
     fn should_mutate_value() {
-        let map = AutoDashMapI32::new(1);
+        let map = AutoDashMapI64::new(i64::MIN);
         let key = map.insert_auto("value");
         {
             let mut value = map.get_mut(key).unwrap();
@@ -114,7 +115,7 @@ mod tests {
 
     #[test]
     fn should_remove_entry() {
-        let map = AutoDashMapI32::new(1);
+        let map = AutoDashMapI64::new(i64::MIN);
         let key = map.insert_auto("value");
         let removed_value = map.remove(key).unwrap();
         assert_eq!(removed_value, "value");
@@ -123,13 +124,13 @@ mod tests {
 
     #[test]
     fn should_serialize() {
-        let map = AutoDashMapI32::new(1);
+        let map = AutoDashMapI64::new(i64::MIN);
         map.insert_auto("value1");
         map.insert_auto("value2");
         let actual = serde_json::to_value(&map).unwrap();
         let expected = json!({
-            "1": "value1",
-            "2": "value2",
+            "-9223372036854775808": "value1",
+            "-9223372036854775807": "value2",
         });
 
         assert_eq!(actual, expected);
@@ -137,14 +138,14 @@ mod tests {
 
     #[test]
     fn should_return_none_on_getting_none_existing_entry() {
-        let map = AutoDashMapI32::new(1);
+        let map = AutoDashMapI64::new(i64::MIN);
         map.insert_auto("value");
         assert!(map.get(999).is_none());
     }
 
     #[test]
     fn should_return_none_on_removing_none_existing_entry() {
-        let map = AutoDashMapI32::new(1);
+        let map = AutoDashMapI64::new(i64::MIN);
         map.insert_auto("value");
         assert!(map.remove(999).is_none());
     }

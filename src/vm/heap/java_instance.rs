@@ -158,6 +158,10 @@ impl Array {
     pub fn raw_data(&self) -> &Vec<u8> {
         &self.data
     }
+
+    pub fn raw_data_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.data
+    }
 }
 
 #[derive(Debug, Serialize, Clone)]

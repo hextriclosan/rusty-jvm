@@ -3,6 +3,7 @@ use crate::vm::error::ErrorKind::{
 };
 use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
+use miniz_oxide::MZError;
 use num_enum::TryFromPrimitiveError;
 use std::error::Error as StdError;
 use std::ffi::OsString;
@@ -132,6 +133,12 @@ impl From<OsString> for Error {
         Error::new_execution(&format!(
             "Failed to convert OsString value {value:?} to String"
         ))
+    }
+}
+
+impl From<MZError> for Error {
+    fn from(error: MZError) -> Self {
+        Error::new_execution(&format!("MZError: {error:?}"))
     }
 }
 
