@@ -62,20 +62,12 @@ import java.util.List;
 
 public class CompositePattern {
     public static void main(String[] args) {
-        Unit eliteSquad = new UnitGroup(new Assassin(), new Archer());
+        Unit eliteSquad = new UnitGroup(
+                new Assassin(50),
+                new Assassin(55));
         Unit namelessSquad = new UnitGroup(
-                () -> 2,
-                new AbstractUnit() {
-                    @Override
-                    protected String phrase() {
-                        return "Where am I?";
-                    }
-
-                    @Override
-                    public int damage() {
-                        return 1;
-                    }
-                });
+                () -> 10,
+                new Soldier("Soldier", "For honor!", 2));
 
         Unit army = new UnitGroup(eliteSquad, namelessSquad);
         System.out.println("Army attack power is " + army.damage());
@@ -86,44 +78,60 @@ interface Unit {
     int damage();
 }
 
-abstract class AbstractUnit implements Unit {
-    protected AbstractUnit() {
-        System.out.println(getIntroMessage());
+interface TalkingUnit extends Unit {
+    String name();
+    String phrase();
+    int damageValue();
+
+    @Override
+    default int damage() {
+        int dmg = damageValue();
+        speak(dmg);
+        return dmg;
     }
 
-    protected String getName() {
-        String name = getClass().getSimpleName();
-        return !name.isEmpty() ? name : "Unnamed Unit";
-    }
-
-    protected abstract String phrase();
-
-    private String getIntroMessage() {
-        return getName() + ": " + phrase();
+    default void speak(int dmg) {
+        System.out.println(name() + "(" + dmg + ") says: " + phrase());
     }
 }
 
-class Assassin extends AbstractUnit {
-    @Override
-    public int damage() {
-        return 45;
+abstract class AbstractTalkingUnit implements TalkingUnit {
+    private final String name;
+    private final String phrase;
+    private final int baseDamage;
+
+    protected AbstractTalkingUnit(String name, String phrase, int baseDamage) {
+        this.name = name != null ? name : getClass().getSimpleName();
+        this.phrase = phrase != null ? phrase : "Arrr!";
+        this.baseDamage = baseDamage;
     }
 
     @Override
-    protected String phrase() {
-        return "Target acquired.";
+    public int damageValue() {
+        return baseDamage * damageMultiplier();
     }
+
+    @Override
+    public String phrase() {
+        return phrase;
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    protected abstract int damageMultiplier();
 }
 
-class Archer extends AbstractUnit {
-    @Override
-    public int damage() {
-        return 12;
+class Assassin extends AbstractTalkingUnit {
+    public Assassin(int damageValue) {
+        super(null, "Target acquired.", damageValue);
     }
 
     @Override
-    protected String phrase() {
-        return "Ready to fire.";
+    protected int damageMultiplier() {
+        return 2;
     }
 }
 
@@ -131,10 +139,6 @@ class UnitGroup implements Unit {
     private final List<Unit> units = new ArrayList<>();
 
     public UnitGroup(Unit... units) {
-        addUnits(units);
-    }
-
-    public void addUnits(Unit... units) {
         this.units.addAll(Arrays.asList(units));
     }
 
@@ -144,6 +148,9 @@ class UnitGroup implements Unit {
                 .mapToInt(Unit::damage)
                 .sum();
     }
+}
+
+record Soldier(String name, String phrase, int damageValue) implements TalkingUnit {
 }
 ```
 
@@ -164,10 +171,10 @@ class UnitGroup implements Unit {
 If everything is set up correctly, you should see:
 
 ```
-Assassin: Target acquired.
-Archer: Ready to fire.
-Unnamed Unit: Where am I?
-Army attack power is 60
+Assassin(100) says: Target acquired.
+Assassin(110) says: Target acquired.
+Soldier(2) says: For honor!
+Army attack power is 222
 ```
 
 ## License
