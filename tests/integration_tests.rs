@@ -1114,49 +1114,285 @@ fn should_operate_with_var_args() {
 fn should_support_getting_declared_methods() {
     assert_success(
         "samples.reflection.trivial.declaredmethods.DeclaredMethodsExample",
-        r#"Information about method:sampleMethod
+        r#"Class: samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+All declared methods:
+Information about method:sampleMethod
 ------------------------------------------------
+String representation:private native java.lang.String[] samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.sampleMethod(java.lang.String,int,double[]) throws java.io.IOError,java.lang.NullPointerException
 Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
 Return Type:class [Ljava.lang.String;
 Modifiers:private transient native
 Parameter Count:3
 Parameter Types:
-	java.lang.String
-	int
-	[D
+ - java.lang.String
+ - int
+ - [D
 Generic Parameter Types:
-	java.lang.String
-	int
-	double[]
+ - java.lang.String
+ - int
+ - double[]
 Is Synthetic:false
 Is Default:false
 Is Bridge:false
 Exception Types:
-	java.io.IOError
-	java.lang.NullPointerException
+ - java.io.IOError
+ - java.lang.NullPointerException
 Generic Exception Types:
-	java.io.IOError
-	java.lang.NullPointerException
+ - java.io.IOError
+ - java.lang.NullPointerException
 Is VarArgs:true
-Generic Return Type:class [Ljava.lang.String;
 
-Information about method:main
+Information about method:lambda$print$0
 ------------------------------------------------
+String representation:private static int samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.lambda$print$0(java.lang.reflect.Method,java.lang.reflect.Method)
+Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+Return Type:int
+Modifiers:private static
+Parameter Count:2
+Parameter Types:
+ - java.lang.reflect.Method
+ - java.lang.reflect.Method
+Generic Parameter Types:
+ - java.lang.reflect.Method
+ - java.lang.reflect.Method
+Is Synthetic:true
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:print
+------------------------------------------------
+String representation:private static void samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.print(java.lang.reflect.Method)
 Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
 Return Type:void
-Modifiers:public static
+Modifiers:private static
 Parameter Count:1
 Parameter Types:
-	[Ljava.lang.String;
+ - java.lang.reflect.Method
 Generic Parameter Types:
-	java.lang.String[]
+ - java.lang.reflect.Method
 Is Synthetic:false
 Is Default:false
 Is Bridge:false
 Exception Types:
 Generic Exception Types:
 Is VarArgs:false
-Generic Return Type:void
+
+Information about method:print
+------------------------------------------------
+String representation:private static void samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.print(java.lang.reflect.Method[])
+Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+Return Type:void
+Modifiers:private static
+Parameter Count:1
+Parameter Types:
+ - [Ljava.lang.reflect.Method;
+Generic Parameter Types:
+ - java.lang.reflect.Method[]
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:main
+------------------------------------------------
+String representation:public static void samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.main(java.lang.String[])
+Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+Return Type:void
+Modifiers:public static
+Parameter Count:1
+Parameter Types:
+ - [Ljava.lang.String;
+Generic Parameter Types:
+ - java.lang.String[]
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+
+Public only methods:
+Information about method:equals
+------------------------------------------------
+String representation:public boolean java.lang.Object.equals(java.lang.Object)
+Class:class java.lang.Object
+Return Type:boolean
+Modifiers:public
+Parameter Count:1
+Parameter Types:
+ - java.lang.Object
+Generic Parameter Types:
+ - java.lang.Object
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:getClass
+------------------------------------------------
+String representation:public final native java.lang.Class java.lang.Object.getClass()
+Class:class java.lang.Object
+Return Type:class java.lang.Class
+Modifiers:public final native
+Parameter Count:0
+Parameter Types:
+Generic Parameter Types:
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:notify
+------------------------------------------------
+String representation:public final native void java.lang.Object.notify()
+Class:class java.lang.Object
+Return Type:void
+Modifiers:public final native
+Parameter Count:0
+Parameter Types:
+Generic Parameter Types:
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:notifyAll
+------------------------------------------------
+String representation:public final native void java.lang.Object.notifyAll()
+Class:class java.lang.Object
+Return Type:void
+Modifiers:public final native
+Parameter Count:0
+Parameter Types:
+Generic Parameter Types:
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:wait
+------------------------------------------------
+String representation:public final void java.lang.Object.wait() throws java.lang.InterruptedException
+Class:class java.lang.Object
+Return Type:void
+Modifiers:public final
+Parameter Count:0
+Parameter Types:
+Generic Parameter Types:
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+ - java.lang.InterruptedException
+Generic Exception Types:
+ - java.lang.InterruptedException
+Is VarArgs:false
+
+Information about method:wait
+------------------------------------------------
+String representation:public final void java.lang.Object.wait(long) throws java.lang.InterruptedException
+Class:class java.lang.Object
+Return Type:void
+Modifiers:public final
+Parameter Count:1
+Parameter Types:
+ - long
+Generic Parameter Types:
+ - long
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+ - java.lang.InterruptedException
+Generic Exception Types:
+ - java.lang.InterruptedException
+Is VarArgs:false
+
+Information about method:wait
+------------------------------------------------
+String representation:public final void java.lang.Object.wait(long,int) throws java.lang.InterruptedException
+Class:class java.lang.Object
+Return Type:void
+Modifiers:public final
+Parameter Count:2
+Parameter Types:
+ - long
+ - int
+Generic Parameter Types:
+ - long
+ - int
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+ - java.lang.InterruptedException
+Generic Exception Types:
+ - java.lang.InterruptedException
+Is VarArgs:false
+
+Information about method:toString
+------------------------------------------------
+String representation:public java.lang.String java.lang.Object.toString()
+Class:class java.lang.Object
+Return Type:class java.lang.String
+Modifiers:public
+Parameter Count:0
+Parameter Types:
+Generic Parameter Types:
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:hashCode
+------------------------------------------------
+String representation:public native int java.lang.Object.hashCode()
+Class:class java.lang.Object
+Return Type:int
+Modifiers:public native
+Parameter Count:0
+Parameter Types:
+Generic Parameter Types:
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
+
+Information about method:main
+------------------------------------------------
+String representation:public static void samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.main(java.lang.String[])
+Class:class samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
+Return Type:void
+Modifiers:public static
+Parameter Count:1
+Parameter Types:
+ - [Ljava.lang.String;
+Generic Parameter Types:
+ - java.lang.String[]
+Is Synthetic:false
+Is Default:false
+Is Bridge:false
+Exception Types:
+Generic Exception Types:
+Is VarArgs:false
 
 "#,
     );
