@@ -71,7 +71,7 @@ public class DeclaredMethodsExample {
         // System.out.println("Annotations: ");
         // for (Object annotation : method.getAnnotations()) { // Exception in thread "system" java.lang.InternalError: Proxy is not supported until module system is fully initialized
         //     System.out.println(" - " + String.valueOf(annotation));
-        /// }
+        // }
         // System.out.println("Generic Return Type:" + method.getGenericReturnType()); // Generic Return Type:java.lang.Class<?> vs Generic Return Type:class java.lang.Class
 
         System.out.println();
