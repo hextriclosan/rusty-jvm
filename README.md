@@ -18,13 +18,19 @@ One major feature that’s still missing is garbage collection. That’s the nex
 
 ## Implemented Key Features
 
-- 99% of actual opcodes ([JVMS §6][jvms-6])
+- 100% of actual opcodes ([JVMS §6][jvms-6])
+- Lambda Expressions ([JLS §15.27][jls-15.27])
 - Static initialization ([JVMS §5.5][jvms-5.5])
 - Polymorphic models ([JLS §8.4.8][jls-8.4.8])
 - Single- and multi-dimensional arrays ([JLS §10][jls-10])
 - Exceptions ([JLS §11][jls-11])
+- Record Classes ([JVMS §8.10][jls-8.10])
+- [java.util.stream][java.util.stream-api] (partially)
 - [java.io][java.io-api] (partially)
 - [java.nio][java.nio-api] (partially)
+- [java.lang.invoke][java.lang.invoke-api] (partially)
+- [java.lang.reflect][java.lang.reflect-api] (partially)
+- [java.util.zip][java.util.zip-api] (partially)
 - Type casting ([JLS §5.5][jls-5.5])
 - Program arguments ([JLS §12.1.4][jls-12.1.4])
 - [java.lang.System][java.lang.system-api] (most features)
@@ -200,11 +206,17 @@ Army attack power is 222
 [jvms-6]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html
 [jls-5.5]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-5.html#jls-5.5
 [jls-8.4.8]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-8.html#jls-8.4.8
+[jls-8.10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-8.html#jls-8.10
 [jls-10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-10.html
 [jls-11]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-11.html
 [jls-12.1.4]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-12.html#jls-12.1.4
 [jls-14.10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-14.html#jls-14.10
+[jls-15.27]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.27
+[java.util.stream-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/stream/package-summary.html
 [java.io-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/io/package-summary.html
 [java.nio-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/nio/package-summary.html
+[java.lang.invoke-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/invoke/package-summary.html
+[java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/reflect/package-summary.html
+[java.util.zip-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/zip/package-summary.html
 [java.lang.system-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/System.html
 [java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/reflect/package-summary.html
