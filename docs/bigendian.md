@@ -6,26 +6,16 @@ docker run -it --platform=linux/s390x -v <PROJECT_DIR>:/mnt/rusty-jvm --entrypoi
 ```
 
 ## Download compatible Java Core classes
-#### Install dependencies
 ```shell
 apt-get update
 apt-get install -y --no-install-recommends curl
-```
-#### Set variables
-```shell
+export JAVA_HOME="/opt/java"
 JAVA_VERSION="23.0.2+7"
 JAVA_CHECKSUM="591ccf4d27016315700cc9cc979f7cf343900b6bee1b0b45c93f2c5f946e5aac"
 JAVA_MAJOR="23"
-JAVA_HOME="/opt/java"
 ARCH="s390x"
 URL="https://github.com/adoptium/temurin${JAVA_MAJOR}-binaries/releases/download/jdk-${JAVA_VERSION}/OpenJDK${JAVA_MAJOR}U-jdk_${ARCH}_linux_hotspot_$(echo ${JAVA_VERSION} | sed 's/+/_/g').tar.gz"
-```
-#### Download JDK
-```shell
 curl -LfsSo /tmp/openjdk.tar.gz "${URL}"
-```
-#### Extract JDK
-```shell
 mkdir -p "${JAVA_HOME}"
 tar -xzf /tmp/openjdk.tar.gz -C "${JAVA_HOME}" --strip-components=1
 ```
@@ -35,5 +25,5 @@ tar -xzf /tmp/openjdk.tar.gz -C "${JAVA_HOME}" --strip-components=1
 cd /mnt/rusty-jvm/tests/test_data
 ```
 ```bash
-CARGO_TARGET_DIR=../../target/s390x-unknown-linux-gnu cargo test
+CARGO_TARGET_DIR=/tmp/target/s390x-unknown-linux-gnu cargo test
 ```
