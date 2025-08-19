@@ -70,7 +70,6 @@ impl<V> AutoDashMap<V> for AutoDashMapI64<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
     use serde_json;
     use serde_json::json;
 
