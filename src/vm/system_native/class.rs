@@ -266,11 +266,11 @@ fn get_declared_fields(class_ref: i32, public_only: bool) -> Result<i32> {
 
 pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let class_ref = args[0];
-    let _public_only = args[1]; //todo: implement public only
-    let methods_ref = get_declared_methods(class_ref)?;
+    let public_only = args[1] != 0;
+    let methods_ref = get_declared_methods(class_ref, public_only)?;
     Ok(vec![methods_ref])
 }
-fn get_declared_methods(class_ref: i32) -> Result<i32> {
+fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
     let java_methods = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
         let jc = method_area.get(&class_name)?;
@@ -279,10 +279,17 @@ fn get_declared_methods(class_ref: i32) -> Result<i32> {
 
     let method_refs = java_methods
         .iter()
-        .filter(|java_method| {
-            (java_method.name() != "<init>") && (java_method.name() != "<clinit>")
+        .filter_map(|java_method| {
+            if (java_method.name() == "<init>") || (java_method.name() == "<clinit>") {
+                return None; // Skip constructors and static initializers
+            }
+
+            if public_only && (java_method.access_flags() as u16 & PUBLIC) == 0 {
+                return None; // Skip non-public methods
+            }
+
+            Some(java_method.reflection_ref())
         })
-        .map(|java_method| java_method.reflection_ref())
         .collect::<Result<Vec<_>>>()?;
 
     let result_ref = with_heap_write_lock(|heap| {
