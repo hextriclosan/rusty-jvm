@@ -6,7 +6,7 @@
 //! Currently supports a range of Java language features up to Java 23 (excluding GC and threading for now).
 //!
 //! ## Features
-//! Refer to the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/main/README.md#implemented-key-features)
+//! Refer to the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.4.0/README.md#implemented-key-features)
 //!
 //! ## Usage
 //!
