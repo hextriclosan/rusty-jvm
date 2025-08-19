@@ -178,10 +178,11 @@ record Soldier(String name, String phrase, int damageValue) implements TalkingUn
 If everything is set up correctly, you should see:
 
 ```
-Assassin: Target acquired.
-Archer: Ready to fire.
-Unnamed Unit: Where am I?
-Army attack power is 60
+Assassin(100) says: Target acquired.
+Assassin(110) says: Target acquired.
+Unknown Unit(7) says: Arrr!
+Soldier[name=Soldier, phrase=For honor!, damageValue=11]
+Army attack power is 230
 ```
 
 ## License
