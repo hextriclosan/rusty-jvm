@@ -1115,7 +1115,7 @@ fn should_support_getting_declared_methods() {
     assert_success(
         "samples.reflection.trivial.declaredmethods.DeclaredMethodsExample",
         r#"Class: samples.reflection.trivial.declaredmethods.DeclaredMethodsExample
-All declared method:
+All declared methods:
 Information about method:sampleMethod
 ------------------------------------------------
 String representation:private native java.lang.String[] samples.reflection.trivial.declaredmethods.DeclaredMethodsExample.sampleMethod(java.lang.String,int,double[]) throws java.io.IOError,java.lang.NullPointerException

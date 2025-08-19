@@ -14,7 +14,7 @@ public class DeclaredMethodsExample {
         Class<?> clazz = DeclaredMethodsExample.class;
 
         System.out.println("Class: " + clazz.getName());
-        System.out.println("All declared method:");
+        System.out.println("All declared methods:");
         print(clazz.getDeclaredMethods());
 
         System.out.println();
