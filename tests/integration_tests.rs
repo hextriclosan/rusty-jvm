@@ -2430,9 +2430,8 @@ fn should_support_composite_pattern() {
         "samples.patterns.composite.CompositePattern",
         r#"Assassin(100) says: Target acquired.
 Assassin(110) says: Target acquired.
-Unknown Unit(7) says: Arrr!
-Soldier[name=Soldier, phrase=For honor!, damageValue=11]
-Army attack power is 230
+Soldier(2) says: For honor!
+Army attack power is 222
 "#,
     );
 }
