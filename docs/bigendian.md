@@ -4,8 +4,8 @@
 ```bash
 docker run -it --platform=linux/s390x -v <PROJECT_DIR>:/mnt/rusty-jvm --entrypoint /bin/bash s390x/rust
 ```
-
-## Download compatible Java Core classes
+## Inside the Docker Container
+### Download JDK with the Compatible Core Classes
 ```shell
 apt-get update
 apt-get install -y --no-install-recommends curl
@@ -20,10 +20,8 @@ mkdir -p "${JAVA_HOME}"
 tar -xzf /tmp/openjdk.tar.gz -C "${JAVA_HOME}" --strip-components=1
 ```
 
-## Run Integration Tests Inside the Docker Container
+### Run Integration Tests
 ```bash
 cd /mnt/rusty-jvm/tests/test_data
-```
-```bash
 CARGO_TARGET_DIR=/tmp/target/s390x-unknown-linux-gnu cargo test
 ```
