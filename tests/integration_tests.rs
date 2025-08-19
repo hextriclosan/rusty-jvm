@@ -2428,10 +2428,11 @@ Lambda Result: User-123
 fn should_support_composite_pattern() {
     assert_success(
         "samples.patterns.composite.CompositePattern",
-        r#"Assassin: Target acquired.
-Archer: Ready to fire.
-Unnamed Unit: Where am I?
-Army attack power is 60
+        r#"Assassin(100) says: Target acquired.
+Assassin(110) says: Target acquired.
+Unknown Unit(7) says: Arrr!
+Soldier[name=Soldier, phrase=For honor!, damageValue=11]
+Army attack power is 230
 "#,
     );
 }

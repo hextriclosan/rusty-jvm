@@ -59,23 +59,18 @@ package samples.patterns.composite;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 public class CompositePattern {
     public static void main(String[] args) {
-        Unit eliteSquad = new UnitGroup(new Assassin(), new Archer());
+        UnitGroup eliteSquad = new UnitGroup(new Assassin(50));
+        eliteSquad.addUnits(new Assassin(55));
         Unit namelessSquad = new UnitGroup(
                 () -> 2,
-                new AbstractUnit() {
-                    @Override
-                    protected String phrase() {
-                        return "Where am I?";
-                    }
-
-                    @Override
-                    public int damage() {
-                        return 1;
-                    }
-                });
+                new AbstractUnit(7) {
+                },
+                new Soldier("Soldier", "For honor!", 11));
 
         Unit army = new UnitGroup(eliteSquad, namelessSquad);
         System.out.println("Army attack power is " + army.damage());
@@ -86,44 +81,60 @@ interface Unit {
     int damage();
 }
 
-abstract class AbstractUnit implements Unit {
-    protected AbstractUnit() {
-        System.out.println(getIntroMessage());
+interface TalkingUnit extends Unit {
+    int damageValue();
+
+    default int attack() {
+        System.out.println(this);
+        return damageValue();
     }
 
-    protected String getName() {
-        String name = getClass().getSimpleName();
-        return !name.isEmpty() ? name : "Unnamed Unit";
+    @Override
+    default int damage() {
+        return attack();
+    }
+}
+
+abstract class AbstractUnit implements TalkingUnit {
+    private final String name;
+    private final String phrase;
+    private final int damageValue;
+
+    protected AbstractUnit(String name, String phrase, int damageValue) {
+        this.name = Optional.ofNullable(name).orElseGet(this::getDefaultName);
+        this.phrase = Objects.requireNonNullElse(phrase, "Arrr!");
+        this.damageValue = damageValue;
     }
 
-    protected abstract String phrase();
+    protected AbstractUnit(int damageValue) {
+        this(null, null, damageValue);
+    }
 
-    private String getIntroMessage() {
-        return getName() + ": " + phrase();
+    private String getDefaultName() {
+        return Optional.of(getClass().getSimpleName())
+                .filter(s -> !s.isBlank())
+                .orElse("Unknown Unit");
+    }
+
+    @Override
+    public int damageValue() {
+        return damageValue;
+    }
+
+    @Override
+    public String toString() {
+        return name + "(" + damageValue() + ") says: " + phrase;
     }
 }
 
 class Assassin extends AbstractUnit {
-    @Override
-    public int damage() {
-        return 45;
+    public Assassin(int damageValue) {
+        super(null, "Target acquired.", damageValue);
     }
 
     @Override
-    protected String phrase() {
-        return "Target acquired.";
-    }
-}
-
-class Archer extends AbstractUnit {
-    @Override
-    public int damage() {
-        return 12;
-    }
-
-    @Override
-    protected String phrase() {
-        return "Ready to fire.";
+    public int damageValue() {
+        return super.damageValue() * 2; // Assassins deal extra damage
     }
 }
 
@@ -144,6 +155,9 @@ class UnitGroup implements Unit {
                 .mapToInt(Unit::damage)
                 .sum();
     }
+}
+
+record Soldier(String name, String phrase, int damageValue) implements TalkingUnit {
 }
 ```
 
