@@ -80,9 +80,7 @@ interface Unit {
 
 interface TalkingUnit extends Unit {
     String name();
-
     String phrase();
-
     int damageValue();
 
     @Override
