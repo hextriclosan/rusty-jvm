@@ -8,7 +8,7 @@ pub(crate) fn current_thread_wrp(_args: &[i32]) -> Result<Vec<i32>> {
 }
 fn current_thread() -> Result<i32> {
     let thread_id = with_method_area(|method_area| {
-        method_area.system_thread_id() // since we do not spawn threads, primordial system thread returned here
+        method_area.system_thread_id() // since we do not spawn threads, primordial system thread is returned here
     })?;
     Ok(thread_id)
 }
