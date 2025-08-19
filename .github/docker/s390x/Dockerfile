@@ -9,8 +9,8 @@ ARG JAVA_CHECKSUM="591ccf4d27016315700cc9cc979f7cf343900b6bee1b0b45c93f2c5f946e5
 ARG JAVA_MAJOR="23"
 
 # Set environment variables that will persist in the final image
-ENV JAVA_HOME /opt/java
-ENV PATH $JAVA_HOME/bin:$PATH
+ENV JAVA_HOME=/opt/java
+ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Download, verify, extract, and clean up in a single RUN command to optimize layers
 RUN set -eux; \
