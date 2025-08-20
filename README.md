@@ -214,4 +214,3 @@ Army attack power is 222
 [java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/reflect/package-summary.html
 [java.util.zip-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/zip/package-summary.html
 [java.lang.system-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/System.html
-[java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/reflect/package-summary.html
