@@ -1,3 +1,11 @@
+# 0.4.0
+
+## What's Changed
+* Native methods `System.nanoTime()`, `Class.getDeclaredMethod(...)`, `Class.getDeclaredConstructor(...)`, `Class.getMethods()`, `Class.getFields()`
+* Support for `invokedynamic` instruction and `java.lang.invoke` package (including support for lambdas, stream API, records)
+* Basic support of `java.util.zip` package
+
+
 # 0.3.0
 
 ## What's Changed

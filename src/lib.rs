@@ -1,29 +1,41 @@
 //! # Rusty JVM
 //!
-//! A JVM interpreter written in Rust from scratch — no dependency on existing JVMs.
+//! A Java Virtual Machine (JVM) interpreter written in Rust from scratch — with no dependency on existing JVMs.
 //!
 //! `rusty-jvm` executes Java bytecode in interpreted mode and aims to support as much of the Java language as possible.
-//! Currently supports a range of Java language features up to Java 23 (excluding GC and lambdas for now).
+//! It currently supports a broad set of language features up to Java 23, with garbage collection and multithreading planned for future releases.
 //!
 //! ## Features
-//! Refer to the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/main/README.md#implemented-key-features)
+//! See the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.4.0/README.md#implemented-key-features) for the full list of implemented features.
 //!
 //! ## Usage
 //!
-//! ### Creating a simple Java program
-//! ###### Windows
-//! ```bash
+//! ### Step 1: Create a simple Java program
+//! Create a file named `Hello.java` with the following content:
+//! ```java
+//! public class Hello {
+//!     public static void main(String[] args) {
+//!         System.out.println("Hello, world!");
+//!     }
+//! }
+//! ```
+//!
+//! #### Shortcut (one-liner)
+//! On Windows (cmd):
+//! ```shell
 //! echo public class Hello { public static void main(String[] args) { System.out.println("Hello, world!"); } } > Hello.java
 //! ```
-//! ###### Unix-like systems
+//! On Unix-like systems:
 //! ```bash
 //! echo 'public class Hello { public static void main(String[] args) { System.out.println("Hello, world!"); } }' > Hello.java
 //! ```
-//! ### Compiling the Java program (current supported version is Java 23)
+//!
+//! ### Step 2: Compile the Java program (currently tested with Java 23)
 //! ```bash
 //! javac Hello.java
 //! ```
-//! ### Running the compiled Java program with Rusty JVM
+//!
+//! ### Step 3: Run the compiled Java program with Rusty JVM
 //! ```bash
 //! rusty-jvm Hello
 //! ```

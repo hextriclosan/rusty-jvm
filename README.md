@@ -9,27 +9,30 @@
 
 ## Introduction
 
-Writing a JVM has long been a dream of mine, so I decided to give it a try combining my curiosity about how suitable Rust is for such a task with my desire to see how far I could push it.
-I'm not the first to explore this idea [this project][rjvm-articles] is a well-known and easily searchable example but unlike that project, I aim to create a JVM capable of running as much Java code as possible.
-I have to say, I didn’t expect to get this far.
-Java code is run in interpreted mode, meaning the JVM reads and executes bytecode instructions directly without compiling them to native code, so please don't expect high performance.
-There is no dependency on any existing JVM implementation. Everything related to Java is implemented from scratch.
-One major feature that’s still missing is garbage collection. That’s the next big milestone.
+This project is a Java Virtual Machine (JVM) implemented in Rust, built to run Java programs independently of existing JVMs.
+Everything related to Java is implemented from scratch.
+The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone. 
+The next major objectives include the integration of garbage collection and support for multithreading.
 
 ## Implemented Key Features
 
-- 99% of actual opcodes ([JVMS §6][jvms-6])
+- 100% of actual opcodes ([JVMS §6][jvms-6])
+- Lambda Expressions ([JLS §15.27][jls-15.27])
 - Static initialization ([JVMS §5.5][jvms-5.5])
 - Polymorphic models ([JLS §8.4.8][jls-8.4.8])
 - Single- and multi-dimensional arrays ([JLS §10][jls-10])
 - Exceptions ([JLS §11][jls-11])
-- [java.io][java.io-api] (partially)
-- [java.nio][java.nio-api] (partially)
+- Record Classes ([JVMS §8.10][jls-8.10])
 - Type casting ([JLS §5.5][jls-5.5])
 - Program arguments ([JLS §12.1.4][jls-12.1.4])
-- [java.lang.System][java.lang.system-api] (most features)
-- [Reflection][java.lang.reflect-api] (some features)
 - Assertions ([JLS §14.10][jls-14.10])
+- [Dynamic Language Support][java.lang.invoke-api] (partially)
+- [Stream API][java.util.stream-api] (partially)
+- [Reflection][java.lang.reflect-api] (some features)
+- [java.io][java.io-api] (partially)
+- [java.nio][java.nio-api] (partially)
+- [java.util.zip][java.util.zip-api] (partially)
+- [java.lang.System][java.lang.system-api] (most features)
 
 See [integration tests](tests/test_data) for broader examples of supported Java features.
 
@@ -194,17 +197,20 @@ Army attack power is 222
 [dep-status-image]: https://deps.rs/repo/github/hextriclosan/rusty-jvm/status.svg
 [dep-status-link]: https://deps.rs/repo/github/hextriclosan/rusty-jvm
 
-[rjvm-articles]: https://andreabergia.com/series/writing-a-jvm-in-rust/
-
 [jvms-5.5]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html#jvms-5.5
 [jvms-6]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html
 [jls-5.5]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-5.html#jls-5.5
 [jls-8.4.8]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-8.html#jls-8.4.8
+[jls-8.10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-8.html#jls-8.10
 [jls-10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-10.html
 [jls-11]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-11.html
 [jls-12.1.4]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-12.html#jls-12.1.4
 [jls-14.10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-14.html#jls-14.10
+[jls-15.27]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.27
+[java.util.stream-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/stream/package-summary.html
 [java.io-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/io/package-summary.html
 [java.nio-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/nio/package-summary.html
-[java.lang.system-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/System.html
+[java.lang.invoke-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/invoke/package-summary.html
 [java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/reflect/package-summary.html
+[java.util.zip-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/zip/package-summary.html
+[java.lang.system-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/System.html
