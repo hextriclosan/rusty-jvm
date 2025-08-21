@@ -10,7 +10,7 @@ use std::fs::File;
 use std::sync::{LazyLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-static HEAP: LazyLock<RwLock<Heap>> = LazyLock::new(RwLock::default);
+static HEAP: LazyLock<RwLock<Heap>> = LazyLock::new(|| RwLock::new(Heap::new(1)));
 
 pub(crate) fn with_heap_read_lock<F, R>(f: F) -> R
 where
@@ -35,6 +35,13 @@ pub(crate) struct Heap {
 }
 
 impl Heap {
+    pub fn new(start_from_id: i32) -> Self {
+        Self {
+            data: AutoDashMapI32::new(start_from_id),
+            ref_by_stringvalue: HashMap::new(),
+        }
+    }
+
     pub fn create_instance(&mut self, java_instance: JavaInstance) -> i32 {
         self.data.insert_auto(Object(java_instance))
     }
