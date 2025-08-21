@@ -28,10 +28,19 @@ where
     f(&mut heap)
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize)]
 pub(crate) struct Heap {
     data: AutoDashMapI32<HeapValue>,
     ref_by_stringvalue: HashMap<String, i32>,
+}
+
+impl Default for Heap {
+    fn default() -> Self {
+        Self {
+            data: AutoDashMapI32::new(1), // start from 1 to avoid 0 as a valid reference
+            ref_by_stringvalue: HashMap::new(),
+        }
+    }
 }
 
 impl Heap {
