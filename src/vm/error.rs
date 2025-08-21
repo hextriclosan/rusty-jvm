@@ -8,7 +8,6 @@ use num_enum::TryFromPrimitiveError;
 use std::error::Error as StdError;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
-use std::num::TryFromIntError;
 use std::string::{FromUtf16Error, FromUtf8Error};
 use std::sync::PoisonError;
 use std::time::SystemTimeError;
@@ -140,12 +139,6 @@ impl From<OsString> for Error {
 impl From<MZError> for Error {
     fn from(error: MZError) -> Self {
         Error::new_execution(&format!("MZError: {error:?}"))
-    }
-}
-
-impl From<TryFromIntError> for Error {
-    fn from(error: TryFromIntError) -> Self {
-        Error::new_execution(&format!("TryFromIntError: {error:?}"))
     }
 }
 
