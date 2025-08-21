@@ -44,7 +44,6 @@ impl Default for Heap {
 }
 
 impl Heap {
-
     pub fn create_instance(&mut self, java_instance: JavaInstance) -> i32 {
         self.data.insert_auto(Object(java_instance))
     }
