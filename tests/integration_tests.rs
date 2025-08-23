@@ -2572,3 +2572,11 @@ Level 9, Compressed size: 76, Compression ratio: 0.21714285714285714%, Decompres
 "#,
     );
 }
+
+#[test]
+fn should_invoke_constructor_via_reflection() {
+    assert_success(
+        "samples.reflection.directconstructorhandleaccessor.DirectConstructorHandleAccessorExample",
+        "Target{byteField=-128, booleanField=true, shortField=-32768, charField=ї, intField=2000000000, floatField=3.14, longField=-9223372036854775808, doubleField=3.141592653589793, stringField='seven', objectField=[1, 2, 3], mapField={8=eight}}\n",
+    );
+}
