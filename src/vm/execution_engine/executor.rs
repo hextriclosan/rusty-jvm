@@ -108,13 +108,15 @@ impl Executor {
     }
 
     fn set_stack_arguments(stack_frame: &mut StackFrame, args: &[StackValueKind]) -> Result<()> {
-        for (i, arg) in args.iter().enumerate() {
+        let mut chunk_index = 0;
+        for arg in args.iter() {
             match arg {
-                StackValueKind::I32(value) => stack_frame.set_local(i, *value),
-                StackValueKind::I64(value) => stack_frame.set_local(i, *value),
-                StackValueKind::F32(value) => stack_frame.set_local(i, *value),
-                StackValueKind::F64(value) => stack_frame.set_local(i, *value),
+                StackValueKind::I32(value) => stack_frame.set_local(chunk_index, *value),
+                StackValueKind::I64(value) => stack_frame.set_local(chunk_index, *value),
+                StackValueKind::F32(value) => stack_frame.set_local(chunk_index, *value),
+                StackValueKind::F64(value) => stack_frame.set_local(chunk_index, *value),
             }
+            chunk_index += arg.chunks();
         }
 
         Ok(())

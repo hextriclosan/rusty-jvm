@@ -10,6 +10,15 @@ pub enum StackValueKind {
     F64(f64),
 }
 
+impl StackValueKind {
+    pub fn chunks(&self) -> usize {
+        match self {
+            StackValueKind::I32(_) | StackValueKind::F32(_) => 1,
+            StackValueKind::I64(_) | StackValueKind::F64(_) => 2,
+        }
+    }
+}
+
 impl From<i32> for StackValueKind {
     fn from(value: i32) -> Self {
         StackValueKind::I32(value)

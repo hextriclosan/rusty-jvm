@@ -31,7 +31,7 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_natives_init_wrp, method_handle_natives_object_field_offset_wrp,
     method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
     method_handle_natives_static_field_offset_wrp, native_accessor_invoke0_wrp,
-    set_call_site_target_normal_wrp,
+    native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
 };
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
@@ -633,6 +633,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
         Basic(native_accessor_invoke0_wrp),
+    );
+    table.insert(
+        "jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
+        Basic(native_accessor_newinstance0_wrp),
     );
     table.insert(
         "java/util/zip/Deflater:init:(IIZ)J",
