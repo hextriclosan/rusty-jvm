@@ -520,6 +520,8 @@ fn should_do_trivial_reflection() {
   isEnum: false
   isAnnotation: false
   isSynthetic: false
+  isRecord: false
+  isEnumeration: false
 Class: class java.lang.Object
   modifiers: 1
   isPrimitive: false
@@ -528,6 +530,8 @@ Class: class java.lang.Object
   isEnum: false
   isAnnotation: false
   isSynthetic: false
+  isRecord: false
+  isEnumeration: false
 Class: class samples.reflection.trivial.Examinee
   modifiers: 1024
   isPrimitive: false
@@ -536,6 +540,8 @@ Class: class samples.reflection.trivial.Examinee
   isEnum: false
   isAnnotation: false
   isSynthetic: false
+  isRecord: false
+  isEnumeration: false
 Class: interface samples.reflection.trivial.ExamineeInterface
   modifiers: 1536
   isPrimitive: false
@@ -544,6 +550,28 @@ Class: interface samples.reflection.trivial.ExamineeInterface
   isEnum: false
   isAnnotation: false
   isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.Enm
+  modifiers: 16400
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: true
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: true
+Class: int
+  modifiers: 1041
+  isPrimitive: true
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
 "#,
     );
 }
