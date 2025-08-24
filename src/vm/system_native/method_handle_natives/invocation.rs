@@ -257,7 +257,7 @@ fn invoke_exact_method(
                         )
                     })
             }).ok_or_else(|| Error::new_constant_pool(&format!(
-                "Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_method_signature} getting virtual_method"
+                "invoke_exact_method: Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_method_signature} getting virtual_method"
             )))?;
 
             (Arc::clone(&java_method), method_args.to_owned())

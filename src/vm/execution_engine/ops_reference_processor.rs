@@ -120,41 +120,41 @@ pub(crate) fn process(
         }
         INVOKEVIRTUAL => {
             store_ex_pc(stack_frames)?;
-            let (_, full_signature, method_signature) = get_class_name_and_signature(
-                stack_frames,
-                current_class_name,
-                CPoolHelper::get_full_method_info,
-            )?;
+            let (class_name_by_ref_type, full_signature, method_signature) =
+                get_class_name_and_signature(
+                    stack_frames,
+                    current_class_name,
+                    CPoolHelper::get_full_method_info,
+                )?;
             let method_descriptor = method_signature.parse()?;
             let method_args = prepare_invoke_context(stack_frames, &method_descriptor, true)?;
             let reference = method_args
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
-            let instance_type_class_name =
+            let class_name_by_instance =
                 with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
 
-            let java_method = with_method_area(|method_area| {
+            let exact_implementation = with_method_area(|method_area| {
                 method_area
-                    .lookup_for_implementation(&instance_type_class_name, &full_signature) // first looking for method in parent and above classes
+                    .lookup_for_implementation(&class_name_by_instance, &full_signature) // first looking for method in parent and above classes
                     .or_else(|| { // if not found, looking for default method implementation in interfaces
                         method_area.lookup_for_implementation_interface(
-                            &instance_type_class_name,
+                            &class_name_by_instance,
                             &full_signature,
                         )
                     })
             }).ok_or_else(|| Error::new_constant_pool(&format!(
-                "Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_signature} getting virtual_method"
+                "Error getting instance type JavaMethod by class name {class_name_by_instance} and full signature {full_signature} getting virtual_method"
             )))?;
 
-            let class_name = java_method.class_name();
             invoke(
                 stack_frames,
                 &full_signature,
                 &method_args,
-                Arc::clone(&java_method),
-                class_name,
+                Arc::clone(&exact_implementation),
+                &class_name_by_instance,
             )?;
-            trace!("INVOKEVIRTUAL -> {class_name}.{full_signature}({method_args:?})");
+            trace!("INVOKEVIRTUAL -> invoked {class_name_by_instance}.{full_signature}({method_args:?}) via {class_name_by_ref_type}.{full_signature}");
         }
         INVOKESPECIAL => {
             store_ex_pc(stack_frames)?;
