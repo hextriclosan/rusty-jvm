@@ -19,7 +19,7 @@ public class PrintStreamExample {
             ps.println("Third Line");
         }
 
-//         https://github.com/hextriclosan/rusty-jvm/issues/127 // Native method jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object; not found
+//      Exception in thread \"system\" java.util.MissingResourceException: Can\'t find bundle for base name sun.text.resources.FormatData, locale format.language_value_FORMAT.COUNTRY_VALUE_format.variant_VALUE_#Format.script_value\r
 //         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
 //             ps.printf("Hello %s, you are %d years old.%n", "Alice", 30);
 //         }
@@ -34,7 +34,7 @@ public class PrintStreamExample {
             ps.println();
         }
 
-//         Native Call Error: Native method jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object; not found
+//      Exception in thread \"system\" java.util.MissingResourceException: Can\'t find bundle for base name sun.text.resources.FormatData, locale format.language_value_FORMAT.COUNTRY_VALUE_format.variant_VALUE_#Format.script_value\r
 //         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
 //             ps.println(new Person("John", 25));
 //         }
