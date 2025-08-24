@@ -510,7 +510,70 @@ fn should_do_trivial_properties() {
 
 #[test]
 fn should_do_trivial_reflection() {
-    assert_success("samples.reflection.trivial.TrivialReflection", "2578\n");
+    assert_success(
+        "samples.reflection.trivial.TrivialReflection",
+        r#"Class: class java.lang.Class
+  modifiers: 17
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class java.lang.Object
+  modifiers: 1
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.Examinee
+  modifiers: 1024
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: interface samples.reflection.trivial.ExamineeInterface
+  modifiers: 1536
+  isPrimitive: false
+  isArray: false
+  isInterface: true
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.Enm
+  modifiers: 16400
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: true
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: true
+Class: int
+  modifiers: 1041
+  isPrimitive: true
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+"#,
+    );
 }
 
 #[test]

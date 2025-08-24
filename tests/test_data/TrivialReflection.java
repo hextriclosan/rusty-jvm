@@ -2,17 +2,26 @@ package samples.reflection.trivial;
 
 public class TrivialReflection {
     public static void main(String[] args) {
-        Class<Class> clazz1 = Class.class;
-        Class<Object> clazz2 = Object.class;
-        Class<Examinee> clazz3 = Examinee.class;
-        Class<ExamineeInterface> clazz4 = ExamineeInterface.class;
-        int modifiers1 = clazz1.getModifiers();
-        int modifiers2 = clazz2.getModifiers();
-        int modifiers3 = clazz3.getModifiers();
-        int modifiers4 = clazz4.getModifiers();
+        print(Class.class);
+        print(Object.class);
+        print(Examinee.class);
+        print(ExamineeInterface.class);
+        // print(Rcd.class); // Native Call Error: Native method java/lang/Class:isRecord0:()Z
+        print(Enm.class);
+        print(int.class);
+    }
 
-        int result = modifiers1 + modifiers2 + modifiers3 + modifiers4;
-        System.out.println(result);
+    private static void print(Class<?> clazz) {
+        System.out.println("Class: " + clazz);
+        System.out.println("  modifiers: " + clazz.getModifiers());
+        System.out.println("  isPrimitive: " + clazz.isPrimitive());
+        System.out.println("  isArray: " + clazz.isArray());
+        System.out.println("  isInterface: " + clazz.isInterface());
+        System.out.println("  isEnum: " + clazz.isEnum());
+        System.out.println("  isAnnotation: " + clazz.isAnnotation());
+        System.out.println("  isSynthetic: " + clazz.isSynthetic());
+        System.out.println("  isRecord: " + clazz.isRecord());
+        System.out.println("  isEnumeration: " + clazz.isEnum());
     }
 }
 
@@ -20,4 +29,10 @@ abstract class Examinee {
 }
 
 interface ExamineeInterface {
+}
+
+record Rcd() {
+}
+
+enum Enm {
 }
