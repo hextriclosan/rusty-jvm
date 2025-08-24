@@ -147,14 +147,15 @@ pub(crate) fn process(
                 "Error getting instance type JavaMethod by class name {class_name_by_instance} and full signature {full_signature} getting virtual_method"
             )))?;
 
+            let class_name = exact_implementation.class_name();
             invoke(
                 stack_frames,
                 &full_signature,
                 &method_args,
                 Arc::clone(&exact_implementation),
-                &class_name_by_instance,
+                &class_name,
             )?;
-            trace!("INVOKEVIRTUAL -> invoked {class_name_by_instance}.{full_signature}({method_args:?}) via {class_name_by_ref_type}.{full_signature}");
+            trace!("INVOKEVIRTUAL -> invoked {class_name}.{full_signature}({method_args:?}) via {class_name_by_ref_type}.{full_signature}");
         }
         INVOKESPECIAL => {
             store_ex_pc(stack_frames)?;
