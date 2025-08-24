@@ -10,7 +10,7 @@ public class UnsafePutReferenceVolatileExample {
 
     public static void main(String[] args) {
         Long[] longs = new Long[3];
-        int baseOffset = U.arrayBaseOffset(Long[].class);
+        long baseOffset = U.arrayBaseOffset(Long[].class);
         int indexScale = U.arrayIndexScale(Long[].class);
 
         for (int index = 0; index < longs.length; index++) {

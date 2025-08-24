@@ -13,7 +13,7 @@ public class UnsafeGetLongUnalignedExample {
             5785795392284602925L,  // { 45, 50, 55, 60, 65, 70, 75, 80 } in little-endian
         };
 
-        final int offset = U.ARRAY_LONG_BASE_OFFSET;
+        final long offset = U.ARRAY_LONG_BASE_OFFSET;
         for (int i = 0; i < 9; ++i) {
             System.out.println(U.getLongUnaligned(array, offset + i));
         }
