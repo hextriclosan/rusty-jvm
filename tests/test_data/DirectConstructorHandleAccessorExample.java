@@ -8,6 +8,7 @@ import java.util.Map;
 public class DirectConstructorHandleAccessorExample {
     public static void main(String[] args) throws Exception {
         constructAndPrint();
+        constructWithNullAndPrint();
     }
 
     private static void constructAndPrint() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchMethodException {
@@ -44,6 +45,13 @@ public class DirectConstructorHandleAccessorExample {
                 Map.of("8", "eight"));
         System.out.println(target);
     }
+
+    private static void constructWithNullAndPrint() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchMethodException {
+        Constructor<Target> targetConstructor = Target.class.getDeclaredConstructor();
+        targetConstructor.setAccessible(true);
+        Target target = targetConstructor.newInstance((Object[])null);
+        System.out.println(target);
+    }
 }
 
 final class Target {
@@ -59,7 +67,7 @@ final class Target {
     private final Object objectField;
     private final Map<String, String> mapField;
 
-    Target(byte byteField, boolean booleanField, short shortField, char charField, int intField, float floatField, long longField, double doubleField, String stringField, Object objectField, Map<String, String> mapField) {
+    private Target(byte byteField, boolean booleanField, short shortField, char charField, int intField, float floatField, long longField, double doubleField, String stringField, Object objectField, Map<String, String> mapField) {
         this.byteField = byteField;
         this.booleanField = booleanField;
         this.shortField = shortField;
@@ -71,6 +79,20 @@ final class Target {
         this.stringField = stringField;
         this.objectField = objectField;
         this.mapField = mapField;
+    }
+
+    private Target() {
+        this(Byte.MAX_VALUE,
+                             true,
+                             Short.MAX_VALUE,
+                             'є',
+                             Integer.MAX_VALUE,
+                             1.337f,
+                             Long.MAX_VALUE,
+                             Math.PI,
+                             "seventy",
+                             List.of(10, 20, 30),
+                             Map.of("80", "eighty"));
     }
 
     @Override

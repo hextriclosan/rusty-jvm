@@ -54,7 +54,11 @@ fn resolve_method_and_args(
             "parameterTypes",
         )?[0];
 
-        let entire_array_args = heap.get_entire_array(args_ref)?;
+        let entire_array_args = if args_ref != 0 {
+            heap.get_entire_array(args_ref)?
+        } else {
+            Array::new("[Ljava/lang/Object;", 0)
+        };
         let parameter_types = heap.get_entire_array(parameter_types_ref)?;
 
         Ok::<(i32, i32, Array, Array), Error>((
