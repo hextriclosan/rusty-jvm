@@ -104,7 +104,7 @@ public class UnsafeUsage {
         Examinee three = new Examinee();
         Examinee[] examinees = new Examinee[]{one, two, three};
         int index = 1;
-        int arrayBaseOffset = U.arrayBaseOffset(Examinee[].class);
+        long arrayBaseOffset = U.arrayBaseOffset(Examinee[].class);
         int scale = U.arrayIndexScale(Examinee[].class);
         if ((scale & (scale - 1)) != 0) {
             throw new RuntimeException("array index scale not a power of two");
