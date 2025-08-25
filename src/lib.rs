@@ -49,8 +49,7 @@ pub use vm::run;
 #[get = "pub"]
 /// Represents the command-line arguments for the Java program.
 pub struct Arguments {
-    /// The entry point for the Java program.  
-    /// This may be empty when running in install or purge mode.
+    /// The entry point for the Java program (e.g. `com.example.Main`).
     entry_point: String,
     /// The arguments passed to the Java program.
     program_args: Vec<String>,
