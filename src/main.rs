@@ -19,6 +19,7 @@ fn main() {
                 .allow_hyphen_values(true),
         )
         .override_help(help_msg())
+        .version(env!("CARGO_PKG_VERSION"))
         .get_matches();
 
     let raw_args = matches

@@ -2338,9 +2338,24 @@ Options:
     --<option>        Java launcher options
     -<option>         Java standard options
     -h, --help        Show this help message
+    -V, --version     Show version information
 "#;
     utils::assert_with_all_args(
         &["--help"],
+        "",
+        &[],
+        expected_stdout,
+        "",
+        utils::ExecutionResult::Success,
+    );
+}
+
+#[cfg(not(windows))] // todo: fix this test on Windows
+#[test]
+fn should_print_version_message() {
+    let expected_stdout = "rusty-jvm 0.4.0\n";
+    utils::assert_with_all_args(
+        &["--version"],
         "",
         &[],
         expected_stdout,
