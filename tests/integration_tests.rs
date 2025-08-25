@@ -2338,6 +2338,7 @@ Options:
     --<option>        Java launcher options
     -<option>         Java standard options
     -h, --help        Show this help message
+    -V, --version     Show version information
 "#;
     utils::assert_with_all_args(
         &["--help"],
