@@ -23,6 +23,11 @@ public class UnsafeUsage {
         putInt();
         putIntVolatile();
         putLong();
+        setGetByteArray();
+        setGetShortArray();
+        setGetCharArray();
+        setGetIntArray();
+        setGetLongArray();
     }
 
     private static void isBigEndian() {
@@ -103,14 +108,7 @@ public class UnsafeUsage {
         Examinee two = new Examinee();
         Examinee three = new Examinee();
         Examinee[] examinees = new Examinee[]{one, two, three};
-        int index = 1;
-        long arrayBaseOffset = U.arrayBaseOffset(Examinee[].class);
-        int scale = U.arrayIndexScale(Examinee[].class);
-        if ((scale & (scale - 1)) != 0) {
-            throw new RuntimeException("array index scale not a power of two");
-        }
-        int arrayShift = 31 - Integer.numberOfLeadingZeros(scale);
-        long offset = ((long) index << arrayShift) + arrayBaseOffset;
+        long offset = getArrayOffset(Examinee[].class, 1);
         Examinee item = (Examinee) U.getReferenceAcquire(examinees, offset);
         System.out.println("examinees[1] got by offset is `two`: " + (item == two));
 
@@ -192,6 +190,62 @@ public class UnsafeUsage {
 
         U.putLong(examinee, longFieldOffset, 128_849_018_920L);
         System.out.println("putLong on field examinee.field5: currentValue=" + examinee.field5);
+    }
+
+    private static void setGetByteArray() {
+        long offset = getArrayOffset(byte[].class, 5);
+        byte[] bytes = new byte[11];
+        U.putByte(bytes, offset, (byte) 100);
+        System.out.println(Arrays.toString(bytes));
+        byte b = U.getByte(bytes, offset);
+        System.out.println("byte at index 5 is: " + b);
+    }
+
+    private static void setGetShortArray() {
+        long offset = getArrayOffset(short[].class, 5);
+        short[] shorts = new short[11];
+        U.putShort(shorts, offset, (short) 10000);
+        System.out.println(Arrays.toString(shorts));
+        short s = U.getShort(shorts, offset);
+        System.out.println("short at index 5 is: " + s);
+    }
+
+    private static void setGetCharArray() {
+        long offset = getArrayOffset(char[].class, 5);
+        char[] chars = new char[]{'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'};
+        U.putChar(chars, offset, 'b');
+        System.out.println(Arrays.toString(chars));
+        char c = U.getChar(chars, offset);
+        System.out.println("char at index 5 is: " + c);
+    }
+
+    private static void setGetIntArray() {
+        long offset = getArrayOffset(int[].class, 5);
+        int[] ints = new int[11];
+        U.putInt(ints, offset, 1_000_000_000);
+        System.out.println(Arrays.toString(ints));
+        int i = U.getInt(ints, offset);
+        System.out.println("int at index 5 is: " + i);
+    }
+
+    private static void setGetLongArray() {
+        long offset = getArrayOffset(long[].class, 5);
+        long[] longs = new long[11];
+        U.putLong(longs, offset, 1_000_000_000_000L);
+        System.out.println(Arrays.toString(longs));
+        long l = U.getLong(longs, offset);
+        System.out.println("long at index 5 is: " + l);
+    }
+
+    private static long getArrayOffset(Class<?> clazz, int index) {
+        long arrayBaseOffset = U.arrayBaseOffset(clazz);
+        int scale = U.arrayIndexScale(clazz);
+        if ((scale & (scale - 1)) != 0) {
+            throw new RuntimeException("array index scale not a power of two");
+        }
+        int arrayShift = 31 - Integer.numberOfLeadingZeros(scale);
+        long offset = ((long) index << arrayShift) + arrayBaseOffset;
+        return offset;
     }
 }
 

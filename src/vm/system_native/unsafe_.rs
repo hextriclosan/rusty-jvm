@@ -18,6 +18,7 @@ enum ValueType {
     Byte,
     Int,
     Long,
+    Short,
 }
 
 pub(crate) fn object_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -229,6 +230,31 @@ pub(crate) fn get_short(obj_ref: i32, offset: i64) -> Result<i16> {
     }
 }
 
+pub(crate) fn get_char_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+
+    let char = get_char(obj_ref, offset)?;
+    Ok(vec![char as i32])
+}
+
+pub(crate) fn get_char(obj_ref: i32, offset: i64) -> Result<u16> {
+    if obj_ref != 0 {
+        let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+        if class_name.starts_with("[") {
+            let result = with_heap_read_lock(|heap| {
+                heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 2)
+            })?;
+            Ok(result[0] as u16)
+        } else {
+            todo!("implement get_char for class field");
+        }
+    } else {
+        todo!("implement get_char for null object");
+    }
+}
+
 pub(crate) fn get_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
@@ -415,7 +441,9 @@ pub(crate) fn put_char_wrp(args: &[i32]) -> Result<Vec<i32>> {
 pub(crate) fn put_byte_wrp(args: &[i32]) -> Result<Vec<i32>> {
     put_value_wrapper(args, ValueType::Byte)
 }
-
+pub(crate) fn put_short_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    put_value_wrapper(args, ValueType::Short)
+}
 pub(crate) fn put_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     put_value_wrapper(args, ValueType::Int)
 }
@@ -433,7 +461,7 @@ fn put_value_wrapper(args: &[i32], value_type: ValueType) -> Result<Vec<i32>> {
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
     let value = match value_type {
-        ValueType::Byte | ValueType::Char | ValueType::Int => args[4] as i64,
+        ValueType::Byte | ValueType::Char | ValueType::Int | ValueType::Short => args[4] as i64,
         ValueType::Long => i32toi64(args[5], args[4]),
     };
 
@@ -448,11 +476,14 @@ fn put_value(obj_ref: i32, offset: i64, value: i64, value_type: ValueType) -> Re
             ValueType::Byte => write_raw(offset, value as u8),
             ValueType::Int => write_raw(offset, value as i32),
             ValueType::Long => write_raw(offset, value),
+            ValueType::Short => write_raw(offset, value as i16),
         }
         Ok(())
     } else {
         let raw_value = match value_type {
-            ValueType::Char | ValueType::Byte | ValueType::Int => vec![value as i32],
+            ValueType::Char | ValueType::Byte | ValueType::Int | ValueType::Short => {
+                vec![value as i32]
+            }
             ValueType::Long => i64_to_vec(value),
         };
         put_value_via_object(obj_ref, offset, raw_value)

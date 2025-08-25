@@ -750,6 +750,16 @@ examinee.field3 value got by offset is: 30
 putIntVolatile on field examinee.field3: currentValue=1337
 examinee.field5 value got by offset is: 42949672980
 putLong on field examinee.field5: currentValue=128849018920
+[0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0]
+byte at index 5 is: 100
+[0, 0, 0, 0, 0, 10000, 0, 0, 0, 0, 0]
+short at index 5 is: 10000
+[a, a, a, a, a, b, a, a, a, a, a]
+char at index 5 is: b
+[0, 0, 0, 0, 0, 1000000000, 0, 0, 0, 0, 0]
+int at index 5 is: 1000000000
+[0, 0, 0, 0, 0, 1000000000000, 0, 0, 0, 0, 0]
+long at index 5 is: 1000000000000
 "#,
             if is_bigendian() { 1 } else { 0 }
         ),
