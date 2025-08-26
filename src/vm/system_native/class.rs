@@ -4,41 +4,15 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{strip_nest_host, undecorate};
+use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::Arc;
-/*
- * Access modifier flag constants from tables 4.1, 4.4, 4.5, and 4.7 of
- * The Java Virtual Machine Specification
- */
-const PUBLIC: u16 = 0x00000001;
-const PRIVATE: u16 = 0x00000002;
-const PROTECTED: u16 = 0x00000004;
-const STATIC: u16 = 0x00000008;
-const FINAL: u16 = 0x00000010;
-const _SYNCHRONIZED: u16 = 0x00000020;
-const _VOLATILE: u16 = 0x00000040;
-const _TRANSIENT: u16 = 0x00000080;
-const _NATIVE: u16 = 0x00000100;
-const INTERFACE: u16 = 0x00000200;
-const ABSTRACT: u16 = 0x00000400;
-const STRICT: u16 = 0x00000800;
-const ANNOTATION: u16 = 0x00002000;
-const ENUM: u16 = 0x00004000;
 
-const MODIFIERS: u16 = PUBLIC
-    | PROTECTED
-    | PRIVATE
-    | ABSTRACT
-    | STATIC
-    | FINAL
-    | STRICT
-    | INTERFACE
-    | ENUM
-    | ANNOTATION;
+const PUBLIC: u16 = 0x00000001;
 
 pub(crate) fn get_modifiers_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let modifiers = get_modifiers(args[0])?;
@@ -46,15 +20,18 @@ pub(crate) fn get_modifiers_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![modifiers])
 }
 fn get_modifiers(reference: i32) -> Result<i32> {
-    let modifiers = with_method_area(|method_area| {
+    let modifiers = get_class_modifiers(reference)?;
+    Ok(modifiers.bits() as i32)
+}
+
+fn get_class_modifiers(reference: i32) -> Result<ClassModifier> {
+    with_method_area(|method_area| {
         let name = method_area.get_from_reflection_table(reference)?;
         let rc = method_area.get(&name)?;
-        let access_flags = rc.access_flags();
+        let class_modifiers = rc.class_modifiers();
 
-        Ok::<u16, Error>(access_flags & MODIFIERS)
-    })? as i32;
-
-    Ok(modifiers)
+        Ok::<ClassModifier, Error>(class_modifiers)
+    })
 }
 
 pub(crate) fn get_superclass_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -134,7 +111,8 @@ pub(crate) fn is_interface_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![interface as i32])
 }
 fn is_interface(reference: i32) -> Result<bool> {
-    Ok((get_modifiers(reference)? as u16 & INTERFACE) != 0)
+    let modifiers = get_class_modifiers(reference)?;
+    Ok(modifiers.contains(ClassModifier::Interface))
 }
 
 pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
