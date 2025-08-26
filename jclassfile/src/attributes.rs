@@ -64,7 +64,9 @@ pub enum Attribute {
     RuntimeInvisibleAnnotations {
         annotations: Vec<Annotation>,
     },
-    RuntimeVisibleParameterAnnotations,
+    RuntimeVisibleParameterAnnotations {
+        parameter_annotations: Vec<Vec<Annotation>>,
+    },
     RuntimeInvisibleParameterAnnotations,
     AnnotationDefault {
         default_value: ElementValue,
@@ -520,6 +522,22 @@ fn get_attribute(
             }
 
             RuntimeInvisibleAnnotations { annotations }
+        }
+        "RuntimeVisibleParameterAnnotations" => {
+            let num_parameters: u8 = get_int(&data, &mut start_from)?;
+            let mut parameter_annotations = Vec::with_capacity(num_parameters as usize);
+            for _ in 0..num_parameters {
+                let num_annotations: u16 = get_int(&data, &mut start_from)?;
+                let mut annotations = Vec::with_capacity(num_annotations as usize);
+                for _ in 0..num_annotations {
+                    annotations.push(get_annotation(&data, &mut start_from)?);
+                }
+                parameter_annotations.push(annotations);
+            }
+
+            RuntimeVisibleParameterAnnotations {
+                parameter_annotations,
+            }
         }
         "AnnotationDefault" => {
             let raw = read_byte_block(&data, *start_from, attribute_length as usize)?.to_vec();
