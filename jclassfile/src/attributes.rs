@@ -863,7 +863,7 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
 fn get_type_annotation(data: &[u8], start_from: &mut usize) -> Result<TypeAnnotation> {
     let target_type: u8 = get_int(&data, start_from)?;
     let target_type = TargetType::try_from(target_type)?;
-    let target_info = get_target_info(data, start_from, target_type.clone())?;
+    let target_info = get_target_info(data, start_from, target_type)?;
     let type_path = get_type_path(data, start_from)?;
     let annotation = get_annotation(data, start_from)?;
     Ok(TypeAnnotation::new(
@@ -876,7 +876,7 @@ fn get_type_annotation(data: &[u8], start_from: &mut usize) -> Result<TypeAnnota
 
 #[repr(u8)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TargetType {
     // Regular type parameter annotations
     CLASS_TYPE_PARAMETER = 0x00,
