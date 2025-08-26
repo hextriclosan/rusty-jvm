@@ -84,7 +84,7 @@ impl From<&Attribute> for AttributeType {
             Attribute::RuntimeInvisibleAnnotations { .. } => {
                 AttributeType::RuntimeInvisibleAnnotations
             }
-            Attribute::RuntimeVisibleParameterAnnotations => {
+            Attribute::RuntimeVisibleParameterAnnotations { .. } => {
                 AttributeType::RuntimeVisibleParameterAnnotations
             }
             Attribute::RuntimeInvisibleParameterAnnotations => {
@@ -93,7 +93,7 @@ impl From<&Attribute> for AttributeType {
             Attribute::AnnotationDefault { .. } => AttributeType::AnnotationDefault,
             Attribute::StackMapTable { .. } => AttributeType::StackMapTable,
             Attribute::BootstrapMethods { .. } => AttributeType::BootstrapMethods,
-            Attribute::RuntimeVisibleTypeAnnotations => {
+            Attribute::RuntimeVisibleTypeAnnotations { .. } => {
                 AttributeType::RuntimeVisibleTypeAnnotations
             }
             Attribute::RuntimeInvisibleTypeAnnotations => {
