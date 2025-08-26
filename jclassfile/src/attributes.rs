@@ -360,7 +360,7 @@ pub struct TypeAnnotation {
     target_type: TargetType,
     target_info: TargetInfo,
     type_path: Vec<TypePathEntry>,
-    type_annotation: Annotation, // fixme!!! reconsider
+    annotation: Annotation,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -947,7 +947,6 @@ fn get_target_info(
     start_from: &mut usize,
     target_type: TargetType,
 ) -> Result<TargetInfo> {
-    eprintln!("target_type: {:?}", target_type);
     match target_type {
         TargetType::CLASS_TYPE_PARAMETER | TargetType::METHOD_TYPE_PARAMETER => {
             Ok(TargetInfo::TypeParameterTarget {
