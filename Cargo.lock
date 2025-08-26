@@ -384,19 +384,6 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jclassfile"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5afc0bdeff178cd05bc091a051cba7c69c70f3a2590765eca1d5c0a9d3aa473f"
-dependencies = [
- "bitflags",
- "cesu8",
- "derive-new",
- "getset",
- "num-traits",
-]
-
-[[package]]
-name = "jclassfile"
 version = "0.3.0"
 dependencies = [
  "bitflags",
@@ -406,6 +393,19 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "jclassfile"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f0db25e44b0823f2136abf3999fb1c3365991692d6f2a22670746098d8380fd"
+dependencies = [
+ "bitflags",
+ "cesu8",
+ "derive-new",
+ "getset",
+ "num-traits",
 ]
 
 [[package]]
@@ -918,7 +918,7 @@ dependencies = [
  "derive-new",
  "getset",
  "indexmap",
- "jclassfile 0.2.0",
+ "jclassfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
