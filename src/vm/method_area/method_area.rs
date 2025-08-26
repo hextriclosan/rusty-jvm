@@ -4,6 +4,7 @@ use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
 use crate::vm::helper::undecorate;
 use crate::vm::method_area::attributes_helper::AttributesHelper;
+use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
@@ -236,7 +237,7 @@ impl MethodArea {
                 external_name,
                 super_class_name,
                 interface_names,
-                access_flags,
+                ClassModifier::from_bits_truncate(access_flags),
                 declaring_class,
                 annotations_raw,
                 enclosing_method,
@@ -596,10 +597,6 @@ impl MethodArea {
     }
 
     fn generate_synthetic_class(class_name: &str) -> Arc<JavaClass> {
-        const PUBLIC: u16 = 0x00000001;
-        const FINAL: u16 = 0x00000010;
-        const ABSTRACT: u16 = 0x00000400;
-
         let (internal, external) = derive_internal_and_external_names(class_name);
         Arc::new(JavaClass::new(
             IndexMap::new(),
@@ -612,7 +609,7 @@ impl MethodArea {
             external,
             None,
             IndexSet::new(),
-            PUBLIC | FINAL | ABSTRACT,
+            ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
             None,
             None,
             None,
@@ -621,10 +618,6 @@ impl MethodArea {
     }
 
     fn generate_synthetic_array_class(array_class_name: &str) -> Arc<JavaClass> {
-        const PUBLIC: u16 = 0x00000001;
-        const FINAL: u16 = 0x00000010;
-        const ABSTRACT: u16 = 0x00000400;
-
         let (internal, external) = derive_internal_and_external_names(array_class_name);
         Arc::new(JavaClass::new(
             IndexMap::new(),
@@ -640,7 +633,7 @@ impl MethodArea {
                 "java/lang/Cloneable".to_string(),
                 "java/io/Serializable".to_string(),
             ]),
-            PUBLIC | FINAL | ABSTRACT,
+            ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
             None,
             None,
             None,
