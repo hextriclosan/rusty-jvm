@@ -963,7 +963,7 @@ fn get_target_info(
             })
         }
         TargetType::FIELD | TargetType::METHOD_RETURN | TargetType::METHOD_RECEIVER => {
-            Ok(TargetInfo::EmptyTarget {})
+            Ok(TargetInfo::EmptyTarget)
         }
         TargetType::METHOD_FORMAL_PARAMETER => Ok(TargetInfo::FormalParameterTarget {
             formal_parameter_index: get_int(&data, start_from)?,
