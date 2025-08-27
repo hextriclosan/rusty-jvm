@@ -64,7 +64,9 @@ pub enum Attribute {
     RuntimeInvisibleAnnotations {
         annotations: Vec<Annotation>,
     },
-    RuntimeVisibleParameterAnnotations,
+    RuntimeVisibleParameterAnnotations {
+        parameter_annotations: Vec<Vec<Annotation>>,
+    },
     RuntimeInvisibleParameterAnnotations,
     AnnotationDefault {
         default_value: ElementValue,
@@ -76,7 +78,9 @@ pub enum Attribute {
     BootstrapMethods {
         bootstrap_methods: Vec<BootstrapMethodRecord>,
     },
-    RuntimeVisibleTypeAnnotations,
+    RuntimeVisibleTypeAnnotations {
+        type_annotations: Vec<TypeAnnotation>,
+    },
     RuntimeInvisibleTypeAnnotations,
     MethodParameters {
         parameters: Vec<MethodParameterRecord>,
@@ -348,6 +352,72 @@ pub struct RecordComponentInfo {
     attributes: Vec<Attribute>,
 }
 
+#[derive(Debug, PartialEq, Clone, Getters, new)]
+#[get = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `type_annotation` entry (JVMS §4.7.20).
+pub struct TypeAnnotation {
+    target_type: TargetType,
+    target_info: TargetInfo,
+    type_path: Vec<TypePathEntry>,
+    annotation: Annotation,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `target_info` entry (JVMS §4.7.20.1).
+pub enum TargetInfo {
+    TypeParameterTarget {
+        type_parameter_index: u8,
+    },
+    SupertypeTarget {
+        supertype_index: u16,
+    },
+    TypeParameterBoundTarget {
+        type_parameter_index: u8,
+        bound_index: u8,
+    },
+    EmptyTarget,
+    FormalParameterTarget {
+        formal_parameter_index: u8,
+    },
+    ThrowsTarget {
+        throws_type_index: u16,
+    },
+    LocalvarTarget {
+        table: Vec<LocalvarTargetTableEntry>,
+    },
+    CatchTarget {
+        exception_table_index: u16,
+    },
+    OffsetTarget {
+        offset: u16,
+    },
+    TypeArgumentTarget {
+        offset: u16,
+        type_argument_index: u8,
+    },
+}
+
+#[derive(Debug, PartialEq, Clone, CopyGetters, new)]
+#[get_copy = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `table` entry (JVMS §4.7.20.1).
+pub struct LocalvarTargetTableEntry {
+    start_pc: u16,
+    length: u16,
+    index: u16,
+}
+
+#[derive(Debug, PartialEq, Clone, CopyGetters, new)]
+#[get_copy = "pub"]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `path` entry (JVMS §4.7.20.2).
+pub struct TypePathEntry {
+    path_kind: u8,
+    path_index: u8,
+}
+
 pub(crate) fn get_attributes(
     data: &[u8],
     mut start_from: &mut usize,
@@ -520,6 +590,31 @@ fn get_attribute(
             }
 
             RuntimeInvisibleAnnotations { annotations }
+        }
+        "RuntimeVisibleParameterAnnotations" => {
+            let num_parameters: u8 = get_int(&data, &mut start_from)?;
+            let mut parameter_annotations = Vec::with_capacity(num_parameters as usize);
+            for _ in 0..num_parameters {
+                let num_annotations: u16 = get_int(&data, &mut start_from)?;
+                let mut annotations = Vec::with_capacity(num_annotations as usize);
+                for _ in 0..num_annotations {
+                    annotations.push(get_annotation(&data, &mut start_from)?);
+                }
+                parameter_annotations.push(annotations);
+            }
+
+            RuntimeVisibleParameterAnnotations {
+                parameter_annotations,
+            }
+        }
+        "RuntimeVisibleTypeAnnotations" => {
+            let num_annotations: u16 = get_int(&data, &mut start_from)?;
+            let mut type_annotations = Vec::with_capacity(num_annotations as usize);
+            for _ in 0..num_annotations {
+                type_annotations.push(get_type_annotation(&data, &mut start_from)?);
+            }
+
+            RuntimeVisibleTypeAnnotations { type_annotations }
         }
         "AnnotationDefault" => {
             let raw = read_byte_block(&data, *start_from, attribute_length as usize)?.to_vec();
@@ -763,4 +858,161 @@ fn get_element_value(data: &[u8], start_from: &mut usize) -> Result<ElementValue
             format!("Unsupported element tag: {}", tag).as_str(),
         )),
     }
+}
+
+fn get_type_annotation(data: &[u8], start_from: &mut usize) -> Result<TypeAnnotation> {
+    let target_type: u8 = get_int(&data, start_from)?;
+    let target_type = TargetType::try_from(target_type)?;
+    let target_info = get_target_info(data, start_from, target_type)?;
+    let type_path = get_type_path(data, start_from)?;
+    let annotation = get_annotation(data, start_from)?;
+    Ok(TypeAnnotation::new(
+        target_type,
+        target_info,
+        type_path,
+        annotation,
+    ))
+}
+
+#[repr(u8)]
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum TargetType {
+    // Regular type parameter annotations
+    CLASS_TYPE_PARAMETER = 0x00,
+    METHOD_TYPE_PARAMETER = 0x01,
+
+    // Type Annotations outside method bodies
+    CLASS_EXTENDS = 0x10,
+    CLASS_TYPE_PARAMETER_BOUND = 0x11,
+    METHOD_TYPE_PARAMETER_BOUND = 0x12,
+    FIELD = 0x13,
+    METHOD_RETURN = 0x14,
+    METHOD_RECEIVER = 0x15,
+    METHOD_FORMAL_PARAMETER = 0x16,
+    THROWS = 0x17,
+
+    // Type Annotations inside method bodies
+    LOCAL_VARIABLE = 0x40,
+    RESOURCE_VARIABLE = 0x41,
+    EXCEPTION_PARAMETER = 0x42,
+    INSTANCEOF = 0x43,
+    NEW = 0x44,
+    CONSTRUCTOR_REFERENCE = 0x45,
+    METHOD_REFERENCE = 0x46,
+    CAST = 0x47,
+    CONSTRUCTOR_INVOCATION_TYPE_ARGUMENT = 0x48,
+    METHOD_INVOCATION_TYPE_ARGUMENT = 0x49,
+    CONSTRUCTOR_REFERENCE_TYPE_ARGUMENT = 0x4A,
+    METHOD_REFERENCE_TYPE_ARGUMENT = 0x4B,
+}
+
+impl TryFrom<u8> for TargetType {
+    type Error = Error;
+
+    fn try_from(value: u8) -> std::result::Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(TargetType::CLASS_TYPE_PARAMETER),
+            0x01 => Ok(TargetType::METHOD_TYPE_PARAMETER),
+            0x10 => Ok(TargetType::CLASS_EXTENDS),
+            0x11 => Ok(TargetType::CLASS_TYPE_PARAMETER_BOUND),
+            0x12 => Ok(TargetType::METHOD_TYPE_PARAMETER_BOUND),
+            0x13 => Ok(TargetType::FIELD),
+            0x14 => Ok(TargetType::METHOD_RETURN),
+            0x15 => Ok(TargetType::METHOD_RECEIVER),
+            0x16 => Ok(TargetType::METHOD_FORMAL_PARAMETER),
+            0x17 => Ok(TargetType::THROWS),
+            0x40 => Ok(TargetType::LOCAL_VARIABLE),
+            0x41 => Ok(TargetType::RESOURCE_VARIABLE),
+            0x42 => Ok(TargetType::EXCEPTION_PARAMETER),
+            0x43 => Ok(TargetType::INSTANCEOF),
+            0x44 => Ok(TargetType::NEW),
+            0x45 => Ok(TargetType::CONSTRUCTOR_REFERENCE),
+            0x46 => Ok(TargetType::METHOD_REFERENCE),
+            0x47 => Ok(TargetType::CAST),
+            0x48 => Ok(TargetType::CONSTRUCTOR_INVOCATION_TYPE_ARGUMENT),
+            0x49 => Ok(TargetType::METHOD_INVOCATION_TYPE_ARGUMENT),
+            0x4A => Ok(TargetType::CONSTRUCTOR_REFERENCE_TYPE_ARGUMENT),
+            0x4B => Ok(TargetType::METHOD_REFERENCE_TYPE_ARGUMENT),
+            _ => Err(Error::new_io(
+                InvalidData,
+                &format!("Invalid target_type: {}", value),
+            )),
+        }
+    }
+}
+
+fn get_target_info(
+    data: &[u8],
+    start_from: &mut usize,
+    target_type: TargetType,
+) -> Result<TargetInfo> {
+    match target_type {
+        TargetType::CLASS_TYPE_PARAMETER | TargetType::METHOD_TYPE_PARAMETER => {
+            Ok(TargetInfo::TypeParameterTarget {
+                type_parameter_index: get_int(&data, start_from)?,
+            })
+        }
+        TargetType::CLASS_EXTENDS => Ok(TargetInfo::SupertypeTarget {
+            supertype_index: get_int(&data, start_from)?,
+        }),
+        TargetType::CLASS_TYPE_PARAMETER_BOUND | TargetType::METHOD_TYPE_PARAMETER_BOUND => {
+            Ok(TargetInfo::TypeParameterBoundTarget {
+                type_parameter_index: get_int(&data, start_from)?,
+                bound_index: get_int(&data, start_from)?,
+            })
+        }
+        TargetType::FIELD | TargetType::METHOD_RETURN | TargetType::METHOD_RECEIVER => {
+            Ok(TargetInfo::EmptyTarget)
+        }
+        TargetType::METHOD_FORMAL_PARAMETER => Ok(TargetInfo::FormalParameterTarget {
+            formal_parameter_index: get_int(&data, start_from)?,
+        }),
+        TargetType::THROWS => Ok(TargetInfo::ThrowsTarget {
+            throws_type_index: get_int(&data, start_from)?,
+        }),
+        TargetType::LOCAL_VARIABLE | TargetType::RESOURCE_VARIABLE => {
+            let table_length: u16 = get_int(&data, start_from)?;
+            let mut table = Vec::with_capacity(table_length as usize);
+            for _ in 0..table_length {
+                table.push(LocalvarTargetTableEntry::new(
+                    get_int(&data, start_from)?,
+                    get_int(&data, start_from)?,
+                    get_int(&data, start_from)?,
+                ));
+            }
+
+            Ok(TargetInfo::LocalvarTarget { table })
+        }
+        TargetType::EXCEPTION_PARAMETER => Ok(TargetInfo::CatchTarget {
+            exception_table_index: get_int(&data, start_from)?,
+        }),
+        TargetType::INSTANCEOF
+        | TargetType::NEW
+        | TargetType::CONSTRUCTOR_REFERENCE
+        | TargetType::METHOD_REFERENCE => Ok(TargetInfo::OffsetTarget {
+            offset: get_int(&data, start_from)?,
+        }),
+        TargetType::CAST
+        | TargetType::CONSTRUCTOR_INVOCATION_TYPE_ARGUMENT
+        | TargetType::METHOD_INVOCATION_TYPE_ARGUMENT
+        | TargetType::CONSTRUCTOR_REFERENCE_TYPE_ARGUMENT
+        | TargetType::METHOD_REFERENCE_TYPE_ARGUMENT => Ok(TargetInfo::TypeArgumentTarget {
+            offset: get_int(&data, start_from)?,
+            type_argument_index: get_int(&data, start_from)?,
+        }),
+    }
+}
+
+fn get_type_path(data: &[u8], start_from: &mut usize) -> Result<Vec<TypePathEntry>> {
+    let path_length: u8 = get_int(&data, start_from)?;
+    let mut path = Vec::with_capacity(path_length as usize);
+    for _ in 0..path_length {
+        path.push(TypePathEntry::new(
+            get_int(&data, start_from)?,
+            get_int(&data, start_from)?,
+        ));
+    }
+
+    Ok(path)
 }

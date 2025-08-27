@@ -147,9 +147,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "clap"
-version = "4.5.45"
+version = "4.5.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc0e74a703892159f5ae7d3aac52c8e6c392f5ae5f359c70b5881d60aaac318"
+checksum = "2c5e4fcf9c21d2e544ca1ee9d8552de13019a42aa7dbf32747fa7aaf1df76e57"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -157,9 +157,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.44"
+version = "4.5.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3e7f4214277f3c7aa526a59dd3fbe306a370daee1f8b7b8c987069cd8e888a8"
+checksum = "fecb53a0e6fcfb055f686001bc2e2592fa527efaf38dbe81a6a9563562e57d41"
 dependencies = [
  "anstream",
  "anstyle",
@@ -384,7 +384,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jclassfile"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitflags",
  "cesu8",
@@ -397,9 +397,9 @@ dependencies = [
 
 [[package]]
 name = "jclassfile"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5afc0bdeff178cd05bc091a051cba7c69c70f3a2590765eca1d5c0a9d3aa473f"
+checksum = "5f0db25e44b0823f2136abf3999fb1c3365991692d6f2a22670746098d8380fd"
 dependencies = [
  "bitflags",
  "cesu8",
@@ -918,7 +918,7 @@ dependencies = [
  "derive-new",
  "getset",
  "indexmap",
- "jclassfile 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jclassfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",

@@ -10,13 +10,6 @@ This crate reads and parses Java class files, following the [Java Virtual Machin
 While there are other crates with similar functionality, the `jclassfile` crate stands out for its extensive testing within the [rusty-jvm][rusty-jvm] project.
 It has been used to parse thousands of OpenJDK standard library classes and is also exercised through numerous integration tests within the project.
 
-To use it, add the following lines to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-jclassfile = "0.1.0"
-```
-
 ## Implementation Status
 The following sections of the Java Virtual Machine Specification (JVMS, Java SE 23 Edition) are implemented:
 
@@ -54,11 +47,11 @@ The following sections of the Java Virtual Machine Specification (JVMS, Java SE 
   - [x] The RuntimeVisibleAnnotations Attribute ([§4.7.16][jvms-4.7.16])
     - [x] The element_value structure ([§4.7.16.1][jvms-4.7.16.1])
   - [x] The RuntimeInvisibleAnnotations Attribute ([§4.7.17][jvms-4.7.17])
-  - [ ] The RuntimeVisibleParameterAnnotations Attribute ([§4.7.18][jvms-4.7.18])
+  - [x] The RuntimeVisibleParameterAnnotations Attribute ([§4.7.18][jvms-4.7.18])
   - [ ] The RuntimeInvisibleParameterAnnotations Attribute ([§4.7.19][jvms-4.7.19])
-  - [ ] The RuntimeVisibleTypeAnnotations Attribute ([§4.7.20][jvms-4.7.20])
-    - [ ] The target_info union ([§4.7.20.1][jvms-4.7.20.1])
-    - [ ] The type_path structure ([§4.7.20.2][jvms-4.7.20.2])
+  - [x] The RuntimeVisibleTypeAnnotations Attribute ([§4.7.20][jvms-4.7.20])
+    - [x] The target_info union ([§4.7.20.1][jvms-4.7.20.1])
+    - [x] The type_path structure ([§4.7.20.2][jvms-4.7.20.2])
   - [ ] The RuntimeInvisibleTypeAnnotations Attribute ([§4.7.21][jvms-4.7.21])
   - [x] The AnnotationDefault Attribute ([§4.7.22][jvms-4.7.22])
   - [x] The BootstrapMethods Attribute ([§4.7.23][jvms-4.7.23])

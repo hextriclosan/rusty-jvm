@@ -750,6 +750,16 @@ examinee.field3 value got by offset is: 30
 putIntVolatile on field examinee.field3: currentValue=1337
 examinee.field5 value got by offset is: 42949672980
 putLong on field examinee.field5: currentValue=128849018920
+[0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0]
+byte at index 5 is: 100
+[0, 0, 0, 0, 0, 10000, 0, 0, 0, 0, 0]
+short at index 5 is: 10000
+[a, a, a, a, a, b, a, a, a, a, a]
+char at index 5 is: b
+[0, 0, 0, 0, 0, 1000000000, 0, 0, 0, 0, 0]
+int at index 5 is: 1000000000
+[0, 0, 0, 0, 0, 1000000000000, 0, 0, 0, 0, 0]
+long at index 5 is: 1000000000000
 "#,
             if is_bigendian() { 1 } else { 0 }
         ),
@@ -2328,9 +2338,24 @@ Options:
     --<option>        Java launcher options
     -<option>         Java standard options
     -h, --help        Show this help message
+    -V, --version     Show version information
 "#;
     utils::assert_with_all_args(
         &["--help"],
+        "",
+        &[],
+        expected_stdout,
+        "",
+        utils::ExecutionResult::Success,
+    );
+}
+
+#[cfg(not(windows))] // todo: fix this test on Windows
+#[test]
+fn should_print_version_message() {
+    let expected_stdout = "rusty-jvm 0.4.0\n";
+    utils::assert_with_all_args(
+        &["--version"],
         "",
         &[],
         expected_stdout,
@@ -2650,5 +2675,13 @@ fn should_invoke_method_via_reflection() {
     assert_success(
         "samples.reflection.directmethodhandleaccessor.DirectMethodHandleAccessorExample",
         "TargetInstance - secretMethod invoked with: byte=-128, boolean=true, short=-32768, char=ї, int=2000000000, float=3.14, long=-9223372036854775808, double=3.141592653589793, string=seven, object=[1, 2, 3], map={8=eight}\n",
+    );
+}
+
+#[test]
+fn should_perform_lookup_in_interfaces_during_invokespecial_call() {
+    assert_success(
+        "samples.inheritance.defaultmethodviaparent.DefaultMethodViaParentExample",
+        "42\n",
     );
 }

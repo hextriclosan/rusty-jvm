@@ -2,6 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::invoke_dynamic_runner::InvokeDynamicRunner;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType};
 use crate::vm::method_area::attributes_helper::AttributesHelper;
+use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::CPoolHelper;
 use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::JavaMethod;
@@ -13,8 +14,6 @@ use once_cell::sync::OnceCell;
 use parking_lot::ReentrantMutex;
 use std::cell::RefCell;
 use std::sync::Arc;
-
-const INTERFACE: u16 = 0x00000200;
 
 pub const STATIC_FIELDS_START: i64 = i32::MAX as i64;
 
@@ -39,7 +38,7 @@ pub(crate) struct JavaClass {
     #[get = "pub"]
     interfaces: IndexSet<String>,
     #[get_copy = "pub"]
-    access_flags: u16,
+    class_modifiers: ClassModifier,
 
     #[get = "pub"]
     static_fields_init_state: Arc<ReentrantMutex<InitState>>,
@@ -98,7 +97,7 @@ impl JavaClass {
         external_name: String,
         parent: Option<String>,
         interfaces: IndexSet<String>,
-        access_flags: u16,
+        class_modifiers: ClassModifier,
         declaring_class: Option<String>,
         annotations_raw: Option<Vec<u8>>,
         enclosing_method: Option<(String, String, String)>,
@@ -115,7 +114,7 @@ impl JavaClass {
             external_name,
             parent,
             interfaces,
-            access_flags,
+            class_modifiers,
             static_fields_init_state: Arc::default(),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
@@ -128,7 +127,7 @@ impl JavaClass {
     }
 
     pub fn is_interface(&self) -> bool {
-        self.access_flags & INTERFACE != 0
+        self.class_modifiers.contains(ClassModifier::Interface)
     }
 
     pub fn static_field(&self, field_name: &str) -> Option<Arc<FieldValue>> {

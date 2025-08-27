@@ -29,8 +29,9 @@ fn get_class_access_flags(class_ref: i32) -> Result<i32> {
     let class_name =
         with_method_area(|method_area| method_area.get_from_reflection_table(class_ref))?;
 
-    let flags =
-        with_method_area(|method_area| Ok(method_area.get(&class_name)?.access_flags() as i32));
+    let flags = with_method_area(|method_area| {
+        Ok(method_area.get(&class_name)?.class_modifiers().bits() as i32)
+    });
     flags
 }
 

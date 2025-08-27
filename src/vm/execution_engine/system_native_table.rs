@@ -52,12 +52,12 @@ use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
     compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp,
-    ensure_class_initialized0_wrp, get_byte_wrp, get_int_volatile_wrp, get_int_wrp,
+    ensure_class_initialized0_wrp, get_byte_wrp, get_char_wrp, get_int_volatile_wrp, get_int_wrp,
     get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
     object_field_offset_0_wrp, object_field_offset_1_wrp, put_byte_wrp, put_char_wrp,
     put_int_volatile_wrp, put_int_wrp, put_long_wrp, put_reference_volatile_wrp,
-    put_reference_wrp, set_memory0_wrp, should_be_initialized0_wrp, static_field_base0_wrp,
-    static_field_offset_0_wrp,
+    put_reference_wrp, put_short_wrp, set_memory0_wrp, should_be_initialized0_wrp,
+    static_field_base0_wrp, static_field_offset_0_wrp,
 };
 use crate::vm::system_native::zip::crc32::java_util_zip_crc32_updatebytes0_wrp;
 use crate::vm::system_native::zip::deflater::{
@@ -250,6 +250,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_short_wrp),
     );
     table.insert(
+        "jdk/internal/misc/Unsafe:getChar:(Ljava/lang/Object;J)C",
+        Basic(get_char_wrp),
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:getInt:(Ljava/lang/Object;J)I",
         Basic(get_int_wrp),
     );
@@ -289,6 +293,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:putByte:(Ljava/lang/Object;JB)V",
         Basic(put_byte_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:putShort:(Ljava/lang/Object;JS)V",
+        Basic(put_short_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:putInt:(Ljava/lang/Object;JI)V",
@@ -465,6 +473,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         }),
     );
     table.insert(
+        "java/lang/ref/PhantomReference:clear0:()V",
+        Basic(void_stub), // todo: this should be implemented with GC
+    );
+    table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
         WithStackFrames(reflection_get_caller_class_wrp),
     );
@@ -639,6 +651,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(native_accessor_newinstance0_wrp),
     );
     table.insert(
+        "jdk/internal/vm/ContinuationSupport:isSupported0:()Z",
+        Basic(|_args: &[i32]| Ok(vec![0])), // We do not support Loom continuations (yet)
+    );
+    table.insert(
         "java/util/zip/Deflater:init:(IIZ)J",
         Basic(java_util_zip_deflater_init_wrp),
     );
@@ -691,6 +707,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             set_end_of_file_wrp,
         };
         use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
+        use crate::vm::system_native::platform_specific_files::winnt_file_system::get_final_path0_wrp;
 
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
@@ -784,6 +801,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/io/Win32ErrorMode:setErrorMode:(J)J",
             Basic(set_error_mode_wrp),
+        );
+        table.insert(
+            "java/io/WinNTFileSystem:getFinalPath0:(Ljava/lang/String;)Ljava/lang/String;",
+            WithMutStackFrames(get_final_path0_wrp),
         );
     }
 
