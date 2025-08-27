@@ -647,6 +647,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(native_accessor_newinstance0_wrp),
     );
     table.insert(
+        "jdk/internal/vm/ContinuationSupport:isSupported0:()Z",
+        Basic(|_args: &[i32]| Ok(vec![0])), // We do not support Loom continuations (yet)
+    );
+    table.insert(
         "java/util/zip/Deflater:init:(IIZ)J",
         Basic(java_util_zip_deflater_init_wrp),
     );
