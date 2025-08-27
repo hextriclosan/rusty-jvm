@@ -473,6 +473,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         }),
     );
     table.insert(
+        "java/lang/ref/PhantomReference:clear0:()V",
+        Basic(void_stub), // todo: this should be implemented with GC
+    );
+    table.insert(
         "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
         WithStackFrames(reflection_get_caller_class_wrp),
     );
