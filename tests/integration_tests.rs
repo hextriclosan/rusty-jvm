@@ -2677,3 +2677,11 @@ fn should_invoke_method_via_reflection() {
         "TargetInstance - secretMethod invoked with: byte=-128, boolean=true, short=-32768, char=ї, int=2000000000, float=3.14, long=-9223372036854775808, double=3.141592653589793, string=seven, object=[1, 2, 3], map={8=eight}\n",
     );
 }
+
+#[test]
+fn should_perform_lookup_in_interfaces_during_invokespecial_call() {
+    assert_success(
+        "samples.inheritance.defaultmethodviaparent.DefaultMethodViaParentExample",
+        "42\n",
+    );
+}

@@ -167,6 +167,12 @@ pub(crate) fn process(
                 )?;
             let java_method = with_method_area(|method_area| {
                 method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
+                    .or_else(|| { // if not found, looking for default method implementation in interfaces
+                        method_area.lookup_for_implementation_interface(
+                            &class_name_to_start_lookup_from,
+                            &full_signature,
+                        )
+                    })
                                 .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokespecial")))
             })?;
             let method_args =
