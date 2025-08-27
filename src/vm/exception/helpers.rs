@@ -33,3 +33,16 @@ pub fn throw_file_not_found_exception(
 
     Ok(())
 }
+
+pub fn throw_null_pointer_exception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
+    let message_ref = StringPoolHelper::get_string(message)?;
+    let args = vec![StackValueKind::from(message_ref)];
+    construct_exception_and_throw(
+        "java/lang/NullPointerException",
+        "<init>:(Ljava/lang/String;)V",
+        &args,
+        stack_frames,
+    )?;
+
+    Ok(())
+}

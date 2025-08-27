@@ -707,6 +707,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             set_end_of_file_wrp,
         };
         use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
+        use crate::vm::system_native::platform_specific_files::winnt_file_system::get_final_path0_wrp;
 
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
@@ -800,6 +801,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/io/Win32ErrorMode:setErrorMode:(J)J",
             Basic(set_error_mode_wrp),
+        );
+        table.insert(
+            "java/io/WinNTFileSystem:getFinalPath0:(Ljava/lang/String;)Ljava/lang/String;",
+            WithMutStackFrames(get_final_path0_wrp),
         );
     }
 
