@@ -1,4 +1,4 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::{Error, ErrorKind, Result};
 use crate::vm::exception::helpers::{throw_ioexception, throw_null_pointer_exception};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -24,8 +24,11 @@ pub(crate) fn get_final_path0_wrp(
     let _filesystem_impl_ref = args[0];
     let path_ref = args[1];
 
-    let final_path_ref = get_final_path0(path_ref, stack_frames)?;
-    Ok(vec![final_path_ref])
+    match get_final_path0(path_ref, stack_frames) {
+        Ok(final_path_ref) => Ok(vec![final_path_ref]),
+        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
+        Err(e) => Err(e),
+    }
 }
 fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
     if path_ref == 0 {
@@ -35,16 +38,16 @@ fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<i32>
 
     let path = get_utf8_string_by_ref(path_ref)?;
     let wide_path = WideCString::new(&path);
-    let result = get_final_path0_impl(&wide_path)?;
-
-    match StringPoolHelper::get_string(&result) {
-        Ok(final_path_ref) => Ok(final_path_ref),
-        Err(_) => {
-            let error_msg = format!("Bad pathname: {path} ({})", get_last_error()?);
+    let final_path = match get_final_path0_impl(&wide_path) {
+        Ok(final_path) => Ok(final_path),
+        Err(e) => {
+            let error_msg = format!("Bad pathname: {path} - ({e}) ({})", get_last_error()?);
             throw_ioexception(&error_msg, stack_frames)?;
             Err(Error::new_exception())
         }
-    }
+    }?;
+    let final_path_ref = StringPoolHelper::get_string(&final_path)?;
+    Ok(final_path_ref)
 }
 fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     let handle = unsafe {
