@@ -39,9 +39,9 @@ fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<i32>
     let path = get_utf8_string_by_ref(path_ref)?;
     let wide_path = WideCString::new(&path);
     let final_path = match get_final_path0_impl(&wide_path) {
-        Ok(final_path) => Ok::<String, Error>(final_path),
+        Ok(final_path) => Ok(final_path),
         Err(e) => {
-            let error_msg = format!("Bad pathname: {path}, ({e}) ({})", get_last_error()?);
+            let error_msg = format!("Bad pathname: {path} - ({e}) ({})", get_last_error()?);
             throw_ioexception(&error_msg, stack_frames)?;
             Err(Error::new_exception())
         }
