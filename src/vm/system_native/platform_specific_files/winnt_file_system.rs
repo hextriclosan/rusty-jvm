@@ -43,7 +43,7 @@ fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<i32>
         Err(e) => {
             let error_msg = format!("Bad pathname: {path}, ({e}) ({})", get_last_error()?);
             throw_ioexception(&error_msg, stack_frames)?;
-            return Err(Error::new_exception());
+            Err(Error::new_exception())
         }
     }?;
     let final_path_ref = StringPoolHelper::get_string(&final_path)?;
