@@ -12,7 +12,6 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("display.language", "display.language_VALUE"),
         ("display.script", "display.script_VALUE"),
         ("display.variant", "display.variant_VALUE"),
-        ("file.encoding", "file.encoding_VALUE"),
         ("file.separator", file_separator()),
         ("format.country", "format.country_VALUE"),
         ("format.language", "format.language_VALUE"),
@@ -28,6 +27,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("https.proxyPort", "https.proxyPort_VALUE"),
         ("java.io.tmpdir", "java.io.tmpdir_VALUE"),
         ("line.separator", line_separator()),
+        ("native.encoding", "native.encoding_VALUE"),
         ("os.arch", "os.arch_VALUE"),
         ("os.name", os_name()),
         ("os.version", os_version()),
@@ -35,7 +35,8 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("socksNonProxyHosts", "socksNonProxyHosts_VALUE"),
         ("socksProxyHost", "socksProxyHost_VALUE"),
         ("socksProxyPort", "socksProxyPort_VALUE"),
-        ("stderr.encoding", "stderr.encoding_VALUE"),
+        ("stderr.encoding", "cp437"), // https://github.com/hextriclosan/rusty-jvm/issues/489
+        ("stdin.encoding", "native.encoding_VALUE"),
         ("stdout.encoding", "stdout.encoding_VALUE"),
         ("sun.arch.abi", "sun.arch.abi_VALUE"),
         ("sun.arch.data.model", "sun.arch.data.model_VALUE"),
@@ -113,7 +114,7 @@ mod tests {
             platform_properties.get("os.name"),
             Some(&"new_os_name".to_string())
         );
-        assert_eq!(platform_properties.len(), 39);
+        assert_eq!(platform_properties.len(), 40);
 
         assert_eq!(
             vm_properties,
