@@ -123,7 +123,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/System:mapLibraryName:(Ljava/lang/String;)Ljava/lang/String;",
         Basic(system_map_library_name_wrp),
     );
-    table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp));
+    table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert(
         "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
         Basic(get_superclass_wrp),
@@ -136,9 +136,9 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
         Basic(|_args: &[i32]| Ok(vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
     );
-    table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp));
-    table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp));
-    table.insert("java/lang/Class:isInterface:()Z", Basic(is_interface_wrp));
+    table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp)); // todo: remove me after migration from 23 to 25 java version
+    table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp)); // todo: remove me after migration from 23 to 25 java version
+    table.insert("java/lang/Class:isInterface:()Z", Basic(is_interface_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", Basic(for_name0_wrp));
     table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
     table.insert(
@@ -602,6 +602,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/UnixFileSystem:createFileExclusively0:(Ljava/lang/String;)Z",
         Basic(create_file_exclusively0_wrp),
     );
+    // todo: remove me after migration from 23 to 25 java version
     table.insert(
         "java/io/WinNTFileSystem:delete0:(Ljava/io/File;)Z",
         Basic(delete0_wrp),
