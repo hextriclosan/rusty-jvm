@@ -1596,10 +1596,10 @@ fn should_return_system_properties() {
         .expect("path.separator is not a string");
     assert_eq!(path_separator, get_path_separator());
 
-    let path_separator = json["other.property"]
+    let other_property = json["other.property"]
         .as_str()
         .expect("other.property is not a string");
-    assert_eq!(path_separator, "null");
+    assert_eq!(other_property, "null");
 
     let java_home = json["java.home"]
         .as_str()
