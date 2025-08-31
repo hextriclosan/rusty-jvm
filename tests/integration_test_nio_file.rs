@@ -1,6 +1,5 @@
-use crate::utils::{assert_success_with_args, get_output_with_args};
-use std::env;
-use std::fs::remove_dir_all;
+use crate::utils::{assert_success_with_args, get_output_with_args, TEST_PATH};
+use std::ops::Deref;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
@@ -10,7 +9,7 @@ const ENTRY_POINT_ARG: &str = "samples.nio.niofileexample.NioFileExample";
 
 #[test]
 fn should_support_nio_file() {
-    let temp_dir = TempDir::new_in("..").expect("failed to create temp dir");
+    let temp_dir = TempDir::new_in(TEST_PATH.deref()).expect("failed to create temp dir");
     let dir_name = temp_dir
         .path()
         .file_name()
@@ -18,7 +17,6 @@ fn should_support_nio_file() {
         .to_str()
         .expect("dir_name is not a string");
     let mut file_path = PathBuf::new();
-    file_path.push("..");
     file_path.push(dir_name);
     file_path.push("nio");
     file_path.push("example");
@@ -35,10 +33,6 @@ fn should_support_nio_file() {
     delete_file(file_path.to_str().unwrap());
     delete_file(dir_path.to_str().unwrap());
     delete_file(grand_parent_dir.to_str().unwrap());
-
-    let current_dir = env::current_dir().expect("failed to get current dir");
-    let path_to_remove = current_dir.join("tests").join(dir_name);
-    remove_dir_all(path_to_remove.as_path()).expect("failed to remove temp dir");
 }
 
 fn create_dirs(path: &str) {

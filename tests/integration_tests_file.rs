@@ -1,6 +1,6 @@
 mod utils;
 
-use crate::utils::{assert_success_with_args, REPO_PATH};
+use crate::utils::{assert_success_with_args, REPO_PATH, TEST_PATH};
 use derive_new::new;
 use once_cell::sync::Lazy;
 use path_absolutize::Absolutize;
@@ -12,7 +12,7 @@ use tempfile::TempDir;
 
 #[test]
 fn should_support_java_io_file() {
-    let _guard = CleanUpOnPanic {};
+    let _guard = CleanUp {};
 
     file_info_when_does_not_exist();
     create_file_when_does_not_exist();
@@ -114,10 +114,9 @@ fn delete_file_when_does_not_exist() {
 const ENTRY_POINT_ARG: &str = "samples.io.fileexample.FileExample";
 const FILE_NAME: &str = "file_example_test.txt";
 
-static TEST_DIR_PATH: Lazy<PathBuf> = Lazy::new(|| create_path(&["tests", "test_data"]));
 static TEMP_DIR: Lazy<TempDir> = Lazy::new(|| {
     TempDir::new_in(
-        TEST_DIR_PATH
+        TEST_PATH
             .deref()
             .parent()
             .expect("Failed to get parent dir"),
@@ -226,7 +225,7 @@ fn file_path() -> PathBuf {
 
 fn absolute_path() -> PathBuf {
     let mut absolute_path = PathBuf::from(&*REPO_PATH_STR);
-    absolute_path.push(TEST_DIR_PATH.as_path());
+    absolute_path.push(TEST_PATH.as_path());
     absolute_path.push(file_path());
 
     absolute_path
@@ -267,9 +266,9 @@ fn file_properties(_path: &Path) -> std::io::Result<(bool, bool, bool, bool)> {
     Ok((false, true, true, true))
 }
 
-struct CleanUpOnPanic;
+struct CleanUp;
 
-impl Drop for CleanUpOnPanic {
+impl Drop for CleanUp {
     fn drop(&mut self) {
         let tmp_dir_to_remove = canonical_path()
             .parent()

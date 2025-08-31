@@ -1583,7 +1583,7 @@ fn should_return_system_properties() {
     assert!(re.is_match(os_version), "os.version format is incorrect");
 
     let user_dir = json["user.dir"].as_str().expect("user.dir is not a string");
-    assert!(user_dir.ends_with("test_data"));
+    assert!(user_dir.ends_with("java_classes_for_tests"));
 
     let os_name = json["os.name"].as_str().expect("os.name is not a string");
     let os_name = os_name.to_lowercase();

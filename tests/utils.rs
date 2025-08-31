@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 use assert_cmd::Command;
 use once_cell::sync::Lazy;
+use std::path::PathBuf;
 use std::{env, fs, iter};
-
-const PATH: &str = "tests/test_data";
 use tempfile::TempDir;
 
 #[derive(PartialEq)]
@@ -12,9 +11,14 @@ pub enum ExecutionResult {
     Failure,
 }
 
-pub(crate) static REPO_PATH: Lazy<std::path::PathBuf> =
+pub(crate) static REPO_PATH: Lazy<PathBuf> =
     Lazy::new(|| env::current_dir().expect("Failed to get current directory"));
-pub(crate) static TEST_PATH: Lazy<std::path::PathBuf> = Lazy::new(|| REPO_PATH.join(PATH));
+pub(crate) static TEST_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    let out_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into()))
+        .join("java_classes_for_tests");
+
+    out_dir
+});
 
 pub fn is_bigendian() -> bool {
     cfg!(target_endian = "big")
@@ -213,7 +217,7 @@ pub fn assert_file_with_args(
 
 fn get_command(arguments: &[&str]) -> Command {
     let mut cmd = Command::cargo_bin("rusty-jvm").expect("Failed to locate rusty-jvm binary");
-    cmd.current_dir(PATH).args(arguments);
+    cmd.current_dir(TEST_PATH.as_path()).args(arguments);
     cmd
 }
 
