@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import static com.github.hextriclosan.rustyjvm.Constants.OUTPUT_PATH;
+
 public class Dup2_X1Generator {
     private static final String PACKAGE = "samples/opcodes/dup2_x1";
     private static final String CLASS_NAME = "Dup2_X1GeneratedExample";
@@ -84,7 +86,7 @@ public class Dup2_X1Generator {
 
         cw.visitEnd();
 
-        File outputDir = new File("../../tests/test_data/" + PACKAGE);
+        File outputDir = new File(OUTPUT_PATH + '/' + PACKAGE);
         outputDir.mkdirs();
         try (FileOutputStream fos = new FileOutputStream(new File(outputDir, CLASS_NAME + ".class"))) {
             fos.write(cw.toByteArray());

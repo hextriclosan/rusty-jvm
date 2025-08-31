@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import static com.github.hextriclosan.rustyjvm.Constants.OUTPUT_PATH;
+
 public class OperandStackOverflowGenerator {
     private static final String PACKAGE = "samples/invalidprograms/operandstackoverflow";
     private static final String CLASS_NAME = "OperandStackOverflowExample";
@@ -42,7 +44,7 @@ public class OperandStackOverflowGenerator {
 
         cw.visitEnd();
 
-        File outputDir = new File("../../tests/test_data/" + PACKAGE);
+        File outputDir = new File(OUTPUT_PATH + '/' + PACKAGE);
         outputDir.mkdirs();
         try (FileOutputStream fos = new FileOutputStream(new File(outputDir, CLASS_NAME + ".class"))) {
             fos.write(cw.toByteArray());
