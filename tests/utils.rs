@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 use std::{env, fs, iter};
 
 const PATH: &str = "tests/test_data";
+use tempfile::TempDir;
 
 #[derive(PartialEq)]
 pub enum ExecutionResult {
@@ -190,8 +191,13 @@ pub fn get_output_with_raw_args(args: &[&str]) -> String {
     String::from_utf8(output.stdout).expect("Failed to convert output to string")
 }
 
-pub fn assert_file(entry: &str, file_path: &str, expected_file_content: &str) {
-    assert_success(entry, "");
+pub fn assert_file_with_args(
+    entry: &str,
+    arguments: &[&str],
+    file_path: &str,
+    expected_file_content: &str,
+) {
+    assert_success_with_args(entry, arguments, "");
 
     #[cfg(target_os = "windows")]
     let expected_file_content = to_windows(expected_file_content);
@@ -220,4 +226,14 @@ pub fn to_windows(input: &str) -> String {
 fn normalize_lambda(to_strip: &str) -> String {
     let re = regex::Regex::new(r"(\$\$Lambda/0x0000)[0-9a-fA-F]+").unwrap();
     re.replace_all(to_strip, "$1").to_string()
+}
+
+pub fn tmp_file(file_name: &str) -> (String, TempDir) {
+    let tmp_dir = TempDir::new().expect("Failed to create temp dir");
+    let file_path = tmp_dir.path().join(file_name);
+    let file_path = file_path
+        .to_str()
+        .expect("Conversion of file failed")
+        .to_owned();
+    (file_path, tmp_dir)
 }

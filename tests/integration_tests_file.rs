@@ -4,9 +4,11 @@ use crate::utils::{assert_success_with_args, REPO_PATH};
 use derive_new::new;
 use once_cell::sync::Lazy;
 use path_absolutize::Absolutize;
-use std::fs::remove_file;
+use std::fs::remove_dir_all;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::string::ToString;
+use tempfile::TempDir;
 
 #[test]
 fn should_support_java_io_file() {
@@ -110,11 +112,37 @@ fn delete_file_when_does_not_exist() {
 }
 
 const ENTRY_POINT_ARG: &str = "samples.io.fileexample.FileExample";
-const FILE_PATH_ARG: &str = "../tmp/file_example_test.txt";
+const FILE_NAME: &str = "file_example_test.txt";
 
 static TEST_DIR_PATH: Lazy<PathBuf> = Lazy::new(|| create_path(&["tests", "test_data"]));
-static DIR_PATH: Lazy<PathBuf> = Lazy::new(|| create_path(&["..", "tmp"]));
-const FILE_NAME: &str = "file_example_test.txt";
+static TEMP_DIR: Lazy<TempDir> = Lazy::new(|| {
+    TempDir::new_in(
+        TEST_DIR_PATH
+            .deref()
+            .parent()
+            .expect("Failed to get parent dir"),
+    )
+    .expect("Failed to create temp dir")
+});
+static DIR_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    create_path(&[
+        "..",
+        TEMP_DIR
+            .deref()
+            .path()
+            .file_name()
+            .expect("Failed to get temp dir name")
+            .to_str()
+            .expect("Failed to convert temp dir name to str"),
+    ])
+});
+static FILE_PATH_ARG: Lazy<String> = Lazy::new(|| {
+    DIR_PATH
+        .deref()
+        .join(FILE_NAME)
+        .to_string_lossy()
+        .into_owned()
+});
 
 static REPO_PATH_STR: Lazy<String> =
     Lazy::new(|| REPO_PATH.as_path().to_string_lossy().to_string());
@@ -243,13 +271,10 @@ struct CleanUpOnPanic;
 
 impl Drop for CleanUpOnPanic {
     fn drop(&mut self) {
-        if std::thread::panicking() {
-            remove_file(canonical_path()).unwrap_or_else(|e| {
-                eprintln!(
-                    "Failed to remove file during cleanup: {} ({e})",
-                    canonical_path().display()
-                );
-            });
-        }
+        let tmp_dir_to_remove = canonical_path()
+            .parent()
+            .expect("Failed to get parent dir")
+            .to_path_buf();
+        remove_dir_all(tmp_dir_to_remove).expect("Failed to remove dir");
     }
 }

@@ -337,9 +337,9 @@ upcasting(): [10, 20, 30]
 }
 
 use crate::utils::{
-    assert_failure, assert_file, assert_success_with_args, assert_success_with_stderr,
+    assert_failure, assert_file_with_args, assert_success_with_args, assert_success_with_stderr,
     get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
-    is_bigendian, line_ending, map_library_name,
+    is_bigendian, line_ending, map_library_name, tmp_file,
 };
 use regex::Regex;
 use serde_json::Value;
@@ -966,24 +966,29 @@ fn should_use_grandparent_method_via_super() {
 
 #[test]
 fn should_write_file_to_fs() {
-    assert_file(
+    let (file_path, _guard) = tmp_file("test.txt");
+    assert_file_with_args(
         "samples.io.fileoutputstreamexample.FileOutputStreamExample",
-        "tests/tmp/test.txt",
+        &[&file_path],
+        &file_path,
         "CAFEBABE",
     )
 }
 
 #[test]
 fn should_write_file_to_fs_with_buffered_stream() {
-    assert_file(
+    let (file_path, _guard) = tmp_file("buffered_output.txt");
+    assert_file_with_args(
         "samples.io.bufferedoutputstreamchunkingexample.BufferedOutputStreamChunkingExample",
-        "tests/tmp/buffered_output.txt",
+        &[&file_path],
+        &file_path,
         "This is a test for BufferedOutputStream chunking.",
     )
 }
 
 #[test]
 fn should_write_file_with_print_stream() {
+    let (file_path, _guard) = tmp_file("print_stream_test.txt");
     let expected_file_content = r#"Hello, PrintStream!
 First Line
 Second Line
@@ -993,9 +998,10 @@ Hello as raw bytes
 This is written immediately. This follows after flush.
 This is an example of chaining PrintStreams.
 "#;
-    assert_file(
+    assert_file_with_args(
         "samples.io.printstreamexample.PrintStreamExample",
-        "tests/tmp/print_stream_test.txt",
+        &[&file_path],
+        &file_path,
         expected_file_content,
     );
 }
@@ -2211,10 +2217,12 @@ fn should_handle_operand_stack_overflow() {
 
 #[test]
 fn should_support_file_dispatcher_for_various_os() {
+    let (file_path, _guard) = tmp_file("file_dispatcher_example.txt");
     let expected_file_content = "Hello from FileChannel!";
-    assert_file(
+    assert_file_with_args(
         "samples.nio.filedispatcherexample.FileDispatcherExample",
-        "tests/tmp/file_dispatcher_example.txt",
+        &[&file_path],
+        &file_path,
         expected_file_content,
     );
 }

@@ -6,8 +6,9 @@ import java.io.IOException;
 
 public class BufferedOutputStreamChunkingExample {
     public static void main(String[] args) throws IOException {
+        String fileName = args[0];
         try (BufferedOutputStream bos = new BufferedOutputStream(
-                new FileOutputStream("../tmp/buffered_output.txt"), 8)) { // Set buffer size to 8 bytes
+                new FileOutputStream(fileName), 8)) { // Set buffer size to 8 bytes
             byte[] data = "This is a test for BufferedOutputStream chunking.".getBytes();
 
             // Write data byte by byte

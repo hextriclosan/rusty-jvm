@@ -9,7 +9,8 @@ import java.nio.file.StandardOpenOption;
 public class FileDispatcherExample {
 
     public static void main(String[] args) throws IOException {
-        Path path = Path.of("../tmp/file_dispatcher_example.txt");
+        String fileName = args[0];
+        Path path = Path.of(fileName);
 
         // Write to the file (uses FileDispatcherImpl.write0 under the hood)
         try (FileChannel channel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
