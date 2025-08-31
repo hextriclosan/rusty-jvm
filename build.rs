@@ -9,12 +9,12 @@ fn main() -> anyhow::Result<()> {
         .join("java_classes_for_tests");
     fs::create_dir_all(&dest_dir)?;
 
-    copt_generated_files(&dest_dir)?;
+    copy_generated_files(&dest_dir)?;
 
     compile(&dest_dir)
 }
 
-fn copt_generated_files(dest_dir: &Path) -> anyhow::Result<()> {
+fn copy_generated_files(dest_dir: &Path) -> anyhow::Result<()> {
     let src_dir = PathBuf::from("tests/test_data/generated");
     let options = CopyOptions::new().content_only(true).overwrite(true);
     copy(src_dir, dest_dir, &options)?;
