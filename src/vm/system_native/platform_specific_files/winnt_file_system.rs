@@ -102,7 +102,7 @@ fn get_final_path0_impl(path: &WideCString) -> Result<String> {
 }
 
 pub(crate) fn winnt_file_system_delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _filesystem_impl_ref = args[0];
+    let filesystem_impl_ref = args[0];
     let file_ref = args[1];
     let allow_delete_readonly = args[2] != 0;
 
@@ -112,5 +112,5 @@ pub(crate) fn winnt_file_system_delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
         ));
     }
 
-    delete0_wrp(&[_filesystem_impl_ref, file_ref]) //fallback to common implementation
+    delete0_wrp(&[filesystem_impl_ref, file_ref]) //fallback to common implementation
 }
