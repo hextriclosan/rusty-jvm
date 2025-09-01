@@ -2,6 +2,7 @@ use crate::vm::error::{Error, ErrorKind, Result};
 use crate::vm::exception::helpers::{throw_ioexception, throw_null_pointer_exception};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::system_native::io_file_system::delete0_wrp;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     get_last_error, strip_string,
 };
@@ -98,4 +99,18 @@ fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     };
 
     Ok(result)
+}
+
+pub(crate) fn winnt_file_system_delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _filesystem_impl_ref = args[0];
+    let file_ref = args[1];
+    let allow_delete_readonly = args[2] != 0;
+
+    if allow_delete_readonly {
+        return Err(Error::new_native(
+            "-Djdk.io.File.allowDeleteReadOnlyFiles is not supported (JDK-8356195)",
+        ));
+    }
+
+    delete0_wrp(&[_filesystem_impl_ref, file_ref]) //fallback to common implementation
 }
