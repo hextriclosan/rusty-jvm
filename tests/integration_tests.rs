@@ -2794,3 +2794,17 @@ readAllBytes: java.io.IOException: Stream Closed
         &expected_stdout,
     )
 }
+
+#[test]
+fn should_support_jep512() {
+    assert_success(
+        "CompactSourceFilesExample",
+        r#"James: 5
+Bill: 4
+Guy: 3
+Alex: 4
+Dan: 3
+Gavin: 5
+"#,
+    );
+}

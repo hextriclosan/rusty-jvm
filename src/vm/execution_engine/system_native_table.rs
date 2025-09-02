@@ -715,6 +715,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/NullPointerException:getExtendedNPEMessage:()Ljava/lang/String;",
         Basic(|_args: &[i32]| Ok(vec![0])), // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
     );
+    table.insert(
+        "java/io/Console:istty:()Z",
+        Basic(|_args: &[i32]| Ok(vec![1])), // todo implement me
+    );
 
     platform_specific(&mut table);
 
