@@ -15,7 +15,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn copy_generated_files(dest_dir: &Path) -> anyhow::Result<()> {
-    let src_dir = PathBuf::from("tests/test_data/generated");
+    let src_dir = PathBuf::from("tests").join("test_data").join("generated");
     let options = CopyOptions::new().content_only(true).overwrite(true);
     copy(src_dir, dest_dir, &options)?;
 
@@ -43,7 +43,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
     }
     println!("javac version OK: {}", version_str.trim());
 
-    let src_dir = PathBuf::from("tests/test_data");
+    let src_dir = PathBuf::from("tests").join("test_data");
     let excludes = [
         "StringConcatInline.java",
         "BootstrapMethodInvokerExample.java",
