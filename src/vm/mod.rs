@@ -4,6 +4,7 @@ mod exception;
 mod execution_engine;
 mod heap;
 mod helper;
+mod launcher;
 mod method_area;
 mod properties;
 mod stack;
@@ -14,7 +15,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::helper::create_array_of_strings;
+use crate::vm::launcher::resolve_and_execute_main_method;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::properties::system_properties::init_system_properties;
@@ -46,12 +47,8 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<Vec<i32>> {
     let internal_name = &main_class_name.replace('.', "/");
     StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
 
-    let args_array_ref = create_array_of_strings(arguments.program_args())?;
-    Executor::invoke_static_method(
-        internal_name,
-        "main:([Ljava/lang/String;)V",
-        &[args_array_ref.into()],
-    )
+    resolve_and_execute_main_method(internal_name, arguments.program_args())?;
+    Ok(vec![])
 }
 
 fn prelude(java_home: &Path) -> Result<()> {

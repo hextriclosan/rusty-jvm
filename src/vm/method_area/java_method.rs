@@ -3,6 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_write_lock;
 use crate::vm::helper::{clazz_ref, undecorate};
+use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
@@ -311,6 +312,10 @@ impl JavaMethod {
 
     pub fn access_flags(&self) -> i32 {
         self.access_flags
+    }
+
+    pub fn is_static(&self) -> bool {
+        (self.access_flags & ClassModifier::Static.bits() as i32) != 0
     }
 
     pub fn name_signature(&self) -> &str {
