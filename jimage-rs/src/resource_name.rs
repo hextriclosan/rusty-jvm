@@ -87,5 +87,4 @@ impl<'a> DoubleEndedIterator for ResourceNamesIter<'a> {
     }
 }
 
-impl ExactSizeIterator for ResourceNamesIter<'_> {}
 impl FusedIterator for ResourceNamesIter<'_> {}
