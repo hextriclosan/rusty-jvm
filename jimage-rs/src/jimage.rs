@@ -2,6 +2,7 @@ use crate::bytes_utils::read_integer;
 use crate::error::{DecompressionSnafu, IoSnafu, JImageError, Result, Utf8Snafu};
 use crate::header::Header;
 use crate::resource_header::ResourceHeader;
+use crate::resource_name::{ResourceName, ResourceNamesIter};
 use memchr::memchr;
 use memmap2::Mmap;
 use snafu::ResultExt;
@@ -106,6 +107,46 @@ impl JImage {
         }
 
         self.get_resource(&attribute)
+    }
+
+    /// Returns an iterator over all resource names in the JImage file.
+    pub fn resource_names_iter(&self) -> ResourceNamesIter<'_> {
+        ResourceNamesIter::new(self)
+    }
+
+    /// Returns a vector of all resource names in the JImage file.
+    pub fn resource_names(&self) -> Result<Vec<ResourceName<'_>>> {
+        self.resource_names_iter().collect()
+    }
+
+    /// Retrieves the resource name at the specified index.
+    pub(crate) fn resource_at_index(&self, idx: usize) -> Result<Option<ResourceName<'_>>> {
+        let offset_index = self.offset_value(idx as i32)?;
+        let attribute = self.attributes(offset_index)?;
+        let module = self.get_str_for_attribute(attribute, AttributeKind::MODULE)?;
+        if matches!(module.as_ref(), "" | "modules" | "packages") {
+            return Ok(None);
+        }
+        let parent = self.get_str_for_attribute(attribute, AttributeKind::PARENT)?;
+        let base = self.get_str_for_attribute(attribute, AttributeKind::BASE)?;
+        let extension = self.get_str_for_attribute(attribute, AttributeKind::EXTENSION)?;
+        Ok(Some(ResourceName {
+            module,
+            parent,
+            base,
+            extension,
+        }))
+    }
+
+    /// Returns the total number of items (resources) in the JImage file.
+    pub(crate) fn items_count(&self) -> usize {
+        self.header.items_count() as usize
+    }
+
+    fn get_str_for_attribute(&self, attribute: [u64; 8], kind: AttributeKind) -> Result<Cow<str>> {
+        let offset = attribute[kind as usize] as usize;
+        let value = self.get_string(offset)?;
+        Ok(Cow::Borrowed(value))
     }
 
     /// Finds the offset index for a given resource name using a hash function.

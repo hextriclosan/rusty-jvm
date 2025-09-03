@@ -2,6 +2,7 @@ use assert_matches::assert_matches;
 use jimage_rs::error::JImageError;
 use jimage_rs::JImage;
 use rstest::rstest;
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 const WITHOUT_PARENT_EXPECTED: &[u8] =
@@ -48,4 +49,29 @@ fn should_return_error_if_magic_is_non_valid() {
 fn should_return_error_if_impossible_to_read() {
     let result = JImage::open("tests/test_data/lib/3bytes-file.jimage");
     assert_matches!(result, Err(JImageError::RawRead { from, to }) if from == 0 && to == 4);
+}
+
+#[test]
+fn should_return_resource_name() {
+    let image = JImage::open("tests/test_data/lib/non-compressed_little-endian.jimage")
+        .expect("Failed to read jimage file");
+    let resource_names = image
+        .resource_names_iter()
+        .filter_map(Result::ok)
+        .map(|v| {
+            let (module, name) = v.get_full_name();
+            module + "/" + &name
+        })
+        .collect::<BTreeSet<_>>();
+
+    let expected = vec![
+        "java.base/java/lang/Object.class".into(),
+        "java.base/java/lang/hank.txt".into(),
+        "java.base/java/lang/without_ext".into(),
+        "java.base/module-info.class".into(),
+        "java.base/without_parent.txt".into(),
+    ]
+    .into_iter()
+    .collect::<BTreeSet<_>>();
+    assert_eq!(expected, resource_names);
 }
