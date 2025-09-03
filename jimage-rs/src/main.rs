@@ -54,7 +54,7 @@ fn main() {
         }
         Commands::List(args) => {
             list_resources(&args.jimage_path).unwrap_or_else(|err| {
-                eprintln!("Error getting list of resource: {}", err);
+                eprintln!("Error getting list of resources: {}", err);
                 std::process::exit(1);
             });
         }
