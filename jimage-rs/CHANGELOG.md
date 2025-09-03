@@ -1,5 +1,4 @@
 # 0.0.3
-
 * Added ability to get list of all resources in the JImage file.
 
 
