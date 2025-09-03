@@ -1,6 +1,6 @@
 [package]
 name = "jimage-rs"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 rust-version = "1.74"
 description = "A fast and efficient Rust library for working with jimage files used by the Java Platform Module System."
@@ -16,10 +16,10 @@ exclude = ["tests/**"]
 workspace = ".."
 
 [dependencies]
-memmap2 = "0.9.7"
+memmap2 = "0.9.8"
 memchr = "2.7.5"
 flate2 = "1.1.2"
-snafu = "0.8.6"
+snafu = "0.8.9"
 clap = { version = "4.5.45", features = ["derive"] }
 byteorder = "1.5.0"
 
