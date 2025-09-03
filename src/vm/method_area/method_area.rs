@@ -40,6 +40,7 @@ where
 #[derive(Debug)]
 pub(crate) struct MethodArea {
     jimage: JImage,
+    modules_mapping: HashMap<String, String>,
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
@@ -57,8 +58,18 @@ impl MethodArea {
     fn new(java_home: &Path) -> Result<Self> {
         let modules = java_home.join("lib").join("modules");
         let synthetic_classes = Self::generate_synthetic_classes();
+
+        let jimage = JImage::open(modules)?;
+        let modules_mapping = jimage
+            .resource_names_iter()
+            .map(|result| result.map_err(Error::from))
+            .map(|result| result.map(|r| r.get_full_name()))
+            .map(|result| result.map(|(module, name)| (name, module)))
+            .collect::<Result<HashMap<_, _>>>()?;
+
         Ok(Self {
-            jimage: JImage::open(modules)?,
+            jimage,
+            modules_mapping,
             loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::default(),
             ldc_resolution_manager: LdcResolutionManager::default(),
@@ -116,24 +127,25 @@ impl MethodArea {
     }
 
     fn load_class_file(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
-        let maybe_std_file = format!("/java.base/{}.class", fully_qualified_class_name);
-        if let Some(res) = self
-            .jimage
-            .find_resource(&maybe_std_file)
-            .map_err(|jimage_error| Error::new_execution(&jimage_error.to_string()))?
-        {
-            match self.try_parse(&res) {
-                Ok(Some(java_class)) => return Ok(java_class),
-                Ok(None) => {}
-                Err(e) => return Err(e),
-            };
+        let class_file_path = format!("{fully_qualified_class_name}.class");
+        if let Some(module) = self.modules_mapping.get(&class_file_path) {
+            let resource_path = format!("/{module}/{class_file_path}");
+            if let Some(res) = self
+                .jimage
+                .find_resource(&resource_path)
+                .map_err(|jimage_error| Error::new_execution(&jimage_error.to_string()))?
+            {
+                match self.try_parse(&res) {
+                    Ok(Some(java_class)) => return Ok(java_class),
+                    Ok(None) => {}
+                    Err(e) => return Err(e),
+                };
+            }
         }
 
-        self.try_open_and_parse(&Path::new(fully_qualified_class_name).with_extension("class"))?
+        self.try_open_and_parse(&PathBuf::from(&class_file_path))?
             .ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "error opening class file {fully_qualified_class_name}"
-                ))
+                Error::new_execution(&format!("error opening class file {class_file_path}"))
             })
     }
 
