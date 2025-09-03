@@ -109,14 +109,17 @@ impl JImage {
         self.get_resource(&attribute)
     }
 
+    /// Returns an iterator over all resource names in the JImage file.
     pub fn resource_names_iter(&self) -> ResourceNamesIter<'_> {
         ResourceNamesIter::new(self)
     }
 
+    /// Returns a vector of all resource names in the JImage file.
     pub fn resource_names(&self) -> Result<Vec<ResourceName<'_>>> {
         self.resource_names_iter().collect()
     }
 
+    /// Retrieves the resource name at the specified index.
     pub(crate) fn resource_at_index(&self, idx: usize) -> Result<Option<ResourceName<'_>>> {
         let offset_index = self.offset_value(idx as i32)?;
         let attribute = self.attributes(offset_index)?;
@@ -135,6 +138,7 @@ impl JImage {
         }))
     }
 
+    /// Returns the total number of items (resources) in the JImage file.
     pub(crate) fn items_count(&self) -> usize {
         self.header.items_count() as usize
     }

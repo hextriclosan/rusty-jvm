@@ -15,9 +15,9 @@ pub struct ResourceName<'a> {
 impl<'a> ResourceName<'a> {
     /// Gets the full resource name as a tuple of (module, full_path).
     /// The full path is constructed by combining the parent, base, and extension.
-    /// For example, if the module is "java.base", parent is "java/lang",
-    /// base is "String", and extension is "class", the full path will be
-    /// "java/lang/String.class".
+    /// For example, if the module is `"java.base"`, parent is `"java/lang"`,
+    /// base is `"String"`, and extension is `"class"`, the full path will be
+    /// `"java/lang/String.class"`.
     pub fn get_full_name(&self) -> (String, String) {
         let mut full_name = String::new();
 
