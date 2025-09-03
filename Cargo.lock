@@ -469,20 +469,6 @@ dependencies = [
 
 [[package]]
 name = "jimage-rs"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd81c34ab2cbbf173ccb27da4a6c96d4355bb29b095c8728da3161ee2543ed16"
-dependencies = [
- "byteorder",
- "clap",
- "flate2",
- "memchr",
- "memmap2",
- "snafu",
-]
-
-[[package]]
-name = "jimage-rs"
 version = "0.0.3"
 dependencies = [
  "assert_matches",
@@ -492,6 +478,20 @@ dependencies = [
  "memchr",
  "memmap2",
  "rstest",
+ "snafu",
+]
+
+[[package]]
+name = "jimage-rs"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50a46221efa7286b072d6f89b7edd932d9bfdda54ff302b54a004f363f2068c7"
+dependencies = [
+ "byteorder",
+ "clap",
+ "flate2",
+ "memchr",
+ "memmap2",
  "snafu",
 ]
 
@@ -965,7 +965,7 @@ dependencies = [
  "indexmap",
  "jclassfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jimage-rs 0.0.2",
+ "jimage-rs 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
  "miniz_oxide",
  "mockall",
