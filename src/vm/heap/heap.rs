@@ -13,6 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 static HEAP: LazyLock<Heap> = LazyLock::new(Heap::default);
 
 pub(crate) fn with_heap_read_lock<F, R>(f: F) -> R
+// TODO: rework this rudimentary function
 where
     F: FnOnce(&Heap) -> R,
 {
@@ -20,6 +21,7 @@ where
 }
 
 pub(crate) fn with_heap_write_lock<F, R>(f: F) -> R
+// TODO: rework this rudimentary function
 where
     F: FnOnce(&Heap) -> R,
 {
