@@ -4,52 +4,52 @@ use crate::vm::error::{Error, Result};
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
+use dashmap::DashMap;
 use serde::Serialize;
-use std::collections::HashMap;
 use std::fs::File;
-use std::sync::{LazyLock, RwLock};
+use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-static HEAP: LazyLock<RwLock<Heap>> = LazyLock::new(RwLock::default);
+static HEAP: LazyLock<Heap> = LazyLock::new(Heap::default);
 
 pub(crate) fn with_heap_read_lock<F, R>(f: F) -> R
+// TODO: rework this rudimentary function
 where
     F: FnOnce(&Heap) -> R,
 {
-    let heap = HEAP.read().expect("error getting heap read lock");
-    f(&heap)
+    f(&HEAP)
 }
 
 pub(crate) fn with_heap_write_lock<F, R>(f: F) -> R
+// TODO: rework this rudimentary function
 where
-    F: FnOnce(&mut Heap) -> R,
+    F: FnOnce(&Heap) -> R,
 {
-    let mut heap = HEAP.write().expect("error getting heap write lock");
-    f(&mut heap)
+    f(&HEAP)
 }
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Heap {
     data: AutoDashMapI32<HeapValue>,
-    ref_by_stringvalue: HashMap<String, i32>,
+    ref_by_stringvalue: DashMap<String, i32>,
 }
 
 impl Default for Heap {
     fn default() -> Self {
         Self {
             data: AutoDashMapI32::new(1), // start from 1 to avoid 0 as a valid reference
-            ref_by_stringvalue: HashMap::new(),
+            ref_by_stringvalue: DashMap::new(),
         }
     }
 }
 
 impl Heap {
-    pub fn create_instance(&mut self, java_instance: JavaInstance) -> i32 {
+    pub fn create_instance(&self, java_instance: JavaInstance) -> i32 {
         self.data.insert_auto(Object(java_instance))
     }
 
     pub fn set_object_field_value(
-        &mut self,
+        &self,
         objectref: i32,
         class_name: &str,
         field_name_type: &str,
@@ -119,11 +119,11 @@ impl Heap {
             })
     }
 
-    pub(crate) fn create_array(&mut self, type_name: &str, len: i32) -> i32 {
+    pub(crate) fn create_array(&self, type_name: &str, len: i32) -> i32 {
         self.data.insert_auto(Arr(Array::new(type_name, len)))
     }
 
-    pub(crate) fn create_array_with_values(&mut self, type_name: &str, array: &[i32]) -> i32 {
+    pub(crate) fn create_array_with_values(&self, type_name: &str, array: &[i32]) -> i32 {
         self.data
             .insert_auto(Arr(Array::new_with_values(type_name, array)))
     }
@@ -169,7 +169,7 @@ impl Heap {
     }
 
     pub(crate) fn get_entire_raw_data_mut(
-        &mut self,
+        &self,
         array_ref: i32,
     ) -> Result<MappedRefMut<i32, HeapValue, Vec<u8>>> {
         if array_ref == 0 {
@@ -190,7 +190,7 @@ impl Heap {
             .ok_or_else(|| Error::new_execution(&format!("instance is not an array: {array_ref}")))
     }
 
-    pub(crate) fn set_entire_array(&mut self, array_ref: i32, array_val: Array) -> Result<()> {
+    pub(crate) fn set_entire_array(&self, array_ref: i32, array_val: Array) -> Result<()> {
         self.data
             .get_mut(array_ref)
             .and_then(|mut entry| match entry.value_mut() {
@@ -235,7 +235,7 @@ impl Heap {
     }
 
     pub(crate) fn set_array_value(
-        &mut self,
+        &self,
         arrayref: i32,
         index: i32,
         value: Vec<i32>,
@@ -253,7 +253,7 @@ impl Heap {
     }
 
     pub(crate) fn set_array_value_by_raw_offset(
-        &mut self,
+        &self,
         arrayref: i32,
         offset: usize,
         value: Vec<i32>,
@@ -289,7 +289,7 @@ impl Heap {
         self.ref_by_stringvalue.get(string).map(|v| *v)
     }
 
-    pub(crate) fn put_const_string_ref(&mut self, string: &str, reference: i32) -> Option<i32> {
+    pub(crate) fn put_const_string_ref(&self, string: &str, reference: i32) -> Option<i32> {
         self.ref_by_stringvalue
             .insert(string.to_string(), reference)
     }
@@ -306,7 +306,7 @@ impl Heap {
         Ok(())
     }
 
-    pub(crate) fn clone_instance(&mut self, objectref: i32) -> Result<i32> {
+    pub(crate) fn clone_instance(&self, objectref: i32) -> Result<i32> {
         let cloned_heap_value = {
             self.data
                 .get(objectref)
