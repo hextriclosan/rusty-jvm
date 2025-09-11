@@ -1,7 +1,7 @@
-use crate::vm::error::Error;
+use crate::vm::error::{Error, Result};
 
 pub enum ThrowingResult<T> {
-    Result(crate::vm::error::Result<T>),
+    Result(Result<T>),
     ExceptionThrown,
 }
 
@@ -19,6 +19,11 @@ impl<T> ThrowingResult<T> {
     }
 }
 
+/// Unwraps a `Result<T, E>` and returns early as `ThrowingResult::err(E)`
+/// if it's an `Err`.  
+///
+/// # Panics / Constraints
+/// Must be used inside a function returning `ThrowingResult<T>`.
 #[macro_export]
 macro_rules! unwrap_or_return_err {
     ($expr:expr) => {
@@ -41,6 +46,13 @@ macro_rules! throw_and_return {
     }};
 }
 
+/// Unwraps a `ThrowingResult<T>`:
+/// - Returns the inner `T` if `ThrowingResult::Result(Ok(t))`
+/// - Propagates error if `ThrowingResult::Result(Err(e))`
+/// - Returns `Ok($default)` if `ThrowingResult::ExceptionThrown`
+///
+/// # Constraints
+/// Must be used inside a function returning `Result<T, E>`.
 #[macro_export]
 macro_rules! unwrap_result_or_return_default {
     ($expr:expr, $default:expr) => {{

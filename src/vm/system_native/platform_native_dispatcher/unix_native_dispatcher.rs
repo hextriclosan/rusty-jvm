@@ -1,10 +1,12 @@
-use crate::vm::error::{Error, ErrorKind, Result};
+use crate::vm::error::{Error, Result};
+use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::heap::with_heap_write_lock;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::unix_helpers::{
     throw_unix_exception, throw_unix_exception_with_errno,
 };
+use crate::{throw_and_return, unwrap_result_or_return_default};
 use nix::fcntl::{open, OFlag};
 use nix::libc::{c_char, mode_t, rmdir};
 use nix::sys::stat::{lstat, stat, FileStat, Mode};
@@ -13,18 +15,14 @@ use std::ffi::{CStr, CString};
 use std::os::fd::IntoRawFd;
 
 pub fn get_cwd_wrp(_args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    match get_cwd(stack_frames) {
-        Ok(byte_array_ref) => Ok(vec![byte_array_ref]),
-        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let byte_array_ref = unwrap_result_or_return_default!(get_cwd(stack_frames), vec![]);
+    Ok(vec![byte_array_ref])
 }
-fn get_cwd(stack_frames: &mut StackFrames) -> Result<i32> {
+fn get_cwd(stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
     let path = match getcwd() {
         Ok(path) => path,
         Err(errno) => {
-            throw_unix_exception_with_errno(errno as i32, stack_frames)?;
-            return Err(Error::new_exception());
+            throw_and_return!(throw_unix_exception_with_errno(errno as i32, stack_frames))
         }
     };
 
@@ -37,7 +35,7 @@ fn get_cwd(stack_frames: &mut StackFrames) -> Result<i32> {
     // Allocate the byte array in the heap and return its reference
     let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values("[b", &cwd));
 
-    Ok(array_ref)
+    ThrowingResult::ok(array_ref)
 }
 
 pub fn unix_native_dispatcher_open0_wrp(
@@ -48,18 +46,21 @@ pub fn unix_native_dispatcher_open0_wrp(
     let flags = args[2];
     let mode = args[3];
 
-    match open0(path_address, flags, mode, stack_frames) {
-        Ok(fd) => Ok(vec![fd]),
-        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let fd =
+        unwrap_result_or_return_default!(open0(path_address, flags, mode, stack_frames), vec![]);
+    Ok(vec![fd])
 }
-fn open0(path_address: i64, flags: i32, mode: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+fn open0(
+    path_address: i64,
+    flags: i32,
+    mode: i32,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
     let path = unsafe { CStr::from_ptr(path_address as *const c_char) };
     let path = match path.to_str() {
         Ok(path) => path,
         Err(e) => {
-            return Err(Error::new_native(&format!(
+            return ThrowingResult::err(Error::new_native(&format!(
                 "Failed to convert path to string: {}",
                 e
             )))
@@ -73,12 +74,11 @@ fn open0(path_address: i64, flags: i32, mode: i32, stack_frames: &mut StackFrame
     ) {
         Ok(fd) => fd,
         Err(errno) => {
-            throw_unix_exception_with_errno(errno as i32, stack_frames)?;
-            return Err(Error::new_exception());
+            throw_and_return!(throw_unix_exception_with_errno(errno as i32, stack_frames))
         }
     };
 
-    Ok(fd.into_raw_fd() as i32)
+    ThrowingResult::ok(fd.into_raw_fd() as i32)
 }
 
 pub fn mkdir0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {

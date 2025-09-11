@@ -1,7 +1,9 @@
-use crate::vm::error::{Error, ErrorKind, Result};
+use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_ioexception;
+use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::helper::{get_fd, i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
+use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use nix::sys::stat::fstat;
 use nix::unistd::{read, write};
 use std::os::fd::BorrowedFd;
@@ -19,17 +21,20 @@ pub fn unix_file_dispatcher_impl_write0_wrp(
     let address = i32toi64(args[2], args[1]);
     let len = args[3];
 
-    match write0(fd_ref, address, len, stack_frames) {
-        Ok(result) => Ok(vec![result]),
-        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let result =
+        unwrap_result_or_return_default!(write0(fd_ref, address, len, stack_frames), vec![]);
+    Ok(vec![result])
 }
-fn write0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+fn write0(
+    fd_ref: i32,
+    address: i64,
+    len: i32,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
     let address = address as usize as *const u8;
     let buf = unsafe { from_raw_parts(address, len as usize) };
 
-    let fd = get_fd(fd_ref)?;
+    let fd = unwrap_or_return_err!(get_fd(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match write(fd, buf) {
         Ok(written) => written as i32,
@@ -37,13 +42,12 @@ fn write0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) -
             nix::errno::Errno::EAGAIN => IOS_UNAVAILABLE,
             nix::errno::Errno::EINTR => IOS_INTERRUPTED,
             _ => {
-                throw_ioexception("Write failed", stack_frames)?;
-                return Err(Error::new_exception());
+                throw_and_return!(throw_ioexception("Write failed", stack_frames))
             }
         },
     };
 
-    Ok(result)
+    ThrowingResult::ok(result)
 }
 
 pub fn unix_file_dispatcher_impl_read0_wrp(
@@ -54,17 +58,20 @@ pub fn unix_file_dispatcher_impl_read0_wrp(
     let address = i32toi64(args[2], args[1]);
     let len = args[3];
 
-    match read0(fd_ref, address, len, stack_frames) {
-        Ok(result) => Ok(vec![result]),
-        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let result =
+        unwrap_result_or_return_default!(read0(fd_ref, address, len, stack_frames), vec![]);
+    Ok(vec![result])
 }
-fn read0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+fn read0(
+    fd_ref: i32,
+    address: i64,
+    len: i32,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
     let address = address as usize as *mut u8;
     let buf = unsafe { from_raw_parts_mut(address, len as usize) };
 
-    let fd = get_fd(fd_ref)?;
+    let fd = unwrap_or_return_err!(get_fd(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match read(fd, buf) {
         Ok(read) => {
@@ -78,13 +85,12 @@ fn read0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) ->
             nix::errno::Errno::EAGAIN => IOS_UNAVAILABLE,
             nix::errno::Errno::EINTR => IOS_INTERRUPTED,
             _ => {
-                throw_ioexception("Read failed", stack_frames)?;
-                return Err(Error::new_exception());
+                throw_and_return!(throw_ioexception("Read failed", stack_frames))
             }
         },
     };
 
-    Ok(result)
+    ThrowingResult::ok(result)
 }
 
 pub fn unix_file_dispatcher_impl_size0_wrp(
@@ -93,23 +99,22 @@ pub fn unix_file_dispatcher_impl_size0_wrp(
 ) -> Result<Vec<i32>> {
     let fd_ref = args[0];
 
-    match size0(fd_ref, stack_frames) {
-        Ok(result) => Ok(i64_to_vec(result)),
-        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let result = unwrap_result_or_return_default!(size0(fd_ref, stack_frames), vec![]);
+    Ok(i64_to_vec(result))
 }
-fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> Result<i64> {
-    let fd = get_fd(fd_ref)?;
+fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
+    let fd = unwrap_or_return_err!(get_fd(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match fstat(fd) {
         Ok(stat) => stat.st_size as i64,
         Err(errno) if matches!(errno, nix::errno::Errno::EINTR) => IOS_INTERRUPTED as i64,
         Err(errno) => {
-            throw_ioexception(&format!("Size failed: {}", errno.to_string()), stack_frames)?;
-            return Err(Error::new_exception());
+            throw_and_return!(throw_ioexception(
+                &format!("Size failed: {}", errno.to_string()),
+                stack_frames
+            ))
         }
     };
 
-    Ok(result)
+    ThrowingResult::ok(result)
 }
