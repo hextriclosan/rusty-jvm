@@ -75,5 +75,5 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i1
         &[system_thread_ref.into(), throwable_ref.into()],
     )?;
 
-    Err(Error::new_exception())
+    Err(Error::uncaught_exception())
 }

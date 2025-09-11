@@ -50,7 +50,7 @@ fn handle_execution(arguments: Arguments) -> Result<i32, String> {
     run(&arguments, &PathBuf::from(java_home))
         .map(|_ret_value| EXIT_SUCCESS)
         .map_err(|err| {
-            if err.is_exception_thrown() {
+            if err.is_uncaught_exception() {
                 String::new() // no error message needed for exceptions since it already handled by the VM
             } else {
                 format!("VM execution failed: {}", err)

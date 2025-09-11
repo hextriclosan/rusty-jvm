@@ -1,8 +1,10 @@
-use crate::vm::error::{Error, ErrorKind, Result};
+use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_ioexception;
+use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::helper::{get_handle, i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::get_last_error;
+use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::mem::zeroed;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, LPCVOID};
@@ -33,11 +35,11 @@ pub fn windows_file_dispatcher_write0_wrp(
     let len = args[3];
     let append = args[4] != 0;
 
-    match write0(fd_ref, address, len, append, stack_frames) {
-        Ok(result) => Ok(vec![result]),
-        Err(e) if matches!(e.kind(), ErrorKind::ExceptionThrown) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let ret = unwrap_result_or_return_default!(
+        write0(fd_ref, address, len, append, stack_frames),
+        vec![]
+    );
+    Ok(vec![ret])
 }
 fn write0(
     fd_ref: i32,
@@ -45,12 +47,11 @@ fn write0(
     len: i32,
     append: bool,
     stack_frames: &mut StackFrames,
-) -> Result<i32> {
-    let handle = get_handle(fd_ref)?;
+) -> ThrowingResult<i32> {
+    let handle = unwrap_or_return_err!(get_handle(fd_ref));
     let handle = handle as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
-        throw_ioexception("Invalid handle", stack_frames)?;
-        return Err(Error::new_exception());
+        throw_and_return!(throw_ioexception("Invalid handle", stack_frames))
     }
 
     let mut ov: OVERLAPPED = unsafe { zeroed() };
@@ -73,10 +74,9 @@ fn write0(
     };
 
     if result == 0 {
-        let error_msg = get_last_error()?;
-        throw_ioexception(&error_msg, stack_frames)?;
-        return Err(Error::new_exception());
+        let error_msg = unwrap_or_return_err!(get_last_error());
+        throw_and_return!(throw_ioexception(&error_msg, stack_frames))
     }
 
-    Ok(written as i32)
+    ThrowingResult::ok(written as i32)
 }
