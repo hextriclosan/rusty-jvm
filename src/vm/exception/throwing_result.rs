@@ -19,8 +19,7 @@ impl<T> ThrowingResult<T> {
     }
 }
 
-/// Unwraps a `Result<T, E>` and returns early as `ThrowingResult::err(E)`
-/// if it's an `Err`.  
+/// Unwraps a `Result<T, E>` and returns early as `ThrowingResult::err(E)` if it's an `Err`.
 ///
 /// # Panics / Constraints
 /// Must be used inside a function returning `ThrowingResult<T>`.
