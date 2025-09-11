@@ -1,5 +1,5 @@
 use crate::vm::error::ErrorKind::{
-    ClassFile, ConstantPool, ExceptionThrown, Execution, Io, Native,
+    ClassFile, ConstantPool, Execution, Io, Native, UncaughtException,
 };
 use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
@@ -35,8 +35,8 @@ impl Error {
         Self::new(Native(String::from(descr)))
     }
 
-    pub(crate) fn new_exception() -> Error {
-        Self::new(ExceptionThrown)
+    pub(crate) fn uncaught_exception() -> Error {
+        Self::new(UncaughtException)
     }
 
     pub fn kind(&self) -> &ErrorKind {
@@ -48,8 +48,8 @@ impl Error {
     }
 
     /// Returns `true` if the error represents an unhandled Java exception.
-    pub fn is_exception_thrown(&self) -> bool {
-        matches!(*self.0, ExceptionThrown)
+    pub fn is_uncaught_exception(&self) -> bool {
+        matches!(*self.0, UncaughtException)
     }
 }
 
@@ -61,7 +61,7 @@ impl Display for Error {
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
             Execution(descr) => write!(f, "Execution Error: {descr}"),
             Native(descr) => write!(f, "Native Call Error: {descr}"),
-            ExceptionThrown => write!(f, "Exception thrown"),
+            UncaughtException => write!(f, "Uncaught Exception"),
 
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -151,7 +151,7 @@ pub enum ErrorKind {
     ConstantPool(String),
     Execution(String),
     Native(String),
-    ExceptionThrown,
+    UncaughtException,
 
     #[doc(hidden)]
     __Nonexhaustive,
