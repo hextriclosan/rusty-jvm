@@ -1,9 +1,14 @@
 use crate::vm::error::Result;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
-pub(crate) fn object_field_offset_by_refs(class_ref: i32, string_ref: i32) -> Result<i64> {
-    let field_name = get_utf8_string_by_ref(string_ref)?;
+pub(crate) fn object_field_offset_by_refs(
+    class_ref: i32,
+    string_ref: i32,
+    stack_frames: &mut StackFrames,
+) -> Result<i64> {
+    let field_name = get_utf8_string_by_ref(string_ref, stack_frames)?;
     let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
     object_field_offset_by_names(&class_name, &field_name)
 }

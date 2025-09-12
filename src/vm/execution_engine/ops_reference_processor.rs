@@ -1,5 +1,7 @@
+use crate::unwrap_result_or_return_default;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
+use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::opcode::*;
@@ -73,13 +75,25 @@ pub(crate) fn process(
             trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
         }
         GETFIELD => {
-            let stack_frame = last_frame_mut(stack_frames)?;
-            let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
-            let objectref = stack_frame.pop();
-            let value = with_heap_read_lock(|heap| {
-                heap.get_object_field_value(objectref, class_name.as_str(), field_name.as_str())
-            })?;
+            let (class_name, field_name, objectref) = {
+                let stack_frame = last_frame_mut(stack_frames)?;
+                let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
+                let objectref = stack_frame.pop();
+                (class_name, field_name, objectref)
+            };
 
+            let value = with_heap_read_lock(|heap| {
+                heap.get_object_field_value_throwing(
+                    objectref,
+                    class_name.as_str(),
+                    field_name.as_str(),
+                    stack_frames,
+                )
+            });
+
+            let value = unwrap_result_or_return_default!(value, ());
+
+            let stack_frame = last_frame_mut(stack_frames)?;
             value.iter().rev().try_for_each(|x| stack_frame.push(*x))?;
 
             stack_frame.incr_pc();

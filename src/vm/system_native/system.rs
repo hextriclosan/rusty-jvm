@@ -3,6 +3,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_write_lock;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::object::identity_hashcode;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
@@ -112,14 +113,17 @@ fn set_err0(print_stream_ref: i32) -> Result<()> {
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 
-pub(crate) fn system_map_library_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn system_map_library_name_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
     let name_ref = args[0];
-    let library_name_ref = map_library_name(name_ref)?;
+    let library_name_ref = map_library_name(name_ref, stack_frames)?;
 
     Ok(vec![library_name_ref])
 }
-fn map_library_name(name_ref: i32) -> Result<i32> {
-    let name = get_utf8_string_by_ref(name_ref)?;
+fn map_library_name(name_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+    let name = get_utf8_string_by_ref(name_ref, stack_frames)?;
     let library_name = libloading::library_filename(name).into_string()?;
     let library_name_ref = StringPoolHelper::get_string(&library_name)?;
 

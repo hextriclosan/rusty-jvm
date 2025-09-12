@@ -48,7 +48,7 @@ fn write0(
     append: bool,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<i32> {
-    let handle = unwrap_or_return_err!(get_handle(fd_ref));
+    let handle = unwrap_or_return_err!(get_handle(fd_ref, stack_frames));
     let handle = handle as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
         throw_and_return!(throw_ioexception("Invalid handle", stack_frames))

@@ -1,8 +1,12 @@
 use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
+use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
+use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
+use crate::vm::stack::stack_frame::StackFrames;
+use crate::{throw_and_return, unwrap_or_return_err};
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
 use dashmap::DashMap;
 use serde::Serialize;
@@ -74,19 +78,21 @@ impl Heap {
             .ok_or_else(|| Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
     }
 
-    pub fn get_object_field_value(
+    pub fn get_object_field_value_throwing(
         &self,
         objectref: i32,
         class_name: &str,
         field_name_type: &str,
-    ) -> Result<Vec<i32>> {
+        stack_frames: &mut StackFrames,
+    ) -> ThrowingResult<Vec<i32>> {
         if objectref == 0 {
-            return Err(Error::new_execution(&format!(
-                "error getting field value: {class_name} from null-object"
-            ))); // throw an appropriate exception here
+            throw_and_return!(throw_null_pointer_exception_with_message(
+                &format!("Cannot read field \"{field_name_type}\" because \"<VALUE>\" is null"),
+                stack_frames
+            ))
         }
 
-        self.data.get(objectref)
+        let result = self.data.get(objectref)
             .and_then(|entry| {
                 match entry.value() {
                     Object(java_instance) => {
@@ -96,7 +102,30 @@ impl Heap {
                     _ => None,
                 }
             })
-            .ok_or_else(|| Error::new_execution(&format!("error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}")))
+            .ok_or_else(|| Error::new_execution(&format!("error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}")));
+
+        let unwrapped = unwrap_or_return_err!(result);
+        ThrowingResult::ok(unwrapped)
+    }
+
+    pub fn get_object_field_value(
+        &self,
+        objectref: i32,
+        class_name: &str,
+        field_name_type: &str,
+        stack_frames: &mut StackFrames,
+    ) -> Result<Vec<i32>> {
+        match self.get_object_field_value_throwing(
+            objectref,
+            class_name,
+            field_name_type,
+            stack_frames,
+        ) {
+            ThrowingResult::Result(v) => v,
+            ThrowingResult::ExceptionThrown => Err(Error::new_execution(
+                "Exception was thrown while getting field value",
+            )),
+        }
     }
 
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {

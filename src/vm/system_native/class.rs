@@ -9,6 +9,7 @@ use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
+use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::Arc;
 
@@ -58,14 +59,17 @@ fn get_superclass(clazz_ref: i32) -> Result<i32> {
     Ok(current_clazz_ref)
 }
 
-pub(crate) fn get_primitive_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn get_primitive_class_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
     let string_ref = args[0];
-    let class_ref = get_primitive_class(string_ref)?;
+    let class_ref = get_primitive_class(string_ref, stack_frames)?;
     Ok(vec![class_ref])
 }
 
-fn get_primitive_class(string_ref: i32) -> Result<i32> {
-    let string_content = get_utf8_string_by_ref(string_ref)?;
+fn get_primitive_class(string_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+    let string_content = get_utf8_string_by_ref(string_ref, stack_frames)?;
     let mapped_class_name = map_primitive_class(&string_content)?;
 
     let reflection_ref =
@@ -141,17 +145,23 @@ fn init_class_name(class_ref: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
-pub(crate) fn for_name0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn for_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let name_ref = args[0];
     let initialize = args[1] != 0;
     let loader_ref = args[2];
     let caller_ref = args[3];
 
-    let class_ref = for_name0(name_ref, initialize, loader_ref, caller_ref)?;
+    let class_ref = for_name0(name_ref, initialize, loader_ref, caller_ref, stack_frames)?;
     Ok(vec![class_ref])
 }
-fn for_name0(name_ref: i32, initialize: bool, _loader_ref: i32, _caller_ref: i32) -> Result<i32> {
-    let name = get_utf8_string_by_ref(name_ref)?;
+fn for_name0(
+    name_ref: i32,
+    initialize: bool,
+    _loader_ref: i32,
+    _caller_ref: i32,
+    stack_frames: &mut StackFrames,
+) -> Result<i32> {
+    let name = get_utf8_string_by_ref(name_ref, stack_frames)?;
     let internal_name = name.replace('.', "/");
     let reflection_ref =
         with_method_area(|method_area| method_area.load_reflection_class(&internal_name))?;

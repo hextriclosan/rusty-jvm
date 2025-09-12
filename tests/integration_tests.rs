@@ -2693,3 +2693,12 @@ fn should_perform_lookup_in_interfaces_during_invokespecial_call() {
         "42\n",
     );
 }
+
+#[test]
+fn should_handle_null_pointer_exceptions() {
+    assert_success(
+        "samples.npe.allnpeexamples.AllNPEExamples",
+        r#"Field access: Cannot read field "x" because "<VALUE>" is null
+"#,
+    );
+}

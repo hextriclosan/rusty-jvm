@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::member_name::{
     set_reference_kind, MemberName,
 };
@@ -15,12 +16,13 @@ pub fn resolve(
     _caller_class_ref: i32,
     _lookup_mode: i32,
     _speculative_resolve: bool,
+    stack_frames: &mut StackFrames,
 ) -> Result<i32> {
-    let mut member_name = MemberName::new(member_name_ref)?;
+    let mut member_name = MemberName::new(member_name_ref, stack_frames)?;
     let reference_kind = member_name.reference_kind();
     match reference_kind {
         REF_invokeVirtual | REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial
-        | REF_invokeInterface => resolve_method(&mut member_name),
+        | REF_invokeInterface => resolve_method(&mut member_name, stack_frames),
         REF_getField | REF_putField => Ok(member_name_ref),
         REF_getStatic | REF_putStatic => resolve_static_field(&mut member_name),
     }
@@ -28,9 +30,9 @@ pub fn resolve(
 
 /// Sets MemberName.method instance of ResolvedMethodName with injected `long vmtarget` (which is a pointer to the target method's vtable (Method* in HotSpot)).
 /// Also sets ResolvedMethodName.vmholder - the class that declares the resolved method.
-fn resolve_method(member_name: &mut MemberName) -> Result<i32> {
+fn resolve_method(member_name: &mut MemberName, stack_frames: &mut StackFrames) -> Result<i32> {
     let type_obj_ref = member_name.type_obj_ref();
-    let method_type = MethodType::new(type_obj_ref)?;
+    let method_type = MethodType::new(type_obj_ref, stack_frames)?;
     let method_name = member_name.name();
     let ptype_names = method_type.ptype_names();
     let rtype_name = method_type.rtype_name();
@@ -82,7 +84,11 @@ fn resolve_static_field(member_name: &mut MemberName) -> Result<i32> {
 
 /// Resolves MemberName instance based on `obj_ref` which is expected to be a `java/lang/reflect/Method`, `java/lang/reflect/Constructor`, or `java/lang/reflect/Field`.
 /// It initializes the `vmtarget` and `vmindex` fields of the MemberName
-pub(crate) fn member_name_init(member_name_ref: i32, obj_ref: i32) -> Result<()> {
+pub(crate) fn member_name_init(
+    member_name_ref: i32,
+    obj_ref: i32,
+    stack_frames: &mut StackFrames,
+) -> Result<()> {
     // MethodHandleNatives.Constants
     const MN_IS_METHOD: i32 = 0x00010000; // method (not constructor)
     const MN_IS_CONSTRUCTOR: i32 = 0x00020000; // constructor
@@ -93,7 +99,7 @@ pub(crate) fn member_name_init(member_name_ref: i32, obj_ref: i32) -> Result<()>
         "java/lang/reflect/Method" => {
             // fill in vmtarget, vmindex while we have Method ref in hand:
             let modifiers = with_heap_read_lock(|h| {
-                h.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")
+                h.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers", stack_frames)
             })?[0];
             let method_flags = MethodFlags::from_bits_truncate(modifiers as u16);
             let kind = if method_flags.contains(MethodFlags::ACC_STATIC) {
@@ -101,7 +107,13 @@ pub(crate) fn member_name_init(member_name_ref: i32, obj_ref: i32) -> Result<()>
             } else {
                 todo!("member_name_init: Handle non-static method resolution")
             };
-            init_from_method_or_constructor(member_name_ref, obj_ref, kind, MN_IS_METHOD)?;
+            init_from_method_or_constructor(
+                member_name_ref,
+                obj_ref,
+                kind,
+                MN_IS_METHOD,
+                stack_frames,
+            )?;
         }
         "java/lang/reflect/Constructor" => {
             // fill in vmtarget, vmindex while we have Constructor ref in hand:
@@ -110,6 +122,7 @@ pub(crate) fn member_name_init(member_name_ref: i32, obj_ref: i32) -> Result<()>
                 obj_ref,
                 REF_newInvokeSpecial,
                 MN_IS_CONSTRUCTOR,
+                stack_frames,
             )?;
         }
         "java/lang/reflect/Field" => {
@@ -131,12 +144,15 @@ fn init_from_method_or_constructor(
     obj_ref: i32,
     kind: ReferenceKind,
     internal_flag: i32,
+    stack_frames: &mut StackFrames,
 ) -> Result<()> {
     let obj_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     let (clazz_ref, modifiers, slot) = with_heap_read_lock(|h| {
-        let clazz_ref = h.get_object_field_value(obj_ref, obj_name.as_str(), "clazz")?[0];
-        let modifiers = h.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")?[0];
-        let slot = h.get_object_field_value(obj_ref, obj_name.as_str(), "slot")?[0];
+        let clazz_ref =
+            h.get_object_field_value(obj_ref, obj_name.as_str(), "clazz", stack_frames)?[0];
+        let modifiers =
+            h.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers", stack_frames)?[0];
+        let slot = h.get_object_field_value(obj_ref, obj_name.as_str(), "slot", stack_frames)?[0];
 
         Ok::<(i32, i32, i32), Error>((clazz_ref, modifiers, slot))
     })?;
