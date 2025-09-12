@@ -92,9 +92,10 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
 }
 
 #[cfg(unix)]
-pub fn get_fd(fd_ref: i32) -> Result<i32> {
+pub fn get_fd(fd_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
     with_heap_read_lock(|heap| {
-        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?;
+        let raw =
+            heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", stack_frames)?;
         Ok::<i32, Error>(raw[0])
     })
 }
