@@ -2,6 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind::{
@@ -31,20 +32,27 @@ pub struct MemberName {
 }
 
 impl MemberName {
-    pub fn new(member_name_ref: i32) -> Result<Self> {
+    pub fn new(member_name_ref: i32, stack_frames: &mut StackFrames) -> Result<Self> {
         let (flags, class_ref, name_ref, type_obj_ref) = with_heap_read_lock(|heap| {
-            let flags = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "flags")?[0];
-            let class_ref = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "clazz")?[0];
-            let name_ref = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "name")?[0];
+            let flags =
+                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "flags", stack_frames)?
+                    [0];
+            let class_ref =
+                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "clazz", stack_frames)?
+                    [0];
+            let name_ref =
+                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "name", stack_frames)?
+                    [0];
             let type_obj_ref =
-                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "type")?[0];
+                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "type", stack_frames)?
+                    [0];
             Ok::<(i32, i32, i32, i32), Error>((flags, class_ref, name_ref, type_obj_ref))
         })?;
 
         let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
-        let name = get_utf8_string_by_ref(name_ref)?;
+        let name = get_utf8_string_by_ref(name_ref, stack_frames)?;
         let reference_kind = get_reference_kind(flags)?;
-        let method = load_method(member_name_ref)?;
+        let method = load_method(member_name_ref, stack_frames)?;
 
         Ok(Self {
             member_name_ref,
@@ -124,16 +132,20 @@ impl MemberName {
     }
 }
 
-fn load_method(member_name_ref: i32) -> Result<Option<ResolvedMethodName>> {
+fn load_method(
+    member_name_ref: i32,
+    stack_frames: &mut StackFrames,
+) -> Result<Option<ResolvedMethodName>> {
     let resolved_method_name_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(member_name_ref, MEMBER_NAME, "method")
+        heap.get_object_field_value(member_name_ref, MEMBER_NAME, "method", stack_frames)
     })?[0];
 
     if resolved_method_name_ref == 0 {
         return Ok(None);
     }
 
-    let resolved_method_name = ResolvedMethodName::new_load_by_ref(resolved_method_name_ref)?;
+    let resolved_method_name =
+        ResolvedMethodName::new_load_by_ref(resolved_method_name_ref, stack_frames)?;
     Ok(Some(resolved_method_name))
 }
 

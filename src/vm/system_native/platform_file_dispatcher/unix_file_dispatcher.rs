@@ -34,7 +34,7 @@ fn write0(
     let address = address as usize as *const u8;
     let buf = unsafe { from_raw_parts(address, len as usize) };
 
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_fd(fd_ref, stack_frames));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match write(fd, buf) {
         Ok(written) => written as i32,
@@ -71,7 +71,7 @@ fn read0(
     let address = address as usize as *mut u8;
     let buf = unsafe { from_raw_parts_mut(address, len as usize) };
 
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_fd(fd_ref, stack_frames));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match read(fd, buf) {
         Ok(read) => {
@@ -103,7 +103,7 @@ pub fn unix_file_dispatcher_impl_size0_wrp(
     Ok(i64_to_vec(result))
 }
 fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_fd(fd_ref, stack_frames));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match fstat(fd) {
         Ok(stat) => stat.st_size as i64,

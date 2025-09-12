@@ -2,13 +2,14 @@ use crate::vm::error::Result;
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::helper::clazz_ref;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub(crate) const SYNTH_CLASS_DELIM: char = '#';
 static COUNTER: AtomicU32 = AtomicU32::new(1);
 
-pub(crate) fn define_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn define_class0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let class_loader_ref = args[0];
     let lookup_ref = args[1];
     let name_ref = args[2];
@@ -30,6 +31,7 @@ pub(crate) fn define_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
         initialize,
         flags,
         class_data_ref,
+        stack_frames,
     )?;
 
     Ok(vec![class_ref])
@@ -45,10 +47,11 @@ fn define_class0(
     _initialize: bool,
     _flags: i32,
     _class_data_ref: i32,
+    stack_frames: &mut StackFrames,
 ) -> Result<i32> {
     let name = format!(
         "{}{SYNTH_CLASS_DELIM}0x{:016X}",
-        get_utf8_string_by_ref(name_ref)?,
+        get_utf8_string_by_ref(name_ref, stack_frames)?,
         increment_counter()
     );
     let buf = with_heap_read_lock(|heap| heap.get_entire_array(buf_ref))?;
@@ -68,14 +71,17 @@ fn define_class0(
     clazz_ref
 }
 
-pub(crate) fn find_bootstrap_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn find_bootstrap_class_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
     let name_ref = args[0];
-    let clazz_ref = find_bootstrap_class(name_ref)?;
+    let clazz_ref = find_bootstrap_class(name_ref, stack_frames)?;
 
     Ok(vec![clazz_ref])
 }
-fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
-    let name = get_utf8_string_by_ref(name_ref)?;
+fn find_bootstrap_class(name_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+    let name = get_utf8_string_by_ref(name_ref, stack_frames)?;
     let internal_name = &name.replace('.', "/");
 
     // Check if the class is already loaded and exists

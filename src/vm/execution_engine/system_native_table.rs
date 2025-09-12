@@ -121,7 +121,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/System:mapLibraryName:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(system_map_library_name_wrp),
+        WithMutStackFrames(system_map_library_name_wrp),
     );
     table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert(
@@ -130,7 +130,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Class:getPrimitiveClass:(Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(get_primitive_class_wrp),
+        WithMutStackFrames(get_primitive_class_wrp),
     );
     table.insert(
         "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
@@ -139,7 +139,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert("java/lang/Class:isInterface:()Z", Basic(is_interface_wrp)); // todo: remove me after migration from 23 to 25 java version
-    table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", Basic(for_name0_wrp));
+    table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", WithMutStackFrames(for_name0_wrp));
     table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Class:initClassName:()Ljava/lang/String;",
@@ -207,39 +207,39 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/Unsafe:objectFieldOffset0:(Ljava/lang/reflect/Field;)J",
-        Basic(object_field_offset_0_wrp),
+        WithMutStackFrames(object_field_offset_0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:objectFieldOffset1:(Ljava/lang/Class;Ljava/lang/String;)J",
-        Basic(object_field_offset_1_wrp),
+        WithMutStackFrames(object_field_offset_1_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:staticFieldOffset0:(Ljava/lang/reflect/Field;)J",
-        Basic(static_field_offset_0_wrp),
+        WithMutStackFrames(static_field_offset_0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:staticFieldBase0:(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
-        Basic(static_field_base0_wrp),
+        WithMutStackFrames(static_field_base0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetInt:(Ljava/lang/Object;JII)Z",
-        Basic(compare_and_set_int_wrp),
+        WithMutStackFrames(compare_and_set_int_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetReference:(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-        Basic(compare_and_set_int_wrp)
+        WithMutStackFrames(compare_and_set_int_wrp)
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetLong:(Ljava/lang/Object;JJJ)Z",
-        Basic(compare_and_set_long_wrp),
+        WithMutStackFrames(compare_and_set_long_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndExchangeLong:(Ljava/lang/Object;JJJ)J",
-        Basic(compare_and_exchange_long_wrp),
+        WithMutStackFrames(compare_and_exchange_long_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getReferenceVolatile:(Ljava/lang/Object;J)Ljava/lang/Object;",
-        Basic(get_reference_volatile_wrp),
+        WithMutStackFrames(get_reference_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getByte:(Ljava/lang/Object;J)B",
@@ -255,19 +255,19 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getInt:(Ljava/lang/Object;J)I",
-        Basic(get_int_wrp),
+        WithMutStackFrames(get_int_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getIntVolatile:(Ljava/lang/Object;J)I",
-        Basic(get_int_volatile_wrp),
+        WithMutStackFrames(get_int_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getLong:(Ljava/lang/Object;J)J",
-        Basic(get_long_wrp),
+        WithMutStackFrames(get_long_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getLongVolatile:(Ljava/lang/Object;J)J",
-        Basic(get_long_volatile_wrp),
+        WithMutStackFrames(get_long_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:arrayIndexScale0:(Ljava/lang/Class;)I",
@@ -276,7 +276,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("jdk/internal/misc/Unsafe:fullFence:()V", Basic(void_stub));
     table.insert(
         "jdk/internal/misc/Unsafe:getReference:(Ljava/lang/Object;J)Ljava/lang/Object;",
-        Basic(get_reference_volatile_wrp),
+        WithMutStackFrames(get_reference_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:putReference:(Ljava/lang/Object;JLjava/lang/Object;)V",
@@ -332,7 +332,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
-        Basic(intern_wrp),
+        WithMutStackFrames(intern_wrp),
     );
     table.insert(
         "java/lang/Float:floatToRawIntBits:(F)I",
@@ -397,7 +397,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/io/FileDescriptor:close0:()V",
-        Basic(file_descriptor_close0_wrp),
+        WithMutStackFrames(file_descriptor_close0_wrp),
     );
     table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
     table.insert("java/io/FileInputStream:initIDs:()V", Basic(void_stub));
@@ -459,11 +459,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/io/FileOutputStream:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/FileOutputStream:write:(IZ)V",
-        Basic(file_output_stream_write_wrp),
+        WithMutStackFrames(file_output_stream_write_wrp),
     );
     table.insert(
         "java/io/FileOutputStream:writeBytes:([BIIZ)V",
-        Basic(file_output_stream_write_bytes_wrp),
+        WithMutStackFrames(file_output_stream_write_bytes_wrp),
     );
     table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
     table.insert(
@@ -498,11 +498,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:init:(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
-        Basic(method_handle_natives_init_wrp),
+        WithMutStackFrames(method_handle_natives_init_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:resolve:(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
-        Basic(method_handle_natives_resolve_wrp),
+        WithMutStackFrames(method_handle_natives_resolve_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:registerNatives:()V",
@@ -510,15 +510,15 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:objectFieldOffset:(Ljava/lang/invoke/MemberName;)J",
-        Basic(method_handle_natives_object_field_offset_wrp),
+        WithMutStackFrames(method_handle_natives_object_field_offset_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:staticFieldOffset:(Ljava/lang/invoke/MemberName;)J",
-        Basic(method_handle_natives_static_field_offset_wrp),
+        WithMutStackFrames(method_handle_natives_static_field_offset_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:staticFieldBase:(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
-        Basic(method_handle_natives_static_field_base_wrp),
+        WithMutStackFrames(method_handle_natives_static_field_base_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:getNamedCon:(I[Ljava/lang/Object;)I",
@@ -526,7 +526,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:getMemberVMInfo:(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
-        Basic(method_handle_natives_get_member_vm_info_wrp),
+        WithMutStackFrames(method_handle_natives_get_member_vm_info_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandleNatives:setCallSiteTargetNormal:(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
@@ -546,7 +546,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
-        Basic(define_class0_wrp),
+        WithMutStackFrames(define_class0_wrp),
     );
     table.insert(
         "java/lang/ClassLoader:registerNatives:()V",
@@ -554,7 +554,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/ClassLoader:findBootstrapClass:(Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(find_bootstrap_class_wrp),
+        WithMutStackFrames(find_bootstrap_class_wrp),
     );
     table.insert(
         "jdk/internal/reflect/ConstantPool:getUTF8At0:(Ljava/lang/Object;I)Ljava/lang/String;",
@@ -574,7 +574,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/loader/NativeLibraries:findBuiltinLib:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(find_builtin_lib_wrp),
+        WithMutStackFrames(find_builtin_lib_wrp),
     );
     table.insert(
         "jdk/internal/loader/NativeLibraries:load:(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z", // todo: should be implemented with shared library dynamic loading
@@ -588,44 +588,44 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/io/WinNTFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(canonicalize0_wrp),
+        WithMutStackFrames(canonicalize0_wrp),
     );
     table.insert(
         "java/io/UnixFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(canonicalize0_wrp),
+        WithMutStackFrames(canonicalize0_wrp),
     );
     table.insert(
         "java/io/WinNTFileSystem:createFileExclusively0:(Ljava/lang/String;)Z",
-        Basic(create_file_exclusively0_wrp),
+        WithMutStackFrames(create_file_exclusively0_wrp),
     );
     table.insert(
         "java/io/UnixFileSystem:createFileExclusively0:(Ljava/lang/String;)Z",
-        Basic(create_file_exclusively0_wrp),
+        WithMutStackFrames(create_file_exclusively0_wrp),
     );
     // todo: remove me after migration from 23 to 25 java version
     table.insert(
         "java/io/WinNTFileSystem:delete0:(Ljava/io/File;)Z",
-        Basic(delete0_wrp),
+        WithMutStackFrames(delete0_wrp),
     );
     table.insert(
         "java/io/UnixFileSystem:delete0:(Ljava/io/File;)Z",
-        Basic(delete0_wrp),
+        WithMutStackFrames(delete0_wrp),
     );
     table.insert(
         "java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
-        Basic(get_boolean_attributes0_wrp),
+        WithMutStackFrames(get_boolean_attributes0_wrp),
     );
     table.insert(
         "java/io/UnixFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
-        Basic(get_boolean_attributes0_wrp),
+        WithMutStackFrames(get_boolean_attributes0_wrp),
     );
     table.insert(
         "java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z",
-        Basic(check_access0_wrp),
+        WithMutStackFrames(check_access0_wrp),
     );
     table.insert(
         "java/io/UnixFileSystem:checkAccess0:(Ljava/io/File;I)Z",
-        Basic(check_access0_wrp),
+        WithMutStackFrames(check_access0_wrp),
     );
     table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
     table.insert("sun/nio/ch/IOUtil:iovMax:()I", Basic(iov_max_wrp));
@@ -645,11 +645,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
-        Basic(native_accessor_invoke0_wrp),
+        WithMutStackFrames(native_accessor_invoke0_wrp),
     );
     table.insert(
         "jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
-        Basic(native_accessor_newinstance0_wrp),
+        WithMutStackFrames(native_accessor_newinstance0_wrp),
     );
     table.insert(
         "jdk/internal/vm/ContinuationSupport:isSupported0:()Z",
@@ -811,7 +811,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         );
         table.insert(
             "java/io/WinNTFileSystem:delete0:(Ljava/io/File;Z)Z",
-            Basic(winnt_file_system_delete0_wrp),
+            WithMutStackFrames(winnt_file_system_delete0_wrp),
         );
     }
 
