@@ -39,8 +39,8 @@ public class AllNPEExamples {
 
     static void arrayAccess() {
         Object placeholder0 = null;
-        int[] array = null;
-        int x = array[0];
+        String[] array = null;
+        String x = array[0];
     }
 
     static void syncOnNull() {
@@ -130,6 +130,12 @@ public class AllNPEExamples {
             arrayLength();
         } catch (Throwable throwable) {
             System.out.println("Array length: " + throwable.getMessage());
+        }
+
+        try {
+            arrayAccess();
+        } catch (Throwable throwable) {
+            System.out.println("Array access: " + throwable.getMessage());
         }
     }
 

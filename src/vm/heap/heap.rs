@@ -254,7 +254,9 @@ impl Heap {
                 }
                 _ => None,
             })
-            .ok_or_else(|| Error::new_execution("error getting array value from heap"))
+            .ok_or_else(|| {
+                Error::new_execution("error getting array value from heap by raw offset")
+            })
     }
 
     pub(crate) fn set_array_value(
