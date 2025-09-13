@@ -2704,6 +2704,7 @@ Method call (invokeinterface): Cannot invoke "java/lang/Runnable.run:()V" becaus
 Array length: Cannot read the array length because "<VALUE>" is null
 Array access: Cannot load from object array because "<VALUE>" is null
 Synchronization on null: Cannot enter synchronized block because "<VALUE>" is null
+Unboxing: Cannot invoke "java/lang/Integer.intValue:()I" because "<VALUE>" is null
 "#,
     );
 }
