@@ -1,23 +1,19 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_read_lock;
-use crate::vm::stack::stack_frame::StackFrames;
 
 const STRING_CLASS_NAME: &str = "java/lang/String";
 const VALUE_FIELD: &str = "value";
 const CODER_FIELD: &str = "coder";
 
-pub(crate) fn get_utf8_string_by_ref(
-    string_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Result<String> {
+pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> Result<String> {
     let array_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(string_ref, STRING_CLASS_NAME, VALUE_FIELD, stack_frames)
+        heap.get_object_field_value(string_ref, STRING_CLASS_NAME, VALUE_FIELD)
     })?;
     let array_ref = array_ref[0];
     // todo: re-check race condition between calls
     let coder = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(string_ref, STRING_CLASS_NAME, CODER_FIELD, stack_frames)
+        heap.get_object_field_value(string_ref, STRING_CLASS_NAME, CODER_FIELD)
     })?;
     let coder = coder[0] as u8;
 
@@ -58,12 +54,12 @@ pub(crate) fn get_utf8_string_by_ref(
     Ok(result)
 }
 
-pub(crate) fn intern_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let reference = intern(args[0], stack_frames)?;
+pub(crate) fn intern_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let reference = intern(args[0])?;
     Ok(vec![reference])
 }
-fn intern(reference: i32, stack_frames: &mut StackFrames) -> Result<i32> {
-    let string = get_utf8_string_by_ref(reference, stack_frames)?;
+fn intern(reference: i32) -> Result<i32> {
+    let string = get_utf8_string_by_ref(reference)?;
 
     StringPoolHelper::get_string(&string)
 }

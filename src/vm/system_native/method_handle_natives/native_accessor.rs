@@ -5,17 +5,11 @@ use crate::vm::heap::java_instance::Array;
 use crate::vm::helper::clazz_ref;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::{StackValue, StackValueKind};
 use std::sync::Arc;
 
-pub fn native_accessor_invoke0(
-    method_ref: i32,
-    obj_ref: i32,
-    args_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Result<i32> {
-    let (method, args) = resolve_method_and_args(method_ref, args_ref, stack_frames)?;
+pub fn native_accessor_invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> Result<i32> {
+    let (method, args) = resolve_method_and_args(method_ref, args_ref)?;
 
     let ret = if obj_ref == 0 {
         Executor::invoke_static_method(method.class_name(), method.name_signature(), &args)?[0]
@@ -31,12 +25,8 @@ pub fn native_accessor_invoke0(
     Ok(ret)
 }
 
-pub fn native_accessor_newinstance0(
-    constructor_ref: i32,
-    args_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Result<i32> {
-    let (method, args) = resolve_method_and_args(constructor_ref, args_ref, stack_frames)?;
+pub fn native_accessor_newinstance0(constructor_ref: i32, args_ref: i32) -> Result<i32> {
+    let (method, args) = resolve_method_and_args(constructor_ref, args_ref)?;
 
     Executor::invoke_args_constructor(
         method.class_name(),
@@ -49,27 +39,19 @@ pub fn native_accessor_newinstance0(
 fn resolve_method_and_args(
     method_or_constructor_ref: i32,
     args_ref: i32,
-    stack_frames: &mut StackFrames,
 ) -> Result<(Arc<JavaMethod>, Vec<StackValueKind>)> {
     let (clazz_ref, slot, entire_array_args, parameter_types) = with_heap_read_lock(|heap| {
         let method_name = heap.get_instance_name(method_or_constructor_ref)?;
-        let clazz_ref = heap.get_object_field_value(
-            method_or_constructor_ref,
-            method_name.as_str(),
-            "clazz",
-            stack_frames,
-        )?[0];
-        let slot = heap.get_object_field_value(
-            method_or_constructor_ref,
-            method_name.as_str(),
-            "slot",
-            stack_frames,
-        )?[0];
+        let clazz_ref =
+            heap.get_object_field_value(method_or_constructor_ref, method_name.as_str(), "clazz")?
+                [0];
+        let slot =
+            heap.get_object_field_value(method_or_constructor_ref, method_name.as_str(), "slot")?
+                [0];
         let parameter_types_ref = heap.get_object_field_value(
             method_or_constructor_ref,
             method_name.as_str(),
             "parameterTypes",
-            stack_frames,
         )?[0];
 
         let entire_array_args = if args_ref != 0 {

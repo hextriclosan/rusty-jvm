@@ -1,21 +1,20 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_read_lock;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use bitflags::bitflags;
 use path_absolutize::Absolutize;
 use std::path::Path;
 
-pub(crate) fn canonicalize0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+pub(crate) fn canonicalize0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _filesystem_impl_ref = args[0];
     let path_ref = args[1];
-    let canonical_path_ref = canonicalize0(path_ref, stack_frames)?;
+    let canonical_path_ref = canonicalize0(path_ref)?;
 
     Ok(vec![canonical_path_ref])
 }
-fn canonicalize0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
-    let path = get_utf8_string_by_ref(path_ref, stack_frames)?;
+fn canonicalize0(path_ref: i32) -> Result<i32> {
+    let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
     let canonical_path = path.absolutize()?;
@@ -27,18 +26,15 @@ fn canonicalize0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
     Ok(canonical_name_ref)
 }
 
-pub(crate) fn create_file_exclusively0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn create_file_exclusively0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _filesystem_impl_ref = args[0];
     let path_ref = args[1];
-    let created = create_file_exclusively0(path_ref, stack_frames)?;
+    let created = create_file_exclusively0(path_ref)?;
 
     Ok(vec![if created { 1 } else { 0 }])
 }
-fn create_file_exclusively0(path_ref: i32, stack_frames: &mut StackFrames) -> Result<bool> {
-    let path = get_utf8_string_by_ref(path_ref, stack_frames)?;
+fn create_file_exclusively0(path_ref: i32) -> Result<bool> {
+    let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
     if path.exists() {
@@ -50,17 +46,17 @@ fn create_file_exclusively0(path_ref: i32, stack_frames: &mut StackFrames) -> Re
         .map_err(|e| Error::new_execution(&format!("Failed to create file {path:?}: {e}")))
 }
 
-pub(crate) fn delete0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+pub(crate) fn delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _filesystem_impl_ref = args[0];
     let file_ref = args[1];
-    let deleted = delete0(file_ref, stack_frames)?;
+    let deleted = delete0(file_ref)?;
 
     Ok(vec![if deleted { 1 } else { 0 }])
 }
-fn delete0(file_ref: i32, stack_frames: &mut StackFrames) -> Result<bool> {
-    let path_ref = extract_path(file_ref, stack_frames)?;
+fn delete0(file_ref: i32) -> Result<bool> {
+    let path_ref = extract_path(file_ref)?;
 
-    let path = get_utf8_string_by_ref(path_ref, stack_frames)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
     if !path.exists() {
@@ -72,13 +68,10 @@ fn delete0(file_ref: i32, stack_frames: &mut StackFrames) -> Result<bool> {
         .map_err(|e| Error::new_execution(&format!("Failed to delete file {path:?}: {e}")))
 }
 
-pub(crate) fn get_boolean_attributes0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn get_boolean_attributes0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _filesystem_impl_ref = args[0];
     let file_ref = args[1];
-    let attributes = get_boolean_attributes0(file_ref, stack_frames)?;
+    let attributes = get_boolean_attributes0(file_ref)?;
 
     Ok(vec![attributes])
 }
@@ -91,10 +84,10 @@ bitflags! {
         const BA_HIDDEN = 0x08;
     }
 }
-fn get_boolean_attributes0(file_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
-    let path_ref = extract_path(file_ref, stack_frames)?;
+fn get_boolean_attributes0(file_ref: i32) -> Result<i32> {
+    let path_ref = extract_path(file_ref)?;
 
-    let path = get_utf8_string_by_ref(path_ref, stack_frames)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
     if !path.exists() {
@@ -145,11 +138,11 @@ fn is_hidden(path: &Path) -> bool {
     false
 }
 
-pub(crate) fn check_access0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+pub(crate) fn check_access0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _filesystem_impl_ref = args[0];
     let file_ref = args[1];
     let access = args[2];
-    let result = check_access0(file_ref, access, stack_frames)?;
+    let result = check_access0(file_ref, access)?;
 
     Ok(vec![if result { 1 } else { 0 }])
 }
@@ -161,10 +154,10 @@ bitflags! {
         const ACCESS_READ = 0x04;
     }
 }
-fn check_access0(file_ref: i32, access: i32, stack_frames: &mut StackFrames) -> Result<bool> {
-    let path_ref = extract_path(file_ref, stack_frames)?;
+fn check_access0(file_ref: i32, access: i32) -> Result<bool> {
+    let path_ref = extract_path(file_ref)?;
 
-    let path = get_utf8_string_by_ref(path_ref, stack_frames)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
     if !path.exists() {
@@ -215,8 +208,9 @@ fn check_access_impl(path: &Path, mode: Access) -> bool {
     }
 }
 
-fn extract_path(file_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
-    Ok(with_heap_read_lock(|heap| {
-        heap.get_object_field_value(file_ref, "java/io/File", "path", stack_frames)
-    })?[0])
+fn extract_path(file_ref: i32) -> Result<i32> {
+    Ok(
+        with_heap_read_lock(|heap| heap.get_object_field_value(file_ref, "java/io/File", "path"))?
+            [0],
+    )
 }

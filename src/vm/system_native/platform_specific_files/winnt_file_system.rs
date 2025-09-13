@@ -40,7 +40,7 @@ fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> ThrowingRes
         ))
     }
 
-    let path = unwrap_or_return_err!(get_utf8_string_by_ref(path_ref, stack_frames));
+    let path = unwrap_or_return_err!(get_utf8_string_by_ref(path_ref));
     let wide_path = WideCString::new(&path);
     let final_path = match get_final_path0_impl(&wide_path) {
         Ok(final_path) => final_path,
@@ -106,10 +106,7 @@ fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     Ok(result)
 }
 
-pub(crate) fn winnt_file_system_delete0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn winnt_file_system_delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let filesystem_impl_ref = args[0];
     let file_ref = args[1];
     let allow_delete_readonly = args[2] != 0;
@@ -120,5 +117,5 @@ pub(crate) fn winnt_file_system_delete0_wrp(
         ));
     }
 
-    delete0_wrp(&[filesystem_impl_ref, file_ref], stack_frames) //fallback to common implementation
+    delete0_wrp(&[filesystem_impl_ref, file_ref]) //fallback to common implementation
 }

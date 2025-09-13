@@ -1,3 +1,4 @@
+use crate::throw_and_return;
 use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
@@ -6,7 +7,6 @@ use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::{throw_and_return, unwrap_or_return_err};
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
 use dashmap::DashMap;
 use serde::Serialize;
@@ -78,6 +78,31 @@ impl Heap {
             .ok_or_else(|| Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
     }
 
+    pub fn get_object_field_value(
+        &self,
+        objectref: i32,
+        class_name: &str,
+        field_name_type: &str,
+    ) -> Result<Vec<i32>> {
+        if objectref == 0 {
+            return Err(Error::new_execution(&format!(
+                "error getting field value: {class_name} from null-object"
+            ))); // throw an appropriate exception here
+        }
+
+        self.data.get(objectref)
+            .and_then(|entry| {
+                match entry.value() {
+                    Object(java_instance) => {
+                        let ret = java_instance.get_field_value(class_name, field_name_type).ok()?;
+                        Some(ret)
+                    },
+                    _ => None,
+                }
+            })
+            .ok_or_else(|| Error::new_execution(&format!("error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}")))
+    }
+
     pub fn get_object_field_value_throwing(
         &self,
         objectref: i32,
@@ -92,40 +117,9 @@ impl Heap {
             ))
         }
 
-        let result = self.data.get(objectref)
-            .and_then(|entry| {
-                match entry.value() {
-                    Object(java_instance) => {
-                        let ret = java_instance.get_field_value(class_name, field_name_type).ok()?;
-                        Some(ret)
-                    },
-                    _ => None,
-                }
-            })
-            .ok_or_else(|| Error::new_execution(&format!("error getting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}")));
+        let result = self.get_object_field_value(objectref, class_name, field_name_type);
 
-        let unwrapped = unwrap_or_return_err!(result);
-        ThrowingResult::ok(unwrapped)
-    }
-
-    pub fn get_object_field_value(
-        &self,
-        objectref: i32,
-        class_name: &str,
-        field_name_type: &str,
-        stack_frames: &mut StackFrames,
-    ) -> Result<Vec<i32>> {
-        match self.get_object_field_value_throwing(
-            objectref,
-            class_name,
-            field_name_type,
-            stack_frames,
-        ) {
-            ThrowingResult::Result(v) => v,
-            ThrowingResult::ExceptionThrown => Err(Error::new_execution(
-                "Exception was thrown while getting field value",
-            )),
-        }
+        ThrowingResult::Result(result)
     }
 
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {

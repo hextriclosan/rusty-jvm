@@ -5,7 +5,6 @@ use crate::vm::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::java_class::STATIC_FIELDS_START;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::object_offset::offset_utils::{
     object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
 };
@@ -22,120 +21,84 @@ enum ValueType {
     Short,
 }
 
-pub(crate) fn object_field_offset_0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn object_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let field_ref = args[1];
-    let offset = object_field_offset_0(field_ref, stack_frames)?;
+    let offset = object_field_offset_0(field_ref)?;
 
     let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
     let low = (offset & 0xFFFFFFFF) as i32;
 
     Ok(vec![high, low])
 }
-fn object_field_offset_0(field_ref: i32, stack_frames: &mut StackFrames) -> Result<i64> {
+fn object_field_offset_0(field_ref: i32) -> Result<i64> {
     let (class_ref, field_name_ref) = with_heap_read_lock(|heap| {
-        let class_ref = heap.get_object_field_value(
-            field_ref,
-            "java/lang/reflect/Field",
-            "clazz",
-            stack_frames,
-        )?[0];
-        let field_name_ref = heap.get_object_field_value(
-            field_ref,
-            "java/lang/reflect/Field",
-            "name",
-            stack_frames,
-        )?[0];
+        let class_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
+        let field_name_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "name")?[0];
 
         Ok::<(i32, i32), Error>((class_ref, field_name_ref))
     })?;
 
     let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
-    let field_name = get_utf8_string_by_ref(field_name_ref, stack_frames)?;
+    let field_name = get_utf8_string_by_ref(field_name_ref)?;
 
     object_field_offset_by_names(&class_name, &field_name)
 }
 
-pub(crate) fn object_field_offset_1_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let class_ref = args[1];
     let string_ref = args[2];
-    let offset = object_field_offset_1(class_ref, string_ref, stack_frames)?;
+    let offset = object_field_offset_1(class_ref, string_ref)?;
 
     let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
     let low = (offset & 0xFFFFFFFF) as i32;
 
     Ok(vec![high, low])
 }
-fn object_field_offset_1(
-    class_ref: i32,
-    string_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Result<i64> {
-    object_field_offset_by_refs(class_ref, string_ref, stack_frames)
+fn object_field_offset_1(class_ref: i32, string_ref: i32) -> Result<i64> {
+    object_field_offset_by_refs(class_ref, string_ref)
 }
 
-pub(crate) fn static_field_offset_0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn static_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let field_ref = args[1];
-    let offset = static_field_offset_0(field_ref, stack_frames)?;
+    let offset = static_field_offset_0(field_ref)?;
 
     let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
     let low = (offset & 0xFFFFFFFF) as i32;
 
     Ok(vec![high, low])
 }
-fn static_field_offset_0(field_ref: i32, stack_frames: &mut StackFrames) -> Result<i64> {
+fn static_field_offset_0(field_ref: i32) -> Result<i64> {
     let (class_ref, field_name_ref) = with_heap_read_lock(|heap| {
-        let class_ref = heap.get_object_field_value(
-            field_ref,
-            "java/lang/reflect/Field",
-            "clazz",
-            stack_frames,
-        )?[0];
-        let field_name_ref = heap.get_object_field_value(
-            field_ref,
-            "java/lang/reflect/Field",
-            "name",
-            stack_frames,
-        )?[0];
+        let class_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
+        let field_name_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "name")?[0];
 
         Ok::<(i32, i32), Error>((class_ref, field_name_ref))
     })?;
 
     let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
-    let field_name = get_utf8_string_by_ref(field_name_ref, stack_frames)?;
+    let field_name = get_utf8_string_by_ref(field_name_ref)?;
 
     static_field_offset_by_names(&class_name, &field_name)
 }
 
-pub(crate) fn static_field_base0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn static_field_base0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let field_ref = args[1];
-    let base_ref = static_field_base0(field_ref, stack_frames)?;
+    let base_ref = static_field_base0(field_ref)?;
 
     Ok(vec![base_ref])
 }
-fn static_field_base0(field_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+fn static_field_base0(field_ref: i32) -> Result<i32> {
     let clazz_ref = with_heap_read_lock(|heap| {
-        let clazz_ref = heap.get_object_field_value(
-            field_ref,
-            "java/lang/reflect/Field",
-            "clazz",
-            stack_frames,
-        )?[0];
+        let clazz_ref =
+            heap.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
 
         Ok::<i32, Error>(clazz_ref)
     })?;
@@ -146,26 +109,17 @@ fn static_field_base0(field_ref: i32, stack_frames: &mut StackFrames) -> Result<
     Ok(class_ref)
 }
 
-pub(crate) fn compare_and_set_int_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
     let expected = args[4];
     let x = args[5];
 
-    let result = compare_and_set_int(obj_ref, offset, expected, x, stack_frames)?;
+    let result = compare_and_set_int(obj_ref, offset, expected, x)?;
     Ok(vec![result as i32])
 }
-fn compare_and_set_int(
-    obj_ref: i32,
-    offset: i64,
-    expected: i32,
-    x: i32,
-    stack_frames: &mut StackFrames,
-) -> Result<bool> {
+fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Result<bool> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     let updated = if class_name.starts_with("[") {
         with_heap_write_lock(|heap| {
@@ -181,8 +135,7 @@ fn compare_and_set_int(
         let jc = with_method_area(|area| area.get(class_name.as_str()))?;
         let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
         with_heap_write_lock(|heap| {
-            let result =
-                heap.get_object_field_value(obj_ref, &class_name, &field_name, stack_frames)?[0];
+            let result = heap.get_object_field_value(obj_ref, &class_name, &field_name)?[0];
 
             if result == expected {
                 heap.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])?;
@@ -196,22 +149,15 @@ fn compare_and_set_int(
     updated
 }
 
-pub(crate) fn get_reference_volatile_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
 
-    let result = get_reference_volatile(obj_ref, offset, stack_frames)?;
+    let result = get_reference_volatile(obj_ref, offset)?;
     Ok(vec![result])
 }
-fn get_reference_volatile(
-    obj_ref: i32,
-    offset: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<i32> {
+fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     let raw_value = if class_name.starts_with("[") {
         with_heap_read_lock(|heap| {
@@ -228,7 +174,7 @@ fn get_reference_volatile(
             let jc = with_method_area(|area| area.get(class_name.as_str()))?;
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
             with_heap_read_lock(|heap| {
-                heap.get_object_field_value(obj_ref, &class_name, &field_name, stack_frames)
+                heap.get_object_field_value(obj_ref, &class_name, &field_name)
             })?
         }
     };
@@ -309,7 +255,7 @@ pub(crate) fn get_char(obj_ref: i32, offset: i64) -> Result<u16> {
     }
 }
 
-pub(crate) fn get_int_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+pub(crate) fn get_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
@@ -317,7 +263,7 @@ pub(crate) fn get_int_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Resul
     let int = if obj_ref == 0 {
         get_int_raw(offset)?
     } else {
-        get_int_via_object(obj_ref, offset, stack_frames)?
+        get_int_via_object(obj_ref, offset)?
     };
     Ok(vec![int])
 }
@@ -328,11 +274,7 @@ pub(crate) fn get_int_raw(address: i64) -> Result<i32> {
         Ok(read(ptr))
     }
 }
-pub(crate) fn get_int_via_object(
-    obj_ref: i32,
-    offset: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<i32> {
+pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
     if obj_ref != 0 {
         let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
         if class_name.starts_with("[") {
@@ -348,8 +290,7 @@ pub(crate) fn get_int_via_object(
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
             let result = with_heap_read_lock(|heap| {
-                let bytes =
-                    heap.get_object_field_value(obj_ref, &class_name, &field_name, stack_frames);
+                let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name);
                 bytes
             })?;
             Ok(result[0])
@@ -358,26 +299,23 @@ pub(crate) fn get_int_via_object(
         todo!("implement get_int for null object");
     }
 }
-pub(crate) fn get_int_volatile_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    get_int_wrp(args, stack_frames) // todo! make me volatile
+pub(crate) fn get_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    get_int_wrp(args) // todo! make me volatile
 }
 
-pub(crate) fn get_long_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+pub(crate) fn get_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
 
-    let result = get_long(obj_ref, offset, stack_frames)?;
+    let result = get_long(obj_ref, offset)?;
 
     let high = ((result >> 32) & 0xFFFFFFFF) as i32;
     let low = (result & 0xFFFFFFFF) as i32;
 
     Ok(vec![high, low])
 }
-fn get_long(obj_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> Result<i64> {
+fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
     if obj_ref != 0 {
         let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
         if class_name.starts_with("[") {
@@ -393,8 +331,7 @@ fn get_long(obj_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> Result
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
             let result = with_heap_read_lock(|heap| {
-                let bytes =
-                    heap.get_object_field_value(obj_ref, &class_name, &field_name, stack_frames);
+                let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name);
                 bytes
             })?;
             Ok(vec_to_i64(&result))
@@ -404,68 +341,41 @@ fn get_long(obj_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> Result
     }
 }
 
-pub(crate) fn get_long_volatile_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    get_long_wrp(args, stack_frames) // todo! make me volatile
+pub(crate) fn get_long_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    get_long_wrp(args) // todo! make me volatile
 }
 
-pub(crate) fn compare_and_set_long_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
     let expected = i32toi64(args[5], args[4]);
     let x = i32toi64(args[7], args[6]);
 
-    let result = compare_and_set_long(obj_ref, offset, expected, x, stack_frames)?;
+    let result = compare_and_set_long(obj_ref, offset, expected, x)?;
     Ok(vec![result as i32])
 }
-fn compare_and_set_long(
-    obj_ref: i32,
-    offset: i64,
-    expected: i64,
-    x: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<bool> {
-    let (updated, _old_value) = compare_and_x_long(obj_ref, offset, expected, x, stack_frames)?;
+fn compare_and_set_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<bool> {
+    let (updated, _old_value) = compare_and_x_long(obj_ref, offset, expected, x)?;
     Ok(updated)
 }
 
-pub(crate) fn compare_and_exchange_long_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn compare_and_exchange_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
     let expected = i32toi64(args[5], args[4]);
     let x = i32toi64(args[7], args[6]);
 
-    let result = compare_and_exchange_long(obj_ref, offset, expected, x, stack_frames)?;
+    let result = compare_and_exchange_long(obj_ref, offset, expected, x)?;
     Ok(i64_to_vec(result))
 }
-fn compare_and_exchange_long(
-    obj_ref: i32,
-    offset: i64,
-    expected: i64,
-    x: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<i64> {
-    let (_updated, old_value) = compare_and_x_long(obj_ref, offset, expected, x, stack_frames)?;
+fn compare_and_exchange_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<i64> {
+    let (_updated, old_value) = compare_and_x_long(obj_ref, offset, expected, x)?;
     Ok(old_value)
 }
 
-fn compare_and_x_long(
-    obj_ref: i32,
-    offset: i64,
-    expected: i64,
-    x: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<(bool, i64)> {
+fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<(bool, i64)> {
     if obj_ref == 0 {
         return Ok((true, 0)); // fixme: not real implementation, just a placeholder for case when object is null
     }
@@ -477,8 +387,7 @@ fn compare_and_x_long(
     let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
     with_heap_write_lock(|heap| {
-        let bytes =
-            heap.get_object_field_value(obj_ref, &class_name, &field_name, stack_frames)?;
+        let bytes = heap.get_object_field_value(obj_ref, &class_name, &field_name)?;
         let old_value = i32toi64(bytes[0], bytes[1]);
 
         if old_value == expected {

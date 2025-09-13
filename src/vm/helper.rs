@@ -3,7 +3,6 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValue;
 use jdescriptor::TypeDescriptor;
 
@@ -92,18 +91,16 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
 }
 
 #[cfg(unix)]
-pub fn get_fd(fd_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+pub fn get_fd(fd_ref: i32) -> Result<i32> {
     with_heap_read_lock(|heap| {
-        let raw =
-            heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", stack_frames)?;
+        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?;
         Ok::<i32, Error>(raw[0])
     })
 }
 #[cfg(windows)]
-pub fn get_handle(fd_ref: i32, stack_frames: &mut StackFrames) -> Result<i64> {
+pub fn get_handle(fd_ref: i32) -> Result<i64> {
     with_heap_read_lock(|heap| {
-        let raw =
-            heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle", stack_frames)?;
+        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
         Ok::<i64, Error>(vec_to_i64(&raw))
     })
 }

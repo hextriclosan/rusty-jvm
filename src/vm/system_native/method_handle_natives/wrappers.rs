@@ -13,21 +13,15 @@ use crate::vm::system_native::method_handle_natives::offsets::{
 };
 use crate::vm::system_native::method_handle_natives::resolution::{member_name_init, resolve};
 
-pub(crate) fn method_handle_natives_init_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn method_handle_natives_init_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_name_ref = args[0];
     let obj_ref = args[1];
-    member_name_init(member_name_ref, obj_ref, stack_frames)?;
+    member_name_init(member_name_ref, obj_ref)?;
 
     Ok(vec![])
 }
 
-pub(crate) fn method_handle_natives_resolve_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn method_handle_natives_resolve_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_mame_ref = args[0];
     let caller_class_ref = args[1];
     let lookup_mode = args[2];
@@ -37,7 +31,6 @@ pub(crate) fn method_handle_natives_resolve_wrp(
         caller_class_ref,
         lookup_mode,
         speculative_resolve,
-        stack_frames,
     )?;
     Ok(vec![member_mame_ref])
 }
@@ -59,12 +52,9 @@ pub(crate) fn method_handle_invoke_basic_wrp(
     method_handle_invoke_exact_wrp(args, stack_frames) // TODO: implement real invokeBasic
 }
 
-pub(crate) fn method_handle_natives_object_field_offset_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn method_handle_natives_object_field_offset_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_name_ref = args[0];
-    let offset = get_field_offset(member_name_ref, stack_frames)?;
+    let offset = get_field_offset(member_name_ref)?;
     Ok(i64_to_vec(offset))
 }
 
@@ -78,25 +68,19 @@ pub(crate) fn method_handle_invoke_wrp(
     method_handle_invoke_exact_wrp(args, stack_frames)
 }
 
-pub(crate) fn method_handle_natives_static_field_offset_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn method_handle_natives_static_field_offset_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_name_ref = args[0];
-    let offset = get_static_field_offset(member_name_ref, stack_frames)?;
+    let offset = get_static_field_offset(member_name_ref)?;
     Ok(i64_to_vec(offset))
 }
 
-pub(crate) fn method_handle_natives_static_field_base_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn method_handle_natives_static_field_base_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_name_ref = args[0];
-    let base_ref = static_field_base(member_name_ref, stack_frames)?;
+    let base_ref = static_field_base(member_name_ref)?;
     Ok(vec![base_ref])
 }
-fn static_field_base(member_name_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
-    let member_name = MemberName::new(member_name_ref, stack_frames)?;
+fn static_field_base(member_name_ref: i32) -> Result<i32> {
+    let member_name = MemberName::new(member_name_ref)?;
     let class_name = member_name.class_name();
     let class_ref = with_method_area(|area| area.load_reflection_class(class_name))?;
     Ok(class_ref)
@@ -109,13 +93,10 @@ pub(crate) fn method_handle_natives_get_named_con_wrp(args: &[i32]) -> Result<Ve
     Ok(vec![0])
 }
 
-pub(crate) fn method_handle_natives_get_member_vm_info_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn method_handle_natives_get_member_vm_info_wrp(args: &[i32]) -> Result<Vec<i32>> {
     // returns {vmindex,vmtarget}
     let member_name_ref = args[0];
-    let member_name = MemberName::new(member_name_ref, stack_frames)?;
+    let member_name = MemberName::new(member_name_ref)?;
     let array_ref = member_name.get_member_vm_info()?;
     Ok(vec![array_ref])
 }
@@ -140,25 +121,19 @@ fn set_call_site_target_normal(call_site_ref: i32, method_handle_ref: i32) -> Re
     })
 }
 
-pub(crate) fn native_accessor_invoke0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn native_accessor_invoke0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let method_ref = args[0];
     let obj_ref = args[1];
     let args_ref = args[2];
-    let ret_obj_ref = native_accessor_invoke0(method_ref, obj_ref, args_ref, stack_frames)?;
+    let ret_obj_ref = native_accessor_invoke0(method_ref, obj_ref, args_ref)?;
 
     Ok(vec![ret_obj_ref])
 }
 
-pub(crate) fn native_accessor_newinstance0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+pub(crate) fn native_accessor_newinstance0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let constructor_ref = args[0];
     let args_ref = args[1];
-    let ret_obj_ref = native_accessor_newinstance0(constructor_ref, args_ref, stack_frames)?;
+    let ret_obj_ref = native_accessor_newinstance0(constructor_ref, args_ref)?;
 
     Ok(vec![ret_obj_ref])
 }
