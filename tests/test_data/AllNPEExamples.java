@@ -31,16 +31,16 @@ public class AllNPEExamples {
         int len = second.length();
     }
 
-    static void arrayAccess() {
-        Object placeholder0 = null;
-        int[] array = null;
-        int x = array[0];
-    }
-
     static void arrayLength() {
         Object placeholder0 = null;
         int[] array = null;
         int x = array.length;
+    }
+
+    static void arrayAccess() {
+        Object placeholder0 = null;
+        int[] array = null;
+        int x = array[0];
     }
 
     static void syncOnNull() {
@@ -124,6 +124,12 @@ public class AllNPEExamples {
             methodCallInterface();
         } catch (Throwable throwable) {
             System.out.println("Method call (invokeinterface): " + throwable.getMessage());
+        }
+
+        try {
+            arrayLength();
+        } catch (Throwable throwable) {
+            System.out.println("Array length: " + throwable.getMessage());
         }
     }
 
