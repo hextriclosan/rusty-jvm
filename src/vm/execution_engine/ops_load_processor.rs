@@ -1,12 +1,10 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
-use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::fmt::Display;
 use tracing::trace;
 
@@ -32,38 +30,14 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
         ALOAD_0 | ALOAD_1 | ALOAD_2 | ALOAD_3 => {
             handle_load::<i32, _>(last_frame_mut(stack_frames)?, code - ALOAD_0, "ALOAD_")
         }
-        IALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<i32>(stack_frames, "IALOAD"),
-            ()
-        )),
-        LALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<i64>(stack_frames, "LALOAD"),
-            ()
-        )),
-        FALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<f32>(stack_frames, "FALOAD"),
-            ()
-        )),
-        DALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<f64>(stack_frames, "DALOAD"),
-            ()
-        )),
-        AALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<i32>(stack_frames, "AALOAD"),
-            ()
-        )),
-        BALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<i32>(stack_frames, "BALOAD"),
-            ()
-        )),
-        CALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<i32>(stack_frames, "CALOAD"),
-            ()
-        )),
-        SALOAD => Ok(unwrap_result_or_return_default!(
-            handle_array_load::<i32>(stack_frames, "SALOAD"),
-            ()
-        )),
+        IALOAD => handle_array_load::<i32>(stack_frames, "IALOAD"),
+        LALOAD => handle_array_load::<i64>(stack_frames, "LALOAD"),
+        FALOAD => handle_array_load::<f32>(stack_frames, "FALOAD"),
+        DALOAD => handle_array_load::<f64>(stack_frames, "DALOAD"),
+        AALOAD => handle_array_load::<i32>(stack_frames, "AALOAD"),
+        BALOAD => handle_array_load::<i32>(stack_frames, "BALOAD"),
+        CALOAD => handle_array_load::<i32>(stack_frames, "CALOAD"),
+        SALOAD => handle_array_load::<i32>(stack_frames, "SALOAD"),
         _ => Err(Error::new_execution(&format!(
             "Unknown load opcode: {code}"
         ))),
@@ -97,31 +71,26 @@ where
 fn handle_array_load<T: StackValue + Display + Copy>(
     stack_frames: &mut StackFrames,
     name_starts: &str,
-) -> ThrowingResult<()> {
-    let (arrayref, index) = {
-        let stack_frame = unwrap_or_return_err!(last_frame_mut(stack_frames));
-        let index: i32 = stack_frame.pop();
-        let arrayref: i32 = stack_frame.pop();
-        (arrayref, index)
-    };
+) -> Result<()> {
+    let stack_frame = last_frame_mut(stack_frames)?;
+    let index: i32 = stack_frame.pop();
+    let arrayref: i32 = stack_frame.pop();
     if arrayref == 0 {
-        let array_type = unwrap_or_return_err!(type_by_aload(name_starts));
-        throw_and_return!(throw_null_pointer_exception_with_message(
+        let array_type = type_by_aload(name_starts)?;
+        throw_null_pointer_exception_with_message(
             &format!("Cannot load from {array_type} array because \"<VALUE>\" is null"),
-            stack_frames
-        ))
+            stack_frames,
+        )?;
+        return Ok(());
     }
-    let raw_value = with_heap_read_lock(|heap| heap.get_array_value(arrayref, index));
-    let raw_value = unwrap_or_return_err!(raw_value);
+    let raw_value = with_heap_read_lock(|heap| heap.get_array_value(arrayref, index))?;
 
     let value: T = T::from_vec(&raw_value);
-
-    let stack_frame = unwrap_or_return_err!(last_frame_mut(stack_frames));
-    unwrap_or_return_err!(stack_frame.push(value));
+    stack_frame.push(value)?;
     stack_frame.incr_pc();
     trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");
 
-    ThrowingResult::ok(())
+    Ok(())
 }
 
 fn type_by_aload(aload: &str) -> Result<&str> {
