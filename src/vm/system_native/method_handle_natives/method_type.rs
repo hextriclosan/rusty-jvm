@@ -2,7 +2,6 @@ use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::helper::decorate;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::stack::stack_frame::StackFrames;
 use getset::Getters;
 
 const METHOD_TYPE: &'static str = "java/lang/invoke/MethodType";
@@ -15,12 +14,12 @@ pub struct MethodType {
 }
 
 impl MethodType {
-    pub fn new(type_obj_ref: i32, stack_frames: &mut StackFrames) -> Result<Self> {
+    pub fn new(type_obj_ref: i32) -> Result<Self> {
         let (rtype_class_ref, ptype_class_refs) = with_heap_read_lock(|heap| {
             let rtype_class_ref =
-                heap.get_object_field_value(type_obj_ref, METHOD_TYPE, "rtype", stack_frames)?[0];
+                heap.get_object_field_value(type_obj_ref, METHOD_TYPE, "rtype")?[0];
             let ptype_class_refs =
-                heap.get_object_field_value(type_obj_ref, METHOD_TYPE, "ptypes", stack_frames)?[0];
+                heap.get_object_field_value(type_obj_ref, METHOD_TYPE, "ptypes")?[0];
             Ok::<(i32, i32), Error>((rtype_class_ref, ptype_class_refs))
         })?;
 

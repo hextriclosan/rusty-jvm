@@ -2,7 +2,6 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{i64_to_vec, vec_to_i64};
-use crate::vm::stack::stack_frame::StackFrames;
 use getset::CopyGetters;
 
 const RESOLVED_METHOD_NAME: &'static str = "java/lang/invoke/ResolvedMethodName";
@@ -25,12 +24,9 @@ impl ResolvedMethodName {
         })
     }
 
-    pub fn new_load_by_ref(
-        resolved_method_name_ref: i32,
-        stack_frames: &mut StackFrames,
-    ) -> Result<Self> {
-        let vmholder = load_vmholder(resolved_method_name_ref, stack_frames)?;
-        let vmtarget = load_vmtarget(resolved_method_name_ref, stack_frames)?;
+    pub fn new_load_by_ref(resolved_method_name_ref: i32) -> Result<Self> {
+        let vmholder = load_vmholder(resolved_method_name_ref)?;
+        let vmtarget = load_vmtarget(resolved_method_name_ref)?;
         Ok(Self {
             resolved_method_name_ref,
             vmholder,
@@ -72,26 +68,16 @@ impl ResolvedMethodName {
     }
 }
 
-fn load_vmholder(resolved_method_name_ref: i32, stack_frames: &mut StackFrames) -> Result<i32> {
+fn load_vmholder(resolved_method_name_ref: i32) -> Result<i32> {
     let vmholder_class_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(
-            resolved_method_name_ref,
-            RESOLVED_METHOD_NAME,
-            "vmholder",
-            stack_frames,
-        )
+        heap.get_object_field_value(resolved_method_name_ref, RESOLVED_METHOD_NAME, "vmholder")
     })?[0];
     Ok(vmholder_class_ref)
 }
 
-fn load_vmtarget(resolved_method_name_ref: i32, stack_frames: &mut StackFrames) -> Result<i64> {
+fn load_vmtarget(resolved_method_name_ref: i32) -> Result<i64> {
     let vmtarget_raw = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(
-            resolved_method_name_ref,
-            RESOLVED_METHOD_NAME,
-            "vmtarget",
-            stack_frames,
-        )
+        heap.get_object_field_value(resolved_method_name_ref, RESOLVED_METHOD_NAME, "vmtarget")
     })?;
     Ok(vec_to_i64(&vmtarget_raw))
 }
