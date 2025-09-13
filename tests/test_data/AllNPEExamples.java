@@ -15,10 +15,16 @@ public class AllNPEExamples {
         int x = point.x;
     }
 
-    static void methodCall() {
+    static void methodCallVirtual() {
         Object placeholder0 = null;
         String str = null;
         int len = str.length();
+    }
+
+    static void methodCallInterface() {
+        Object placeholder0 = null;
+        Runnable r = null;
+        r.run();
     }
 
     static void methodCallOnParam(String first, String second) {
@@ -108,11 +114,17 @@ public class AllNPEExamples {
             System.out.println("Field access: " + throwable.getMessage());
         }
 
-//         try {
-//             methodCall();
-//         } catch (Throwable throwable) {
-//             System.out.println("Method call: " + throwable.getMessage());
-//         }
+        try {
+            methodCallVirtual();
+        } catch (Throwable throwable) {
+            System.out.println("Method call (invokevirtual): " + throwable.getMessage());
+        }
+
+        try {
+            methodCallInterface();
+        } catch (Throwable throwable) {
+            System.out.println("Method call (invokeinterface): " + throwable.getMessage());
+        }
     }
 
 //    todo: use this approach after fixing the issue with crash
