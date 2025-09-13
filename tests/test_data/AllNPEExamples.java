@@ -143,6 +143,12 @@ public class AllNPEExamples {
         } catch (Throwable throwable) {
             System.out.println("Synchronization on null: " + throwable.getMessage());
         }
+
+        try {
+            unboxing();
+        } catch (Throwable throwable) {
+            System.out.println("Unboxing: " + throwable.getMessage());
+        }
     }
 
 //    todo: use this approach after fixing the issue with crash
