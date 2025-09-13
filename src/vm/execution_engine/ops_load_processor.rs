@@ -32,41 +32,40 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
         ALOAD_0 | ALOAD_1 | ALOAD_2 | ALOAD_3 => {
             handle_load::<i32, _>(last_frame_mut(stack_frames)?, code - ALOAD_0, "ALOAD_")
         }
-        IALOAD => {
-            let result = handle_array_load::<i32>(stack_frames, "IALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        LALOAD => {
-            let result = handle_array_load::<i64>(stack_frames, "LALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        FALOAD => {
-            let result = handle_array_load::<f32>(stack_frames, "FALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        DALOAD => {
-            let result = handle_array_load::<f64>(stack_frames, "DALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        AALOAD => {
-            let result = handle_array_load::<i32>(stack_frames, "AALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        BALOAD => {
-            let result = handle_array_load::<i32>(stack_frames, "BALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        CALOAD => {
-            let result = handle_array_load::<i32>(stack_frames, "CALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
-        SALOAD => {
-            let result = handle_array_load::<i32>(stack_frames, "SALOAD");
-            Ok(unwrap_result_or_return_default!(result, ()))
-        }
+        IALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<i32>(stack_frames, "IALOAD"),
+            ()
+        )),
+        LALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<i64>(stack_frames, "LALOAD"),
+            ()
+        )),
+        FALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<f32>(stack_frames, "FALOAD"),
+            ()
+        )),
+        DALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<f64>(stack_frames, "DALOAD"),
+            ()
+        )),
+        AALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<i32>(stack_frames, "AALOAD"),
+            ()
+        )),
+        BALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<i32>(stack_frames, "BALOAD"),
+            ()
+        )),
+        CALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<i32>(stack_frames, "CALOAD"),
+            ()
+        )),
+        SALOAD => Ok(unwrap_result_or_return_default!(
+            handle_array_load::<i32>(stack_frames, "SALOAD"),
+            ()
+        )),
         _ => Err(Error::new_execution(&format!(
-            "Unknown load opcode: {}",
-            code
+            "Unknown load opcode: {code}"
         ))),
     }
 }
