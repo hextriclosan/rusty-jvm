@@ -137,6 +137,12 @@ public class AllNPEExamples {
         } catch (Throwable throwable) {
             System.out.println("Array access: " + throwable.getMessage());
         }
+
+        try {
+            syncOnNull();
+        } catch (Throwable throwable) {
+            System.out.println("Synchronization on null: " + throwable.getMessage());
+        }
     }
 
 //    todo: use this approach after fixing the issue with crash

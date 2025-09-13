@@ -472,6 +472,11 @@ pub(crate) fn process(
         MONITORENTER => {
             let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
+            if objectref == 0 {
+                throw_null_pointer_exception_with_message("Cannot enter synchronized block because \"<VALUE>\" is null", stack_frames)?;
+                return Ok(());
+            }
+
             // todo: implement me
             stack_frame.incr_pc();
             trace!("MONITORENTER -> objectref={objectref}");
