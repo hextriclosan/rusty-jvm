@@ -308,6 +308,23 @@ impl Heap {
             })
     }
 
+    pub fn get_array_len_throwing(
+        &self,
+        arrayref: i32,
+        stack_frames: &mut StackFrames,
+    ) -> ThrowingResult<i32> {
+        if arrayref == 0 {
+            throw_and_return!(throw_null_pointer_exception_with_message(
+                "Cannot read the array length because \"<VALUE>\" is null",
+                stack_frames
+            ))
+        }
+
+        let result = self.get_array_len(arrayref);
+
+        ThrowingResult::Result(result)
+    }
+
     pub(crate) fn get_const_string_ref(&self, string: &str) -> Option<i32> {
         self.ref_by_stringvalue.get(string).map(|v| *v)
     }

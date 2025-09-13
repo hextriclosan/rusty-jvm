@@ -383,12 +383,17 @@ pub(crate) fn process(
             trace!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
         }
         ARRAYLENGTH => {
+            let arrayref = {
+                let stack_frame = last_frame_mut(stack_frames)?;
+                stack_frame.pop()
+            };
+
+            let throwing_result =
+                with_heap_read_lock(|heap| heap.get_array_len_throwing(arrayref, stack_frames));
+            let len = unwrap_result_or_return_default!(throwing_result, ());
+
             let stack_frame = last_frame_mut(stack_frames)?;
-            let arrayref = stack_frame.pop();
-
-            let len = with_heap_read_lock(|heap| heap.get_array_len(arrayref))?;
             stack_frame.push(len)?;
-
             stack_frame.incr_pc();
             trace!("ARRAYLENGTH -> arrayref={arrayref}, len={len}");
         }
