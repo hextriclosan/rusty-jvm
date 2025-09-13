@@ -2703,6 +2703,7 @@ Method call (invokevirtual): Cannot invoke "java/lang/String.length:()I" because
 Method call (invokeinterface): Cannot invoke "java/lang/Runnable.run:()V" because "<VALUE>" is null
 Array length: Cannot read the array length because "<VALUE>" is null
 Array access: Cannot load from object array because "<VALUE>" is null
+Synchronization on null: Cannot enter synchronized block because "<VALUE>" is null
 "#,
     );
 }
