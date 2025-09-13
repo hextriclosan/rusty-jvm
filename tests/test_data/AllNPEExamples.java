@@ -67,7 +67,6 @@ public class AllNPEExamples {
         String[] strings = null;
         varargsMethod(strings);
     }
-
     static void varargsMethod(String... args) {
         System.out.println(args.length);
     }
@@ -154,6 +153,12 @@ public class AllNPEExamples {
             throwNull();
         } catch (Throwable throwable) {
             System.out.println("Throw null: " + throwable.getMessage());
+        }
+
+        try {
+            varargs();
+        } catch (Throwable throwable) {
+            System.out.println("Var args: " + throwable.getMessage());
         }
     }
 
