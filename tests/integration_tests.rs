@@ -2699,6 +2699,8 @@ fn should_handle_null_pointer_exceptions() {
     assert_success(
         "samples.npe.allnpeexamples.AllNPEExamples",
         r#"Field access: Cannot read field "x" because "<VALUE>" is null
+Method call (invokevirtual): Cannot invoke "java/lang/String.length:()I" because "<VALUE>" is null
+Method call (invokeinterface): Cannot invoke "java/lang/Runnable.run:()V" because "<VALUE>" is null
 "#,
     );
 }

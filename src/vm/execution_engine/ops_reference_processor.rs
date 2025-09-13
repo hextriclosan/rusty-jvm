@@ -1,6 +1,7 @@
 use crate::unwrap_result_or_return_default;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
+use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::vm::execution_engine::invoker::invoke;
@@ -145,6 +146,12 @@ pub(crate) fn process(
             let reference = method_args
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
+
+            if *reference == 0 {
+                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name_by_ref_type}.{full_signature}\" because \"<VALUE>\" is null"), stack_frames)?;
+                return Ok(());
+            }
+
             let class_name_by_instance =
                 with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
 
@@ -241,7 +248,7 @@ pub(crate) fn process(
                 )));
             }
 
-            let (_, full_signature, _) = get_class_name_and_signature_by_index(
+            let (class_name, full_signature, _) = get_class_name_and_signature_by_index(
                 current_class_name,
                 CPoolHelper::get_full_interfacemethodref_info,
                 index,
@@ -249,6 +256,12 @@ pub(crate) fn process(
             let reference = method_args
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
+
+            if *reference == 0 {
+                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name}.{full_signature}\" because \"<VALUE>\" is null"), stack_frames)?;
+                return Ok(());
+            }
+
             let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
             let java_method = with_method_area(|method_area| {
                 method_area
