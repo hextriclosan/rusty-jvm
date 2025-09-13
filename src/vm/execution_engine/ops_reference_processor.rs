@@ -404,6 +404,15 @@ pub(crate) fn process(
                 let throwable_ref: i32 = stack_frame.pop();
                 throwable_ref
             };
+
+            if throwable_ref == 0 {
+                throw_null_pointer_exception_with_message(
+                    "Cannot throw exception because \"<VALUE>\" is null",
+                    stack_frames,
+                )?;
+                return Ok(());
+            }
+
             let (exception_name, found_exception_handler) =
                 throw_exception_with_ref(throwable_ref, stack_frames)?;
             trace!("ATHROW -> throwable_ref={throwable_ref}, exception_name={exception_name}, found_exception_handler={found_exception_handler}");
@@ -473,7 +482,10 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
             if objectref == 0 {
-                throw_null_pointer_exception_with_message("Cannot enter synchronized block because \"<VALUE>\" is null", stack_frames)?;
+                throw_null_pointer_exception_with_message(
+                    "Cannot enter synchronized block because \"<VALUE>\" is null",
+                    stack_frames,
+                )?;
                 return Ok(());
             }
 

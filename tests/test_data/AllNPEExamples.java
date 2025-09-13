@@ -149,6 +149,12 @@ public class AllNPEExamples {
         } catch (Throwable throwable) {
             System.out.println("Unboxing: " + throwable.getMessage());
         }
+
+        try {
+            throwNull();
+        } catch (Throwable throwable) {
+            System.out.println("Throw null: " + throwable.getMessage());
+        }
     }
 
 //    todo: use this approach after fixing the issue with crash
