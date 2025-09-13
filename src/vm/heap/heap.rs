@@ -1,3 +1,4 @@
+use crate::throw_and_return;
 use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
@@ -6,7 +7,6 @@ use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::throw_and_return;
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
 use dashmap::DashMap;
 use serde::Serialize;

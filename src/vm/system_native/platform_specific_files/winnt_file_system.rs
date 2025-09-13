@@ -1,5 +1,7 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::{throw_ioexception, throw_null_pointer_exception_with_message};
+use crate::vm::exception::helpers::{
+    throw_ioexception, throw_null_pointer_exception_with_message,
+};
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::stack::stack_frame::StackFrames;
