@@ -148,7 +148,7 @@ pub(crate) fn process(
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
 
             if *reference == 0 {
-                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name_by_ref_type}.{full_signature}\" because \"<VALUE>\" is null"), stack_frames)?;
+                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name_by_ref_type}.{full_signature}\" because \"<VAR_NAME>\" is null"), stack_frames)?;
                 return Ok(());
             }
 
@@ -258,7 +258,7 @@ pub(crate) fn process(
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
 
             if *reference == 0 {
-                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name}.{full_signature}\" because \"<VALUE>\" is null"), stack_frames)?;
+                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name}.{full_signature}\" because \"<VAR_NAME>\" is null"), stack_frames)?;
                 return Ok(());
             }
 
@@ -407,7 +407,7 @@ pub(crate) fn process(
 
             if throwable_ref == 0 {
                 throw_null_pointer_exception_with_message(
-                    "Cannot throw exception because \"<VALUE>\" is null",
+                    "Cannot throw exception because \"<VAR_NAME>\" is null",
                     stack_frames,
                 )?;
                 return Ok(());
@@ -483,7 +483,7 @@ pub(crate) fn process(
             let objectref: i32 = stack_frame.pop();
             if objectref == 0 {
                 throw_null_pointer_exception_with_message(
-                    "Cannot enter synchronized block because \"<VALUE>\" is null",
+                    "Cannot enter synchronized block because \"<VAR_NAME>\" is null",
                     stack_frames,
                 )?;
                 return Ok(());

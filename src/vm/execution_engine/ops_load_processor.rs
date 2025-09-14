@@ -78,7 +78,7 @@ fn handle_array_load<T: StackValue + Display + Copy>(
     if arrayref == 0 {
         let array_type = type_by_aload(name_starts)?;
         throw_null_pointer_exception_with_message(
-            &format!("Cannot load from {array_type} array because \"<VALUE>\" is null"),
+            &format!("Cannot load from {array_type} array because \"<VAR_NAME>\" is null"),
             stack_frames,
         )?;
         return Ok(());
