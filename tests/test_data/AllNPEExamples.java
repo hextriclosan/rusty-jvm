@@ -82,6 +82,12 @@ public class AllNPEExamples {
     static void requireNonNull() {
         Object placeholder0 = null;
         Object object = null;
+        Objects.requireNonNull(object);
+    }
+
+    static void requireNonNullWithMsg() {
+        Object placeholder0 = null;
+        Object object = null;
         Objects.requireNonNull(object, "Object must not be null");
     }
 
@@ -107,100 +113,45 @@ public class AllNPEExamples {
     }
 
     public static void main(String[] args) {
-        try {
-            fieldAccess();
-        } catch (Throwable throwable) {
-            System.out.println("Field access: " + throwable.getMessage());
-        }
+        Case[] tests = {
+                new Case("Field access", AllNPEExamples::fieldAccess),
+                new Case("Method call (invokevirtual)", AllNPEExamples::methodCallVirtual),
+                new Case("Method call (invokeinterface)", AllNPEExamples::methodCallInterface),
+                new Case("Method call on param", () -> methodCallOnParam(null, null)),
+                new Case("Array length", AllNPEExamples::arrayLength),
+                new Case("Array access", AllNPEExamples::arrayAccess),
+                new Case("Synchronization on null", AllNPEExamples::syncOnNull),
+                new Case("Unboxing", AllNPEExamples::unboxing),
+                new Case("Throw null", AllNPEExamples::throwNull),
+                new Case("Var args", AllNPEExamples::varargs),
+                new Case("Switch on null", AllNPEExamples::switchOnNull),
+                new Case("Objects.requireNonNull", AllNPEExamples::requireNonNull),
+                new Case("Objects.requireNonNull with message", AllNPEExamples::requireNonNullWithMsg),
+                new Case("Method reference bound to null", AllNPEExamples::methodRef),
+                new Case("Reflection field get", () -> {
+                    try {
+                        reflectionField();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }),
+                new Case("Reflection method invoke", () -> {
+                    try {
+                        reflectionMethod();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }),
+        };
 
-        try {
-            methodCallVirtual();
-        } catch (Throwable throwable) {
-            System.out.println("Method call (invokevirtual): " + throwable.getMessage());
-        }
-
-        try {
-            methodCallInterface();
-        } catch (Throwable throwable) {
-            System.out.println("Method call (invokeinterface): " + throwable.getMessage());
-        }
-
-        try {
-            arrayLength();
-        } catch (Throwable throwable) {
-            System.out.println("Array length: " + throwable.getMessage());
-        }
-
-        try {
-            arrayAccess();
-        } catch (Throwable throwable) {
-            System.out.println("Array access: " + throwable.getMessage());
-        }
-
-        try {
-            syncOnNull();
-        } catch (Throwable throwable) {
-            System.out.println("Synchronization on null: " + throwable.getMessage());
-        }
-
-        try {
-            unboxing();
-        } catch (Throwable throwable) {
-            System.out.println("Unboxing: " + throwable.getMessage());
-        }
-
-        try {
-            throwNull();
-        } catch (Throwable throwable) {
-            System.out.println("Throw null: " + throwable.getMessage());
-        }
-
-        try {
-            varargs();
-        } catch (Throwable throwable) {
-            System.out.println("Var args: " + throwable.getMessage());
+        for (Case test : tests) {
+            try {
+                test.npeExample().run();
+            } catch (Throwable throwable) {
+                System.out.println(test.description() + ": " + throwable.getMessage());
+            }
         }
     }
-
-//    todo: use this approach after fixing the issue with crash
-//    public static void main(String[] args) {
-//        Case[] tests = {
-//                new Case("Field access", AllNPEExamples::fieldAccess),
-//                new Case("Method call", AllNPEExamples::methodCall),
-//                new Case("Method call on param", () -> AllNPEExamples.methodCallOnParam(null, null)),
-//                new Case("Array element", AllNPEExamples::arrayAccess),
-//                new Case("Array length", AllNPEExamples::arrayLength),
-//                new Case("Synchronization", AllNPEExamples::syncOnNull),
-//                new Case("Unboxing", AllNPEExamples::unboxing),
-//                new Case("Throw null", AllNPEExamples::throwNull),
-//                new Case("Varargs with null", AllNPEExamples::varargs),
-//                new Case("Switch on null", AllNPEExamples::switchOnNull),
-//                new Case("Objects.requireNonNull", AllNPEExamples::requireNonNull),
-//                new Case("Method reference bound to null", AllNPEExamples::methodRef),
-//                new Case("Reflection: field get", () -> {
-//                    try {
-//                        reflectionField();
-//                    } catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }),
-//                new Case("Reflection: method invoke", () -> {
-//                    try {
-//                        reflectionMethod();
-//                    } catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                })
-//        };
-//
-//        for (Case test : tests) {
-//            try {
-//                test.npeExample().run();
-//            } catch (Throwable throwable) {
-//                System.out.println(test.description() + ": " + throwable.getMessage());
-//            }
-//        }
-//    }
 }
 
 record Case(String description, Runnable npeExample) {

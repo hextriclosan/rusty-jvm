@@ -2698,15 +2698,22 @@ fn should_perform_lookup_in_interfaces_during_invokespecial_call() {
 fn should_handle_null_pointer_exceptions() {
     assert_success(
         "samples.npe.allnpeexamples.AllNPEExamples",
-        r#"Field access: Cannot read field "x" because "<VALUE>" is null
-Method call (invokevirtual): Cannot invoke "java/lang/String.length:()I" because "<VALUE>" is null
-Method call (invokeinterface): Cannot invoke "java/lang/Runnable.run:()V" because "<VALUE>" is null
-Array length: Cannot read the array length because "<VALUE>" is null
-Array access: Cannot load from object array because "<VALUE>" is null
-Synchronization on null: Cannot enter synchronized block because "<VALUE>" is null
-Unboxing: Cannot invoke "java/lang/Integer.intValue:()I" because "<VALUE>" is null
-Throw null: Cannot throw exception because "<VALUE>" is null
-Var args: Cannot read the array length because "<VALUE>" is null
+        r#"Field access: Cannot read field "x" because "<VAR_NAME>" is null
+Method call (invokevirtual): Cannot invoke "java/lang/String.length:()I" because "<VAR_NAME>" is null
+Method call (invokeinterface): Cannot invoke "java/lang/Runnable.run:()V" because "<VAR_NAME>" is null
+Method call on param: Cannot invoke "java/lang/String.length:()I" because "<VAR_NAME>" is null
+Array length: Cannot read the array length because "<VAR_NAME>" is null
+Array access: Cannot load from object array because "<VAR_NAME>" is null
+Synchronization on null: Cannot enter synchronized block because "<VAR_NAME>" is null
+Unboxing: Cannot invoke "java/lang/Integer.intValue:()I" because "<VAR_NAME>" is null
+Throw null: Cannot throw exception because "<VAR_NAME>" is null
+Var args: Cannot read the array length because "<VAR_NAME>" is null
+Switch on null: Cannot invoke "java/lang/String.hashCode:()I" because "<VAR_NAME>" is null
+Objects.requireNonNull: null
+Objects.requireNonNull with message: Object must not be null
+Method reference bound to null: null
+Reflection field get: java.lang.NullPointerException: Cannot invoke "java/lang/Object.getClass:()Ljava/lang/Class;" because "<VAR_NAME>" is null
+Reflection method invoke: java.lang.NullPointerException: Cannot invoke "java/lang/Object.getClass:()Ljava/lang/Class;" because "<VAR_NAME>" is null
 "#,
     );
 }

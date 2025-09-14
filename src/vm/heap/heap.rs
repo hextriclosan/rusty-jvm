@@ -112,7 +112,7 @@ impl Heap {
     ) -> ThrowingResult<Vec<i32>> {
         if objectref == 0 {
             throw_and_return!(throw_null_pointer_exception_with_message(
-                &format!("Cannot read field \"{field_name_type}\" because \"<VALUE>\" is null"),
+                &format!("Cannot read field \"{field_name_type}\" because \"<VAR_NAME>\" is null"),
                 stack_frames
             ))
         }
@@ -317,7 +317,7 @@ impl Heap {
     ) -> ThrowingResult<i32> {
         if arrayref == 0 {
             throw_and_return!(throw_null_pointer_exception_with_message(
-                "Cannot read the array length because \"<VALUE>\" is null",
+                "Cannot read the array length because \"<VAR_NAME>\" is null",
                 stack_frames
             ))
         }
