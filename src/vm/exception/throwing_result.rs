@@ -28,7 +28,7 @@ macro_rules! unwrap_or_return_err {
     ($expr:expr) => {
         match $expr {
             Ok(val) => val,
-            Err(e) => return ThrowingResult::err(e),
+            Err(e) => return ThrowingResult::err(e.into()),
         }
     };
 }

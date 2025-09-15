@@ -1,4 +1,7 @@
 mod utils;
+
+use std::fs::File;
+use std::io::Write;
 use utils::assert_success;
 
 #[test]
@@ -344,6 +347,7 @@ use crate::utils::{
 use regex::Regex;
 use serde_json::Value;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tempfile::NamedTempFile;
 
 #[test]
 fn should_do_native_call_on_system_current_time() {
@@ -977,7 +981,7 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
-fn should_support_file_input_stream_exceptions() {
+fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();
 
@@ -2745,4 +2749,48 @@ Reflection field get: java.lang.NullPointerException: Cannot invoke "java/lang/O
 Reflection method invoke: java.lang.NullPointerException: Cannot invoke "java/lang/Object.getClass:()Ljava/lang/Class;" because "<VAR_NAME>" is null
 "#,
     );
+}
+
+#[test]
+fn should_support_file_input_stream() {
+    use std::io::Write;
+    let mut file = NamedTempFile::new().expect("Failed to create temp file");
+    let expected_content = "I'm a sample file.";
+    write!(file.as_file_mut(), "{}", expected_content).expect("Failed to write to temp file");
+
+    assert_success_with_args(
+        "samples.io.fileinputstreamexample.FileInputStreamExample",
+        &[&file.path().display().to_string()],
+        expected_content,
+    );
+}
+
+#[test]
+fn should_support_file_input_stream_exceptions() {
+    let (file_path, tmp_dir) = tmp_file("test.txt");
+    let dir_path = tmp_dir.as_ref().display().to_string();
+    {
+        let mut file = File::create(&file_path).expect("Failed to open temp file");
+        file.write_all(b"Sample content")
+            .expect("Failed to write to temp file");
+    }
+
+    let msg = if cfg!(windows) {
+        "Access is denied. (os error 5)"
+    } else {
+        "Is a directory"
+    };
+    let expected_stdout = format!(
+        r#"S
+openFile: java.io.FileNotFoundException: {dir_path} ({msg})
+readByte: java.io.IOException: Stream Closed
+readBytes: java.io.IOException: Stream Closed
+readAllBytes: java.io.IOException: Stream Closed
+"#
+    );
+    assert_success_with_args(
+        "samples.io.fileinputstreamthrowexample.FileInputStreamThrowExample",
+        &[&file_path],
+        &expected_stdout,
+    )
 }
