@@ -972,6 +972,32 @@ fn should_write_file_to_fs() {
         &[&file_path],
         &file_path,
         "CAFEBABE",
+        "",
+    )
+}
+
+#[test]
+fn should_support_file_input_stream_exceptions() {
+    let (file_path, tmp_dir) = tmp_file("test.txt");
+    let dir_path = tmp_dir.as_ref().display().to_string();
+
+    let msg = if cfg!(windows) {
+        "Access is denied. (os error 5)"
+    } else {
+        "Is a directory (os error 21)"
+    };
+    let expected_stdout = format!(
+        r#"openFile: java.io.FileNotFoundException: {dir_path} ({msg})
+writeByte: java.io.IOException: Stream Closed
+writeBytes: java.io.IOException: Stream Closed
+"#
+    );
+    assert_file_with_args(
+        "samples.io.fileoutputstreamthrowexample.FileOutputStreamThrowExample",
+        &[&file_path],
+        &file_path,
+        "A",
+        &expected_stdout,
     )
 }
 
@@ -983,6 +1009,7 @@ fn should_write_file_to_fs_with_buffered_stream() {
         &[&file_path],
         &file_path,
         "This is a test for BufferedOutputStream chunking.",
+        "",
     )
 }
 
@@ -1003,6 +1030,7 @@ This is an example of chaining PrintStreams.
         &[&file_path],
         &file_path,
         expected_file_content,
+        "",
     );
 }
 
@@ -2224,6 +2252,7 @@ fn should_support_file_dispatcher_for_various_os() {
         &[&file_path],
         &file_path,
         expected_file_content,
+        "",
     );
 }
 

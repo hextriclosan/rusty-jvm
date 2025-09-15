@@ -459,11 +459,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/io/FileOutputStream:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/FileOutputStream:write:(IZ)V",
-        Basic(file_output_stream_write_wrp),
+        WithMutStackFrames(file_output_stream_write_wrp),
     );
     table.insert(
         "java/io/FileOutputStream:writeBytes:([BIIZ)V",
-        Basic(file_output_stream_write_bytes_wrp),
+        WithMutStackFrames(file_output_stream_write_bytes_wrp),
     );
     table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
     table.insert(

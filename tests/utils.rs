@@ -200,8 +200,9 @@ pub fn assert_file_with_args(
     arguments: &[&str],
     file_path: &str,
     expected_file_content: &str,
+    expected_stdout: &str,
 ) {
-    assert_success_with_args(entry, arguments, "");
+    assert_success_with_args(entry, arguments, expected_stdout);
 
     #[cfg(target_os = "windows")]
     let expected_file_content = to_windows(expected_file_content);
