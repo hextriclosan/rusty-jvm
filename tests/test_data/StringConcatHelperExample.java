@@ -36,7 +36,7 @@ public class StringConcatHelperExample {
         byte[] buf = StringConcatHelper.newArray(lengthCoder);
 
         for (int i = toConcat.length - 1; i >= 0; i--) {
-            lengthCoder = StringConcatHelper.prepend(lengthCoder, buf, toConcat[i]);
+            lengthCoder = StringConcatHelper.prepend(lengthCoder, buf, toConcat[i], "");
         }
 
         return StringConcatHelper.newString(buf, lengthCoder);
