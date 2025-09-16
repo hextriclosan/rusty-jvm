@@ -18,8 +18,9 @@ use crate::vm::system_native::constant_pool::{
 };
 use crate::vm::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::vm::system_native::file_input_stream::{
-    file_input_stream_length0_wrp, file_input_stream_open0_wrp, file_input_stream_position0_wrp,
-    file_input_stream_read0_wrp, file_input_stream_read_bytes_wrp,
+    file_input_stream_is_regular_file0_wrp, file_input_stream_length0_wrp,
+    file_input_stream_open0_wrp, file_input_stream_position0_wrp, file_input_stream_read0_wrp,
+    file_input_stream_read_bytes_wrp,
 };
 use crate::vm::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
@@ -424,6 +425,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/io/FileInputStream:read0:()I",
         WithMutStackFrames(file_input_stream_read0_wrp),
+    );
+    table.insert(
+        "java/io/FileInputStream:isRegularFile0:(Ljava/io/FileDescriptor;)Z",
+        WithMutStackFrames(file_input_stream_is_regular_file0_wrp),
     );
     table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",
