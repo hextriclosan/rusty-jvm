@@ -85,12 +85,17 @@ impl PlatformFile {
         mode: Mode,
         stack_frames: &mut StackFrames,
     ) -> ThrowingResult<ManuallyDrop<File>> {
-        let handle = with_heap_read_lock(|heap| {
-            let fd_ref = heap.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
+        let fd_ref =
+            with_heap_read_lock(|heap| heap.get_object_field_value(obj_ref, mode.as_ref(), "fd"));
+        let fd_ref = unwrap_or_return_err!(fd_ref)[0];
+        Self::get_by_fd(fd_ref, stack_frames)
+    }
 
-            helper::get_handle(fd_ref)
-        });
-        let handle = unwrap_or_return_err!(handle);
+    pub fn get_by_fd(
+        fd_ref: i32,
+        stack_frames: &mut StackFrames,
+    ) -> ThrowingResult<ManuallyDrop<File>> {
+        let handle = unwrap_or_return_err!(helper::get_handle(fd_ref));
 
         if handle == -1 {
             throw_and_return!(throw_ioexception("Stream Closed", stack_frames))

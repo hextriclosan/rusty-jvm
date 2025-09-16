@@ -1,4 +1,4 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
@@ -52,13 +52,17 @@ impl PlatformFile {
         mode: Mode,
         stack_frames: &mut StackFrames,
     ) -> ThrowingResult<ManuallyDrop<File>> {
-        let fd = with_heap_read_lock(|heap| {
-            let fd_ref = heap.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
-            let fd = get_fd(fd_ref)?;
+        let fd_ref =
+            with_heap_read_lock(|heap| heap.get_object_field_value(obj_ref, mode.as_ref(), "fd"));
+        let fd_ref = unwrap_or_return_err!(fd_ref)[0];
+        Self::get_by_fd(fd_ref, stack_frames)
+    }
 
-            Ok::<i32, Error>(fd)
-        });
-        let fd = unwrap_or_return_err!(fd);
+    pub fn get_by_fd(
+        fd_ref: i32,
+        stack_frames: &mut StackFrames,
+    ) -> ThrowingResult<ManuallyDrop<File>> {
+        let fd = unwrap_or_return_err!(get_fd(fd_ref));
 
         if fd == -1 {
             throw_and_return!(throw_ioexception("Stream Closed", stack_frames))

@@ -157,3 +157,25 @@ fn read0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
     }
     ThrowingResult::ok(buffer[0] as i32)
 }
+
+pub(crate) fn file_input_stream_is_regular_file0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let _obj_ref = args[0];
+    let fd_ref = args[1];
+    let regular = unwrap_result_or_return_default!(is_regular_file0(fd_ref, stack_frames), vec![]);
+    Ok(vec![if regular { 1 } else { 0 }])
+}
+fn is_regular_file0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<bool> {
+    let file = match PlatformFile::get_by_fd(fd_ref, stack_frames) {
+        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    };
+    let metadata = match file.metadata() {
+        Ok(m) => m,
+        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
+    };
+
+    ThrowingResult::ok(metadata.is_file())
+}
