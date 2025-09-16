@@ -38,8 +38,8 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         .stdout(Stdio::piped())
         .output()?;
     let version_str = String::from_utf8_lossy(&output.stdout);
-    if !version_str.contains("23") {
-        anyhow::bail!("javac version is not 23: {}", version_str.trim());
+    if !version_str.contains("25") {
+        anyhow::bail!("javac version is not 25: {}", version_str.trim());
     }
     println!("javac version OK: {}", version_str.trim());
 
