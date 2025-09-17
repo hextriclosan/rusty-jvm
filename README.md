@@ -38,8 +38,8 @@ See [integration tests](tests/test_data) for broader examples of supported Java 
 
 ## Java Standard Library Classes
 
-This project relies on standard library classes from the *OpenJDK JDK 23 General Availability Release*.
-To run the Java code, you must have JDK 23 installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
+This project relies on standard library classes from the **JDK 25 (LTS)**.
+To run the Java code, you must have **JDK 25 (LTS)** installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
 
 ## Getting Started
 
@@ -48,7 +48,7 @@ To run the Java code, you must have JDK 23 installed on your machine and ensure 
 Ensure the following are set up:
 
 - A machine running **Windows**, **macOS**, or **Linux**
-- **JDK** installed and configured (OpenJDK 23 is recommended)
+- **JDK 25 (LTS)** installed and configured
 - **Rust** installed and configured
 
 ### Example Program
@@ -197,20 +197,20 @@ Army attack power is 222
 [dep-status-image]: https://deps.rs/repo/github/hextriclosan/rusty-jvm/status.svg
 [dep-status-link]: https://deps.rs/repo/github/hextriclosan/rusty-jvm
 
-[jvms-5.5]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-5.html#jvms-5.5
-[jvms-6]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-6.html
-[jls-5.5]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-5.html#jls-5.5
-[jls-8.4.8]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-8.html#jls-8.4.8
-[jls-8.10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-8.html#jls-8.10
-[jls-10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-10.html
-[jls-11]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-11.html
-[jls-12.1.4]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-12.html#jls-12.1.4
-[jls-14.10]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-14.html#jls-14.10
-[jls-15.27]: https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.27
-[java.util.stream-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/stream/package-summary.html
-[java.io-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/io/package-summary.html
-[java.nio-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/nio/package-summary.html
-[java.lang.invoke-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/invoke/package-summary.html
-[java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/reflect/package-summary.html
-[java.util.zip-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/util/zip/package-summary.html
-[java.lang.system-api]: https://docs.oracle.com/en/java/javase/23/docs/api/java.base/java/lang/System.html
+[jvms-5.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
+[jvms-6]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html
+[jls-5.5]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-5.html#jls-5.5
+[jls-8.4.8]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-8.html#jls-8.4.8
+[jls-8.10]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-8.html#jls-8.10
+[jls-10]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-10.html
+[jls-11]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-11.html
+[jls-12.1.4]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.1.4
+[jls-14.10]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-14.html#jls-14.10
+[jls-15.27]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-15.html#jls-15.27
+[java.util.stream-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/stream/package-summary.html
+[java.io-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/io/package-summary.html
+[java.nio-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/nio/package-summary.html
+[java.lang.invoke-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/package-summary.html
+[java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/reflect/package-summary.html
+[java.util.zip-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/zip/package-summary.html
+[java.lang.system-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/System.html
