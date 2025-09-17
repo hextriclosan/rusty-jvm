@@ -89,16 +89,14 @@ fn resolve_method_and_args(
 
 fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
     // todo: use me after migration from 23 to 25 java version
-    // let primitive = Executor::invoke_non_static_method(
-    //     "java/lang/Class",
-    //     "isPrimitive:()Z",
-    //     clazz_ref_,
-    //     &[],
-    // )?[0] != 0;
-    //
-    // if !primitive {
-    //     return Ok(StackValueKind::I32(obj_ref)); // Return as object if not primitive
-    // }
+    let primitive =
+        Executor::invoke_non_static_method("java/lang/Class", "isPrimitive:()Z", clazz_ref_, &[])?
+            [0]
+            != 0;
+
+    if !primitive {
+        return Ok(StackValueKind::I32(obj_ref)); // Return as object if not primitive
+    }
 
     let res = if clazz_ref_ == clazz_ref("B")? {
         let raw =
@@ -145,8 +143,9 @@ fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
         )?;
         StackValueKind::F64(f64::from_vec(&raw))
     } else {
-        // todo: return error here after migration from 23 to 25 java version
-        return Ok(StackValueKind::I32(obj_ref));
+        return Err(Error::new_execution(&format!(
+            "Unrecognized primitive type with clazz_ref {clazz_ref_}"
+        )));
     };
 
     Ok(res)

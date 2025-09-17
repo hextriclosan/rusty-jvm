@@ -7,10 +7,9 @@ use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::class::{
     class_init_class_name_wrp, class_is_instance_wrp, for_name0_wrp, get_constant_pool_wrp,
     get_declared_constructors0_wrp, get_declared_fields0_wrp, get_declared_methods0_wrp,
-    get_declaring_class0_wrp, get_enclosing_method0_wrp, get_interfaces0_wrp, get_modifiers_wrp,
-    get_nest_host0_wrp, get_primitive_class_wrp, get_raw_annotations_wrp,
-    get_simple_binary_name0_wrp, get_superclass_wrp, is_array_wrp, is_assignable_from_wrp,
-    is_interface_wrp, is_primitive_wrp,
+    get_declaring_class0_wrp, get_enclosing_method0_wrp, get_interfaces0_wrp, get_nest_host0_wrp,
+    get_primitive_class_wrp, get_raw_annotations_wrp, get_simple_binary_name0_wrp,
+    get_superclass_wrp, is_assignable_from_wrp,
 };
 use crate::vm::system_native::class_loader::{define_class0_wrp, find_bootstrap_class_wrp};
 use crate::vm::system_native::constant_pool::{
@@ -26,7 +25,7 @@ use crate::vm::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
 use crate::vm::system_native::io_file_system::{
-    canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp, delete0_wrp,
+    canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp,
     get_boolean_attributes0_wrp,
 };
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
@@ -128,7 +127,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/System:mapLibraryName:(Ljava/lang/String;)Ljava/lang/String;",
         Basic(system_map_library_name_wrp),
     );
-    table.insert("java/lang/Class:getModifiers:()I", Basic(get_modifiers_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert(
         "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
         Basic(get_superclass_wrp),
@@ -141,9 +139,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
         Basic(|_args: &[i32]| Ok(vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
     );
-    table.insert("java/lang/Class:isPrimitive:()Z", Basic(is_primitive_wrp)); // todo: remove me after migration from 23 to 25 java version
-    table.insert("java/lang/Class:isArray:()Z", Basic(is_array_wrp)); // todo: remove me after migration from 23 to 25 java version
-    table.insert("java/lang/Class:isInterface:()Z", Basic(is_interface_wrp)); // todo: remove me after migration from 23 to 25 java version
     table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", Basic(for_name0_wrp));
     table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
     table.insert(
@@ -631,15 +626,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/UnixFileSystem:createFileExclusively0:(Ljava/lang/String;)Z",
         Basic(create_file_exclusively0_wrp),
     );
-    // todo: remove me after migration from 23 to 25 java version
-    table.insert(
-        "java/io/WinNTFileSystem:delete0:(Ljava/io/File;)Z",
-        Basic(delete0_wrp),
-    );
-    table.insert(
-        "java/io/UnixFileSystem:delete0:(Ljava/io/File;)Z",
-        Basic(delete0_wrp),
-    );
     table.insert(
         "java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
         Basic(get_boolean_attributes0_wrp),
@@ -854,6 +840,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
 
     #[cfg(unix)]
     {
+        use crate::vm::system_native::io_file_system::delete0_wrp;
         use crate::vm::system_native::platform_file_dispatcher::unix_file_dispatcher::{
             unix_file_dispatcher_impl_read0_wrp, unix_file_dispatcher_impl_size0_wrp,
             unix_file_dispatcher_impl_write0_wrp,
@@ -863,6 +850,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             unix_native_dispatcher_open0_wrp, unlink0_wrp,
         };
 
+        table.insert(
+            "java/io/UnixFileSystem:delete0:(Ljava/io/File;)Z",
+            Basic(delete0_wrp),
+        );
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:getcwd:()[B",
             WithMutStackFrames(get_cwd_wrp),

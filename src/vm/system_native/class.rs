@@ -4,35 +4,14 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{strip_nest_host, undecorate};
-use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
+use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::Arc;
 
 const PUBLIC: u16 = 0x00000001;
-
-pub(crate) fn get_modifiers_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let modifiers = get_modifiers(args[0])?;
-
-    Ok(vec![modifiers])
-}
-fn get_modifiers(reference: i32) -> Result<i32> {
-    let modifiers = get_class_modifiers(reference)?;
-    Ok(modifiers.bits() as i32)
-}
-
-fn get_class_modifiers(reference: i32) -> Result<ClassModifier> {
-    with_method_area(|method_area| {
-        let name = method_area.get_from_reflection_table(reference)?;
-        let rc = method_area.get(&name)?;
-        let class_modifiers = rc.class_modifiers();
-
-        Ok::<ClassModifier, Error>(class_modifiers)
-    })
-}
 
 pub(crate) fn get_superclass_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let current_clazz_ref = args[0];
@@ -79,40 +58,6 @@ fn map_primitive_class(primitive_type: &str) -> Result<&str> {
     })?;
 
     Ok(matched)
-}
-
-pub(crate) fn is_primitive_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let primitive = is_primitive(args[0])?;
-
-    Ok(vec![primitive as i32])
-}
-fn is_primitive(reference: i32) -> Result<bool> {
-    with_method_area(|method_area| {
-        let name = method_area.get_from_reflection_table(reference)?;
-        Ok(PRIMITIVE_TYPE_BY_CODE.contains_key(&name.as_str()))
-    })
-}
-
-pub(crate) fn is_array_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let array = is_array(args[0])?;
-
-    Ok(vec![array as i32])
-}
-fn is_array(reference: i32) -> Result<bool> {
-    with_method_area(|method_area| {
-        let name = method_area.get_from_reflection_table(reference)?;
-        Ok(name.starts_with('['))
-    })
-}
-
-pub(crate) fn is_interface_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let interface = is_interface(args[0])?;
-
-    Ok(vec![interface as i32])
-}
-fn is_interface(reference: i32) -> Result<bool> {
-    let modifiers = get_class_modifiers(reference)?;
-    Ok(modifiers.contains(ClassModifier::Interface))
 }
 
 pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
