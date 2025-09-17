@@ -46,6 +46,7 @@ fn create_file_exclusively0(path_ref: i32) -> Result<bool> {
         .map_err(|e| Error::new_execution(&format!("Failed to create file {path:?}: {e}")))
 }
 
+#[cfg(unix)]
 pub(crate) fn delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _filesystem_impl_ref = args[0];
     let file_ref = args[1];
@@ -53,7 +54,7 @@ pub(crate) fn delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 
     Ok(vec![if deleted { 1 } else { 0 }])
 }
-fn delete0(file_ref: i32) -> Result<bool> {
+pub(crate) fn delete0(file_ref: i32) -> Result<bool> {
     let path_ref = extract_path(file_ref)?;
 
     let path = get_utf8_string_by_ref(path_ref)?;
