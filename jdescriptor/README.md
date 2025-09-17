@@ -57,6 +57,6 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 [docs-link]: https://docs.rs/jdescriptor
 [license-mit-image]: https://img.shields.io/badge/license-MIT-blue.svg
 [license-mit-link]: LICENSE
-[jvms-index]: https://docs.oracle.com/javase/specs/jvms/se23/html/
-[jvms-4.3.2]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.2
-[jvms-4.3.3]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.3.3
+[jvms-index]: https://docs.oracle.com/javase/specs/jvms/se25/html/
+[jvms-4.3.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.2
+[jvms-4.3.3]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.3

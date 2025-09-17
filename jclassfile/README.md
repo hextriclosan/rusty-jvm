@@ -11,7 +11,7 @@ While there are other crates with similar functionality, the `jclassfile` crate 
 It has been used to parse thousands of OpenJDK standard library classes and is also exercised through numerous integration tests within the project.
 
 ## Implementation Status
-The following sections of the Java Virtual Machine Specification (JVMS, Java SE 23 Edition) are implemented:
+The following sections of the Java Virtual Machine Specification (JVMS, Java SE 25 Edition) are implemented:
 
 - [x] The ClassFile Structure ([§4.1][jvms-4.1])
 - [x] The Constant Pool ([§4.4][jvms-4.4])
@@ -92,59 +92,59 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 [license-mit-image]: https://img.shields.io/badge/license-MIT-blue.svg
 [license-mit-link]: LICENSE
 
-[jvms-4]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html
-[jvms-4.1]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.1
-[jvms-4.4]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4
-[jvms-4.4.1]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.1
-[jvms-4.4.2]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.2
-[jvms-4.4.3]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.3
-[jvms-4.4.4]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.4
-[jvms-4.4.5]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.5
-[jvms-4.4.6]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.6
-[jvms-4.4.7]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.7
-[jvms-4.4.8]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.8
-[jvms-4.4.9]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.9
-[jvms-4.4.10]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.10
-[jvms-4.4.11]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.11
-[jvms-4.4.12]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.4.12
-[jvms-4.5]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.5
-[jvms-4.6]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.6
-[jvms-4.7]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7
-[jvms-4.7.2]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.2
-[jvms-4.7.3]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.3
-[jvms-4.7.4]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.4
-[jvms-4.7.5]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.5
-[jvms-4.7.6]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.6
-[jvms-4.7.7]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.7
-[jvms-4.7.8]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.8
-[jvms-4.7.9]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.9
-[jvms-4.7.10]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.10
-[jvms-4.7.11]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.11
-[jvms-4.7.12]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.12
-[jvms-4.7.13]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.13
-[jvms-4.7.14]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.14
-[jvms-4.7.15]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.15
-[jvms-4.7.16]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16
-[jvms-4.7.16.1]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.16.1
-[jvms-4.7.17]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.17
-[jvms-4.7.18]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.18
-[jvms-4.7.19]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.19
-[jvms-4.7.20]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20
-[jvms-4.7.20.1]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20.1
-[jvms-4.7.20.2]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.20.2
-[jvms-4.7.21]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.21
-[jvms-4.7.22]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.22
-[jvms-4.7.23]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.23
-[jvms-4.7.24]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.24
-[jvms-4.7.25]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.25
-[jvms-4.7.26]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.26
-[jvms-4.7.27]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.27
-[jvms-4.7.28]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.28
-[jvms-4.7.29]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.29
-[jvms-4.7.30]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.30
-[jvms-4.7.31]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.7.31
-[jvms-4.8]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.8
-[jvms-4.9]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.9
-[jvms-4.10]: https://docs.oracle.com/javase/specs/jvms/se23/html/jvms-4.html#jvms-4.10
+[jvms-4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
+[jvms-4.1]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1
+[jvms-4.4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4
+[jvms-4.4.1]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.1
+[jvms-4.4.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2
+[jvms-4.4.3]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.3
+[jvms-4.4.4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4
+[jvms-4.4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5
+[jvms-4.4.6]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.6
+[jvms-4.4.7]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7
+[jvms-4.4.8]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.8
+[jvms-4.4.9]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.9
+[jvms-4.4.10]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.10
+[jvms-4.4.11]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.11
+[jvms-4.4.12]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.12
+[jvms-4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.5
+[jvms-4.6]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.6
+[jvms-4.7]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7
+[jvms-4.7.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.2
+[jvms-4.7.3]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3
+[jvms-4.7.4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4
+[jvms-4.7.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.5
+[jvms-4.7.6]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6
+[jvms-4.7.7]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.7
+[jvms-4.7.8]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.8
+[jvms-4.7.9]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.9
+[jvms-4.7.10]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.10
+[jvms-4.7.11]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.11
+[jvms-4.7.12]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.12
+[jvms-4.7.13]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.13
+[jvms-4.7.14]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.14
+[jvms-4.7.15]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.15
+[jvms-4.7.16]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16
+[jvms-4.7.16.1]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16.1
+[jvms-4.7.17]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.17
+[jvms-4.7.18]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.18
+[jvms-4.7.19]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.19
+[jvms-4.7.20]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20
+[jvms-4.7.20.1]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.1
+[jvms-4.7.20.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.2
+[jvms-4.7.21]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.21
+[jvms-4.7.22]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.22
+[jvms-4.7.23]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23
+[jvms-4.7.24]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.24
+[jvms-4.7.25]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25
+[jvms-4.7.26]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.26
+[jvms-4.7.27]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.27
+[jvms-4.7.28]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.28
+[jvms-4.7.29]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.29
+[jvms-4.7.30]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.30
+[jvms-4.7.31]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.31
+[jvms-4.8]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.8
+[jvms-4.9]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9
+[jvms-4.10]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10
 
 [rusty-jvm]: https://github.com/hextriclosan/rusty-jvm
