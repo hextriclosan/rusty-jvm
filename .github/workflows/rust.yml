@@ -28,8 +28,8 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '23'
+          distribution: 'zulu'
+          java-version: '25'
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
