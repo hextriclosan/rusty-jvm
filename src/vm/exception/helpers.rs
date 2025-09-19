@@ -49,3 +49,16 @@ pub fn throw_null_pointer_exception_with_message(
 
     Ok(())
 }
+
+pub fn throw_internal_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
+    let message_ref = StringPoolHelper::get_string(message)?;
+    let args = vec![StackValueKind::from(message_ref)];
+    construct_exception_and_throw(
+        "java/lang/InternalError",
+        "<init>:(Ljava/lang/String;)V",
+        &args,
+        stack_frames,
+    )?;
+
+    Ok(())
+}

@@ -735,9 +735,9 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             access_check_wrp, close_handle_wrp, create_directory0_wrp, create_file0_wrp,
             delete_file0_wrp, duplicate_token_ex_wrp, format_message_wrp, get_current_process_wrp,
             get_current_thread_wrp, get_drive_type0_wrp, get_file_attributes_ex0_wrp,
-            get_file_security0_wrp, get_volume_information0_wrp, get_volume_path_name0_wrp,
-            open_process_token_wrp, open_thread_token_wrp, remove_directory0_wrp,
-            set_end_of_file_wrp,
+            get_file_security0_wrp, get_full_path_name0_wrp, get_volume_information0_wrp,
+            get_volume_path_name0_wrp, open_process_token_wrp, open_thread_token_wrp,
+            remove_directory0_wrp, set_end_of_file_wrp,
         };
         use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
         use crate::vm::system_native::platform_specific_files::winnt_file_system::{
@@ -819,6 +819,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:FormatMessage:(I)Ljava/lang/String;",
             Basic(format_message_wrp),
+        );
+        table.insert(
+            "sun/nio/fs/WindowsNativeDispatcher:GetFullPathName0:(J)Ljava/lang/String;",
+            WithMutStackFrames(get_full_path_name0_wrp),
         );
 
         table.insert(
