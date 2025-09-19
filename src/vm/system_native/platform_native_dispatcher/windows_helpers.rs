@@ -1,5 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::exception::common::construct_exception_and_throw;
+use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 use std::ptr::null_mut;
@@ -44,12 +45,17 @@ pub fn throw_windows_exception(stack_frames: &mut StackFrames) -> Result<()> {
     Ok(())
 }
 
-pub fn strip_string(volume_name: &[WCHAR]) -> Result<String> {
+pub fn strip_string(win_string: &[WCHAR]) -> Result<String> {
     let mut len = 0;
-    while volume_name[len] != 0 {
+    while win_string[len] != 0 {
         len += 1;
     }
-    let slice = &volume_name[0..len];
+    let slice = &win_string[0..len];
     let stripped = String::from_utf16(&slice)?;
     Ok(stripped)
+}
+
+pub fn wchar_to_string_ref(win_string: &[WCHAR]) -> Result<i32> {
+    let stripped = strip_string(win_string)?;
+    StringPoolHelper::get_string(&stripped)
 }

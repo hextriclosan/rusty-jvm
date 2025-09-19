@@ -1,11 +1,12 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::exception::helpers::throw_internal_error;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_write_lock;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
-    strip_string, throw_windows_exception,
+    throw_windows_exception, wchar_to_string_ref,
 };
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::mem::zeroed;
@@ -14,8 +15,8 @@ use winapi::shared::minwindef::{DWORD, FALSE, LPVOID, MAX_PATH, TRUE};
 use winapi::shared::winerror::{ERROR_INSUFFICIENT_BUFFER, ERROR_NO_TOKEN};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{
-    CreateDirectoryW, DeleteFileW, GetDriveTypeW, GetFileAttributesExW, GetVolumeInformationW,
-    GetVolumePathNameW, RemoveDirectoryW, SetEndOfFile,
+    CreateDirectoryW, DeleteFileW, GetDriveTypeW, GetFileAttributesExW, GetFullPathNameW,
+    GetVolumeInformationW, GetVolumePathNameW, RemoveDirectoryW, SetEndOfFile,
 };
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use winapi::um::minwinbase::{GetFileExInfoStandard, LPSECURITY_ATTRIBUTES, SECURITY_ATTRIBUTES};
@@ -482,8 +483,7 @@ fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throwi
         throw_and_return!(throw_windows_exception(stack_frames))
     }
 
-    let string = unwrap_or_return_err!(strip_string(&volume_name));
-    let string_ref = unwrap_or_return_err!(StringPoolHelper::get_string(&string));
+    let string_ref = unwrap_or_return_err!(wchar_to_string_ref(&volume_name));
 
     ThrowingResult::ok(string_ref)
 }
@@ -529,12 +529,8 @@ fn get_volume_information0(
         throw_and_return!(throw_windows_exception(stack_frames))
     }
 
-    let volume_name = unwrap_or_return_err!(strip_string(&volume_name));
-    let filesystem_name = unwrap_or_return_err!(strip_string(&filesystem_name));
-
-    let volume_name_ref = unwrap_or_return_err!(StringPoolHelper::get_string(&volume_name));
-    let filesystem_name_ref =
-        unwrap_or_return_err!(StringPoolHelper::get_string(&filesystem_name));
+    let volume_name_ref = unwrap_or_return_err!(wchar_to_string_ref(&volume_name));
+    let filesystem_name_ref = unwrap_or_return_err!(wchar_to_string_ref(&filesystem_name));
 
     let result = with_heap_write_lock(|heap| {
         heap.set_object_field_value(
@@ -609,4 +605,44 @@ fn format_message(error_code: i32) -> Result<i32> {
     let string_ref = StringPoolHelper::get_string(message)?;
 
     Ok(string_ref)
+}
+
+pub fn get_full_path_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let address = i32toi64(args[1], args[0]);
+
+    let string_ref =
+        unwrap_result_or_return_default!(get_full_path_name0(address, stack_frames), vec![]);
+    Ok(vec![string_ref])
+}
+fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+    let lp_file_name = address as usize as LPCWSTR;
+    let mut result = vec![0 as WCHAR; MAX_PATH + 1];
+
+    let len = unsafe {
+        GetFullPathNameW(
+            lp_file_name,
+            MAX_PATH as DWORD,
+            result.as_mut_ptr(),
+            0 as *mut _,
+        )
+    };
+    if len == 0 {
+        throw_and_return!(throw_windows_exception(stack_frames))
+    }
+    if len < MAX_PATH as DWORD {
+        let string_ref = unwrap_or_return_err!(wchar_to_string_ref(&result[..(len + 1) as usize]));
+        ThrowingResult::ok(string_ref)
+    } else {
+        result.resize((len + 1) as usize, 0);
+        let len = unsafe { GetFullPathNameW(lp_file_name, len, result.as_mut_ptr(), 0 as *mut _) };
+        if len == 0 {
+            throw_and_return!(throw_internal_error(
+                "GetFullPathNameW failed",
+                stack_frames
+            ))
+        } else {
+            let string_ref = unwrap_or_return_err!(wchar_to_string_ref(&result[..len as usize]));
+            ThrowingResult::ok(string_ref)
+        }
+    }
 }
