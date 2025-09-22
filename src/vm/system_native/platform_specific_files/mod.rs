@@ -1,3 +1,5 @@
+#[cfg(unix)]
+pub mod unix_file_system;
 #[cfg(windows)]
 pub mod wide_cstring;
 #[cfg(windows)]

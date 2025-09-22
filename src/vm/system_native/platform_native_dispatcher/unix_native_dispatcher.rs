@@ -6,13 +6,16 @@ use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::unix_helpers::{
     throw_unix_exception, throw_unix_exception_with_errno,
 };
-use crate::{throw_and_return, unwrap_result_or_return_default};
+use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use nix::fcntl::{open, OFlag};
 use nix::libc::{c_char, mode_t, rmdir};
 use nix::sys::stat::{lstat, stat, FileStat, Mode};
 use nix::unistd::{access, getcwd, mkdir, unlink, AccessFlags};
-use std::ffi::{CStr, CString};
+use realpath_ext::{realpath, RealpathFlags};
+use std::ffi::{CStr, CString, OsString};
 use std::os::fd::IntoRawFd;
+use std::os::unix::prelude::OsStringExt;
+use std::path::Path;
 
 pub fn get_cwd_wrp(_args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let byte_array_ref = unwrap_result_or_return_default!(get_cwd(stack_frames), vec![]);
@@ -257,4 +260,35 @@ fn copy_stat_attributes(attr_ref: i32, stat: FileStat) -> Result<()> {
 
         Ok::<(), Error>(())
     })
+}
+
+pub fn realpath0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let path_ptr = i32toi64(args[1], args[0]);
+    let byte_arr_ref = unwrap_result_or_return_default!(realpath0(path_ptr, stack_frames), vec![]);
+    Ok(vec![byte_arr_ref])
+}
+fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+    let path = unwrap_or_return_err!(cstring_from_i64(path_ptr));
+    let path = OsString::from_vec(path.into_bytes());
+    let result_path = realpath(Path::new(&path), RealpathFlags::empty());
+    let result_path = match result_path {
+        Ok(p) => p,
+        Err(errno) => {
+            let errno = unwrap_or_return_err!(errno
+                .raw_os_error()
+                .ok_or_else(|| { Error::new_native("Failed to get errno from realpath error") }));
+            throw_and_return!(throw_unix_exception_with_errno(errno, stack_frames))
+        }
+    };
+
+    let path_bytes = result_path
+        .to_string_lossy()
+        .chars()
+        .map(|c| c as i32)
+        .collect::<Vec<_>>();
+
+    // Allocate the byte array in the heap and return its reference
+    let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values("[B", &path_bytes));
+
+    ThrowingResult::ok(array_ref)
 }

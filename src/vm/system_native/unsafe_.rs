@@ -608,7 +608,7 @@ fn copy_memory0(
     let ptr = dest_base_ref as usize as *mut u8;
 
     if src_base_ref != 0 {
-        let arr = with_heap_read_lock(|heap| heap.get_entire_array(src_base_ref))?; // todo: only arrays are supported so far
+        let arr = with_heap_read_lock(|heap| heap.get_entire_array(src_base_ref))?; // todo: only arrays are supported so far (add check isArray)
         let raw = arr.raw_data();
 
         let to_copy = raw
@@ -624,7 +624,18 @@ fn copy_memory0(
             copy(src, dst, len);
         }
     } else {
-        todo!("implement this for absolute addresses");
+        let ptr_copy_from = src_offset as usize as *const u8;
+        with_heap_read_lock(|heap| {
+            let mut arr_copy_to = heap.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
+            unsafe {
+                let output =
+                    &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+
+                copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
+            }
+
+            Ok::<(), Error>(())
+        })?;
     }
 
     Ok(())

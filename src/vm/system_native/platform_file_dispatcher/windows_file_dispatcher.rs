@@ -7,12 +7,17 @@ use crate::vm::system_native::platform_native_dispatcher::windows_helpers::get_l
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::mem::zeroed;
 use std::ptr::null_mut;
-use winapi::shared::minwindef::{DWORD, LPCVOID};
-use winapi::um::fileapi::WriteFile;
+use winapi::shared::minwindef::{DWORD, LPCVOID, LPVOID};
+use winapi::shared::winerror::{ERROR_BROKEN_PIPE, ERROR_NO_DATA};
+use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::fileapi::{ReadFile, WriteFile};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::minwinbase::OVERLAPPED;
 use winapi::um::sysinfoapi::{GetSystemInfo, SYSTEM_INFO};
 use winapi::um::winnt::HANDLE;
+
+const IOS_EOF: i32 = -1; // End of file
+const IOS_UNAVAILABLE: i32 = -2; // Nothing available (non-blocking)
 
 pub fn allocation_granularity0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
     let result = allocation_granularity0();
@@ -79,4 +84,53 @@ fn write0(
     }
 
     ThrowingResult::ok(written as i32)
+}
+
+pub fn windows_file_dispatcher_read0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let fd_ref = args[0];
+    let address = i32toi64(args[2], args[1]);
+    let len = args[3];
+
+    let ret = unwrap_result_or_return_default!(read0(fd_ref, address, len, stack_frames), vec![]);
+    Ok(vec![ret])
+}
+fn read0(
+    fd_ref: i32,
+    address: i64,
+    len: i32,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
+    let handle = unwrap_or_return_err!(get_handle(fd_ref)) as usize as HANDLE;
+    if handle == INVALID_HANDLE_VALUE {
+        throw_and_return!(throw_ioexception("Invalid handle", stack_frames))
+    }
+
+    let mut read: DWORD = 0;
+    let result = unsafe {
+        ReadFile(
+            handle,
+            address as LPVOID,
+            len as DWORD,
+            &mut read,
+            0 as *mut OVERLAPPED,
+        )
+    };
+    if result == 0 {
+        let error_code = unsafe { GetLastError() };
+        if error_code == ERROR_BROKEN_PIPE {
+            return ThrowingResult::ok(IOS_EOF);
+        }
+        if error_code == ERROR_NO_DATA {
+            return ThrowingResult::ok(IOS_UNAVAILABLE);
+        }
+        throw_and_return!(throw_ioexception(
+            &format!("Read failed: {}", unwrap_or_return_err!(get_last_error())),
+            stack_frames
+        ))
+    }
+
+    ThrowingResult::ok(if read == 0 { IOS_EOF } else { read as i32 })
 }

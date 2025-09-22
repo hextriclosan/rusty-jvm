@@ -15,11 +15,14 @@ use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_defa
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, MAX_PATH};
 use winapi::um::errhandlingapi::{GetLastError, SetLastError};
-use winapi::um::fileapi::{CreateFileW, GetFinalPathNameByHandleW, OPEN_EXISTING};
+use winapi::um::fileapi::{
+    CreateFileW, GetFinalPathNameByHandleW, GetVolumeInformationW, OPEN_EXISTING,
+};
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use winapi::um::winbase::FILE_FLAG_BACKUP_SEMANTICS;
 use winapi::um::winnt::{
-    FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE, WCHAR,
+    FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE, LPCWSTR,
+    WCHAR,
 };
 
 pub(crate) fn get_final_path0_wrp(
@@ -119,4 +122,45 @@ pub(crate) fn winnt_file_system_delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 
     let deleted = delete0(file_ref)?;
     Ok(vec![if deleted { 1 } else { 0 }])
+}
+
+pub(crate) fn get_name_max0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let _filesystem_impl_ref = args[0];
+    let path_ref = args[1];
+
+    let ret = unwrap_result_or_return_default!(get_name_max0(path_ref, stack_frames), vec![]);
+    Ok(vec![ret])
+}
+fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+    let path = if path_ref == 0 {
+        0usize as LPCWSTR
+    } else {
+        let path = unwrap_or_return_err!(get_utf8_string_by_ref(path_ref));
+        let wide_path = WideCString::new(&path);
+        wide_path.as_ptr()
+    };
+
+    let mut maximum_component_length: DWORD = 0;
+    let res = unsafe {
+        GetVolumeInformationW(
+            path,
+            null_mut(),
+            0,
+            null_mut(),
+            &mut maximum_component_length,
+            null_mut(),
+            null_mut(),
+            0,
+        )
+    };
+
+    if res == 0 {
+        let error_code = unsafe { GetLastError() };
+        let error_msg = format!(
+            "GetVolumeInformationW failed for path {path_ref} with error code {error_code}"
+        );
+        throw_and_return!(throw_ioexception(&error_msg, stack_frames))
+    }
+
+    ThrowingResult::ok(maximum_component_length as i32)
 }

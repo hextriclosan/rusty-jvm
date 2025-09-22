@@ -12,14 +12,16 @@ use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_defa
 use std::mem::zeroed;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, FALSE, LPVOID, MAX_PATH, TRUE};
-use winapi::shared::winerror::{ERROR_INSUFFICIENT_BUFFER, ERROR_NO_TOKEN};
+use winapi::shared::winerror::{ERROR_INSUFFICIENT_BUFFER, ERROR_NO_MORE_FILES, ERROR_NO_TOKEN};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{
-    CreateDirectoryW, DeleteFileW, GetDriveTypeW, GetFileAttributesExW, GetFullPathNameW,
-    GetVolumeInformationW, GetVolumePathNameW, RemoveDirectoryW, SetEndOfFile,
+    CreateDirectoryW, DeleteFileW, FindClose, FindFirstFileW, GetDriveTypeW, GetFileAttributesExW,
+    GetFullPathNameW, GetVolumeInformationW, GetVolumePathNameW, RemoveDirectoryW, SetEndOfFile,
 };
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-use winapi::um::minwinbase::{GetFileExInfoStandard, LPSECURITY_ATTRIBUTES, SECURITY_ATTRIBUTES};
+use winapi::um::minwinbase::{
+    GetFileExInfoStandard, LPSECURITY_ATTRIBUTES, SECURITY_ATTRIBUTES, WIN32_FIND_DATAW,
+};
 use winapi::um::processthreadsapi::{
     GetCurrentProcess, GetCurrentThread, OpenProcessToken, OpenThreadToken,
 };
@@ -645,4 +647,101 @@ fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throwing
             ThrowingResult::ok(string_ref)
         }
     }
+}
+
+pub fn find_first_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let lp_file_name = i32toi64(args[1], args[0]);
+    let first_file_obj_ref = args[2];
+
+    let _res = unwrap_result_or_return_default!(
+        find_first_file0(lp_file_name, first_file_obj_ref, stack_frames),
+        vec![]
+    );
+    Ok(vec![])
+}
+fn find_first_file0(
+    lp_file_name: i64,
+    first_file_obj_ref: i32,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<()> {
+    let mut data: WIN32_FIND_DATAW = unsafe { zeroed() };
+    let lp_file_name = lp_file_name as usize as LPCWSTR;
+    let handle = unsafe { FindFirstFileW(lp_file_name, &mut data) };
+    if handle == INVALID_HANDLE_VALUE {
+        throw_and_return!(throw_windows_exception(stack_frames))
+    }
+
+    let c_file_name = data.cFileName;
+    let name_ref = unwrap_or_return_err!(wchar_to_string_ref(&c_file_name));
+    let attributes = data.dwFileAttributes as i32;
+
+    let result = with_heap_write_lock(|heap| {
+        heap.set_object_field_value(
+            first_file_obj_ref,
+            "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
+            "handle",
+            i64_to_vec(handle as i64),
+        )?;
+        heap.set_object_field_value(
+            first_file_obj_ref,
+            "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
+            "name",
+            vec![name_ref],
+        )?;
+        heap.set_object_field_value(
+            first_file_obj_ref,
+            "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
+            "attributes",
+            vec![attributes],
+        )?;
+        Ok::<(), Error>(())
+    });
+    let _res = unwrap_or_return_err!(result);
+
+    ThrowingResult::ok(())
+}
+
+pub fn find_next_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let handle = i32toi64(args[1], args[0]);
+    let address = i32toi64(args[3], args[2]);
+
+    let string_ref =
+        unwrap_result_or_return_default!(find_next_file0(handle, address, stack_frames), vec![]);
+    Ok(vec![string_ref])
+}
+fn find_next_file0(
+    handle: i64,
+    address: i64,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
+    let handle = handle as usize as HANDLE;
+    let data = address as usize as *mut WIN32_FIND_DATAW;
+    let result = unsafe { winapi::um::fileapi::FindNextFileW(handle, data) };
+    if result != 0 {
+        let c_file_name = unsafe { (*data).cFileName };
+        let name_ref = unwrap_or_return_err!(wchar_to_string_ref(&c_file_name));
+        ThrowingResult::ok(name_ref)
+    } else {
+        let last_error = unsafe { GetLastError() };
+        if last_error == ERROR_NO_MORE_FILES {
+            ThrowingResult::ok(0)
+        } else {
+            throw_and_return!(throw_windows_exception(stack_frames))
+        }
+    }
+}
+
+pub fn find_close_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
+    let handle = i32toi64(args[1], args[0]);
+
+    let _res = unwrap_result_or_return_default!(find_close(handle, stack_frames), vec![]);
+    Ok(vec![])
+}
+fn find_close(handle: i64, stack_frames: &mut StackFrames) -> ThrowingResult<()> {
+    let handle = handle as usize as HANDLE;
+    let result = unsafe { FindClose(handle) };
+    if result == 0 {
+        throw_and_return!(throw_windows_exception(stack_frames))
+    }
+    ThrowingResult::ok(())
 }
