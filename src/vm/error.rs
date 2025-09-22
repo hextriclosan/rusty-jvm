@@ -5,9 +5,11 @@ use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
 use miniz_oxide::MZError;
 use num_enum::TryFromPrimitiveError;
+use rand::rand_core::OsError;
 use std::error::Error as StdError;
-use std::ffi::OsString;
+use std::ffi::{NulError, OsString};
 use std::fmt::{Debug, Display, Formatter};
+use std::num::TryFromIntError;
 use std::string::{FromUtf16Error, FromUtf8Error};
 use std::sync::PoisonError;
 use std::time::SystemTimeError;
@@ -133,6 +135,24 @@ impl From<OsString> for Error {
         Error::new_execution(&format!(
             "Failed to convert OsString value {value:?} to String"
         ))
+    }
+}
+
+impl From<OsError> for Error {
+    fn from(value: OsError) -> Self {
+        Error::new_execution(&format!("OsError: {value}"))
+    }
+}
+
+impl From<TryFromIntError> for Error {
+    fn from(value: TryFromIntError) -> Self {
+        Error::new_execution(&format!("TryFromIntError: {value}"))
+    }
+}
+
+impl From<NulError> for Error {
+    fn from(value: NulError) -> Self {
+        Error::new_execution(&format!("NulError: {value}"))
     }
 }
 

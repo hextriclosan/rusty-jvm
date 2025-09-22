@@ -90,6 +90,36 @@ fn position0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64
     ThrowingResult::ok(pos as i64)
 }
 
+pub(crate) fn file_input_stream_available0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let obj_ref = args[0];
+    let available = unwrap_result_or_return_default!(available0(obj_ref, stack_frames), vec![]);
+    Ok(vec![available])
+}
+fn available0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Read, stack_frames) {
+        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    };
+    let current_pos = match file.stream_position() {
+        Ok(p) => p,
+        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
+    };
+    let metadata = match file.metadata() {
+        Ok(m) => m,
+        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
+    };
+    let file_size = metadata.len();
+    if file_size < current_pos {
+        return ThrowingResult::ok(0);
+    }
+    let available = file_size - current_pos;
+    let available = unwrap_or_return_err!(i32::try_from(available));
+    ThrowingResult::ok(available)
+}
+
 pub(crate) fn file_input_stream_read_bytes_wrp(
     args: &[i32],
     stack_frames: &mut StackFrames,

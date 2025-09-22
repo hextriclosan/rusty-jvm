@@ -2823,3 +2823,14 @@ Gavin: 5
 "#,
     );
 }
+
+#[test]
+fn should_create_temp_file_and_parse_xml() {
+    assert_success(
+        "samples.io.xmlstringtofileexample.XmlStringToFileExample",
+        r#"Root element: person
+Name: John
+Age: 30
+"#,
+    );
+}
