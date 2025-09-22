@@ -12,6 +12,9 @@ use crate::vm::system_native::method_handle_natives::offsets::{
     get_field_offset, get_static_field_offset,
 };
 use crate::vm::system_native::method_handle_natives::resolution::{member_name_init, resolve};
+use crate::vm::system_native::method_handle_natives::var_handle::{
+    var_handle_get, var_handle_set,
+};
 
 pub(crate) fn method_handle_natives_init_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let member_name_ref = args[0];
@@ -136,4 +139,17 @@ pub(crate) fn native_accessor_newinstance0_wrp(args: &[i32]) -> Result<Vec<i32>>
     let ret_obj_ref = native_accessor_newinstance0(constructor_ref, args_ref)?;
 
     Ok(vec![ret_obj_ref])
+}
+
+pub(crate) fn var_handle_set_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_set = &args[1..];
+    var_handle_set(handle_ref, args_to_set)?;
+    Ok(vec![])
+}
+
+pub(crate) fn var_handle_get_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_get = &args[1..];
+    var_handle_get(handle_ref, args_to_get)
 }
