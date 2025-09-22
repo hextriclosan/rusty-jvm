@@ -96,9 +96,12 @@ fn deep_clone(to_clone: &IndexMap<&str, &str>) -> IndexMap<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vm::JAVA_HOME;
+    use std::path::PathBuf;
 
     #[test]
     fn test_init_system_properties() {
+        JAVA_HOME.set(PathBuf::from("default_java_home")).unwrap();
         let system_properties = IndexMap::from([
             ("os.name".to_string(), "new_os_name".to_string()),
             ("java.home".to_string(), "new_java_home".to_string()),
