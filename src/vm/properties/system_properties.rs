@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::system_native::properties_provider::properties::{
-    endianness, file_separator, line_separator, os_name, os_version, path_separator, user_dir,
+    endianness, file_separator, line_separator, os_name, os_version, path_separator, tmp_dir,
+    user_dir,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
@@ -25,7 +26,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("http.proxyPort", "http.proxyPort_VALUE"),
         ("https.proxyHost", "https.proxyHost_VALUE"),
         ("https.proxyPort", "https.proxyPort_VALUE"),
-        ("java.io.tmpdir", "java.io.tmpdir_VALUE"),
+        ("java.io.tmpdir", tmp_dir()),
         ("line.separator", line_separator()),
         ("native.encoding", "native.encoding_VALUE"),
         ("os.arch", "os.arch_VALUE"),
