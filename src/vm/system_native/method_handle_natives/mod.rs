@@ -6,4 +6,5 @@ mod offsets;
 mod resolution;
 mod resolved_method_name;
 pub(crate) mod types;
+mod var_handle;
 pub(crate) mod wrappers;

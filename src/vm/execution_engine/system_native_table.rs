@@ -35,7 +35,8 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_natives_init_wrp, method_handle_natives_object_field_offset_wrp,
     method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
     method_handle_natives_static_field_offset_wrp, native_accessor_invoke0_wrp,
-    native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
+    native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp, var_handle_get_wrp,
+    var_handle_set_wrp,
 };
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
@@ -567,6 +568,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/invoke/MethodHandle:invoke", // this is a normalized polymorphic signature
         WithMutStackFrames(method_handle_invoke_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:set", // this is a normalized polymorphic signature
+        Basic(var_handle_set_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:get", // this is a normalized polymorphic signature
+        Basic(var_handle_get_wrp),
     );
     table.insert(
         "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",

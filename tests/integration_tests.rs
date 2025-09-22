@@ -1810,6 +1810,9 @@ fn should_work_with_method_handle() {
 (SampleClass)int - MethodHandle(SampleClass)int: 42
 ------- findStaticGetter / findStaticSetter (staticValue) -------
 ()int - MethodHandle()int: 500
+------- arrayElementVarHandle (int[] array elements) -------
+(SampleClass)int - null: 200
+Modified array: [100, 200, 300, 40, 50]
 ------- bindTo (String.length) -------
 ()int - MethodHandle()int: 26
 "#,

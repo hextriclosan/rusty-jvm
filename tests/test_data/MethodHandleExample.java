@@ -17,6 +17,7 @@ import java.util.Arrays;
  * - findStaticGetter / findStaticSetter – Accessing static fields.
  * - findVarHandle – Mutable instance field manipulation via VarHandle.
  * - findStaticVarHandle – Mutable static field manipulation via VarHandle.
+ * - arrayElementVarHandle – Accessing and modifying array elements via VarHandle.
  * - bindTo – Binding a method handle to a specific instance.
  */
 public class MethodHandleExample {
@@ -34,6 +35,7 @@ public class MethodHandleExample {
         demonstrateFindStaticGetterSetter(lookup);
         //demonstrateFindVarHandle(lookup); // Native Call Error: Native method java/lang/invoke/VarHandle:set not found
         //demonstrateFindStaticVarHandle(lookup); // VM execution failed: Native Call Error: Native method java/lang/invoke/VarHandle:set not found
+        demonstrateArrayElementVarHandle(lookup);
         demonstrateBindTo(lookup);
     }
 
@@ -121,6 +123,22 @@ public class MethodHandleExample {
         varHandle.set(1000);
         int value = (int) varHandle.get();
         sampleMethod(MethodType.methodType(int.class), null, value);
+    }
+
+    private static void demonstrateArrayElementVarHandle(MethodHandles.Lookup lookup) {
+        System.out.println("------- arrayElementVarHandle (int[] array elements) -------");
+
+        VarHandle varHandle = MethodHandles.arrayElementVarHandle(int[].class);
+
+        int[] array = new int[] {10, 20, 30, 40, 50};
+        varHandle.set(array, 0, 100);
+        varHandle.set(array, 1, 200);
+        varHandle.set(array, 2, 300);
+
+        int valueAtIndex1 = (int) varHandle.get(array, 1);
+
+        sampleMethod(MethodType.methodType(int.class, SampleClass.class), null, valueAtIndex1);
+        System.out.println("Modified array: " + Arrays.toString(array));
     }
 
     private static void demonstrateBindTo(MethodHandles.Lookup lookup) throws Throwable {
