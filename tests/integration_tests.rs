@@ -1643,7 +1643,10 @@ fn should_return_system_properties() {
     let java_home = json["java.home"]
         .as_str()
         .expect("java.home is not a string");
-    assert_eq!(java_home, "java.home_DEFAULT");
+    assert_eq!(
+        java_home,
+        env::var("JAVA_HOME").expect("JAVA_HOME is not set")
+    );
 
     let tmp_dir = json["java.io.tmpdir"]
         .as_str()

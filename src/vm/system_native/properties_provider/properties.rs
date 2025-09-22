@@ -1,6 +1,9 @@
+use crate::vm::error::Error;
+use crate::vm::JAVA_HOME;
 use os_info::Type;
 use os_info::Version::Semantic;
 use std::env;
+use std::string::ToString;
 use std::sync::LazyLock;
 
 pub(crate) fn is_bigendian() -> bool {
@@ -129,4 +132,20 @@ pub(crate) fn user_dir() -> &'static str {
 static TMP_DIR: LazyLock<String> = LazyLock::new(|| env::temp_dir().display().to_string());
 pub(crate) fn tmp_dir() -> &'static str {
     &TMP_DIR
+}
+static JAVA_HOME_PROP: LazyLock<String> = LazyLock::new(|| {
+    JAVA_HOME
+        .get()
+        .expect("JAVA_HOME is not initialized")
+        .to_str()
+        .ok_or_else(|| {
+            let invalid_path = JAVA_HOME.get().unwrap().as_os_str().to_string_lossy();
+            let msg = format!("Failed to convert JAVA_HOME to UTF-8: {:?}", invalid_path);
+            Error::new_execution(&msg)
+        })
+        .unwrap()
+        .to_string()
+});
+pub(crate) fn java_home() -> &'static str {
+    &JAVA_HOME_PROP
 }

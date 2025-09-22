@@ -22,8 +22,8 @@ use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
 use crate::Arguments;
-use std::path::Path;
-use std::sync::Arc;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -37,12 +37,15 @@ use tracing_subscriber::{fmt, EnvFilter};
 /// * `arguments` - The arguments for the Java program.
 /// * `std_dir` - The path to the standard library directory containing core Java classes.
 pub fn run(arguments: &Arguments, java_home: &Path) -> Result<Vec<i32>> {
+    JAVA_HOME
+        .set(java_home.to_path_buf())
+        .map_err(|e| Error::new_execution(&format!("JAVA_HOME already set: {e:?}")))?;
     let main_class_name = arguments.entry_point();
     validate_class_name(main_class_name)?;
 
     init_system_properties(arguments.system_properties().clone())?;
 
-    prelude(java_home)?;
+    prelude()?;
 
     let internal_name = &main_class_name.replace('.', "/");
     StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
@@ -51,10 +54,10 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<Vec<i32>> {
     Ok(vec![])
 }
 
-fn prelude(java_home: &Path) -> Result<()> {
+fn prelude() -> Result<()> {
     init_logger()?;
 
-    MethodArea::init(java_home)?;
+    MethodArea::init()?;
 
     init()?;
 
@@ -126,3 +129,5 @@ fn put_synthetic_instance_field(
         None => Ok(()),
     }
 }
+
+static JAVA_HOME: OnceLock<PathBuf> = OnceLock::new();
