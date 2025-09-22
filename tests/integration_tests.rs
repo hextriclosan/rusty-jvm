@@ -1,5 +1,6 @@
 mod utils;
 
+use std::env;
 use std::fs::File;
 use std::io::Write;
 use utils::assert_success;
@@ -1643,6 +1644,14 @@ fn should_return_system_properties() {
         .as_str()
         .expect("java.home is not a string");
     assert_eq!(java_home, "java.home_DEFAULT");
+
+    let tmp_dir = json["java.io.tmpdir"]
+        .as_str()
+        .expect("java.io.tmpdir is not a string");
+    assert_eq!(
+        tmp_dir,
+        env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
+    );
 }
 
 #[test]

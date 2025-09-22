@@ -125,3 +125,8 @@ static USER_DIR: LazyLock<String> = LazyLock::new(|| {
 pub(crate) fn user_dir() -> &'static str {
     &USER_DIR
 }
+
+static TMP_DIR: LazyLock<String> = LazyLock::new(|| env::temp_dir().display().to_string());
+pub(crate) fn tmp_dir() -> &'static str {
+    &TMP_DIR
+}
