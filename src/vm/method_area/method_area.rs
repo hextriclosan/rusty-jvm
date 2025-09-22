@@ -10,8 +10,8 @@ use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
-use crate::vm::stack;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
+use crate::vm::{stack, JAVA_HOME};
 use indexmap::{IndexMap, IndexSet};
 use jclassfile::class_file::{parse, ClassFile};
 use jclassfile::fields::{FieldFlags, FieldInfo};
@@ -22,7 +22,7 @@ use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use tracing::trace;
 
@@ -49,13 +49,16 @@ pub(crate) struct MethodArea {
 }
 
 impl MethodArea {
-    pub(crate) fn init(java_home: &Path) -> Result<()> {
+    pub(crate) fn init() -> Result<()> {
         METHOD_AREA
-            .set(MethodArea::new(java_home)?)
+            .set(MethodArea::new()?)
             .map_err(|_| Error::new_execution("MethodArea already initialized"))
     }
 
-    fn new(java_home: &Path) -> Result<Self> {
+    fn new() -> Result<Self> {
+        let java_home = JAVA_HOME.get().ok_or_else(|| {
+            Error::new_execution("JAVA_HOME not set, cannot initialize MethodArea")
+        })?;
         let modules = java_home.join("lib").join("modules");
         let synthetic_classes = Self::generate_synthetic_classes();
 

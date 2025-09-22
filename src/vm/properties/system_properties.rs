@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::system_native::properties_provider::properties::{
-    endianness, file_separator, line_separator, os_name, os_version, path_separator, tmp_dir,
-    user_dir,
+    endianness, file_separator, java_home, line_separator, os_name, os_version, path_separator,
+    tmp_dir, user_dir,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
@@ -53,7 +53,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
 });
 
 static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> =
-    LazyLock::new(|| IndexMap::from([("java.home", "java.home_DEFAULT")]));
+    LazyLock::new(|| IndexMap::from([("java.home", java_home())]));
 
 pub static OVERRIDDEN_PLATFORM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
 pub static OVERRIDDEN_VM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
@@ -96,9 +96,12 @@ fn deep_clone(to_clone: &IndexMap<&str, &str>) -> IndexMap<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vm::JAVA_HOME;
+    use std::path::PathBuf;
 
     #[test]
     fn test_init_system_properties() {
+        JAVA_HOME.set(PathBuf::from("default_java_home")).unwrap();
         let system_properties = IndexMap::from([
             ("os.name".to_string(), "new_os_name".to_string()),
             ("java.home".to_string(), "new_java_home".to_string()),
