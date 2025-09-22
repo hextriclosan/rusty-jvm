@@ -16,13 +16,12 @@ pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()>
             handle_ref,
             &[array_ref.into(), index.into(), value.into()],
         )?;
+        Ok(())
     } else {
-        return Err(crate::vm::error::Error::new_execution(&format!(
+        Err(crate::vm::error::Error::new_execution(&format!(
             "Unsupported VarHandle type: {name}"
-        )));
+        )))
     }
-
-    Ok(())
 }
 
 pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec<i32>> {
