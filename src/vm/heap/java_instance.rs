@@ -51,7 +51,11 @@ impl Array {
             .iter()
             .flat_map(|&value| {
                 let bytes = value.to_ne_bytes();
-                bytes[0..size].to_vec()
+                if cfg!(target_endian = "big") {
+                    bytes[4 - size..4].to_vec()
+                } else {
+                    bytes[0..size].to_vec()
+                }
             })
             .collect();
 
