@@ -282,12 +282,14 @@ impl Heap {
         arrayref: i32,
         offset: usize,
         value: Vec<i32>,
+        size: usize,
     ) -> Result<()> {
         self.data
             .get_mut(arrayref)
             .and_then(|mut entry| match entry.value_mut() {
                 Arr(arr) => {
-                    arr.set_array_value_by_raw_offset(offset, value).ok()?;
+                    arr.set_array_value_by_raw_offset(offset, value, size)
+                        .ok()?;
                     Some(())
                 }
                 _ => None,

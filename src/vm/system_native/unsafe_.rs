@@ -12,13 +12,25 @@ use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
 use std::ptr::{copy, read};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum ValueType {
     Char,
     Byte,
     Int,
     Long,
     Short,
+}
+
+impl From<ValueType> for usize {
+    fn from(value: ValueType) -> Self {
+        match value {
+            ValueType::Byte => 1,
+            ValueType::Char => 2,
+            ValueType::Int => 4,
+            ValueType::Long => 8,
+            ValueType::Short => 2,
+        }
+    }
 }
 
 pub(crate) fn object_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -125,7 +137,12 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
         with_heap_write_lock(|heap| {
             let result = heap.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?[0];
             if result == expected {
-                heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![x])?;
+                heap.set_array_value_by_raw_offset(
+                    obj_ref,
+                    offset as usize,
+                    vec![x],
+                    ValueType::Int.into(),
+                )?;
                 Ok::<bool, Error>(true)
             } else {
                 Ok(false)
@@ -412,7 +429,12 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     with_heap_write_lock(|heap| {
         if class_name.starts_with("[") {
-            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, vec![ref_value])
+            heap.set_array_value_by_raw_offset(
+                obj_ref,
+                offset as usize,
+                vec![ref_value],
+                ValueType::Int.into(),
+            )
         } else {
             if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
                 // Special case for java/lang/Class<T>, in fact it is modification of static field of T
@@ -486,7 +508,7 @@ fn put_value(obj_ref: i32, offset: i64, value: i64, value_type: ValueType) -> Re
             }
             ValueType::Long => i64_to_vec(value),
         };
-        put_value_via_object(obj_ref, offset, raw_value)
+        put_value_via_object(obj_ref, offset, raw_value, value_type)
     }
 }
 
@@ -496,11 +518,21 @@ fn write_raw<T: Copy>(address: i64, value: T) {
     unsafe { copy(src, ptr, size_of::<T>()) };
 }
 
-fn put_value_via_object(obj_ref: i32, offset: i64, raw_value: Vec<i32>) -> Result<()> {
+fn put_value_via_object(
+    obj_ref: i32,
+    offset: i64,
+    raw_value: Vec<i32>,
+    value_type: ValueType,
+) -> Result<()> {
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
     with_heap_write_lock(|heap| {
         if class_name.starts_with('[') {
-            heap.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value)
+            heap.set_array_value_by_raw_offset(
+                obj_ref,
+                offset as usize,
+                raw_value,
+                value_type.into(),
+            )
         } else {
             let jc = with_method_area(|area| area.get(&class_name))?;
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;

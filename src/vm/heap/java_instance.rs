@@ -99,11 +99,15 @@ impl Array {
         let size = Self::bytes_size(&self.type_name);
         let offset = index as usize * size;
 
-        self.set_array_value_by_raw_offset(offset, value)
+        self.set_array_value_by_raw_offset(offset, value, size)
     }
 
-    pub fn set_array_value_by_raw_offset(&mut self, offset: usize, value: Vec<i32>) -> Result<()> {
-        let size = Self::bytes_size(&self.type_name);
+    pub fn set_array_value_by_raw_offset(
+        &mut self,
+        offset: usize,
+        value: Vec<i32>,
+        size: usize,
+    ) -> Result<()> {
         match size {
             1..=4 => {
                 let int_buf = value[0].to_ne_bytes();
