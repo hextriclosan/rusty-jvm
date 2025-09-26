@@ -24,8 +24,8 @@ enum ValueType {
 impl From<ValueType> for usize {
     fn from(value: ValueType) -> Self {
         match value {
-            ValueType::Char => 1,
             ValueType::Byte => 1,
+            ValueType::Char => 2,
             ValueType::Int => 4,
             ValueType::Long => 8,
             ValueType::Short => 2,

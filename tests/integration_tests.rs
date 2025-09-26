@@ -345,6 +345,7 @@ use crate::utils::{
     get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
     is_bigendian, line_ending, map_library_name, tmp_file,
 };
+use itertools::Itertools;
 use regex::Regex;
 use serde_json::Value;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -721,10 +722,15 @@ fn should_do_trivial_treemaps() {
 
 #[test]
 fn should_do_trivial_unsafe_things() {
+    let big_endian = if is_bigendian() { 1 } else { 0 };
+    let short_bytes = get_ne_bytes_as_string(&24583i16.to_ne_bytes());
+    let char_bytes = get_ne_bytes_as_string(&('ї' as u16).to_ne_bytes());
+    let int_bytes = get_ne_bytes_as_string(&1611079230i32.to_ne_bytes());
+    let long_bytes = get_ne_bytes_as_string(&6919532605457772126i64.to_ne_bytes());
     assert_success(
         "samples.jdkinternal.unsafe.trivial.UnsafeUsage",
         &format!(
-            r#"isBigEndian: {}
+            r#"isBigEndian: {big_endian}
 bytes: [0, 0, 0]
 examinee.field3 value got by offset is: 30
 examinee.field3 updated by offset: 40
@@ -759,16 +765,26 @@ putLong on field examinee.field5: currentValue=128849018920
 byte at index 5 is: 100
 [0, 0, 0, 0, 0, 10000, 0, 0, 0, 0, 0]
 short at index 5 is: 10000
+[0, {short_bytes}, 0]
+short at index 1 is: 24583
 [a, a, a, a, a, b, a, a, a, a, a]
 char at index 5 is: b
+[0, {char_bytes}, 0]
+char at index 1 is: ї
 [0, 0, 0, 0, 0, 1000000000, 0, 0, 0, 0, 0]
 int at index 5 is: 1000000000
+[0, {int_bytes}, 0]
+int at index 1 is: 1611079230
 [0, 0, 0, 0, 0, 1000000000000, 0, 0, 0, 0, 0]
 long at index 5 is: 1000000000000
+[0, {long_bytes}, 0]
+long at index 1 is: 6919532605457772126
 "#,
-            if is_bigendian() { 1 } else { 0 }
         ),
     );
+}
+fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| b.to_string()).join(", ")
 }
 
 #[test]

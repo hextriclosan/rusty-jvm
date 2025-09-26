@@ -25,9 +25,13 @@ public class UnsafeUsage {
         putLong();
         setGetByteArray();
         setGetShortArray();
+        setGetShortToByteArray();
         setGetCharArray();
+        setGetCharToByteArray();
         setGetIntArray();
+        setGetIntToByteArray();
         setGetLongArray();
+        setGetLongToByteArray();
     }
 
     private static void isBigEndian() {
@@ -210,6 +214,16 @@ public class UnsafeUsage {
         System.out.println("short at index 5 is: " + s);
     }
 
+    private static void setGetShortToByteArray() {
+        int index = 1;
+        long offset = getArrayOffset(byte[].class, index);
+        byte[] bytes = new byte[4];
+        U.putShort(bytes, offset, (short) 24583); // 01100000 00000111
+        System.out.println(Arrays.toString(bytes));
+        short s = U.getShort(bytes, offset);
+        System.out.println("short at index " + index + " is: " + s);
+    }
+
     private static void setGetCharArray() {
         long offset = getArrayOffset(char[].class, 5);
         char[] chars = new char[]{'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'};
@@ -217,6 +231,16 @@ public class UnsafeUsage {
         System.out.println(Arrays.toString(chars));
         char c = U.getChar(chars, offset);
         System.out.println("char at index 5 is: " + c);
+    }
+
+    private static void setGetCharToByteArray() {
+        int index = 1;
+        long offset = getArrayOffset(byte[].class, index);
+        byte[] bytes = new byte[4];
+        U.putChar(bytes, offset, 'ї'); // 00000100 1010111
+        System.out.println(Arrays.toString(bytes));
+        char c = U.getChar(bytes, offset);
+        System.out.println("char at index " + index + " is: " + c);
     }
 
     private static void setGetIntArray() {
@@ -228,6 +252,16 @@ public class UnsafeUsage {
         System.out.println("int at index 5 is: " + i);
     }
 
+    private static void setGetIntToByteArray() {
+        int index = 1;
+        long offset = getArrayOffset(byte[].class, index);
+        byte[] bytes = new byte[6];
+        U.putInt(bytes, offset, 1611079230); // 01100000 00000111 00011110 00111110
+        System.out.println(Arrays.toString(bytes));
+        int i = U.getInt(bytes, offset);
+        System.out.println("int at index " + index + " is: " + i);
+    }
+
     private static void setGetLongArray() {
         long offset = getArrayOffset(long[].class, 5);
         long[] longs = new long[11];
@@ -235,6 +269,16 @@ public class UnsafeUsage {
         System.out.println(Arrays.toString(longs));
         long l = U.getLong(longs, offset);
         System.out.println("long at index 5 is: " + l);
+    }
+
+    private static void setGetLongToByteArray() {
+        int index = 1;
+        long offset = getArrayOffset(byte[].class, index);
+        byte[] bytes = new byte[10];
+        U.putLong(bytes, offset, 6919532605457772126L); // 01100000 00000111 00011110 00111110 01010000 00001011 00101110 01011110
+        System.out.println(Arrays.toString(bytes));
+        long l = U.getLong(bytes, offset);
+        System.out.println("long at index " + index + " is: " + l);
     }
 
     private static long getArrayOffset(Class<?> clazz, int index) {
