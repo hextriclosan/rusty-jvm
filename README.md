@@ -51,134 +51,37 @@ Ensure the following are set up:
 - **JDK 25 (LTS)** installed and configured
 - **Rust** installed and configured
 
-### Example Program
-
-This Java program calculates the total attack power of a group of game units.  
-It uses abstract classes, interfaces, and polymorphism to showcase rusty-jvm's capabilities.
-
+### Example Program: Count Fruits
+Create a file named `FruitCount.java` with the following content:
 ```java
-package samples.patterns.composite;
-
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public class CompositePattern {
+public class FruitCount {
     public static void main(String[] args) {
-        Unit eliteSquad = new UnitGroup(
-                new Assassin(50),
-                new Assassin(55));
-        Unit namelessSquad = new UnitGroup(
-                () -> 10,
-                new Soldier("Soldier", "For honor!", 2));
+        List<String> fruits = List.of("apple", "banana", "apple", "orange", "banana", "apple");
 
-        Unit army = new UnitGroup(eliteSquad, namelessSquad);
-        System.out.println("Army attack power is " + army.damage());
+        Map<String, Long> counts = fruits.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+        System.out.println(counts);
     }
-}
-
-interface Unit {
-    int damage();
-}
-
-interface TalkingUnit extends Unit {
-    String name();
-    String phrase();
-    int damageValue();
-
-    @Override
-    default int damage() {
-        int dmg = damageValue();
-        speak(dmg);
-        return dmg;
-    }
-
-    default void speak(int dmg) {
-        System.out.println(name() + "(" + dmg + ") says: " + phrase());
-    }
-}
-
-abstract class AbstractTalkingUnit implements TalkingUnit {
-    private final String name;
-    private final String phrase;
-    private final int baseDamage;
-
-    protected AbstractTalkingUnit(String name, String phrase, int baseDamage) {
-        this.name = name != null ? name : getClass().getSimpleName();
-        this.phrase = phrase != null ? phrase : "Arrr!";
-        this.baseDamage = baseDamage;
-    }
-
-    @Override
-    public int damageValue() {
-        return baseDamage * damageMultiplier();
-    }
-
-    @Override
-    public String phrase() {
-        return phrase;
-    }
-
-    @Override
-    public String name() {
-        return name;
-    }
-
-    protected abstract int damageMultiplier();
-}
-
-class Assassin extends AbstractTalkingUnit {
-    public Assassin(int damageValue) {
-        super(null, "Target acquired.", damageValue);
-    }
-
-    @Override
-    protected int damageMultiplier() {
-        return 2;
-    }
-}
-
-class UnitGroup implements Unit {
-    private final List<Unit> units = new ArrayList<>();
-
-    public UnitGroup(Unit... units) {
-        this.units.addAll(Arrays.asList(units));
-    }
-
-    @Override
-    public int damage() {
-        return units.stream()
-                .mapToInt(Unit::damage)
-                .sum();
-    }
-}
-
-record Soldier(String name, String phrase, int damageValue) implements TalkingUnit {
 }
 ```
 
-### Steps to Run
+#### Steps to Run
 
 1. Compile the program using the Java compiler:
    ```sh
-   javac -d . CompositePattern.java
+   javac FruitCount.java
    ```
 
 2. Run it using rusty-jvm:
    ```sh
-   cargo run -- samples.patterns.composite.CompositePattern
+   cargo run -- FruitCount
    ```
-
-### Expected Output
-
-If everything is set up correctly, you should see:
-
-```
-Assassin(100) says: Target acquired.
-Assassin(110) says: Target acquired.
-Soldier(2) says: For honor!
-Army attack power is 222
-```
 
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
