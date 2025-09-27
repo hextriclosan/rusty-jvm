@@ -6,12 +6,11 @@
 //! It currently supports a broad set of language features of Java 25, with garbage collection and multithreading planned for future releases.
 //!
 //! ## Features
-//! See the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.4.0/README.md#implemented-key-features) for the full list of implemented features.
+//! See the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.5.0/README.md#implemented-key-features) for the full list of implemented features.
 //!
 //! ## Usage
 //!
-//! ### Step 1: Create a simple Java program
-//! Create a file named `Hello.java` with the following content:
+//! ### 1. Create a simple Java program
 //! ```java
 //! public class Hello {
 //!     public static void main(String[] args) {
@@ -20,23 +19,13 @@
 //! }
 //! ```
 //!
-//! #### Shortcut (one-liner)
-//! On Windows (cmd):
-//! ```shell
-//! echo public class Hello { public static void main(String[] args) { System.out.println("Hello, world!"); } } > Hello.java
-//! ```
-//! On Unix-like systems:
-//! ```bash
-//! echo 'public class Hello { public static void main(String[] args) { System.out.println("Hello, world!"); } }' > Hello.java
-//! ```
-//!
-//! ### Step 2: Compile the Java program
-//! ```bash
+//! ### 2. Compile the program
+//! ```sh
 //! javac Hello.java
 //! ```
 //!
-//! ### Step 3: Run the compiled Java program with Rusty JVM
-//! ```bash
+//! ### 3. Run it with Rusty JVM
+//! ```sh
 //! rusty-jvm Hello
 //! ```
 mod vm;
