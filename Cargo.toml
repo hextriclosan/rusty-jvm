@@ -1,6 +1,6 @@
 [package]
 name = "rusty-jvm"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.80"
 description = "An implementation of a Java Virtual Machine (JVM)."
@@ -11,7 +11,7 @@ readme = "README.md"
 keywords = ["jvm", "java", "virtual-machine", "interpreter", "jvm-implementation"]
 categories = ["command-line-utilities", "emulators", "virtualization"]
 license = "MIT"
-exclude = [".*", "docs/**", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml"]
+exclude = [".*", "docs/**", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
 
 [workspace]
 members = ["jclassfile", "jdescriptor", "jimage-rs"]

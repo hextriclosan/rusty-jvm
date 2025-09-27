@@ -1,3 +1,11 @@
+# 0.5.0
+
+## What's Changed
+* Switch to java 25 (LTS) core library classes
+* Improve exception handling
+* Fixes for big-endian platforms
+
+
 # 0.4.0
 
 ## What's Changed
