@@ -24,6 +24,7 @@ impl<T> ThrowingResult<T> {
 /// # Panics / Constraints
 /// Must be used inside a function returning `ThrowingResult<T>`.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! unwrap_or_return_err {
     ($expr:expr) => {
         match $expr {
@@ -34,6 +35,7 @@ macro_rules! unwrap_or_return_err {
 }
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! throw_and_return {
     ($expr:expr) => {{
         // Force type-checking: this will only compile if $expr is Result<(), E>
@@ -53,6 +55,7 @@ macro_rules! throw_and_return {
 /// # Constraints
 /// Must be used inside a function returning `Result<T, E>`.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! unwrap_result_or_return_default {
     ($expr:expr, $default:expr) => {{
         match $expr {
