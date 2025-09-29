@@ -2281,13 +2281,12 @@ fn should_handle_operand_stack_overflow() {
 #[test]
 fn should_support_file_dispatcher_for_various_os() {
     let (file_path, _guard) = tmp_file("file_dispatcher_example.txt");
-    let expected_file_content = "Hello from FileChannel!";
     assert_file_with_args(
         "samples.nio.filedispatcherexample.FileDispatcherExample",
         &[&file_path],
         &file_path,
-        expected_file_content,
-        "",
+        "Hello from FileChannel!",
+        "Read: Hello from FileChannel!\n",
     );
 }
 
