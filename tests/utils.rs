@@ -186,7 +186,9 @@ pub fn get_output_with_raw_args(args: &[&str]) -> String {
         .output()
         .expect("Failed to execute process");
 
-    String::from_utf8(output.stdout).expect("Failed to convert output to string")
+    String::from_utf8(output.stdout)
+        .expect("Failed to convert output to string")
+        .replace("\r\n", "\n") // normalize line endings for windows
 }
 
 pub fn assert_file_with_args(
