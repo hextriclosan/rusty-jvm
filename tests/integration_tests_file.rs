@@ -183,7 +183,7 @@ struct TemplateValues {
 }
 
 fn resolve_template(template_values: &TemplateValues) -> String {
-    let result = INFO_TEMPLATE
+    INFO_TEMPLATE
         .replace("{{FILE_PATH}}", &template_values.file_path)
         .replace("{{ABSOLUTE_PATH}}", &template_values.absolute_path)
         .replace("{{CANONICAL_PATH}}", &template_values.canonical_path)
@@ -204,12 +204,7 @@ fn resolve_template(template_values: &TemplateValues) -> String {
         .replace(
             "{{IS_EXECUTABLE}}",
             &template_values.is_executable.to_string(),
-        );
-
-    #[cfg(target_os = "windows")]
-    let result = utils::to_windows(&result);
-
-    result
+        )
 }
 
 fn create_path(args: &[&str]) -> PathBuf {

@@ -2274,7 +2274,8 @@ fn should_print_out_program_args() {
 fn should_handle_operand_stack_overflow() {
     assert_failure(
         "samples.invalidprograms.operandstackoverflow.OperandStackOverflowExample",
-        r#"VM execution failed: Execution Error: Reason: Execution Error: Exceeded max stack size; Current Frame: StackFrame { method_name: "returnInt:()I", pc: 5, ex_pc: None, locals: [], operand_stack: Stack { max_size: 2, data: [10, 20] }, bytecode_ref: [18, 7, 18, 8, 18, 9, 172], current_class_name: "samples/invalidprograms/operandstackoverflow/OperandStackOverflowExample", line_numbers: {}, exception_table: ExceptionTable { table: [] } }"#,
+        r#"VM execution failed: Execution Error: Reason: Execution Error: Exceeded max stack size; Current Frame: StackFrame { method_name: "returnInt:()I", pc: 5, ex_pc: None, locals: [], operand_stack: Stack { max_size: 2, data: [10, 20] }, bytecode_ref: [18, 7, 18, 8, 18, 9, 172], current_class_name: "samples/invalidprograms/operandstackoverflow/OperandStackOverflowExample", line_numbers: {}, exception_table: ExceptionTable { table: [] } }
+"#,
     );
 }
 
@@ -2372,10 +2373,9 @@ This is another error output.
     );
 }
 
-#[cfg(not(windows))] // todo: fix this test on Windows
 #[test]
 fn should_print_info_about_unhandled_exception() {
-    crate::utils::assert_failure_with_stderr(
+    utils::assert_failure_with_stderr(
         "samples.javacore.unhandledexception.UnhandledExceptionExample",
         r#""#,
         r#"Exception in thread "system" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
@@ -2397,7 +2397,6 @@ fn should_print_info_about_unhandled_exception() {
     );
 }
 
-#[cfg(not(windows))] // todo: fix this test on Windows
 #[test]
 fn should_print_help_message() {
     let expected_stdout = r#"Usage: rusty-jvm [options] <mainclass> [args...]
@@ -2421,7 +2420,6 @@ Options:
     );
 }
 
-#[cfg(not(windows))] // todo: fix this test on Windows
 #[test]
 fn should_print_version_message() {
     let expected_stdout = "rusty-jvm 0.5.0\n";
