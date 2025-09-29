@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
@@ -191,12 +192,8 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
             method_type.rtype_name()
         );
     } else if handle_name == MUTABLE_CALL_SITE {
-        let mutable_call_site_ref = handle_ref;
-        let target_ref = with_heap_read_lock(|heap| {
-            // todo: get with getTarget() getter
-            heap.get_object_field_value(mutable_call_site_ref, handle_name.as_str(), "target")
-        })?[0];
-
+        let target_ref =
+            Executor::invoke_non_static_method(&handle_name, "getTarget", handle_ref, &[])?[0];
         print_species(target_ref, indent + 1)?;
     } else {
         unimplemented!(
@@ -212,13 +209,11 @@ fn mutable_call_site_invocation(
     mutable_call_site_ref: i32,
     method_args: &[i32],
     stack_frames: &mut StackFrames,
-    handle_name: &String,
+    handle_name: &str,
 ) -> Result<()> {
-    let target_ref = with_heap_read_lock(|heap| {
-        // todo: get with getTarget() getter
-        heap.get_object_field_value(mutable_call_site_ref, handle_name, "target")
-    })?[0];
-
+    let target_ref =
+        Executor::invoke_non_static_method(handle_name, "getTarget", mutable_call_site_ref, &[])?
+            [0];
     invoke_exact(target_ref, method_args, stack_frames)
 }
 
