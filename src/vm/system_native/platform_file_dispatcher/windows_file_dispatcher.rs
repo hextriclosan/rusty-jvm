@@ -10,11 +10,11 @@ use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, LPCVOID, LPVOID};
 use winapi::shared::winerror::{ERROR_BROKEN_PIPE, ERROR_NO_DATA};
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::fileapi::{ReadFile, WriteFile};
+use winapi::um::fileapi::{GetFileSizeEx, ReadFile, WriteFile};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::minwinbase::OVERLAPPED;
 use winapi::um::sysinfoapi::{GetSystemInfo, SYSTEM_INFO};
-use winapi::um::winnt::HANDLE;
+use winapi::um::winnt::{HANDLE, LARGE_INTEGER};
 
 const IOS_EOF: i32 = -1; // End of file
 const IOS_UNAVAILABLE: i32 = -2; // Nothing available (non-blocking)
@@ -133,4 +133,31 @@ fn read0(
     }
 
     ThrowingResult::ok(if read == 0 { IOS_EOF } else { read as i32 })
+}
+
+pub fn windows_file_dispatcher_size0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let fd_ref = args[0];
+
+    let size = unwrap_result_or_return_default!(size0(fd_ref, stack_frames), vec![]);
+    Ok(i64_to_vec(size))
+}
+fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
+    let handle = unwrap_or_return_err!(get_handle(fd_ref)) as usize as HANDLE;
+    let mut size: LARGE_INTEGER = unsafe { zeroed() };
+
+    let result = unsafe { GetFileSizeEx(handle, &mut size) };
+    if result == 0 {
+        throw_and_return!(throw_ioexception(
+            &format!(
+                "GetFileSizeEx failed: {}",
+                unwrap_or_return_err!(get_last_error())
+            ),
+            stack_frames
+        ))
+    }
+    let size = unsafe { *size.QuadPart() };
+    ThrowingResult::ok(size)
 }

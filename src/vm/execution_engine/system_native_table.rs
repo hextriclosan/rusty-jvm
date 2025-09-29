@@ -748,7 +748,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
         use crate::vm::system_native::platform_file_dispatcher::windows_file_dispatcher::{
             allocation_granularity0_wrp, windows_file_dispatcher_read0_wrp,
-            windows_file_dispatcher_write0_wrp,
+            windows_file_dispatcher_size0_wrp, windows_file_dispatcher_write0_wrp,
         };
         use crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::{
             access_check_wrp, close_handle_wrp, create_directory0_wrp, create_file0_wrp,
@@ -872,6 +872,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/nio/ch/FileDispatcherImpl:read0:(Ljava/io/FileDescriptor;JI)I",
             WithMutStackFrames(windows_file_dispatcher_read0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/FileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",
+            WithMutStackFrames(windows_file_dispatcher_size0_wrp),
         );
         table.insert(
             "sun/io/Win32ErrorMode:setErrorMode:(J)J",

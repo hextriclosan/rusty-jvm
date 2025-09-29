@@ -29,7 +29,7 @@ fn should_support_nio_file() {
     is_writable(dir_path.to_str().unwrap());
     let content = "Some content";
     write_file(file_path.to_str().unwrap(), content);
-    //read_file(file_path.to_str().unwrap(), content); todo: uncomment when Unsafe memory methods are fixed
+    read_file(file_path.to_str().unwrap(), content);
     delete_file(file_path.to_str().unwrap());
     delete_file(dir_path.to_str().unwrap());
     delete_file(grand_parent_dir.to_str().unwrap());
@@ -59,10 +59,10 @@ fn write_file(file_path: &str, content: &str) {
     );
 }
 
-#[allow(dead_code)]
 fn read_file(file_path: &str, content: &str) {
+    let expected_output = format!("File content: {content}\n");
     let actual_content = get_output_with_args(ENTRY_POINT_ARG, &["--read-file", file_path]);
-    assert_eq!(actual_content, content);
+    assert_eq!(actual_content, expected_output);
 }
 
 fn delete_file(path: &str) {
