@@ -19,14 +19,14 @@ public class FileDispatcherExample {
         }
 
         // Read from the file (uses FileDispatcherImpl.read0 internally)
-//         try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
-//             ByteBuffer buffer = ByteBuffer.allocate(64);
-//             int bytesRead = channel.read(buffer); // <- This uses FileDispatcherImpl.read0
-//             buffer.flip();
-//
-//             byte[] data = new byte[bytesRead];
-//             buffer.get(data);
-//             System.out.println("Read: " + new String(data));
-//         }
+        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
+            ByteBuffer buffer = ByteBuffer.allocate(64);
+            int bytesRead = channel.read(buffer); // <- This uses FileDispatcherImpl.read0
+            buffer.flip();
+
+            byte[] data = new byte[bytesRead];
+            buffer.get(data);
+            System.out.println("Read: " + new String(data));
+        }
     }
 }
