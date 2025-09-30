@@ -92,4 +92,6 @@ jobs:
         run: docker build -t cross-s390x-java .github/docker/s390x
 
       - name: Run tests on s390x (Big Endian)
-        run: cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+        run: |
+          unset RUSTC_WRAPPER
+          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
