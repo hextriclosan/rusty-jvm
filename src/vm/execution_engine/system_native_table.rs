@@ -39,6 +39,7 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     var_handle_set_wrp,
 };
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
+use crate::vm::system_native::network_interface::get_all_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
@@ -727,7 +728,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/net/NetworkInterface:init:()V", Basic(void_stub));
     table.insert(
         "java/net/NetworkInterface:getAll:()[Ljava/net/NetworkInterface;",
-        Basic(|_args: &[i32]| Ok(vec![0])), // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
+        Basic(get_all_wrp),
     );
     table.insert(
         "java/lang/Runtime:totalMemory:()J",

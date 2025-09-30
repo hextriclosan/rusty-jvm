@@ -2857,3 +2857,11 @@ Age: 30
 "#,
     );
 }
+
+#[test]
+fn should_get_network_interfaces() {
+    assert_success(
+        "samples.network.trivial.NetworkInterfaceGetAllExample",
+        "0\n",
+    );
+}

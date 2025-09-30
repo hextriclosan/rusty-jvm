@@ -10,6 +10,7 @@ pub(crate) mod method_handle_natives;
 pub(crate) mod native_libraries;
 #[cfg(windows)]
 pub(crate) mod native_seed_generator;
+pub(crate) mod network_interface;
 pub(crate) mod object;
 mod object_offset;
 mod platform_file;
