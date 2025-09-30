@@ -16,6 +16,10 @@ env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
 
+permissions:
+  contents: read
+  packages: write   # <-- needed to push, but also to pull from private images
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
