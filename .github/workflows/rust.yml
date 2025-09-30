@@ -68,6 +68,9 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required for actions/checkout
+      packages: write # Required to push packages
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
