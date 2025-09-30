@@ -16,6 +16,10 @@ env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
 
+permissions:
+  contents: read
+  packages: write   # <-- needed to push, but also to pull from private images
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -93,7 +97,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.PAT_CLASSIC }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull prebuilt cross image
         run: docker pull ghcr.io/${{ github.repository_owner }}/cross-s390x-java:latest
