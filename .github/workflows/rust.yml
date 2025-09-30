@@ -16,10 +16,6 @@ env:
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
 
-permissions:
-  contents: read
-  packages: write   # <-- needed to push, but also to pull from private images
-
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -92,9 +88,6 @@ jobs:
         with:
           tool: cross
 
-      - name: Set CROSS_CUSTOM_IMAGE
-        run: echo "CROSS_CUSTOM_IMAGE=ghcr.io/${{ github.repository_owner }}/cross-s390x-java:latest" >> $GITHUB_ENV
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -105,7 +98,7 @@ jobs:
       - name: Pull prebuilt cross image
         run: docker pull $CROSS_CUSTOM_IMAGE
 
-      - name: Run tests on s390x
+      - name: Run tests on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER
           cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8

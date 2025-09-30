@@ -1,5 +1,5 @@
 [target.s390x-unknown-linux-gnu]
-# Tell `cross` to use the custom Docker image that build in the CI pipeline.
+# Tell `cross` to use the custom Docker image
 image = "ghcr.io/hextriclosan/cross-s390x-java:latest"
 # Tell `cross` to run this command inside the container's shell
 pre-run = "export JAVA_HOME=/opt/java"
