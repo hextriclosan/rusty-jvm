@@ -4,6 +4,7 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
 use crate::vm::helper::{strip_nest_host, undecorate};
+use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
@@ -392,4 +393,24 @@ fn get_nest_host0(clazz_ref: i32) -> Result<i32> {
         .unwrap_or(Ok(clazz_ref));
 
     nest_host_class_ref
+}
+
+pub(crate) fn is_record0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let clazz_ref = args[0];
+    let record = is_record0(clazz_ref)?;
+    Ok(vec![if record { 1 } else { 0 }])
+}
+fn is_record0(clazz_ref: i32) -> Result<bool> {
+    let rc = with_method_area(|method_area| {
+        let name = method_area.get_from_reflection_table(clazz_ref)?;
+        let rc = method_area.get(&name)?;
+        Ok::<_, Error>(rc)
+    })?;
+
+    let record = rc.class_modifiers().contains(ClassModifier::Final)
+        && rc
+            .parent()
+            .as_ref()
+            .map_or(false, |p| p == "java/lang/Record");
+    Ok(record)
 }
