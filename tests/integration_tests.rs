@@ -558,6 +558,16 @@ Class: interface samples.reflection.trivial.ExamineeInterface
   isSynthetic: false
   isRecord: false
   isEnumeration: false
+Class: class samples.reflection.trivial.Rcd
+  modifiers: 16
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: true
+  isEnumeration: false
 Class: class samples.reflection.trivial.Enm
   modifiers: 16400
   isPrimitive: false

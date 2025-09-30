@@ -6,7 +6,7 @@ public class TrivialReflection {
         print(Object.class);
         print(Examinee.class);
         print(ExamineeInterface.class);
-        // print(Rcd.class); // Native Call Error: Native method java/lang/Class:isRecord0:()Z
+        print(Rcd.class);
         print(Enm.class);
         print(int.class);
     }
