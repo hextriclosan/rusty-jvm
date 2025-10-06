@@ -61,7 +61,7 @@ impl Heap {
     ) -> Result<()> {
         if objectref == 0 {
             return Err(Error::new_execution(&format!(
-                "error setting field value: {class_name} to null-object"
+                "error setting field value: {class_name}.{field_name_type} to null-object"
             ))); // throw an appropriate exception here
         }
 
