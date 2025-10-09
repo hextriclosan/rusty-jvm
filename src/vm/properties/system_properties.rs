@@ -128,6 +128,15 @@ mod tests {
             vm_properties,
             &IndexMap::from([
                 ("java.home".to_string(), "new_java_home".to_string()),
+                (
+                    "sun.boot.library.path".to_string(),
+                    if cfg!(windows) {
+                        "default_java_home\\bin"
+                    } else {
+                        "default_java_home/lib"
+                    }
+                    .to_string()
+                ),
                 ("other.property".to_string(), "other_value".to_string())
             ])
         );
