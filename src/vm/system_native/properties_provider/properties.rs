@@ -3,7 +3,6 @@ use crate::vm::JAVA_HOME;
 use os_info::Type;
 use os_info::Version::Semantic;
 use std::env;
-use std::ops::Deref;
 use std::string::ToString;
 use std::sync::LazyLock;
 
@@ -157,7 +156,7 @@ static SUN_BOOT_LIBRARY_PATH: LazyLock<String> = LazyLock::new(|| {
     } else {
         "lib"
     };
-    format!("{}{}{}", JAVA_HOME_PROP.deref(), file_separator(), dir)
+    format!("{}{}{}", &*JAVA_HOME_PROP, file_separator(), dir)
 });
 pub(crate) fn sun_boot_library_path() -> &'static str {
     &SUN_BOOT_LIBRARY_PATH
