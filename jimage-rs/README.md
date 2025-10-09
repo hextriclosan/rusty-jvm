@@ -30,8 +30,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .join("lib")
         .join("modules");
     let jimage = JImage::open(path)?;
+
+    let resource_count = jimage.resource_names_iter().count();
+    println!("Total resources in jimage: {}", resource_count);
+
     match jimage.find_resource("/java.base/java/lang/String.class")? {
-        Some(resource) => println!("Resource found: {:?}", resource),
+        Some(resource) => println!("Resource found, its size is {} bytes", resource.len()),
         None => println!("Resource not found"),
     }
 
@@ -40,10 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ### CLI
-`jimage-rs` command-line utility can be used to extract resources from a jimage file:
-```shell
-jimage-rs extract -r /java.base/java/lang/String.class $JAVA_HOME/lib/modules
-```
+`jimage-rs` command-line utility can be used to:
+- extract resources from a jimage file `jimage-rs extract -r /java.base/java/lang/String.class $JAVA_HOME/lib/modules`
+- list all resources in a jimage file `jimage-rs list $JAVA_HOME/lib/modules`
 
 ## License
 
