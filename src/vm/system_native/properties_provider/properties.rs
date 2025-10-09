@@ -149,3 +149,15 @@ static JAVA_HOME_PROP: LazyLock<String> = LazyLock::new(|| {
 pub(crate) fn java_home() -> &'static str {
     &JAVA_HOME_PROP
 }
+
+static SUN_BOOT_LIBRARY_PATH: LazyLock<String> = LazyLock::new(|| {
+    let dir = if cfg!(target_os = "windows") {
+        "bin"
+    } else {
+        "lib"
+    };
+    format!("{}{}{}", &*JAVA_HOME_PROP, file_separator(), dir)
+});
+pub(crate) fn sun_boot_library_path() -> &'static str {
+    &SUN_BOOT_LIBRARY_PATH
+}

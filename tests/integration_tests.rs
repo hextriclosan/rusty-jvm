@@ -1674,6 +1674,23 @@ fn should_return_system_properties() {
         env::var("JAVA_HOME").expect("JAVA_HOME is not set")
     );
 
+    let sun_boot_library_path = json["sun.boot.library.path"]
+        .as_str()
+        .expect("sun.boot.library.path is not a string");
+
+    let expected_sun_boot_library_path = if cfg!(windows) {
+        format!(
+            "{}\\bin",
+            env::var("JAVA_HOME").expect("JAVA_HOME is not set")
+        )
+    } else {
+        format!(
+            "{}/lib",
+            env::var("JAVA_HOME").expect("JAVA_HOME is not set")
+        )
+    };
+    assert_eq!(sun_boot_library_path, expected_sun_boot_library_path);
+
     let tmp_dir = json["java.io.tmpdir"]
         .as_str()
         .expect("java.io.tmpdir is not a string");

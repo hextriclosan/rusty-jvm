@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::system_native::properties_provider::properties::{
     endianness, file_separator, java_home, line_separator, os_name, os_version, path_separator,
-    tmp_dir, user_dir,
+    sun_boot_library_path, tmp_dir, user_dir,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
@@ -52,8 +52,12 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
     ])
 });
 
-static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> =
-    LazyLock::new(|| IndexMap::from([("java.home", java_home())]));
+static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| {
+    IndexMap::from([
+        ("java.home", java_home()),
+        ("sun.boot.library.path", sun_boot_library_path()),
+    ])
+});
 
 pub static OVERRIDDEN_PLATFORM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
 pub static OVERRIDDEN_VM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
@@ -124,6 +128,15 @@ mod tests {
             vm_properties,
             &IndexMap::from([
                 ("java.home".to_string(), "new_java_home".to_string()),
+                (
+                    "sun.boot.library.path".to_string(),
+                    if cfg!(windows) {
+                        "default_java_home\\bin"
+                    } else {
+                        "default_java_home/lib"
+                    }
+                    .to_string()
+                ),
                 ("other.property".to_string(), "other_value".to_string())
             ])
         );
