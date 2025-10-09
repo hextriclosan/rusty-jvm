@@ -1,6 +1,7 @@
 use crate::bytes_utils::read_integer;
 use crate::error::{DecompressionSnafu, IoSnafu, JImageError, Result, Utf8Snafu};
 use crate::header::Header;
+use crate::raw_jimage::RawJImage;
 use crate::resource_header::ResourceHeader;
 use crate::resource_name::{ResourceName, ResourceNamesIter};
 use memchr::memchr;
@@ -117,6 +118,11 @@ impl JImage {
     /// Returns a vector of all resource names in the JImage file.
     pub fn resource_names(&self) -> Result<Vec<ResourceName<'_>>> {
         self.resource_names_iter().collect()
+    }
+
+    /// Returns a low-level view of the raw mapped data.
+    pub fn raw(&self) -> RawJImage<'_> {
+        RawJImage::new(&self.mmap)
     }
 
     /// Retrieves the resource name at the specified index.

@@ -27,6 +27,7 @@ mod bytes_utils;
 pub mod error;
 mod header;
 pub mod jimage;
+pub mod raw_jimage;
 mod resource_header;
 mod resource_name;
 pub use crate::jimage::JImage;
