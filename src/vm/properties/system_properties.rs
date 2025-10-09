@@ -36,7 +36,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("socksNonProxyHosts", "socksNonProxyHosts_VALUE"),
         ("socksProxyHost", "socksProxyHost_VALUE"),
         ("socksProxyPort", "socksProxyPort_VALUE"),
-        ("stderr.encoding", "cp437"), // https://github.com/hextriclosan/rusty-jvm/issues/489
+        ("stderr.encoding", "cp437"), // todo: https://github.com/hextriclosan/rusty-jvm/issues/489
         ("stdin.encoding", "native.encoding_VALUE"),
         ("stdout.encoding", "stdout.encoding_VALUE"),
         ("sun.arch.abi", "sun.arch.abi_VALUE"),
@@ -44,7 +44,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("sun.cpu.endian", endianness()),
         ("sun.cpu.isalist", "sun.cpu.isalist_VALUE"),
         ("sun.io.unicode.encoding", "sun.io.unicode.encoding_VALUE"),
-        ("sun.jnu.encoding", "sun.jnu.encoding_VALUE"),
+        ("sun.jnu.encoding", "UTF-8"), // todo https://github.com/hextriclosan/rusty-jvm/issues/566
         ("sun.os.patch.level", "sun.os.patch.level_VALUE"),
         ("user.dir", user_dir()),
         ("user.home", "user.home_VALUE"),
