@@ -290,7 +290,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "778e2ac28f6c47af28e4907f13ffd1e1ddbd400980a9abd7c8df189bf578a5ad"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -492,20 +492,6 @@ dependencies = [
 
 [[package]]
 name = "jimage-rs"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50a46221efa7286b072d6f89b7edd932d9bfdda54ff302b54a004f363f2068c7"
-dependencies = [
- "byteorder",
- "clap",
- "flate2",
- "memchr",
- "memmap2",
- "snafu",
-]
-
-[[package]]
-name = "jimage-rs"
 version = "0.0.4"
 dependencies = [
  "assert_matches",
@@ -515,6 +501,20 @@ dependencies = [
  "memchr",
  "memmap2",
  "rstest",
+ "snafu",
+]
+
+[[package]]
+name = "jimage-rs"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "051be579ca70b934979ca3d663edb76ff48b61a04ce806c4ed11f803aae0bb46"
+dependencies = [
+ "byteorder",
+ "clap",
+ "flate2",
+ "memchr",
+ "memmap2",
  "snafu",
 ]
 
@@ -1013,7 +1013,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1039,7 +1039,7 @@ dependencies = [
  "itertools",
  "jclassfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jimage-rs 0.0.3",
+ "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
  "miniz_oxide",
  "mockall",
@@ -1220,7 +1220,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
