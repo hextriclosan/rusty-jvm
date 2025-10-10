@@ -101,10 +101,7 @@ impl ReflectionClassLoader {
             if let Some(package) = a.modules_mapping().get(&file_name) {
                 let modules = a.modules();
                 let registry = modules.registry();
-                let module_ref = registry
-                    .get(package)
-                    .and_then(|got| Some(*got.value()))
-                    .unwrap_or(0);
+                let module_ref = registry.get(package).map(|got| *got.value()).unwrap_or(0);
                 let patch = package == "java.base" && module_ref == 0;
                 Ok::<_, Error>((module_ref, patch))
             } else {

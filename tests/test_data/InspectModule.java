@@ -41,6 +41,10 @@ public class InspectModule {
 
     private static void printExports(Set<ModuleDescriptor.Exports> exports) {
         for (ModuleDescriptor.Exports export : exports) {
+            if ("sun.nio.cs".equals(export.source()) || "sun.security.internal.spec".equals(export.source()) || "sun.security.rsa".equals(export.source())) {
+                // Skip platform-specific exports
+                continue;
+            }
             System.out.println("        " + export.source() + " " + canonicalize(export.targets()) + " " + canonicalize(export.modifiers()));
         }
     }

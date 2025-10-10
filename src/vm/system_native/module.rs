@@ -65,11 +65,11 @@ fn define_module0(
                     })?;
                 }
             } else {
-                unreachable!("Patching has already been performed")
+                return Err(Error::new_execution("Patching has already been performed"));
             }
         }
     } else {
-        unreachable!("Warning: module with null name")
+        return Err(Error::new_execution("Warning: module with null name"));
     }
 
     // todo: implement me?
