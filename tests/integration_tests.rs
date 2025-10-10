@@ -758,8 +758,6 @@ examinees[1] got by offset is `two`: true
 examinees[1] updated by offset and set to `three`: true
 examinees[1] was not updated and remains the same: true
 one.field4 updated by offset to: FIELD4_PUT_REFERENCE_VOLATILE
-Class<Integer>.name update new value is java.lang.Positron
-State restored. Name is now: java.lang.Integer
 Examinee.staticField as java.lang.reflect.Field: static java.lang.String samples.jdkinternal.unsafe.trivial.Examinee.staticField
 staticFieldBase: class samples.jdkinternal.unsafe.trivial.Examinee
 Current static value: staticFieldValue
@@ -2871,6 +2869,187 @@ fn should_create_temp_file_and_parse_xml() {
         r#"Root element: person
 Name: John
 Age: 30
+"#,
+    );
+}
+
+#[test]
+fn should_return_info_about_modules() {
+    assert_success(
+        "samples.module.inspectmodule.InspectModule",
+        r#"Class: class java.lang.String
+  Module name: java.base
+    ModuleDescriptor:
+      name: java.base
+      modifiers: []
+      requires: []
+      exports:
+        com.sun.crypto.provider [jdk.crypto.cryptoki] []
+        com.sun.security.ntlm [java.security.sasl] []
+        java.io [] []
+        java.lang [] []
+        java.lang.annotation [] []
+        java.lang.classfile [] []
+        java.lang.classfile.attribute [] []
+        java.lang.classfile.constantpool [] []
+        java.lang.classfile.instruction [] []
+        java.lang.constant [] []
+        java.lang.foreign [] []
+        java.lang.invoke [] []
+        java.lang.module [] []
+        java.lang.ref [] []
+        java.lang.reflect [] []
+        java.lang.runtime [] []
+        java.math [] []
+        java.net [] []
+        java.net.spi [] []
+        java.nio [] []
+        java.nio.channels [] []
+        java.nio.channels.spi [] []
+        java.nio.charset [] []
+        java.nio.charset.spi [] []
+        java.nio.file [] []
+        java.nio.file.attribute [] []
+        java.nio.file.spi [] []
+        java.security [] []
+        java.security.cert [] []
+        java.security.interfaces [] []
+        java.security.spec [] []
+        java.text [] []
+        java.text.spi [] []
+        java.time [] []
+        java.time.chrono [] []
+        java.time.format [] []
+        java.time.temporal [] []
+        java.time.zone [] []
+        java.util [] []
+        java.util.concurrent [] []
+        java.util.concurrent.atomic [] []
+        java.util.concurrent.locks [] []
+        java.util.function [] []
+        java.util.jar [] []
+        java.util.random [] []
+        java.util.regex [] []
+        java.util.spi [] []
+        java.util.stream [] []
+        java.util.zip [] []
+        javax.crypto [] []
+        javax.crypto.interfaces [] []
+        javax.crypto.spec [] []
+        javax.net [] []
+        javax.net.ssl [] []
+        javax.security.auth [] []
+        javax.security.auth.callback [] []
+        javax.security.auth.login [] []
+        javax.security.auth.spi [] []
+        javax.security.auth.x500 [] []
+        javax.security.cert [] []
+        jdk.internal [jdk.incubator.vector] []
+        jdk.internal.access [java.desktop, java.logging, java.management, java.rmi, jdk.charsets, jdk.crypto.cryptoki, jdk.jartool, jdk.jfr, jdk.jlink, jdk.management, jdk.net, jdk.sctp] []
+        jdk.internal.classfile.components [jdk.jfr] []
+        jdk.internal.event [jdk.jfr] []
+        jdk.internal.foreign [jdk.incubator.vector] []
+        jdk.internal.io [jdk.internal.le, jdk.jshell] []
+        jdk.internal.javac [java.compiler, java.desktop, jdk.compiler, jdk.incubator.vector, jdk.jartool, jdk.jdeps, jdk.jfr, jdk.jlink, jdk.jshell] []
+        jdk.internal.jimage [jdk.jlink] []
+        jdk.internal.jimage.decompressor [jdk.jlink] []
+        jdk.internal.jmod [jdk.compiler, jdk.jlink] []
+        jdk.internal.loader [java.instrument, java.logging, java.naming] []
+        jdk.internal.logger [java.logging] []
+        jdk.internal.misc [java.desktop, java.logging, java.management, java.naming, java.net.http, java.rmi, java.security.jgss, jdk.attach, jdk.charsets, jdk.compiler, jdk.crypto.cryptoki, jdk.graal.compiler, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jfr, jdk.jshell, jdk.nio.mapmode, jdk.unsupported] []
+        jdk.internal.module [java.instrument, java.management.rmi, jdk.compiler, jdk.jartool, jdk.jfr, jdk.jlink, jdk.jpackage] []
+        jdk.internal.org.xml.sax [jdk.jfr] []
+        jdk.internal.org.xml.sax.helpers [jdk.jfr] []
+        jdk.internal.perf [java.management, jdk.internal.jvmstat, jdk.management.agent] []
+        jdk.internal.platform [jdk.jfr, jdk.management] []
+        jdk.internal.ref [java.desktop, java.net.http, jdk.naming.dns] []
+        jdk.internal.reflect [java.logging, java.sql, java.sql.rowset, jdk.dynalink, jdk.internal.vm.ci, jdk.unsupported] []
+        jdk.internal.util [java.desktop, java.naming, java.net.http, java.prefs, java.rmi, java.security.jgss, java.smartcardio, jdk.charsets, jdk.httpserver, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jlink, jdk.jpackage, jdk.net] []
+        jdk.internal.util.xml [jdk.jfr] []
+        jdk.internal.util.xml.impl [jdk.jfr] []
+        jdk.internal.vm [java.management, jdk.internal.jvmstat, jdk.internal.vm.ci, jdk.jfr, jdk.management, jdk.management.agent] []
+        jdk.internal.vm.annotation [java.instrument, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jfr, jdk.unsupported] []
+        jdk.internal.vm.vector [jdk.incubator.vector] []
+        sun.invoke.util [jdk.compiler] []
+        sun.net [java.net.http, jdk.naming.dns] []
+        sun.net.dns [java.security.jgss, jdk.naming.dns] []
+        sun.net.ext [jdk.net] []
+        sun.net.util [java.net.http, jdk.jconsole, jdk.sctp] []
+        sun.net.www [java.net.http, jdk.jartool] []
+        sun.net.www.protocol.http [java.security.jgss] []
+        sun.nio.ch [java.management, jdk.crypto.cryptoki, jdk.net, jdk.sctp] []
+        sun.nio.cs [jdk.charsets] []
+        sun.nio.fs [jdk.net] []
+        sun.reflect.annotation [jdk.compiler] []
+        sun.reflect.generics.reflectiveObjects [java.desktop] []
+        sun.reflect.misc [java.desktop, java.management] []
+        sun.security.internal.interfaces [jdk.crypto.cryptoki] []
+        sun.security.internal.spec [jdk.crypto.cryptoki, jdk.crypto.mscapi] []
+        sun.security.jca [java.smartcardio, jdk.crypto.cryptoki, jdk.naming.dns] []
+        sun.security.pkcs [jdk.jartool] []
+        sun.security.provider [java.security.jgss, jdk.crypto.cryptoki, jdk.security.auth] []
+        sun.security.provider.certpath [java.naming, jdk.jartool] []
+        sun.security.rsa [jdk.crypto.cryptoki, jdk.crypto.mscapi] []
+        sun.security.timestamp [jdk.jartool] []
+        sun.security.tools [jdk.jartool] []
+        sun.security.util [java.naming, java.security.jgss, java.security.sasl, java.smartcardio, java.xml.crypto, jdk.crypto.cryptoki, jdk.crypto.mscapi, jdk.jartool, jdk.security.auth, jdk.security.jgss] []
+        sun.security.validator [jdk.jartool] []
+        sun.security.x509 [jdk.crypto.cryptoki, jdk.jartool] []
+        sun.util.cldr [jdk.jlink] []
+        sun.util.locale.provider [java.desktop, jdk.jlink, jdk.localedata] []
+        sun.util.logging [java.desktop, java.logging, java.prefs] []
+        sun.util.resources [jdk.localedata] []
+      opens: []
+      uses: [java.lang.System$LoggerFinder, java.net.ContentHandlerFactory, java.net.spi.InetAddressResolverProvider, java.net.spi.URLStreamHandlerProvider, java.nio.channels.spi.AsynchronousChannelProvider, java.nio.channels.spi.SelectorProvider, java.nio.charset.spi.CharsetProvider, java.nio.file.spi.FileSystemProvider, java.nio.file.spi.FileTypeDetector, java.security.Provider, java.text.spi.BreakIteratorProvider, java.text.spi.CollatorProvider, java.text.spi.DateFormatProvider, java.text.spi.DateFormatSymbolsProvider, java.text.spi.DecimalFormatSymbolsProvider, java.text.spi.NumberFormatProvider, java.time.chrono.AbstractChronology, java.time.chrono.Chronology, java.time.zone.ZoneRulesProvider, java.util.spi.CalendarDataProvider, java.util.spi.CalendarNameProvider, java.util.spi.CurrencyNameProvider, java.util.spi.LocaleNameProvider, java.util.spi.ResourceBundleControlProvider, java.util.spi.ResourceBundleProvider, java.util.spi.TimeZoneNameProvider, java.util.spi.ToolProvider, javax.security.auth.spi.LoginModule, jdk.internal.io.JdkConsoleProvider, jdk.internal.logger.DefaultLoggerFinder, sun.text.spi.JavaTimeDateTimePatternProvider, sun.util.locale.provider.LocaleDataMetaInfo, sun.util.resources.LocaleData$CommonResourceBundleProvider, sun.util.resources.LocaleData$SupplementaryResourceBundleProvider, sun.util.spi.CalendarProvider]
+      provides: [java.nio.file.spi.FileSystemProvider with [jdk.internal.jrtfs.JrtFileSystemProvider]]
+
+Class: interface org.xml.sax.XMLReader
+  Module name: java.xml
+    ModuleDescriptor:
+      name: java.xml
+      modifiers: []
+      requires: [mandated java.base]
+      exports:
+        com.sun.org.apache.xml.internal.dtm [java.xml.crypto] []
+        com.sun.org.apache.xml.internal.utils [java.xml.crypto] []
+        com.sun.org.apache.xpath.internal [java.xml.crypto] []
+        com.sun.org.apache.xpath.internal.compiler [java.xml.crypto] []
+        com.sun.org.apache.xpath.internal.functions [java.xml.crypto] []
+        com.sun.org.apache.xpath.internal.objects [java.xml.crypto] []
+        com.sun.org.apache.xpath.internal.res [java.xml.crypto] []
+        javax.xml [] []
+        javax.xml.catalog [] []
+        javax.xml.datatype [] []
+        javax.xml.namespace [] []
+        javax.xml.parsers [] []
+        javax.xml.stream [] []
+        javax.xml.stream.events [] []
+        javax.xml.stream.util [] []
+        javax.xml.transform [] []
+        javax.xml.transform.dom [] []
+        javax.xml.transform.sax [] []
+        javax.xml.transform.stax [] []
+        javax.xml.transform.stream [] []
+        javax.xml.validation [] []
+        javax.xml.xpath [] []
+        org.w3c.dom [] []
+        org.w3c.dom.bootstrap [] []
+        org.w3c.dom.events [] []
+        org.w3c.dom.ls [] []
+        org.w3c.dom.ranges [] []
+        org.w3c.dom.traversal [] []
+        org.w3c.dom.views [] []
+        org.xml.sax [] []
+        org.xml.sax.ext [] []
+        org.xml.sax.helpers [] []
+      opens: []
+      uses: [javax.xml.datatype.DatatypeFactory, javax.xml.parsers.DocumentBuilderFactory, javax.xml.parsers.SAXParserFactory, javax.xml.stream.XMLEventFactory, javax.xml.stream.XMLInputFactory, javax.xml.stream.XMLOutputFactory, javax.xml.transform.TransformerFactory, javax.xml.validation.SchemaFactory, javax.xml.xpath.XPathFactory, org.xml.sax.XMLReader]
+      provides: []
+
+Class: class samples.module.inspectmodule.InspectModule
+  Module name: unnamed module
+No ModuleDescriptor
+
 "#,
     );
 }

@@ -9,6 +9,7 @@ use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
+use crate::vm::method_area::module_helper::Modules;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
 use crate::vm::{stack, JAVA_HOME};
@@ -18,6 +19,7 @@ use jclassfile::fields::{FieldFlags, FieldInfo};
 use jclassfile::methods::{MethodFlags, MethodInfo};
 use jdescriptor::TypeDescriptor;
 use jimage_rs::jimage::JImage;
+use jimage_rs::raw_jimage::RawJImage;
 use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
@@ -41,6 +43,7 @@ where
 pub(crate) struct MethodArea {
     jimage: JImage,
     modules_mapping: HashMap<String, String>,
+    modules: Arc<Modules>,
     pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
@@ -73,6 +76,7 @@ impl MethodArea {
         Ok(Self {
             jimage,
             modules_mapping,
+            modules: Arc::new(Modules::new()),
             loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::default(),
             ldc_resolution_manager: LdcResolutionManager::default(),
@@ -737,6 +741,18 @@ impl MethodArea {
         cpool_helper: &CPoolHelper,
     ) -> Option<String> {
         attributes_helper.get_source_file(cpool_helper)
+    }
+
+    pub fn modules(&self) -> Arc<Modules> {
+        Arc::clone(&self.modules)
+    }
+
+    pub fn jimage_raw(&self) -> RawJImage {
+        self.jimage.raw()
+    }
+
+    pub fn modules_mapping(&self) -> &HashMap<String, String> {
+        &self.modules_mapping
     }
 }
 
