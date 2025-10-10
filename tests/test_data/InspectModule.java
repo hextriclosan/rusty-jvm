@@ -33,7 +33,7 @@ public class InspectModule {
         System.out.println("      modifiers: " + canonicalize(descriptor.modifiers()));
         System.out.println("      requires: " + canonicalize(descriptor.requires()));
         System.out.println("      exports:");
-        printExports((Set<ModuleDescriptor.Exports>)canonicalize(descriptor.exports()));
+        printExports((Set<ModuleDescriptor.Exports>) canonicalize(descriptor.exports()));
         System.out.println("      opens: " + canonicalize(descriptor.opens()));
         System.out.println("      uses: " + canonicalize(descriptor.uses()));
         System.out.println("      provides: " + canonicalize(descriptor.provides()));
@@ -41,7 +41,11 @@ public class InspectModule {
 
     private static void printExports(Set<ModuleDescriptor.Exports> exports) {
         for (ModuleDescriptor.Exports export : exports) {
-            if ("sun.nio.cs".equals(export.source()) || "sun.security.internal.spec".equals(export.source()) || "sun.security.rsa".equals(export.source())) {
+            if ("sun.nio.cs".equals(export.source()) ||
+                    "sun.security.internal.spec".equals(export.source()) ||
+                    "sun.security.rsa".equals(export.source()) ||
+                    "sun.security.util".equals(export.source())
+            ) {
                 // Skip platform-specific exports
                 continue;
             }

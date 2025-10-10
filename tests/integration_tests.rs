@@ -2989,7 +2989,6 @@ fn should_return_info_about_modules() {
         sun.security.provider.certpath [java.naming, jdk.jartool] []
         sun.security.timestamp [jdk.jartool] []
         sun.security.tools [jdk.jartool] []
-        sun.security.util [java.naming, java.security.jgss, java.security.sasl, java.smartcardio, java.xml.crypto, jdk.crypto.cryptoki, jdk.crypto.mscapi, jdk.jartool, jdk.security.auth, jdk.security.jgss] []
         sun.security.validator [jdk.jartool] []
         sun.security.x509 [jdk.crypto.cryptoki, jdk.jartool] []
         sun.util.cldr [jdk.jlink] []
