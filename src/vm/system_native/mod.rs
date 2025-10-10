@@ -7,6 +7,8 @@ pub(crate) mod file_output_stream;
 pub(crate) mod io_file_system;
 pub(crate) mod io_util;
 pub(crate) mod method_handle_natives;
+pub(crate) mod module;
+pub(crate) mod native_image_buffer;
 pub(crate) mod native_libraries;
 #[cfg(windows)]
 pub(crate) mod native_seed_generator;

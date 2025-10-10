@@ -81,6 +81,7 @@ fn init_logger() -> Result<()> {
 }
 
 fn init() -> Result<()> {
+    put_synthetic_instance_field("java/lang/invoke/ResolvedMethodName", "vmtarget", "J", 0)?;
     StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
     let lc = with_method_area(|area| area.get("jdk/internal/misc/UnsafeConstants"))?;
     let big_endian = lc.static_field("BIG_ENDIAN").unwrap();
@@ -89,10 +90,6 @@ fn init() -> Result<()> {
     let address_size0 = lc.static_field("ADDRESS_SIZE0").unwrap();
     address_size0.set_raw_value(vec![8])?;
 
-    StaticInit::initialize("java/lang/reflect/AccessibleObject")?;
-
-    put_synthetic_instance_field("java/lang/invoke/ResolvedMethodName", "vmtarget", "J", 0)?;
-
     // create primordial ThreadGroup and Thread
     let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
     with_method_area(|area| area.set_system_thread_group_id(tg_obj_ref))?;
@@ -100,8 +97,19 @@ fn init() -> Result<()> {
     let _thread_obj_ref =
         Executor::create_primordial_thread(&vec![tg_obj_ref.into(), string_obj_ref.into()])?;
 
+    StaticInit::initialize("java/lang/reflect/Method")?;
     Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
-
+    let init_phase2_result = Executor::invoke_static_method(
+        "java/lang/System",
+        "initPhase2:(ZZ)I",
+        &[1.into(), 1.into()],
+    )?[0];
+    if init_phase2_result != 0 {
+        return Err(Error::new_execution(&format!(
+            "System.initPhase2 returned error code {init_phase2_result}"
+        )));
+    }
+    Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[])?;
     Ok(())
 }
 

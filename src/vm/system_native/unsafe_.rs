@@ -219,7 +219,8 @@ pub(crate) fn get_byte(obj_ref: i32, offset: i64) -> Result<i8> {
             todo!("implement get_byte for class field");
         }
     } else {
-        todo!("implement get_byte for null object");
+        let addr = offset as usize as *const u8;
+        unsafe { Ok(read(addr) as i8) }
     }
 }
 
@@ -318,6 +319,11 @@ pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
 }
 pub(crate) fn get_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
     get_int_wrp(args) // todo! make me volatile
+}
+
+pub(crate) fn get_boolean_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let ret = get_int_wrp(args)?; // todo! make me volatile (and boolean)
+    Ok(vec![if ret[0] != 0 { 1 } else { 0 }])
 }
 
 pub(crate) fn get_long_wrp(args: &[i32]) -> Result<Vec<i32>> {

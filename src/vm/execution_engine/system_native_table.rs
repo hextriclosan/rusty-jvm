@@ -38,6 +38,10 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp, var_handle_get_wrp,
     var_handle_set_wrp,
 };
+use crate::vm::system_native::module::{
+    add_exports0_wrp, add_exports_to_all0_wrp, add_reads0_wrp, define_module0_wrp,
+};
+use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::vm::system_native::reflect_array::new_array_wrp;
@@ -57,12 +61,12 @@ use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
     compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp,
-    ensure_class_initialized0_wrp, get_byte_wrp, get_char_wrp, get_int_volatile_wrp, get_int_wrp,
-    get_long_volatile_wrp, get_long_wrp, get_reference_volatile_wrp, get_short_wrp,
-    object_field_offset_0_wrp, object_field_offset_1_wrp, put_byte_wrp, put_char_wrp,
-    put_int_volatile_wrp, put_int_wrp, put_long_wrp, put_reference_volatile_wrp,
-    put_reference_wrp, put_short_wrp, set_memory0_wrp, should_be_initialized0_wrp,
-    static_field_base0_wrp, static_field_offset_0_wrp,
+    ensure_class_initialized0_wrp, get_boolean_volatile_wrp, get_byte_wrp, get_char_wrp,
+    get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
+    get_reference_volatile_wrp, get_short_wrp, object_field_offset_0_wrp,
+    object_field_offset_1_wrp, put_byte_wrp, put_char_wrp, put_int_volatile_wrp, put_int_wrp,
+    put_long_wrp, put_reference_volatile_wrp, put_reference_wrp, put_short_wrp, set_memory0_wrp,
+    should_be_initialized0_wrp, static_field_base0_wrp, static_field_offset_0_wrp,
 };
 use crate::vm::system_native::zip::crc32::java_util_zip_crc32_updatebytes0_wrp;
 use crate::vm::system_native::zip::deflater::{
@@ -199,6 +203,19 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_nest_host0_wrp),
     );
     table.insert("java/lang/Class:isRecord0:()Z", Basic(is_record0_wrp));
+    table.insert("java/lang/Module:defineModule0:(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V", Basic(define_module0_wrp));
+    table.insert(
+        "java/lang/Module:addReads0:(Ljava/lang/Module;Ljava/lang/Module;)V",
+        Basic(add_reads0_wrp),
+    );
+    table.insert(
+        "java/lang/Module:addExportsToAll0:(Ljava/lang/Module;Ljava/lang/String;)V",
+        Basic(add_exports_to_all0_wrp),
+    );
+    table.insert(
+        "java/lang/Module:addExports0:(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V",
+        Basic(add_exports0_wrp),
+    );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
         Basic(void_stub),
@@ -262,6 +279,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:getIntVolatile:(Ljava/lang/Object;J)I",
         Basic(get_int_volatile_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:getBooleanVolatile:(Ljava/lang/Object;J)Z",
+        Basic(get_boolean_volatile_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getLong:(Ljava/lang/Object;J)J",
@@ -369,6 +390,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(|_args: &[i32]| Ok(vec![0])), // Class Data Sharing (CDS) is disabled
     );
     table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
+    table.insert("jdk/internal/jimage/NativeImageBuffer:getNativeMap:(Ljava/lang/String;)Ljava/nio/ByteBuffer;", Basic(get_native_map_wrp));
     table.insert(
         "java/lang/Runtime:maxMemory:()J",
         Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))),
