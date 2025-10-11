@@ -11,7 +11,9 @@ use crate::vm::system_native::class::{
     get_primitive_class_wrp, get_raw_annotations_wrp, get_simple_binary_name0_wrp,
     get_superclass_wrp, is_assignable_from_wrp, is_record0_wrp,
 };
-use crate::vm::system_native::class_loader::{define_class0_wrp, find_bootstrap_class_wrp};
+use crate::vm::system_native::class_loader::{
+    define_class0_wrp, define_class2_wrp, find_bootstrap_class_wrp, find_loaded_class_wrp,
+};
 use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
@@ -609,12 +611,20 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(define_class0_wrp),
     );
     table.insert(
+        "java/lang/ClassLoader:defineClass2:(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
+        Basic(define_class2_wrp),
+    );
+    table.insert(
         "java/lang/ClassLoader:registerNatives:()V",
         Basic(void_stub),
     );
     table.insert(
         "java/lang/ClassLoader:findBootstrapClass:(Ljava/lang/String;)Ljava/lang/Class;",
         Basic(find_bootstrap_class_wrp),
+    );
+    table.insert(
+        "java/lang/ClassLoader:findLoadedClass0:(Ljava/lang/String;)Ljava/lang/Class;",
+        Basic(find_loaded_class_wrp),
     );
     table.insert(
         "jdk/internal/reflect/ConstantPool:getUTF8At0:(Ljava/lang/Object;I)Ljava/lang/String;",
@@ -770,8 +780,9 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
     {
         use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
         use crate::vm::system_native::platform_file_dispatcher::windows_file_dispatcher::{
-            allocation_granularity0_wrp, windows_file_dispatcher_read0_wrp,
-            windows_file_dispatcher_size0_wrp, windows_file_dispatcher_write0_wrp,
+            allocation_granularity0_wrp, windows_file_dispatcher_pread0_wrp,
+            windows_file_dispatcher_read0_wrp, windows_file_dispatcher_size0_wrp,
+            windows_file_dispatcher_write0_wrp,
         };
         use crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::{
             access_check_wrp, close_handle_wrp, create_directory0_wrp, create_file0_wrp,
@@ -897,6 +908,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             WithMutStackFrames(windows_file_dispatcher_read0_wrp),
         );
         table.insert(
+            "sun/nio/ch/FileDispatcherImpl:pread0:(Ljava/io/FileDescriptor;JIJ)I",
+            WithMutStackFrames(windows_file_dispatcher_pread0_wrp),
+        );
+        table.insert(
             "sun/nio/ch/FileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",
             WithMutStackFrames(windows_file_dispatcher_size0_wrp),
         );
@@ -927,8 +942,8 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
     {
         use crate::vm::system_native::io_file_system::delete0_wrp;
         use crate::vm::system_native::platform_file_dispatcher::unix_file_dispatcher::{
-            unix_file_dispatcher_impl_read0_wrp, unix_file_dispatcher_impl_size0_wrp,
-            unix_file_dispatcher_impl_write0_wrp,
+            unix_file_dispatcher_impl_pread0_wrp, unix_file_dispatcher_impl_read0_wrp,
+            unix_file_dispatcher_impl_size0_wrp, unix_file_dispatcher_impl_write0_wrp,
         };
         use crate::vm::system_native::platform_native_dispatcher::unix_native_dispatcher::{
             get_access0_wrp, get_cwd_wrp, lstat0_wrp, mkdir0_wrp, realpath0_wrp, rmdir0_wrp,
@@ -993,6 +1008,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/nio/ch/UnixFileDispatcherImpl:read0:(Ljava/io/FileDescriptor;JI)I",
             WithMutStackFrames(unix_file_dispatcher_impl_read0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:pread0:(Ljava/io/FileDescriptor;JIJ)I",
+            WithMutStackFrames(unix_file_dispatcher_impl_pread0_wrp),
         );
         table.insert(
             "sun/nio/ch/UnixFileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",

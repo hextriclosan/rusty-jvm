@@ -14,12 +14,31 @@ pub fn native_accessor_invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> 
     let ret = if obj_ref == 0 {
         Executor::invoke_static_method(method.class_name(), method.name_signature(), &args)?[0]
     } else {
-        Executor::invoke_non_static_method(
+        let ret = Executor::invoke_non_static_method(
             method.class_name(),
             method.name_signature(),
             obj_ref,
             &args,
-        )?[0]
+        )?;
+        match ret.len() {
+            0 => 0,
+            1 => ret[0],
+            2 => {
+                return Err(Error::new_execution(&format!(
+                    "Method {}.{} returned multiple values, which is not supported (yet)",
+                    method.class_name(),
+                    method.name_signature()
+                )))
+            }
+            _ => {
+                return Err(Error::new_execution(&format!(
+                    "Method {}.{} returned unexpected number of values: {}",
+                    method.class_name(),
+                    method.name_signature(),
+                    ret.len()
+                )))
+            }
+        }
     };
 
     Ok(ret)
