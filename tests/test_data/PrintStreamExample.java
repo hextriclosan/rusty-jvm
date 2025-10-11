@@ -19,10 +19,9 @@ public class PrintStreamExample {
             ps.println("Third Line");
         }
 
-//      Exception in thread \"system\" java.util.MissingResourceException: Can\'t find bundle for base name sun.text.resources.FormatData, locale format.language_value_FORMAT.COUNTRY_VALUE_format.variant_VALUE_#Format.script_value\r
-//         try (PrintStream ps = new PrintStream(new FileOutputStream(fileName, APPEND))) {
-//             ps.printf("Hello %s, you are %d years old.%n", "Alice", 30);
-//         }
+        try (PrintStream ps = new PrintStream(new FileOutputStream(fileName, APPEND))) {
+            ps.printf("Hello %s, you are %d years old.%n", "Alice", 30);
+        }
 
         try (PrintStream ps = new PrintStream(new FileOutputStream(fileName, APPEND))) {
             System.setOut(ps); // Redirects standard output to the file
@@ -34,10 +33,9 @@ public class PrintStreamExample {
             ps.println();
         }
 
-//      Exception in thread \"system\" java.util.MissingResourceException: Can\'t find bundle for base name sun.text.resources.FormatData, locale format.language_value_FORMAT.COUNTRY_VALUE_format.variant_VALUE_#Format.script_value\r
-//         try (PrintStream ps = new PrintStream(new FileOutputStream(FILE_NAME, APPEND))) {
-//             ps.println(new Person("John", 25));
-//         }
+        try (PrintStream ps = new PrintStream(new FileOutputStream(fileName, APPEND))) {
+            ps.println(new Person("John", 25));
+        }
 
         try (PrintStream ps = new PrintStream(new FileOutputStream(fileName, APPEND))) {
             ps.print("This is written immediately. ");

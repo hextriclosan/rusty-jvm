@@ -86,8 +86,30 @@ impl MethodArea {
     }
 
     pub(crate) fn get(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
+        self.get_impl(fully_qualified_class_name, true)?
+            .ok_or_else(|| {
+                Error::new_execution(&format!("Class {fully_qualified_class_name} not found"))
+            })
+    }
+
+    pub(crate) fn get_only_loaded(
+        &self,
+        fully_qualified_class_name: &str,
+    ) -> Result<Option<Arc<JavaClass>>> {
+        self.get_impl(fully_qualified_class_name, false)
+    }
+
+    fn get_impl(
+        &self,
+        fully_qualified_class_name: &str,
+        load_if_not_loaded: bool,
+    ) -> Result<Option<Arc<JavaClass>>> {
         if let Some(java_class) = self.loaded_classes.read()?.get(fully_qualified_class_name) {
-            return Ok(Arc::clone(java_class));
+            return Ok(Some(Arc::clone(java_class)));
+        }
+
+        if !load_if_not_loaded {
+            return Ok(None);
         }
 
         if fully_qualified_class_name.starts_with('[') {
@@ -95,7 +117,7 @@ impl MethodArea {
             self.loaded_classes
                 .write()?
                 .insert(fully_qualified_class_name.to_string(), Arc::clone(&arc));
-            return Ok(arc);
+            return Ok(Some(arc));
         }
 
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
@@ -108,7 +130,7 @@ impl MethodArea {
         );
         trace!("<CLASS LOADED> -> {}", java_class.this_class_name());
 
-        Ok(java_class)
+        Ok(Some(java_class))
     }
 
     pub(crate) fn create_metaclass(

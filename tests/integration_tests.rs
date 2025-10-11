@@ -1049,8 +1049,10 @@ fn should_write_file_with_print_stream() {
 First Line
 Second Line
 Third Line
+Hello Alice, you are 30 years old.
 This will go to the file instead of the console.
 Hello as raw bytes
+Person{name='John', age=25}
 This is written immediately. This follows after flush.
 This is an example of chaining PrintStreams.
 "#;
@@ -3047,5 +3049,13 @@ Class: class samples.module.inspectmodule.InspectModule
 No ModuleDescriptor
 
 "#,
+    );
+}
+
+#[test]
+fn should_support_locales() {
+    assert_success(
+        "samples.locale.localemonthsexample.LocaleMonthsExample",
+        "[січня, лютого, березня, квітня, травня, червня, липня, серпня, вересня, жовтня, листопада, грудня, ]\n",
     );
 }
