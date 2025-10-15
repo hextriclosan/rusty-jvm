@@ -83,12 +83,16 @@ fn init_logger() -> Result<()> {
 fn init() -> Result<()> {
     put_synthetic_instance_field("java/lang/invoke/ResolvedMethodName", "vmtarget", "J", 0)?;
     StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
+
     let lc = with_method_area(|area| area.get("jdk/internal/misc/UnsafeConstants"))?;
     let big_endian = lc.static_field("BIG_ENDIAN").unwrap();
     big_endian.set_raw_value(vec![if is_bigendian() { 1 } else { 0 }])?;
 
     let address_size0 = lc.static_field("ADDRESS_SIZE0").unwrap();
     address_size0.set_raw_value(vec![8])?;
+
+    let page_size = lc.static_field("PAGE_SIZE").unwrap();
+    page_size.set_raw_value(vec![page_size::get() as i32])?;
 
     // create primordial ThreadGroup and Thread
     let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;

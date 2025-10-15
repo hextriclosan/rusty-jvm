@@ -13,24 +13,11 @@ use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{GetFileSizeEx, ReadFile, SetFilePointerEx, WriteFile};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::minwinbase::OVERLAPPED;
-use winapi::um::sysinfoapi::{GetSystemInfo, SYSTEM_INFO};
 use winapi::um::winbase::{FILE_BEGIN, FILE_CURRENT};
 use winapi::um::winnt::{HANDLE, LARGE_INTEGER};
 
 const IOS_EOF: i32 = -1; // End of file
 const IOS_UNAVAILABLE: i32 = -2; // Nothing available (non-blocking)
-
-pub fn allocation_granularity0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let result = allocation_granularity0();
-
-    Ok(i64_to_vec(result))
-}
-fn allocation_granularity0() -> i64 {
-    let mut si: SYSTEM_INFO = unsafe { zeroed() };
-    unsafe { GetSystemInfo(&mut si) }
-
-    si.dwAllocationGranularity as i64
-}
 
 pub fn windows_file_dispatcher_write0_wrp(
     args: &[i32],
