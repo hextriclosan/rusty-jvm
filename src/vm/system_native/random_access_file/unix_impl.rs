@@ -34,9 +34,6 @@ pub(super) fn open0(
     if flags.contains(RandomAccessFileMode::O_SYNC | RandomAccessFileMode::O_DSYNC) {
         oflag |= OFlag::O_SYNC | OFlag::O_DSYNC;
     }
-    if flags.contains(RandomAccessFileMode::O_TEMPORARY) {
-        oflag |= OFlag::O_TMPFILE;
-    }
 
     let mode = nix::sys::stat::Mode::from_bits_truncate(0o666);
     let owned_fd = match open(path, oflag, mode) {
