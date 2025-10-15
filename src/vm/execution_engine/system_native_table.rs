@@ -46,6 +46,7 @@ use crate::vm::system_native::module::{
 use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
+use crate::vm::system_native::platform_file_dispatcher::allocation_granularity0_wrp;
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
@@ -780,9 +781,8 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
     {
         use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
         use crate::vm::system_native::platform_file_dispatcher::windows_file_dispatcher::{
-            allocation_granularity0_wrp, windows_file_dispatcher_pread0_wrp,
-            windows_file_dispatcher_read0_wrp, windows_file_dispatcher_size0_wrp,
-            windows_file_dispatcher_write0_wrp,
+            windows_file_dispatcher_pread0_wrp, windows_file_dispatcher_read0_wrp,
+            windows_file_dispatcher_size0_wrp, windows_file_dispatcher_write0_wrp,
         };
         use crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::{
             access_check_wrp, close_handle_wrp, create_directory0_wrp, create_file0_wrp,
@@ -1016,6 +1016,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/nio/ch/UnixFileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",
             WithMutStackFrames(unix_file_dispatcher_impl_size0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:allocationGranularity0:()J",
+            Basic(allocation_granularity0_wrp),
         );
     }
 
