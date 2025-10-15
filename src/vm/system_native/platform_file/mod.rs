@@ -15,4 +15,6 @@ pub enum Mode {
     Read,
     #[strum(serialize = "java/io/FileOutputStream")]
     Write,
+    #[strum(serialize = "java/io/RandomAccessFile")]
+    ReadWrite,
 }

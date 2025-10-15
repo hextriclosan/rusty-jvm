@@ -47,6 +47,10 @@ use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::vm::system_native::platform_file_dispatcher::allocation_granularity0_wrp;
+use crate::vm::system_native::random_access_file::{
+    random_access_file_open0_wrp, random_access_file_read_bytes0_wrp,
+    random_access_file_seek0_wrp, random_access_file_write_bytes0_wrp,
+};
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
@@ -455,6 +459,23 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/io/FileInputStream:isRegularFile0:(Ljava/io/FileDescriptor;)Z",
         WithMutStackFrames(file_input_stream_is_regular_file0_wrp),
+    );
+    table.insert("java/io/RandomAccessFile:initIDs:()V", Basic(void_stub));
+    table.insert(
+        "java/io/RandomAccessFile:open0:(Ljava/lang/String;I)V",
+        WithMutStackFrames(random_access_file_open0_wrp),
+    );
+    table.insert(
+        "java/io/RandomAccessFile:seek0:(J)V",
+        WithMutStackFrames(random_access_file_seek0_wrp),
+    );
+    table.insert(
+        "java/io/RandomAccessFile:writeBytes0:([BII)V",
+        WithMutStackFrames(random_access_file_write_bytes0_wrp),
+    );
+    table.insert(
+        "java/io/RandomAccessFile:readBytes0:([BII)I",
+        WithMutStackFrames(random_access_file_read_bytes0_wrp),
     );
     table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",

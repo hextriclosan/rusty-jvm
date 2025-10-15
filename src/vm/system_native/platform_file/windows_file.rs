@@ -59,7 +59,11 @@ impl PlatformFile {
         Ok(std_handle as isize as i64)
     }
 
-    pub fn set_raw_id(output_stream_ref: i32, file: File, mode: Mode) -> Result<()> {
+    pub fn set_raw_id<T: IntoRawHandle>(
+        output_stream_ref: i32,
+        file: T,
+        mode: Mode,
+    ) -> Result<()> {
         let raw_handle = file.into_raw_handle(); // move ownership out of file
         let handle = raw_handle as isize as i64;
 
