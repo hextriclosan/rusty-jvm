@@ -12,9 +12,7 @@ use windows_impl::open0;
 
 #[cfg(unix)]
 mod unix_impl;
-use crate::vm::exception::helpers::{
-    throw_ioexception, throw_null_pointer_exception_with_message,
-};
+use crate::vm::exception::helpers::{check_bounds, throw_ioexception};
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::helper::i32toi64;
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
@@ -93,6 +91,11 @@ fn write_bytes0(
     len: i32,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<()> {
+    match check_bounds(bytes_ref, offset, len, stack_frames) {
+        ThrowingResult::Result(_) => {}
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    }
+
     let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::ReadWrite, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
@@ -130,12 +133,11 @@ pub(super) fn read_bytes0(
     len: i32,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<i32> {
-    if bytes_ref == 0 {
-        throw_and_return!(throw_null_pointer_exception_with_message(
-            "bytes array is null",
-            stack_frames
-        ))
+    match check_bounds(bytes_ref, offset, len, stack_frames) {
+        ThrowingResult::Result(_) => {}
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     }
+
     if len == 0 {
         return ThrowingResult::ok(0);
     }
