@@ -31,8 +31,12 @@ pub(super) fn open0(
     if flags.contains(RandomAccessFileMode::O_RDWR) {
         oflag |= OFlag::O_RDWR | OFlag::O_CREAT;
     }
-    if flags.contains(RandomAccessFileMode::O_SYNC | RandomAccessFileMode::O_DSYNC) {
-        oflag |= OFlag::O_SYNC | OFlag::O_DSYNC;
+    // fn open0(...) can't be platform-agnostic because of this O_SYNC and O_DSYNC
+    if flags.contains(RandomAccessFileMode::O_SYNC) {
+        oflag |= OFlag::O_SYNC;
+    }
+    if flags.contains(RandomAccessFileMode::O_DSYNC) {
+        oflag |= OFlag::O_DSYNC;
     }
 
     let mode = nix::sys::stat::Mode::from_bits_truncate(0o666);

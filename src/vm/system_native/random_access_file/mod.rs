@@ -12,7 +12,9 @@ use windows_impl::open0;
 
 #[cfg(unix)]
 mod unix_impl;
-use crate::vm::exception::helpers::throw_ioexception;
+use crate::vm::exception::helpers::{
+    throw_ioexception, throw_null_pointer_exception_with_message,
+};
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::helper::i32toi64;
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
@@ -57,6 +59,13 @@ fn seek0(obj_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> ThrowingR
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
+
+    if offset < 0 {
+        throw_and_return!(throw_ioexception(
+            &format!("Negative seek offset {}", offset),
+            stack_frames
+        ))
+    }
 
     unwrap_or_return_err!(file.seek(std::io::SeekFrom::Start(offset as u64)));
     ThrowingResult::ok(())
@@ -121,25 +130,31 @@ pub(super) fn read_bytes0(
     len: i32,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<i32> {
+    if bytes_ref == 0 {
+        throw_and_return!(throw_null_pointer_exception_with_message(
+            "bytes array is null",
+            stack_frames
+        ))
+    }
+    if len == 0 {
+        return ThrowingResult::ok(0);
+    }
+
     let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::ReadWrite, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
 
-    let ret = with_heap_read_lock(|h| {
+    let result = with_heap_read_lock(|h| {
         let mut input_array = h.get_entire_raw_data_mut(bytes_ref)?;
         let mut input = &mut input_array[offset as usize..(offset + len) as usize];
-        let result = file.read_exact(&mut input);
-        let ret = match result {
-            Ok(_) => Ok(len),
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Ok(-1),
-            Err(e) => Err(e),
-        }?;
-        Ok::<_, Error>(ret)
+        let read = file.read(&mut input)?;
+        Ok::<_, Error>(read)
     });
 
-    match ret {
-        Ok(n) => ThrowingResult::ok(n),
+    match result {
+        Ok(n) if n == 0 => ThrowingResult::ok(-1),
+        Ok(n) => ThrowingResult::ok(n as i32),
         Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
     }
 }

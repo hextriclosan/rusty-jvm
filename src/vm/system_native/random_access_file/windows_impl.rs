@@ -49,8 +49,8 @@ pub(super) fn open0(
         OPEN_EXISTING
     };
     let mut flags_and_attributes = FILE_ATTRIBUTE_NORMAL;
-    if mode.contains(RandomAccessFileMode::O_SYNC | RandomAccessFileMode::O_DSYNC) {
-        flags_and_attributes |= FILE_FLAG_WRITE_THROUGH;
+    if mode.intersects(RandomAccessFileMode::O_SYNC | RandomAccessFileMode::O_DSYNC) {
+        flags_and_attributes |= FILE_FLAG_WRITE_THROUGH; // fn open0(...) can't be platform-agnostic because of this O_SYNC and O_DSYNC
     }
     if mode.contains(RandomAccessFileMode::O_TEMPORARY) {
         flags_and_attributes |= FILE_FLAG_DELETE_ON_CLOSE;
