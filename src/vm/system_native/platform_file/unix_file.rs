@@ -31,7 +31,7 @@ impl PlatformFile {
         Ok(0)
     }
 
-    pub fn set_raw_id(output_stream_ref: i32, file: File, mode: Mode) -> Result<()> {
+    pub fn set_raw_id<T: IntoRawFd>(output_stream_ref: i32, file: T, mode: Mode) -> Result<()> {
         let posix_fd = file.into_raw_fd(); // move ownership out of file
         let fd = posix_fd as i32;
 
@@ -41,7 +41,7 @@ impl PlatformFile {
         Self::set_fd(fd_ref, fd)
     }
 
-    fn set_fd(fd_ref: i32, fd: i32) -> crate::vm::error::Result<()> {
+    fn set_fd(fd_ref: i32, fd: i32) -> Result<()> {
         with_heap_read_lock(|heap| {
             heap.set_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", vec![fd])
         })

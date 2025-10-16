@@ -19,6 +19,7 @@ pub(crate) mod platform_file_dispatcher;
 pub(crate) mod platform_native_dispatcher;
 pub(crate) mod platform_specific_files;
 pub(crate) mod properties_provider;
+pub(crate) mod random_access_file;
 pub(crate) mod reflect_array;
 pub(crate) mod reflecton;
 pub(crate) mod stack_trace_element;

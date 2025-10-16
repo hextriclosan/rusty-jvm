@@ -3,7 +3,7 @@ use crate::vm::exception::helpers::{throw_file_not_found_exception, throw_ioexce
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::platform_file::Mode::Write;
+use crate::vm::system_native::platform_file::Mode::FileOutputStream;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
@@ -37,7 +37,9 @@ fn open0(
         .open(file_name)
     {
         Ok(file) => ThrowingResult::ok(unwrap_or_return_err!(PlatformFile::set_raw_id(
-            obj_ref, file, Write
+            obj_ref,
+            file,
+            FileOutputStream
         ))),
         Err(e) => throw_and_return!(throw_file_not_found_exception(
             file_name_ref,
@@ -63,7 +65,7 @@ fn write(
     _append: bool,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<()> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Write, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -97,7 +99,7 @@ fn write_bytes(
     _append: bool,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<()> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Write, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };

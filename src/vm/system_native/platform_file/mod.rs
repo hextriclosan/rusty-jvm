@@ -12,7 +12,9 @@ pub use windows_file::PlatformFile;
 #[derive(EnumString, AsRefStr, Debug)]
 pub enum Mode {
     #[strum(serialize = "java/io/FileInputStream")]
-    Read,
+    FileInputStream,
     #[strum(serialize = "java/io/FileOutputStream")]
-    Write,
+    FileOutputStream,
+    #[strum(serialize = "java/io/RandomAccessFile")]
+    RandomAccessFile,
 }
