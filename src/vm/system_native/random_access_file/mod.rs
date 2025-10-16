@@ -53,7 +53,8 @@ pub(crate) fn random_access_file_seek0_wrp(
     Ok(vec![])
 }
 fn seek0(obj_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> ThrowingResult<()> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::ReadWrite, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::RandomAccessFile, stack_frames)
+    {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -96,7 +97,8 @@ fn write_bytes0(
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     }
 
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::ReadWrite, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::RandomAccessFile, stack_frames)
+    {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -142,7 +144,8 @@ pub(super) fn read_bytes0(
         return ThrowingResult::ok(0);
     }
 
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::ReadWrite, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::RandomAccessFile, stack_frames)
+    {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };

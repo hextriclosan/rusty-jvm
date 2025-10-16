@@ -4,7 +4,7 @@ use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::heap::with_heap_write_lock;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::platform_file::Mode::Read;
+use crate::vm::system_native::platform_file::Mode::FileInputStream;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
@@ -36,7 +36,7 @@ fn open0(obj_ref: i32, file_name_ref: i32, stack_frames: &mut StackFrames) -> Th
                 ))
             }
 
-            unwrap_or_return_err!(PlatformFile::set_raw_id(obj_ref, file, Read));
+            unwrap_or_return_err!(PlatformFile::set_raw_id(obj_ref, file, FileInputStream));
             ThrowingResult::ok(())
         }
         Err(e) => {
@@ -59,7 +59,7 @@ pub(crate) fn file_input_stream_length0_wrp(
     Ok(i64_to_vec(len))
 }
 fn length0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
-    let file = match PlatformFile::get_by_raw_id(obj_ref, Read, stack_frames) {
+    let file = match PlatformFile::get_by_raw_id(obj_ref, FileInputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -79,7 +79,7 @@ pub(crate) fn file_input_stream_position0_wrp(
     Ok(i64_to_vec(len))
 }
 fn position0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Read, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileInputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -99,7 +99,7 @@ pub(crate) fn file_input_stream_available0_wrp(
     Ok(vec![available])
 }
 fn available0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Read, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileInputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -141,7 +141,7 @@ fn read_bytes(
     len: i32,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<i32> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Read, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileInputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
@@ -173,7 +173,7 @@ pub(crate) fn file_input_stream_read0_wrp(
     Ok(vec![read])
 }
 fn read0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Read, stack_frames) {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileInputStream, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };

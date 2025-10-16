@@ -1,4 +1,4 @@
-use crate::vm::exception::helpers::{throw_file_not_found_exception, throw_ioexception};
+use crate::vm::exception::helpers::throw_file_not_found_exception;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
@@ -18,7 +18,8 @@ pub(super) fn open0(
 
     let path = Path::new(&file_name);
     if path.is_dir() {
-        throw_and_return!(throw_ioexception(
+        throw_and_return!(throw_file_not_found_exception(
+            file_name_ref,
             &format!("{file_name} is a directory"),
             stack_frames
         ))
@@ -52,6 +53,10 @@ pub(super) fn open0(
         }
     };
 
-    unwrap_or_return_err!(PlatformFile::set_raw_id(obj_ref, owned_fd, Mode::ReadWrite));
+    unwrap_or_return_err!(PlatformFile::set_raw_id(
+        obj_ref,
+        owned_fd,
+        Mode::RandomAccessFile
+    ));
     ThrowingResult::ok(())
 }
