@@ -2,7 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
-use crate::vm::helper::get_fd;
+use crate::vm::helper::get_handle;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode;
 use crate::{throw_and_return, unwrap_or_return_err};
@@ -14,7 +14,7 @@ pub struct PlatformFile {}
 
 impl PlatformFile {
     pub fn close(file_descriptor_ref: i32) -> Result<()> {
-        let raw_fd = get_fd(file_descriptor_ref)?;
+        let raw_fd = get_handle(file_descriptor_ref)?;
 
         if raw_fd == -1 {
             return Ok(()); // already closed
@@ -62,7 +62,7 @@ impl PlatformFile {
         fd_ref: i32,
         stack_frames: &mut StackFrames,
     ) -> ThrowingResult<ManuallyDrop<File>> {
-        let fd = unwrap_or_return_err!(get_fd(fd_ref));
+        let fd = unwrap_or_return_err!(get_handle(fd_ref));
 
         if fd == -1 {
             throw_and_return!(throw_ioexception("Stream Closed", stack_frames))

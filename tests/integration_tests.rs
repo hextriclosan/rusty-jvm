@@ -3066,6 +3066,11 @@ fn should_support_random_access_files() {
     let expected_out = r#"=== RandomAccessFile example ===
 intValue = 0xDEADBEEF
 
+=== Memory-mapped file example ===
+Read via mmap -> intValue = 0xDEADBEEF
+
+=== Verify after mmap modification ===
+After mmap -> intValue = 0xCAFEBABE
 "#;
     assert_success_with_args(
         "samples.io.randomaccessfilevsmmapexample.RandomAccessFileVsMMapExample",

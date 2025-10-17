@@ -1050,6 +1050,7 @@ dependencies = [
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
+ "memmap2",
  "miniz_oxide",
  "mockall",
  "murmur3",
