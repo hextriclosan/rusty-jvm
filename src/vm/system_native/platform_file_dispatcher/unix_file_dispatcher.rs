@@ -1,12 +1,13 @@
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::throwing_result::ThrowingResult;
-use crate::vm::helper::{get_fd, i32toi64, i64_to_vec};
+use crate::vm::helper::{get_handle, i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::system_native::platform_file::PlatformFile;
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use nix::sys::stat::fstat;
 use nix::sys::uio::pread;
-use nix::unistd::{read, write};
+use nix::unistd::{ftruncate, read, write};
 use std::os::fd::BorrowedFd;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 
@@ -35,7 +36,7 @@ fn write0(
     let address = address as usize as *const u8;
     let buf = unsafe { from_raw_parts(address, len as usize) };
 
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_handle(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match write(fd, buf) {
         Ok(written) => written as i32,
@@ -72,7 +73,7 @@ fn read0(
     let address = address as usize as *mut u8;
     let buf = unsafe { from_raw_parts_mut(address, len as usize) };
 
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_handle(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match read(fd, buf) {
         Ok(read) => {
@@ -119,7 +120,7 @@ fn pread0(
     let address = address as usize as *mut u8;
     let buf = unsafe { from_raw_parts_mut(address, len as usize) };
 
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_handle(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match pread(fd, buf, position) {
         Ok(read) => {
@@ -151,7 +152,7 @@ pub fn unix_file_dispatcher_impl_size0_wrp(
     Ok(i64_to_vec(result))
 }
 fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
-    let fd = unwrap_or_return_err!(get_fd(fd_ref));
+    let fd = unwrap_or_return_err!(get_handle(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match fstat(fd) {
         Ok(stat) => stat.st_size as i64,
@@ -165,4 +166,28 @@ fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
     };
 
     ThrowingResult::ok(result)
+}
+
+pub(super) fn truncate0(
+    fd_ref: i32,
+    size: i64,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
+    let file = match PlatformFile::get_by_fd(fd_ref, stack_frames) {
+        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    };
+
+    let ret = match ftruncate(&*file, size) {
+        Ok(_) => 0,
+        Err(errno) if matches!(errno, nix::errno::Errno::EINTR) => IOS_INTERRUPTED,
+        Err(errno) => {
+            throw_and_return!(throw_ioexception(
+                &format!("Truncate failed: {}", errno.to_string()),
+                stack_frames
+            ))
+        }
+    };
+
+    ThrowingResult::ok(ret)
 }

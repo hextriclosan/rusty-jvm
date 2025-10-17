@@ -46,7 +46,10 @@ use crate::vm::system_native::module::{
 use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
-use crate::vm::system_native::platform_file_dispatcher::allocation_granularity0_wrp;
+use crate::vm::system_native::platform_file_dispatcher::{
+    allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp, file_dispatcher_map0_wrp,
+    mapped_memory_utils_force0_wrp,
+};
 use crate::vm::system_native::random_access_file::{
     random_access_file_open0_wrp, random_access_file_read_bytes0_wrp,
     random_access_file_seek0_wrp, random_access_file_write_bytes0_wrp,
@@ -719,6 +722,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // todo: implement this (by 0 we say that the platform can not signal native threads)
     );
     table.insert(
+        "java/nio/MappedMemoryUtils:registerNatives:()V",
+        Basic(void_stub),
+    );
+    table.insert(
         "java/lang/Throwable:fillInStackTrace:(I)Ljava/lang/Throwable;",
         WithStackFrames(fill_in_stack_trace_wrp),
     );
@@ -802,8 +809,9 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
     {
         use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
         use crate::vm::system_native::platform_file_dispatcher::windows_file_dispatcher::{
-            windows_file_dispatcher_pread0_wrp, windows_file_dispatcher_read0_wrp,
-            windows_file_dispatcher_size0_wrp, windows_file_dispatcher_write0_wrp,
+            windows_file_dispatcher_duplicate_handle_wrp, windows_file_dispatcher_pread0_wrp,
+            windows_file_dispatcher_read0_wrp, windows_file_dispatcher_size0_wrp,
+            windows_file_dispatcher_write0_wrp,
         };
         use crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::{
             access_check_wrp, close_handle_wrp, create_directory0_wrp, create_file0_wrp,
@@ -937,6 +945,22 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             WithMutStackFrames(windows_file_dispatcher_size0_wrp),
         );
         table.insert(
+            "sun/nio/ch/FileDispatcherImpl:truncate0:(Ljava/io/FileDescriptor;J)I",
+            WithMutStackFrames(file_dispatcher_impl_truncate0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/FileDispatcherImpl:map0:(Ljava/io/FileDescriptor;IJJZ)J",
+            WithMutStackFrames(file_dispatcher_map0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/FileDispatcherImpl:duplicateHandle:(J)J",
+            WithMutStackFrames(windows_file_dispatcher_duplicate_handle_wrp),
+        );
+        table.insert(
+            "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
+            WithMutStackFrames(mapped_memory_utils_force0_wrp),
+        );
+        table.insert(
             "sun/io/Win32ErrorMode:setErrorMode:(J)J",
             Basic(set_error_mode_wrp),
         );
@@ -1041,6 +1065,18 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/nio/ch/UnixFileDispatcherImpl:allocationGranularity0:()J",
             Basic(allocation_granularity0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:truncate0:(Ljava/io/FileDescriptor;J)I",
+            WithMutStackFrames(file_dispatcher_impl_truncate0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:map0:(Ljava/io/FileDescriptor;IJJZ)J",
+            WithMutStackFrames(file_dispatcher_map0_wrp),
+        );
+        table.insert(
+            "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
+            WithMutStackFrames(mapped_memory_utils_force0_wrp),
         );
     }
 

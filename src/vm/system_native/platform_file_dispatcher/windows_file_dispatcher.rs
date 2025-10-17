@@ -7,14 +7,18 @@ use crate::vm::system_native::platform_native_dispatcher::windows_helpers::get_l
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::mem::zeroed;
 use std::ptr::null_mut;
-use winapi::shared::minwindef::{DWORD, LPCVOID, LPVOID};
+use winapi::shared::minwindef::{DWORD, FALSE, LPCVOID, LPVOID};
 use winapi::shared::winerror::{ERROR_BROKEN_PIPE, ERROR_NO_DATA};
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::fileapi::{GetFileSizeEx, ReadFile, SetFilePointerEx, WriteFile};
-use winapi::um::handleapi::INVALID_HANDLE_VALUE;
-use winapi::um::minwinbase::OVERLAPPED;
+use winapi::um::fileapi::{
+    GetFileSizeEx, ReadFile, SetFileInformationByHandle, SetFilePointerEx, WriteFile,
+    FILE_END_OF_FILE_INFO,
+};
+use winapi::um::handleapi::{DuplicateHandle, INVALID_HANDLE_VALUE};
+use winapi::um::minwinbase::{FileEndOfFileInfo, OVERLAPPED};
+use winapi::um::processthreadsapi::GetCurrentProcess;
 use winapi::um::winbase::{FILE_BEGIN, FILE_CURRENT};
-use winapi::um::winnt::{HANDLE, LARGE_INTEGER};
+use winapi::um::winnt::{DUPLICATE_SAME_ACCESS, HANDLE, LARGE_INTEGER};
 
 const IOS_EOF: i32 = -1; // End of file
 const IOS_UNAVAILABLE: i32 = -2; // Nothing available (non-blocking)
@@ -219,4 +223,77 @@ fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
     }
     let size = unsafe { *size.QuadPart() };
     ThrowingResult::ok(size)
+}
+
+pub(super) fn truncate0(
+    fd_ref: i32,
+    size: i64,
+    stack_frames: &mut StackFrames,
+) -> ThrowingResult<i32> {
+    let handle = unwrap_or_return_err!(get_handle(fd_ref)) as usize as HANDLE;
+    let mut eof_info: FILE_END_OF_FILE_INFO = unsafe { zeroed() };
+    unsafe {
+        *eof_info.EndOfFile.QuadPart_mut() = size;
+    }
+
+    let result = unsafe {
+        SetFileInformationByHandle(
+            handle,
+            FileEndOfFileInfo,
+            &mut eof_info as *mut _ as LPVOID,
+            size_of::<FILE_END_OF_FILE_INFO>() as DWORD,
+        )
+    };
+    if result == 0 {
+        throw_and_return!(throw_ioexception(
+            &format!(
+                "Truncation failed: {}",
+                unwrap_or_return_err!(get_last_error())
+            ),
+            stack_frames
+        ))
+    }
+
+    ThrowingResult::ok(0)
+}
+
+pub fn windows_file_dispatcher_duplicate_handle_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let fd = i32toi64(args[1], args[0]);
+
+    let dup_fd = unwrap_result_or_return_default!(duplicate_handle(fd, stack_frames), vec![]);
+    Ok(i64_to_vec(dup_fd))
+}
+fn duplicate_handle(fd: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
+    let handle = fd as usize as HANDLE;
+    if handle == INVALID_HANDLE_VALUE {
+        throw_and_return!(throw_ioexception("Invalid handle", stack_frames))
+    }
+
+    let h_process = unsafe { GetCurrentProcess() };
+    let mut h_result: HANDLE = null_mut();
+    let ret = unsafe {
+        DuplicateHandle(
+            h_process,
+            handle,
+            h_process,
+            &mut h_result,
+            0,
+            FALSE,
+            DUPLICATE_SAME_ACCESS,
+        )
+    };
+    if ret == 0 {
+        throw_and_return!(throw_ioexception(
+            &format!(
+                "DuplicateHandle failed: {}",
+                unwrap_or_return_err!(get_last_error())
+            ),
+            stack_frames
+        ))
+    }
+
+    ThrowingResult::ok(h_result as usize as i64)
 }
