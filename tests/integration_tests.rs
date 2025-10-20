@@ -3065,12 +3065,13 @@ fn should_support_random_access_files() {
     let file = NamedTempFile::new().expect("Failed to create temp file");
     let expected_out = r#"=== RandomAccessFile example ===
 intValue = 0xDEADBEEF
+longValue = 0xFEEDFACE01020304
 
 === Memory-mapped file example ===
-Read via mmap -> intValue = 0xDEADBEEF
+Read via mmap -> intValue = 0xDEADBEEF, longValue = 0xFEEDFACE01020304
 
 === Verify after mmap modification ===
-After mmap -> intValue = 0xCAFEBABE
+After mmap -> intValue = 0xCAFEBABE, longValue = 0xC0DEBA5EDEADBEEF
 "#;
     assert_success_with_args(
         "samples.io.randomaccessfilevsmmapexample.RandomAccessFileVsMMapExample",

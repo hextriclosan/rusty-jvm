@@ -23,17 +23,17 @@ public class RandomAccessFileVsMMapExample {
             raf.seek(0);
             raf.writeInt(0xDEADBEEF);
 
-//             raf.seek(8);
-//             raf.writeLong(123_456_789L);
-//
+            raf.seek(8);
+            raf.writeLong(0xFEEDFACE01020304L);
+
             raf.seek(0);
             int intValue = raf.readInt();
-//
-//             raf.seek(8);
-//             long longValue = raf.readLong();
-//
+
+            raf.seek(8);
+            long longValue = raf.readLong();
+
             System.out.printf("intValue = 0x%08X%n", intValue);
-//             System.out.println("longValue = " + longValue);
+            System.out.printf("longValue = 0x%16X%n", longValue);
         }
         System.out.println();
 
@@ -46,12 +46,12 @@ public class RandomAccessFileVsMMapExample {
 
             // Read what was written before
             int intValue = buffer.getInt(0);
-            //long longValue = buffer.getLong(8);
-            System.out.printf("Read via mmap -> intValue = 0x%08X%n", intValue/* + ", longValue = " + longValue*/);
+            long longValue = buffer.getLong(8);
+            System.out.printf("Read via mmap -> intValue = 0x%08X, longValue = 0x%16X%n", intValue, longValue);
 
             // Modify file directly via memory
             buffer.putInt(0, 0xCAFEBABE);
-            //buffer.putLong(8, 987654321L);
+            buffer.putLong(8, 0xC0DEBA5EDEADBEEFL);
 
             // Force changes to disk
             buffer.force();
@@ -65,11 +65,10 @@ public class RandomAccessFileVsMMapExample {
             raf.seek(0);
             int intValue = raf.readInt();
 
-//             raf.seek(8);
-//             long longValue = raf.readLong();
+            raf.seek(8);
+            long longValue = raf.readLong();
 
-            //System.out.println("After mmap -> intValue = " + intValue/* + ", longValue = " + longValue*/);
-            System.out.printf("After mmap -> intValue = 0x%08X%n", intValue);
+            System.out.printf("After mmap -> intValue = 0x%08X, longValue = 0x%16X%n", intValue, longValue);
         }
     }
 }

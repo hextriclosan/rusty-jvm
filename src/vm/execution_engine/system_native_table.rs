@@ -66,7 +66,7 @@ use crate::vm::system_native::system::{
     system_identity_hashcode_wrp, system_map_library_name_wrp,
 };
 use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
-use crate::vm::system_native::thread::current_thread_wrp;
+use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
@@ -513,9 +513,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     ); // todo: implement this properly
     table.insert(
         "java/lang/Thread:getNextThreadIdOffset:()J",
-        Basic(|_args: &[i32]| {
-            Ok(vec![0, 1]) // it's always 1L, for spawning new threads real one should be incremented
-        }),
+        Basic(get_next_threadid_offset_wrp),
     );
     table.insert("java/lang/Thread:setPriority0:(I)V", Basic(void_stub));
     table.insert("java/lang/Thread:start0:()V", Basic(void_stub));
