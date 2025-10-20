@@ -20,8 +20,5 @@ pub(crate) fn get_next_threadid_offset_wrp(_args: &[i32]) -> Result<Vec<i32>> {
     Ok(i64_to_vec(offset))
 }
 fn get_next_threadid_offset() -> Result<i64> {
-    #[warn(unused_unsafe)]
-    unsafe {
-        Ok(&raw const NEXT_TID_OFFSET as i64)
-    }
+    Ok(&raw const NEXT_TID_OFFSET as i64)
 }
