@@ -33,7 +33,7 @@ public class RandomAccessFileVsMMapExample {
             long longValue = raf.readLong();
 
             System.out.printf("intValue = 0x%08X%n", intValue);
-            System.out.printf("longValue = 0x%16X%n", longValue);
+            System.out.printf("longValue = 0x%016X%n", longValue);
         }
         System.out.println();
 
@@ -47,7 +47,7 @@ public class RandomAccessFileVsMMapExample {
             // Read what was written before
             int intValue = buffer.getInt(0);
             long longValue = buffer.getLong(8);
-            System.out.printf("Read via mmap -> intValue = 0x%08X, longValue = 0x%16X%n", intValue, longValue);
+            System.out.printf("Read via mmap -> intValue = 0x%08X, longValue = 0x%016X%n", intValue, longValue);
 
             // Modify file directly via memory
             buffer.putInt(0, 0xCAFEBABE);
@@ -68,7 +68,7 @@ public class RandomAccessFileVsMMapExample {
             raf.seek(8);
             long longValue = raf.readLong();
 
-            System.out.printf("After mmap -> intValue = 0x%08X, longValue = 0x%16X%n", intValue, longValue);
+            System.out.printf("After mmap -> intValue = 0x%08X, longValue = 0x%016X%n", intValue, longValue);
         }
     }
 }

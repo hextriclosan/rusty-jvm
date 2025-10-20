@@ -534,7 +534,7 @@ fn read_raw<T: Copy>(address: i64) -> T {
     let ptr = address as usize as *const T;
     unsafe {
         let ptr = ptr.add(0);
-        ptr.read()
+        ptr.read_unaligned()
     }
 }
 
