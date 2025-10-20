@@ -360,7 +360,7 @@ fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
             Ok(vec_to_i64(&result))
         }
     } else {
-        Ok(offset) // not real implementation, just a placeholder for case when object is null
+        Ok(read_raw(offset))
     }
 }
 
@@ -400,7 +400,13 @@ fn compare_and_exchange_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -
 
 fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<(bool, i64)> {
     if obj_ref == 0 {
-        return Ok((true, 0)); // fixme: not real implementation, just a placeholder for case when object is null
+        let old_value: i64 = read_raw(offset);
+        return if old_value == expected {
+            write_raw(offset, x);
+            Ok((true, old_value))
+        } else {
+            Ok((false, old_value))
+        };
     }
 
     let class_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
@@ -522,6 +528,14 @@ fn write_raw<T: Copy>(address: i64, value: T) {
     let ptr = address as usize as *mut u8;
     let src = &value as *const T as *const u8;
     unsafe { copy(src, ptr, size_of::<T>()) };
+}
+
+fn read_raw<T: Copy>(address: i64) -> T {
+    let ptr = address as usize as *const T;
+    unsafe {
+        let ptr = ptr.add(0);
+        ptr.read_unaligned()
+    }
 }
 
 fn put_value_via_object(
