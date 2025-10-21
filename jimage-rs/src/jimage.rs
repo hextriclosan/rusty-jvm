@@ -92,7 +92,7 @@ impl JImage {
     }
 
     /// Finds a resource by name and returns its data.
-    pub fn find_resource(&self, name: &str) -> Result<Option<Cow<[u8]>>> {
+    pub fn find_resource(&self, name: &str) -> Result<Option<Cow<'_, [u8]>>> {
         // Find offset index using the hash
         let Some(offset_index) = self.find_offset_index(name)? else {
             return Ok(None);
@@ -149,7 +149,11 @@ impl JImage {
         self.header.items_count() as usize
     }
 
-    fn get_str_for_attribute(&self, attribute: [u64; 8], kind: AttributeKind) -> Result<Cow<str>> {
+    fn get_str_for_attribute(
+        &self,
+        attribute: [u64; 8],
+        kind: AttributeKind,
+    ) -> Result<Cow<'_, str>> {
         let offset = attribute[kind as usize] as usize;
         let value = self.get_string(offset)?;
         Ok(Cow::Borrowed(value))
@@ -226,7 +230,7 @@ impl JImage {
         Ok(attributes)
     }
 
-    fn get_resource(&self, attributes: &[u64; 8]) -> Result<Option<Cow<[u8]>>> {
+    fn get_resource(&self, attributes: &[u64; 8]) -> Result<Option<Cow<'_, [u8]>>> {
         let offset = attributes[AttributeKind::OFFSET as usize] as usize;
         let compressed_size = attributes[AttributeKind::COMPRESSED as usize] as usize;
         let uncompressed_size = attributes[AttributeKind::UNCOMPRESSED as usize] as usize;
