@@ -54,11 +54,11 @@ impl<V> AutoDashMap<V> for AutoDashMapI32<V> {
         key
     }
 
-    fn get(&self, key: Self::Key) -> Option<Ref<Self::Key, V>> {
+    fn get(&self, key: Self::Key) -> Option<Ref<'_, Self::Key, V>> {
         self.map.get(&key)
     }
 
-    fn get_mut(&self, key: Self::Key) -> Option<RefMut<Self::Key, V>> {
+    fn get_mut(&self, key: Self::Key) -> Option<RefMut<'_, Self::Key, V>> {
         self.map.get_mut(&key)
     }
 
