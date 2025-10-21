@@ -769,7 +769,7 @@ impl MethodArea {
         Arc::clone(&self.modules)
     }
 
-    pub fn jimage_raw(&self) -> RawJImage {
+    pub fn jimage_raw(&self) -> RawJImage<'_> {
         self.jimage.raw()
     }
 

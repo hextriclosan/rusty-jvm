@@ -18,11 +18,11 @@ pub trait AutoDashMap<V> {
 
     /// Gets a reference to the value associated with the given key.
     /// Returns `None` if the key does not exist.
-    fn get(&self, key: Self::Key) -> Option<Ref<Self::Key, V>>;
+    fn get(&self, key: Self::Key) -> Option<Ref<'_, Self::Key, V>>;
 
     /// Gets a mutable reference to the value associated with the given key.
     /// Returns `None` if the key does not exist.
-    fn get_mut(&self, key: Self::Key) -> Option<RefMut<Self::Key, V>>;
+    fn get_mut(&self, key: Self::Key) -> Option<RefMut<'_, Self::Key, V>>;
 
     /// Removes the value associated with the given key and returns it.
     /// If the key does not exist, returns `None`.

@@ -172,7 +172,7 @@ impl Heap {
     pub(crate) fn get_entire_raw_data(
         &self,
         array_ref: i32,
-    ) -> Result<MappedRef<i32, HeapValue, Vec<u8>>> {
+    ) -> Result<MappedRef<'_, i32, HeapValue, Vec<u8>>> {
         if array_ref == 0 {
             return Err(Error::new_execution(
                 "NullPointerException: null array reference",
@@ -194,7 +194,7 @@ impl Heap {
     pub(crate) fn get_entire_raw_data_mut(
         &self,
         array_ref: i32,
-    ) -> Result<MappedRefMut<i32, HeapValue, Vec<u8>>> {
+    ) -> Result<MappedRefMut<'_, i32, HeapValue, Vec<u8>>> {
         if array_ref == 0 {
             return Err(Error::new_execution(
                 "NullPointerException: null array reference",
