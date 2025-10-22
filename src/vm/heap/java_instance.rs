@@ -122,6 +122,7 @@ impl Array {
         value: Vec<i32>,
         size: usize,
     ) -> Result<()> {
+        let data_len = self.data.len();
         match size {
             1..=4 => {
                 let bytes = value[0].to_ne_bytes();
@@ -133,7 +134,7 @@ impl Array {
                 self.data
                     .get_mut(offset..offset + size)
                     .ok_or_else(|| Error::new_execution(&format!(
-                        "set_array_value_by_raw_offset: offset out of bounds (offset={offset}, size={size})"
+                        "set_array_value_by_raw_offset: offset out of bounds (offset={offset}, size={size}, data_len={data_len})"
                     )))?
                     .copy_from_slice(slice);
             }
@@ -150,7 +151,7 @@ impl Array {
                 self.data
                     .get_mut(offset..offset + 8)
                     .ok_or_else(|| Error::new_execution(&format!(
-                        "set_array_value_by_raw_offset: offset out of bounds (offset={offset}, size=8)"
+                        "set_array_value_by_raw_offset: offset out of bounds (offset={offset}, size=8, data_len={data_len})"
                     )))?
                     .copy_from_slice(&buf);
             }
