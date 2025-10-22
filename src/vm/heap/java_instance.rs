@@ -74,23 +74,31 @@ impl Array {
 
     pub fn get_value_by_raw_offset(&self, offset: usize, size: usize) -> Result<Vec<i32>> {
         let src = self.data.get(offset..offset + size)
-            .ok_or_else(|| Error::new_execution(&format!("get_value_by_raw_offset: offset out of bounds: offset={offset}, size={size}, data_len={}", self.data.len())))?;
+            .ok_or_else(|| Error::new_execution(&format!(
+                "get_value_by_raw_offset: offset out of bounds: offset={offset}, size={size}, data_len={}",
+                self.data.len()
+            )))?;
+
         match size {
-            1..=4 => {
-                let mut dst_buf = [0u8; 4];
-                if cfg!(target_endian = "big") {
-                    dst_buf[4 - size..4].copy_from_slice(src);
+            1 => Ok(vec![src[0] as i8 as i32]),
+            2 => {
+                let bytes: [u8; 2] = src.try_into()?;
+                let value = if self.type_name == "[C" {
+                    u16::from_ne_bytes(bytes) as i32
                 } else {
-                    dst_buf[0..size].copy_from_slice(src);
-                }
-                let value = i32::from_ne_bytes(dst_buf);
+                    i16::from_ne_bytes(bytes) as i32
+                };
                 Ok(vec![value])
             }
+            4 => {
+                let bytes: [u8; 4] = src.try_into()?;
+                Ok(vec![i32::from_ne_bytes(bytes)])
+            }
             8 => {
-                let mut dst_buf = [0u8; 8];
-                dst_buf.copy_from_slice(src);
-                let high = i32::from_ne_bytes(dst_buf[0..4].try_into().unwrap());
-                let low = i32::from_ne_bytes(dst_buf[4..8].try_into().unwrap());
+                let bytes: [u8; 8] = src.try_into()?;
+                let (high, low) = bytes.split_at(4);
+                let high = i32::from_ne_bytes(high.try_into()?);
+                let low = i32::from_ne_bytes(low.try_into()?);
                 if cfg!(target_endian = "big") {
                     Ok(vec![high, low])
                 } else {
@@ -116,23 +124,35 @@ impl Array {
     ) -> Result<()> {
         match size {
             1..=4 => {
-                let int_buf = value[0].to_ne_bytes();
-                if cfg!(target_endian = "big") {
-                    self.data[offset..offset + size].copy_from_slice(&int_buf[4 - size..4]);
+                let bytes = value[0].to_ne_bytes();
+                let slice = if cfg!(target_endian = "big") {
+                    &bytes[4 - size..]
                 } else {
-                    self.data[offset..offset + size].copy_from_slice(&int_buf[0..size]);
-                }
+                    &bytes[..size]
+                };
+                self.data
+                    .get_mut(offset..offset + size)
+                    .ok_or_else(|| Error::new_execution(&format!(
+                        "set_array_value_by_raw_offset: offset out of bounds (offset={offset}, size={size})"
+                    )))?
+                    .copy_from_slice(slice);
             }
             8 => {
                 let mut buf = [0u8; 8];
                 if cfg!(target_endian = "big") {
-                    buf[0..4].copy_from_slice(&value[0].to_ne_bytes());
-                    buf[4..8].copy_from_slice(&value[1].to_ne_bytes());
+                    buf[..4].copy_from_slice(&value[0].to_ne_bytes());
+                    buf[4..].copy_from_slice(&value[1].to_ne_bytes());
                 } else {
-                    buf[0..4].copy_from_slice(&value[1].to_ne_bytes());
-                    buf[4..8].copy_from_slice(&value[0].to_ne_bytes());
+                    buf[..4].copy_from_slice(&value[1].to_ne_bytes());
+                    buf[4..].copy_from_slice(&value[0].to_ne_bytes());
                 }
-                self.data[offset..offset + size].copy_from_slice(&buf);
+
+                self.data
+                    .get_mut(offset..offset + 8)
+                    .ok_or_else(|| Error::new_execution(&format!(
+                        "set_array_value_by_raw_offset: offset out of bounds (offset={offset}, size=8)"
+                    )))?
+                    .copy_from_slice(&buf);
             }
             _ => return Err(Error::new_execution(&format!("Invalid size: {size}"))),
         }

@@ -3088,3 +3088,20 @@ stringValue = HelloMMapUp
         expected_out,
     );
 }
+
+#[test]
+fn should_support_arrays_to_string() {
+    assert_success(
+        "samples.arrays.tostringexample.ArrayToStringExample",
+        r#"[-128, -1, 0, 1, 127]
+[true, false, true, true, false]
+[-17000, -2000, 0, 2000, 17000]
+[A, r, r, a, y, Ї, ⅒]
+[-2000000000, -1, 0, 1, 2000000000]
+[-9000000000000000000, -1, 0, 1, 9000000000000000000]
+[3.14, 2.71, 1.41, 1.73]
+[3.141592653589793, 2.71, 1.41, 1.73]
+[Hello, Array, to, String, Example]
+"#,
+    );
+}
