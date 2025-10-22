@@ -73,22 +73,24 @@ impl Array {
     }
 
     pub fn get_value_by_raw_offset(&self, offset: usize, size: usize) -> Result<Vec<i32>> {
+        let src = self.data.get(offset..offset + size)
+            .ok_or_else(|| Error::new_execution(&format!("get_value_by_raw_offset: offset out of bounds: offset={offset}, size={size}, data_len={}", self.data.len())))?;
         match size {
             1..=4 => {
-                let mut buf = [0u8; 4];
+                let mut dst_buf = [0u8; 4];
                 if cfg!(target_endian = "big") {
-                    buf[4 - size..4].copy_from_slice(&self.data[offset..offset + size]);
+                    dst_buf[4 - size..4].copy_from_slice(src);
                 } else {
-                    buf[0..size].copy_from_slice(&self.data[offset..offset + size]);
+                    dst_buf[0..size].copy_from_slice(src);
                 }
-                let value = i32::from_ne_bytes(buf);
+                let value = i32::from_ne_bytes(dst_buf);
                 Ok(vec![value])
             }
             8 => {
-                let mut buf = [0u8; 8];
-                buf.copy_from_slice(&self.data[offset..offset + size]);
-                let high = i32::from_ne_bytes(buf[0..4].try_into().unwrap());
-                let low = i32::from_ne_bytes(buf[4..8].try_into().unwrap());
+                let mut dst_buf = [0u8; 8];
+                dst_buf.copy_from_slice(src);
+                let high = i32::from_ne_bytes(dst_buf[0..4].try_into().unwrap());
+                let low = i32::from_ne_bytes(dst_buf[4..8].try_into().unwrap());
                 if cfg!(target_endian = "big") {
                     Ok(vec![high, low])
                 } else {
