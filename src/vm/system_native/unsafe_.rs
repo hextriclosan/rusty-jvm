@@ -244,7 +244,8 @@ pub(crate) fn get_short(obj_ref: i32, offset: i64) -> Result<i16> {
             todo!("implement get_short for class field");
         }
     } else {
-        todo!("implement get_short for null object");
+        let addr = offset as usize as *const i16;
+        unsafe { Ok(read(addr)) }
     }
 }
 

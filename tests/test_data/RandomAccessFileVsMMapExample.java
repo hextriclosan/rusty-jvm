@@ -12,6 +12,12 @@ import java.nio.file.StandardOpenOption;
 
 public class RandomAccessFileVsMMapExample {
 
+    // === Field Offsets ===
+    private static final int OFFSET_INT = 2;
+    private static final int OFFSET_LONG = OFFSET_INT + Integer.BYTES + 2;
+    private static final int OFFSET_DOUBLE = OFFSET_LONG + Long.BYTES + 2;
+    private static final int OFFSET_STRING_LEN = OFFSET_DOUBLE + Double.BYTES + 2;
+
     public static void main(String[] args) throws IOException {
         Path filePath = Paths.get(args[0]);
 
@@ -24,42 +30,39 @@ public class RandomAccessFileVsMMapExample {
         verifyWithRandomAccessFile(filePath);
         System.out.println();
 
-        // hexDump(filePath);
+        hexDump(filePath);
     }
 
+    // === 1. Write initial data using RandomAccessFile ===
     private static void writeWithRandomAccessFile(Path filePath) throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")) {
             System.out.println("=== RandomAccessFile example ===");
 
             // Write int, long, double, and string
-            raf.seek(0);
+            raf.seek(OFFSET_INT);
             raf.writeInt(0xDEADBEEF);
 
-            raf.seek(8);
+            raf.seek(OFFSET_LONG);
             raf.writeLong(0xFEEDFACE01020304L);
 
-            raf.seek(16);
+            raf.seek(OFFSET_DOUBLE);
             raf.writeDouble(3.141592653589793);
 
-            String text = "HelloMMap";
-            byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-            raf.seek(24);
-            raf.writeInt(bytes.length);
-            raf.write(bytes);
+            writeString(raf, OFFSET_STRING_LEN, "HelloMMap");
 
             // Read back and print
-            raf.seek(0);
+            raf.seek(OFFSET_INT);
             int intValue = raf.readInt();
-            raf.seek(8);
+            raf.seek(OFFSET_LONG);
             long longValue = raf.readLong();
-            raf.seek(16);
+            raf.seek(OFFSET_DOUBLE);
             double doubleValue = raf.readDouble();
-            raf.seek(24);
-            String strValue = readString(raf);
+            String strValue = readString(raf, OFFSET_STRING_LEN);
             printValues(intValue, longValue, doubleValue, strValue);
         }
     }
 
+    // === 2. Modify data using memory-mapped file ===
     private static void modifyWithMemoryMap(Path filePath) throws IOException {
         try (FileChannel channel = FileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
             System.out.println("=== Memory-mapped file example ===");
@@ -67,57 +70,70 @@ public class RandomAccessFileVsMMapExample {
             MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, 64);
 
             // Read existing values
-            int intValue = buffer.getInt(0);
-            long longValue = buffer.getLong(8);
-            double doubleValue = buffer.getDouble(16);
-            String strValue = readString(buffer, 24);
+            int intValue = buffer.getInt(OFFSET_INT);
+            long longValue = buffer.getLong(OFFSET_LONG);
+            double doubleValue = buffer.getDouble(OFFSET_DOUBLE);
+            String strValue = readString(buffer, OFFSET_STRING_LEN);
             printValues(intValue, longValue, doubleValue, strValue);
 
             // Modify them
-            buffer.putInt(0, 0xCAFEBABE);
-            buffer.putLong(8, 0xC0DEBA5EDEADBEEFL);
-            buffer.putDouble(16, 2.718281828459045);
+            buffer.putInt(OFFSET_INT, 0xCAFEBABE);
+            buffer.putLong(OFFSET_LONG, 0xC0DEBA5EDEADBEEFL);
+            buffer.putDouble(OFFSET_DOUBLE, 2.718281828459045);
 
-            String newText = "UpdatedMMap";
-            byte[] newBytes = newText.getBytes(StandardCharsets.UTF_8);
-            buffer.putInt(24, newBytes.length);
-            buffer.put(newBytes);
+            String newText = "Water boils at 100 °C";
+            writeString(buffer, OFFSET_STRING_LEN, newText);
 
             buffer.force();
         }
     }
 
+    // === 3. Verify results using RandomAccessFile ===
     private static void verifyWithRandomAccessFile(Path filePath) throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "r")) {
             System.out.println("=== Verify after mmap modification ===");
 
-            raf.seek(0);
+            raf.seek(OFFSET_INT);
             int intValue = raf.readInt();
-            raf.seek(8);
+            raf.seek(OFFSET_LONG);
             long longValue = raf.readLong();
-            raf.seek(16);
+            raf.seek(OFFSET_DOUBLE);
             double doubleValue = raf.readDouble();
-            raf.seek(24);
-            String strValue = readString(raf);
+            String strValue = readString(raf, OFFSET_STRING_LEN);
 
             printValues(intValue, longValue, doubleValue, strValue);
         }
     }
 
     // === Utility methods ===
-    private static String readString(RandomAccessFile raf) throws IOException {
+    private static String readString(RandomAccessFile raf, int offset) throws IOException {
+        raf.seek(offset);
         int len = raf.readInt();
         byte[] bytes = new byte[len];
         raf.readFully(bytes);
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
+    private static void writeString(RandomAccessFile raf, int offset, String value) throws IOException {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        raf.seek(offset);
+        raf.writeInt(bytes.length);
+        raf.write(bytes);
+    }
+
     private static String readString(MappedByteBuffer buffer, int offset) {
-        int len = buffer.getInt(offset);
+        buffer.position(offset);
+        int len = buffer.getInt();
         byte[] bytes = new byte[len];
-        buffer.position(offset + 4);
         buffer.get(bytes);
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    private static void writeString(MappedByteBuffer buffer, int offset, String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        buffer.position(offset);
+        buffer.putInt(bytes.length);
+        buffer.put(bytes);
     }
 
     private static void printValues(int intValue, long longValue, double doubleValue, String strValue) {
@@ -132,12 +148,29 @@ public class RandomAccessFileVsMMapExample {
         byte[] bytes = Files.readAllBytes(path);
 
         for (int i = 0; i < bytes.length; i += 16) {
-            System.out.printf("%04X: ", i);
-            for (int j = 0; j < 16 && i + j < bytes.length; j++) {
-                System.out.printf("%02X ", bytes[i + j]);
+            // Print offset
+            System.out.printf("%04X:", i);
+
+            // Print hex bytes
+            for (int j = 0; j < 16; j++) {
+                if (i + j < bytes.length) {
+                    System.out.printf(" %02X", bytes[i + j] & 0xFF);
+                } else {
+                    System.out.print("   "); // padding for short last line
+                }
             }
+
+            // Space between hex and ASCII
+            System.out.print("  ");
+
+            // Print ASCII representation
+            for (int j = 0; j < 16 && i + j < bytes.length; j++) {
+                int b = bytes[i + j] & 0xFF;
+                char c = (b >= 32 && b <= 126) ? (char) b : '.';
+                System.out.print(c);
+            }
+
             System.out.println();
         }
-        System.out.println();
     }
 }

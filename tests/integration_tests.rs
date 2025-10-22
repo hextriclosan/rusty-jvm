@@ -3079,8 +3079,13 @@ stringValue = HelloMMap
 intValue = 0xCAFEBABE
 longValue = 0xC0DEBA5EDEADBEEF
 doubleValue = 2.718281828459045
-stringValue = HelloMMapUp
+stringValue = Water boils at 100 °C
 
+=== Hex Dump ===
+0000: 00 00 CA FE BA BE 00 00 C0 DE BA 5E DE AD BE EF  ...........^....
+0010: 00 00 40 05 BF 0A 8B 14 57 69 00 00 00 00 00 16  ..@.....Wi......
+0020: 57 61 74 65 72 20 62 6F 69 6C 73 20 61 74 20 31  Water boils at 1
+0030: 30 30 20 C2 B0 43 00 00 00 00 00 00 00 00 00 00  00 ..C..........
 "#;
     assert_success_with_args(
         "samples.io.randomaccessfilevsmmapexample.RandomAccessFileVsMMapExample",
