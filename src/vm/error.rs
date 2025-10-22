@@ -6,6 +6,7 @@ use jimage_rs::error::JImageError;
 use miniz_oxide::MZError;
 use num_enum::TryFromPrimitiveError;
 use rand::rand_core::OsError;
+use std::array::TryFromSliceError;
 use std::error::Error as StdError;
 use std::ffi::{NulError, OsString};
 use std::fmt::{Debug, Display, Formatter};
@@ -159,6 +160,12 @@ impl From<NulError> for Error {
 impl From<MZError> for Error {
     fn from(error: MZError) -> Self {
         Error::new_execution(&format!("MZError: {error:?}"))
+    }
+}
+
+impl From<TryFromSliceError> for Error {
+    fn from(error: TryFromSliceError) -> Self {
+        Error::new_execution(&format!("TryFromSliceError: {error}"))
     }
 }
 
