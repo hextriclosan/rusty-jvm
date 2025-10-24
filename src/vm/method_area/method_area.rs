@@ -44,7 +44,7 @@ pub(crate) struct MethodArea {
     jimage: JImage,
     modules_mapping: HashMap<String, String>,
     modules: Arc<Modules>,
-    pub(crate) loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
+    loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
     javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
     ldc_resolution_manager: LdcResolutionManager,
     system_thread_id: OnceCell<i32>, // initial thread, spawned by VM
@@ -104,6 +104,7 @@ impl MethodArea {
         fully_qualified_class_name: &str,
         load_if_not_loaded: bool,
     ) -> Result<Option<Arc<JavaClass>>> {
+        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
         if let Some(java_class) = self.loaded_classes.read()?.get(fully_qualified_class_name) {
             return Ok(Some(Arc::clone(java_class)));
         }
@@ -119,8 +120,6 @@ impl MethodArea {
                 .insert(fully_qualified_class_name.to_string(), Arc::clone(&arc));
             return Ok(Some(arc));
         }
-
-        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
 
         //todo: make me thread-safe if move to multithreaded jvm
         let java_class = self.load_class_file(fully_qualified_class_name)?;
