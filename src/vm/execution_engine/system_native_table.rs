@@ -68,6 +68,7 @@ use crate::vm::system_native::system::{
 use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
+use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
 use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
     compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp,
@@ -795,6 +796,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/Runtime:freeMemory:()J",
         Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // todo implement me with GC
+    );
+    table.insert(
+        "jdk/internal/misc/PreviewFeatures:isPreviewEnabled:()Z",
+        Basic(|_args: &[i32]| Ok(vec![0])),
+    );
+    table.insert(
+        "java/util/TimeZone:getSystemTimeZoneID:(Ljava/lang/String;)Ljava/lang/String;",
+        Basic(get_system_time_zone_id_wrp),
     );
 
     platform_specific(&mut table);

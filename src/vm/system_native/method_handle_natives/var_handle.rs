@@ -62,6 +62,16 @@ pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec
             &[array_ref.into(), index.into()],
         )?;
         Ok(ret)
+    } else if name == "java/lang/invoke/VarHandleByteArrayAsShorts$ArrayHandle" {
+        let array_ref = args_to_get[0];
+        let index = args_to_get[1];
+        let ret = Executor::invoke_non_static_method(
+            &name,
+            "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)S",
+            handle_ref,
+            &[array_ref.into(), index.into()],
+        )?;
+        Ok(ret)
     } else if name == "java/lang/invoke/VarHandleByteArrayAsInts$ArrayHandle" {
         let array_ref = args_to_get[0];
         let index = args_to_get[1];

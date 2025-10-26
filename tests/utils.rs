@@ -132,11 +132,15 @@ pub fn assert_with_all_args(
         .collect::<Vec<_>>();
     let assert = get_command(&args).assert();
     let assert = if expected_result == ExecutionResult::Success {
-        assert.success()
+        assert.try_success()
     } else {
-        assert.failure()
+        assert.try_failure()
     };
 
+    let assert = match assert {
+        Ok(output) => output,
+        Err(e) => panic!("Failed to get output: {:?}", e),
+    };
     let output = assert.get_output();
     let actual_stdout = String::from_utf8(output.stdout.clone())
         .expect("Failed to convert stdout to string")
