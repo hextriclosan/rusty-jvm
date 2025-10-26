@@ -62,7 +62,6 @@ jobs:
         with:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
 
   test-on-s390x:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
