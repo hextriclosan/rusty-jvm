@@ -155,7 +155,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
         Basic(|_args: &[i32]| Ok(vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
     );
-    table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", Basic(for_name0_wrp));
+    table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", WithMutStackFrames(for_name0_wrp));
     table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
     table.insert(
         "java/lang/Class:initClassName:()Ljava/lang/String;",

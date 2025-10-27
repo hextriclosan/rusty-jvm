@@ -2023,9 +2023,10 @@ class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExamp
 fn should_support_class_for_name_method() {
     assert_success(
         "samples.reflection.trivial.forname.ClassForNameExample",
-        r#"First static block
-class samples.reflection.trivial.forname.First
-class samples.reflection.trivial.forname.Second
+        r#">>> First static block executed
+Loaded class: samples.reflection.trivial.forname.First (initialized=true)
+Loaded class: samples.reflection.trivial.forname.Second (initialized=false)
+ClassNotFoundException: samples.reflection.trivial.forname.NonExisting - java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
 "#,
     );
 }
