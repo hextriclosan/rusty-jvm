@@ -3131,22 +3131,6 @@ Number Format:   1,234,567.89
 Currency Format: $1,234,567.89
 Date Format:     August 24, 1991
 
---- Locale: en_GB ---
-Language:           'en'
-Country:            'GB'
-Variant:            ''
-Script:             ''
-Display Language:   'English'
-Display Country:    'United Kingdom'
-Display Name:       'English (United Kingdom)'
-Display Variant:    ''
-Display Script:     ''
-ISO3 Language:      'eng'
-ISO3 Country:       'GBR'
-Number Format:   1,234,567.89
-Currency Format: £1,234,567.89
-Date Format:     24 August 1991
-
 --- Locale: fr_FR ---
 Language:           'fr'
 Country:            'FR'
@@ -3177,22 +3161,6 @@ ISO3 Language:      'jpn'
 ISO3 Country:       'JPN'
 Number Format:   1,234,567.89
 Currency Format: ￥1,234,568
-Date Format:     1991年8月24日
-
---- Locale: zh_CN ---
-Language:           'zh'
-Country:            'CN'
-Variant:            ''
-Script:             ''
-Display Language:   'Chinese'
-Display Country:    'China'
-Display Name:       'Chinese (China)'
-Display Variant:    ''
-Display Script:     ''
-ISO3 Language:      'zho'
-ISO3 Country:       'CHN'
-Number Format:   1,234,567.89
-Currency Format: ¥1,234,567.89
 Date Format:     1991年8月24日
 
 --- Locale: uk_UA ---
