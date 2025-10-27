@@ -10,7 +10,7 @@ use crate::vm::system_native::object_offset::offset_utils::{
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
-use std::ptr::{copy, read};
+use std::ptr;
 
 #[derive(Clone, Copy, Debug)]
 enum ValueType {
@@ -220,7 +220,7 @@ pub(crate) fn get_byte(obj_ref: i32, offset: i64) -> Result<i8> {
         }
     } else {
         let addr = offset as usize as *const u8;
-        unsafe { Ok(read(addr) as i8) }
+        unsafe { Ok(ptr::read(addr) as i8) }
     }
 }
 
@@ -245,7 +245,7 @@ pub(crate) fn get_short(obj_ref: i32, offset: i64) -> Result<i16> {
         }
     } else {
         let addr = offset as usize as *const i16;
-        unsafe { Ok(read(addr)) }
+        unsafe { Ok(ptr::read(addr)) }
     }
 }
 
@@ -290,7 +290,7 @@ pub(crate) fn get_int_raw(address: i64) -> Result<i32> {
     let ptr = address as usize as *const i32;
     unsafe {
         let ptr = ptr.add(0);
-        Ok(read(ptr))
+        Ok(ptr::read(ptr))
     }
 }
 pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
@@ -528,7 +528,7 @@ fn put_value(obj_ref: i32, offset: i64, value: i64, value_type: ValueType) -> Re
 fn write_raw<T: Copy>(address: i64, value: T) {
     let ptr = address as usize as *mut u8;
     let src = &value as *const T as *const u8;
-    unsafe { copy(src, ptr, size_of::<T>()) };
+    unsafe { ptr::copy(src, ptr, size_of::<T>()) };
 }
 
 fn read_raw<T: Copy>(address: i64) -> T {
@@ -674,7 +674,7 @@ fn copy_memory0(
             let src = to_copy.as_ptr();
             let dst = ptr.add(dest_offset as usize);
             let len = to_copy.len();
-            copy(src, dst, len);
+            ptr::copy(src, dst, len);
         }
     } else {
         let ptr_copy_from = src_offset as usize as *const u8;
@@ -684,7 +684,7 @@ fn copy_memory0(
                 let output =
                     &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
 
-                copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
+                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
             }
 
             Ok::<(), Error>(())
@@ -709,12 +709,9 @@ fn set_memory0(obj_ref: i32, offset: i64, bytes: i64, value: u8) -> Result<()> {
         unimplemented!("implement this for objects")
     }
 
-    let ptr = offset as usize as *mut u8;
-
+    let dst_ptr = offset as *mut u8;
     unsafe {
-        let ptr = ptr.add(0);
-        let src = &value as *const u8;
-        copy(src, ptr, bytes as usize);
+        ptr::write_bytes(dst_ptr, value, bytes as usize);
     }
 
     Ok(())
