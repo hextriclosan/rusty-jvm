@@ -3110,3 +3110,91 @@ fn should_support_arrays_to_string() {
 "#,
     );
 }
+
+#[test]
+fn should_support_locales_advanced() {
+    assert_success(
+        "samples.locale.showlocale.ShowLocale",
+        r#"--- Locale: en_US ---
+Language:           'en'
+Country:            'US'
+Variant:            ''
+Script:             ''
+Display Language:   'English'
+Display Country:    'United States'
+Display Name:       'English (United States)'
+Display Variant:    ''
+Display Script:     ''
+ISO3 Language:      'eng'
+ISO3 Country:       'USA'
+Number Format:   1,234,567.89
+Currency Format: $1,234,567.89
+Date Format:     August 24, 1991
+
+--- Locale: fr_FR ---
+Language:           'fr'
+Country:            'FR'
+Variant:            ''
+Script:             ''
+Display Language:   'French'
+Display Country:    'France'
+Display Name:       'French (France)'
+Display Variant:    ''
+Display Script:     ''
+ISO3 Language:      'fra'
+ISO3 Country:       'FRA'
+Number Format:   1 234 567,89
+Currency Format: 1 234 567,89 €
+Date Format:     24 août 1991
+
+--- Locale: ja_JP ---
+Language:           'ja'
+Country:            'JP'
+Variant:            ''
+Script:             ''
+Display Language:   'Japanese'
+Display Country:    'Japan'
+Display Name:       'Japanese (Japan)'
+Display Variant:    ''
+Display Script:     ''
+ISO3 Language:      'jpn'
+ISO3 Country:       'JPN'
+Number Format:   1,234,567.89
+Currency Format: ￥1,234,568
+Date Format:     1991年8月24日
+
+--- Locale: uk_UA ---
+Language:           'uk'
+Country:            'UA'
+Variant:            ''
+Script:             ''
+Display Language:   'Ukrainian'
+Display Country:    'Ukraine'
+Display Name:       'Ukrainian (Ukraine)'
+Display Variant:    ''
+Display Script:     ''
+ISO3 Language:      'ukr'
+ISO3 Country:       'UKR'
+Number Format:   1 234 567,89
+Currency Format: 1 234 567,89 ₴
+Date Format:     24 серпня 1991 р.
+
+--- Locale: es_MX ---
+Language:           'es'
+Country:            'MX'
+Variant:            ''
+Script:             ''
+Display Language:   'Spanish'
+Display Country:    'Mexico'
+Display Name:       'Spanish (Mexico)'
+Display Variant:    ''
+Display Script:     ''
+ISO3 Language:      'spa'
+ISO3 Country:       'MEX'
+Number Format:   1,234,567.89
+Currency Format: $1,234,567.89
+Date Format:     24 de agosto de 1991
+
+"#,
+    );
+}

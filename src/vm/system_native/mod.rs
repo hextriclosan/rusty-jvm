@@ -28,5 +28,6 @@ pub(crate) mod system;
 pub(crate) mod system_props_raw;
 pub(crate) mod thread;
 pub(crate) mod throwable;
+pub(crate) mod time_zone;
 pub(crate) mod unsafe_;
 pub(crate) mod zip;

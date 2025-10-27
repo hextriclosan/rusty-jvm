@@ -1,6 +1,7 @@
 use crate::vm::error::ErrorKind::{
     ClassFile, ConstantPool, Execution, Io, Native, UncaughtException,
 };
+use iana_time_zone::GetTimezoneError;
 use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
 use miniz_oxide::MZError;
@@ -166,6 +167,12 @@ impl From<MZError> for Error {
 impl From<TryFromSliceError> for Error {
     fn from(error: TryFromSliceError) -> Self {
         Error::new_execution(&format!("TryFromSliceError: {error}"))
+    }
+}
+
+impl From<GetTimezoneError> for Error {
+    fn from(error: GetTimezoneError) -> Self {
+        Error::new_execution(&format!("GetTimezoneError: {error}"))
     }
 }
 
