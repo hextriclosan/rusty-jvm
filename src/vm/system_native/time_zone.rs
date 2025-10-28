@@ -10,7 +10,6 @@ pub(crate) fn get_system_time_zone_id_wrp(args: &[i32]) -> Result<Vec<i32>> {
 // the idea of _java_home_string_ref is to use TZ db from <java_home>/lib/ (we don't do it).
 fn get_system_time_zone_id(_java_home_string_ref: i32) -> Result<i32> {
     let time_zone = iana_time_zone::get_timezone();
-    eprintln!("Detected system time zone: {:?}", time_zone);
     match time_zone {
         Ok(time_zone) => StringPoolHelper::get_string(&time_zone),
         Err(err) => {
