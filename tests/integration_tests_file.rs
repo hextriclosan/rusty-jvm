@@ -196,8 +196,8 @@ fn resolve_template(template_values: &TemplateValues) -> String {
         .replace("{{PARENT}}", &template_values.parent)
         .replace("{{PARENT_FILE}}", &template_values.parent_file)
         .replace("{{IS_ABSOLUTE}}", &template_values.is_absolute.to_string())
-        .replace("{{SIZE}}", &template_values.size.to_string())
         .replace("{{FILE_EXISTS}}", &template_values.file_exists.to_string())
+        .replace("{{SIZE}}", &template_values.size.to_string())
         .replace("{{IS_FILE}}", &template_values.is_file.to_string())
         .replace(
             "{{IS_DIRECTORY}}",

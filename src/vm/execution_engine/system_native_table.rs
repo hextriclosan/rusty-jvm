@@ -985,9 +985,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         );
         table.insert(
             "java/io/WinNTFileSystem:getLength0:(Ljava/io/File;)J",
-            crate::vm::execution_engine::system_native_table::NativeMethod::Basic(
-                crate::vm::system_native::io_file_system::get_length0_wrp,
-            ),
+            Basic(get_length0_wrp),
         );
 
         table.insert(
