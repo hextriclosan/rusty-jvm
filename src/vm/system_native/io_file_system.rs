@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::helper::i64_to_vec;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use bitflags::bitflags;
 use path_absolutize::Absolutize;
@@ -169,6 +170,31 @@ fn check_access0(file_ref: i32, access: i32) -> Result<bool> {
 
     Ok(check_access_impl(path, access_flags))
 }
+
+pub(crate) fn get_length0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _filesystem_impl_ref = args[0];
+    let file_ref = args[1];
+    let length = get_length0(file_ref)?;
+
+    Ok(i64_to_vec(length))
+}
+/// Get the length of the file in bytes.
+///
+/// Return 0 if metadata cannot be retrieved (e.g., file not found, permission denied, I/O error).
+/// This matches Java's File.length() behavior, which returns 0 for non-existent files or on error.
+fn get_length0(file_ref: i32) -> Result<i64> {
+    let path_ref = extract_path(file_ref)?;
+
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let path = Path::new(&path);
+
+    let len = std::fs::metadata(path)
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+
+    Ok(len as i64)
+}
+
 #[cfg(unix)]
 fn check_access_impl(path: &Path, mode: Access) -> bool {
     use nix::unistd::{access, AccessFlags};
