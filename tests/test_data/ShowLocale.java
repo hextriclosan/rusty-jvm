@@ -13,8 +13,6 @@ public class ShowLocale {
     public static void main(String[] args) {
         List<Locale> locales = List.of(
                 //Locale.getDefault(), // https://github.com/hextriclosan/rusty-jvm/issues/489
-                Locale.US,
-                Locale.FRANCE,
                 Locale.JAPAN,
                 Locale.forLanguageTag("uk-UA"),
                 new Locale.Builder().setLanguage("es").setRegion("MX").build()

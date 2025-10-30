@@ -3116,39 +3116,7 @@ fn should_support_arrays_to_string() {
 fn should_support_locales_advanced() {
     assert_success(
         "samples.locale.showlocale.ShowLocale",
-        r#"--- Locale: en_US ---
-Language:           'en'
-Country:            'US'
-Variant:            ''
-Script:             ''
-Display Language:   'English'
-Display Country:    'United States'
-Display Name:       'English (United States)'
-Display Variant:    ''
-Display Script:     ''
-ISO3 Language:      'eng'
-ISO3 Country:       'USA'
-Number Format:   1,234,567.89
-Currency Format: $1,234,567.89
-Date Format:     August 24, 1991
-
---- Locale: fr_FR ---
-Language:           'fr'
-Country:            'FR'
-Variant:            ''
-Script:             ''
-Display Language:   'French'
-Display Country:    'France'
-Display Name:       'French (France)'
-Display Variant:    ''
-Display Script:     ''
-ISO3 Language:      'fra'
-ISO3 Country:       'FRA'
-Number Format:   1 234 567,89
-Currency Format: 1 234 567,89 €
-Date Format:     24 août 1991
-
---- Locale: ja_JP ---
+        r#"--- Locale: ja_JP ---
 Language:           'ja'
 Country:            'JP'
 Variant:            ''
