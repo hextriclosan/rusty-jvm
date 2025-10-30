@@ -45,6 +45,7 @@ public class FileExample {
         System.out.println("Parent file: " + file.getParentFile());
         System.out.println("Is absolute: " + file.isAbsolute());
         System.out.println("File exists: " + file.exists());
+        System.out.println("File size: " + file.length());
         System.out.println("Is file: " + file.isFile());
         System.out.println("Is directory: " + file.isDirectory());
         System.out.println("Is hidden: " + file.isHidden());

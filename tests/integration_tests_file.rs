@@ -33,6 +33,7 @@ fn file_info_when_does_not_exist() {
         to_string(&DIR_PATH),
         false,
         false,
+        0,
         false,
         false,
         false,
@@ -79,6 +80,7 @@ fn file_info_when_exists() {
         to_string(&DIR_PATH),
         false,
         true,
+        size(),
         true,
         false,
         is_hidden,
@@ -155,6 +157,7 @@ Parent: {{PARENT}}
 Parent file: {{PARENT_FILE}}
 Is absolute: {{IS_ABSOLUTE}}
 File exists: {{FILE_EXISTS}}
+File size: {{SIZE}}
 Is file: {{IS_FILE}}
 Is directory: {{IS_DIRECTORY}}
 Is hidden: {{IS_HIDDEN}}
@@ -174,6 +177,7 @@ struct TemplateValues {
     parent_file: String,
     is_absolute: bool,
     file_exists: bool,
+    size: u64,
     is_file: bool,
     is_directory: bool,
     is_hidden: bool,
@@ -192,6 +196,7 @@ fn resolve_template(template_values: &TemplateValues) -> String {
         .replace("{{PARENT}}", &template_values.parent)
         .replace("{{PARENT_FILE}}", &template_values.parent_file)
         .replace("{{IS_ABSOLUTE}}", &template_values.is_absolute.to_string())
+        .replace("{{SIZE}}", &template_values.size.to_string())
         .replace("{{FILE_EXISTS}}", &template_values.file_exists.to_string())
         .replace("{{IS_FILE}}", &template_values.is_file.to_string())
         .replace(
@@ -232,6 +237,12 @@ fn canonical_path() -> PathBuf {
         .absolutize()
         .expect("Failed to normalize path")
         .to_path_buf()
+}
+
+fn size() -> u64 {
+    std::fs::metadata(canonical_path())
+        .map(|meta| meta.len())
+        .unwrap_or(0)
 }
 
 fn to_string(path: &PathBuf) -> String {

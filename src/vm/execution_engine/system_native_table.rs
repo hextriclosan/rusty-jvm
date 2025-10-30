@@ -28,7 +28,7 @@ use crate::vm::system_native::file_output_stream::{
 };
 use crate::vm::system_native::io_file_system::{
     canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp,
-    get_boolean_attributes0_wrp,
+    get_boolean_attributes0_wrp, get_length0_wrp,
 };
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
@@ -983,6 +983,12 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             "java/io/WinNTFileSystem:getNameMax0:(Ljava/lang/String;)I",
             WithMutStackFrames(get_name_max0_wrp),
         );
+        table.insert(
+            "java/io/WinNTFileSystem:getLength0:(Ljava/io/File;)J",
+            crate::vm::execution_engine::system_native_table::NativeMethod::Basic(
+                crate::vm::system_native::io_file_system::get_length0_wrp,
+            ),
+        );
 
         table.insert(
             "sun/security/provider/NativeSeedGenerator:nativeGenerateSeed:([B)Z",
@@ -1010,6 +1016,10 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "java/io/UnixFileSystem:getNameMax0:(Ljava/lang/String;)J",
             Basic(get_name_max0_wrp),
+        );
+        table.insert(
+            "java/io/UnixFileSystem:getLength0:(Ljava/io/File;)J",
+            Basic(get_length0_wrp),
         );
 
         table.insert(
