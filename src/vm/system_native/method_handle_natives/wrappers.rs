@@ -13,7 +13,7 @@ use crate::vm::system_native::method_handle_natives::offsets::{
 };
 use crate::vm::system_native::method_handle_natives::resolution::{member_name_init, resolve};
 use crate::vm::system_native::method_handle_natives::var_handle::{
-    var_handle_get, var_handle_set,
+    var_handle_compare_and_set, var_handle_get, var_handle_set,
 };
 
 pub(crate) fn method_handle_natives_init_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -152,4 +152,11 @@ pub(crate) fn var_handle_get_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let handle_ref = args[0];
     let args_to_get = &args[1..];
     var_handle_get(handle_ref, args_to_get)
+}
+
+pub(crate) fn var_handle_compare_and_set_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_process = &args[1..];
+
+    var_handle_compare_and_set(handle_ref, args_to_process)
 }

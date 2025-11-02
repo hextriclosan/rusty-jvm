@@ -1,6 +1,7 @@
 package samples.locale.showlocale;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
@@ -12,7 +13,6 @@ import java.util.Date;
 public class ShowLocale {
     public static void main(String[] args) {
         List<Locale> locales = List.of(
-                //Locale.getDefault(), // https://github.com/hextriclosan/rusty-jvm/issues/489
                 Locale.JAPAN,
                 Locale.forLanguageTag("uk-UA"),
                 new Locale.Builder().setLanguage("es").setRegion("MX").build()
@@ -43,30 +43,16 @@ public class ShowLocale {
     private static void printFormattingExamples(Locale locale) {
         NumberFormat numberFormat = NumberFormat.getNumberInstance(locale);
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(locale);
-        DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.LONG, locale);
-        Date now = new Date(91, 7, 24); // August 24, 1991
 
-        double exampleNumber = 1234567.89;
+        LocalDate independence = LocalDate.of(1991, Month.AUGUST, 24);
+        DateTimeFormatter dateFormatter = DateTimeFormatter
+                .ofLocalizedDate(FormatStyle.FULL)
+                .withLocale(locale);
+
+        double exampleNumber = 1_234_567.89;
 
         System.out.println("Number Format:   " + numberFormat.format(exampleNumber));
         System.out.println("Currency Format: " + currencyFormat.format(exampleNumber));
-        System.out.println("Date Format:     " + dateFormat.format(now));
+        System.out.println("Date Format:     " + independence.format(dateFormatter));
     }
-
-    //fixme: VM execution failed: Native Call Error: Native method java/lang/invoke/VarHandle:compareAndSet not found
-//     private static void printFormattingExamples(Locale locale) {
-//         NumberFormat numberFormat = NumberFormat.getNumberInstance(locale);
-//         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(locale);
-//
-//         LocalDate now = LocalDate.of(1991, Month.AUGUST, 24);
-//         DateTimeFormatter dateFormatter = DateTimeFormatter
-//                 .ofLocalizedDate(FormatStyle.FULL)
-//                 .withLocale(locale);
-//
-//         double exampleNumber = 1_234_567.89;
-//
-//         System.out.println("Number Format:   " + numberFormat.format(exampleNumber));
-//         System.out.println("Currency Format: " + currencyFormat.format(exampleNumber));
-//         System.out.println("Date Format:     " + now.format(dateFormatter));
-//     }
 }

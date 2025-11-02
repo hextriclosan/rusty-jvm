@@ -3132,7 +3132,7 @@ ISO3 Language:      'jpn'
 ISO3 Country:       'JPN'
 Number Format:   1,234,567.89
 Currency Format: ￥1,234,568
-Date Format:     1991年8月24日
+Date Format:     1991年8月24日土曜日
 
 --- Locale: uk_UA ---
 Language:           'uk'
@@ -3148,7 +3148,7 @@ ISO3 Language:      'ukr'
 ISO3 Country:       'UKR'
 Number Format:   1 234 567,89
 Currency Format: 1 234 567,89 ₴
-Date Format:     24 серпня 1991 р.
+Date Format:     субота, 24 серпня 1991 р.
 
 --- Locale: es_MX ---
 Language:           'es'
@@ -3164,7 +3164,7 @@ ISO3 Language:      'spa'
 ISO3 Country:       'MEX'
 Number Format:   1,234,567.89
 Currency Format: $1,234,567.89
-Date Format:     24 de agosto de 1991
+Date Format:     sábado, 24 de agosto de 1991
 
 "#,
     );

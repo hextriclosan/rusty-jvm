@@ -37,8 +37,8 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_natives_init_wrp, method_handle_natives_object_field_offset_wrp,
     method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
     method_handle_natives_static_field_offset_wrp, native_accessor_invoke0_wrp,
-    native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp, var_handle_get_wrp,
-    var_handle_set_wrp,
+    native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
+    var_handle_compare_and_set_wrp, var_handle_get_wrp, var_handle_set_wrp,
 };
 use crate::vm::system_native::module::{
     add_exports0_wrp, add_exports_to_all0_wrp, add_reads0_wrp, define_module0_wrp,
@@ -629,6 +629,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/invoke/VarHandle:get", // this is a normalized polymorphic signature
         Basic(var_handle_get_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:compareAndSet", // this is a normalized polymorphic signature
+        Basic(var_handle_compare_and_set_wrp),
     );
     table.insert(
         "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",

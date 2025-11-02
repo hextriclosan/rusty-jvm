@@ -2,6 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::with_heap_read_lock;
 use crate::vm::helper::i32toi64;
+use crate::vm::stack::stack_value::StackValueKind;
 
 pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()> {
     let name = with_heap_read_lock(|h| h.get_instance_name(handle_ref))?;
@@ -95,6 +96,32 @@ pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec
     } else {
         Err(crate::vm::error::Error::new_execution(&format!(
             "var_handle_get - Unsupported VarHandle type: {name}"
+        )))
+    }
+}
+
+pub(crate) fn var_handle_compare_and_set(
+    handle_ref: i32,
+    args_to_process: &[i32],
+) -> Result<Vec<i32>> {
+    let name = with_heap_read_lock(|h| h.get_instance_name(handle_ref))?;
+
+    let mut all_args = vec![handle_ref];
+    all_args.extend_from_slice(args_to_process);
+    let all_args = all_args
+        .into_iter()
+        .map(|a| a.into())
+        .collect::<Vec<StackValueKind>>();
+    if name == "java/lang/invoke/VarHandleReferences$FieldInstanceReadWrite" {
+        let ret = Executor::invoke_static_method(
+            &name,
+            "compareAndSet:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z",
+            &all_args,
+        )?;
+        Ok(ret)
+    } else {
+        Err(crate::vm::error::Error::new_execution(&format!(
+            "var_handle_compare_and_set - Unsupported VarHandle type: {name}"
         )))
     }
 }
