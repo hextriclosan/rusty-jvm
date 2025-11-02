@@ -33,8 +33,8 @@ public class MethodHandleExample {
         demonstrateFindConstructorWithArgs(lookup);
         demonstrateFindGetterSetter(lookup);
         demonstrateFindStaticGetterSetter(lookup);
-        //demonstrateFindVarHandle(lookup); // Native Call Error: Native method java/lang/invoke/VarHandle:set not found
-        //demonstrateFindStaticVarHandle(lookup); // VM execution failed: Native Call Error: Native method java/lang/invoke/VarHandle:set not found
+        //demonstrateFindVarHandle(lookup); // Execution Error: var_handle_set - Unsupported VarHandle type: java/lang/invoke/VarHandleInts$FieldInstanceReadWrite
+        //demonstrateFindStaticVarHandle(lookup); // Execution Error: var_handle_set - Unsupported VarHandle type: java/lang/invoke/VarHandleInts$FieldStaticReadWrite
         demonstrateArrayElementVarHandle(lookup);
         demonstrateBindTo(lookup);
     }
