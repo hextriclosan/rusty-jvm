@@ -56,8 +56,8 @@ public class EnclosingMethodExample {
         System.out.println("LocalClass in constructor enclosing method: " + (localClassInConstructorEnclosingMethod != null ? localClassInConstructorEnclosingMethod.getName() : "null"));
 
         // 8. Anonymous class within a static block
-//         Object anonymousInStaticBlock = AnonymousStaticBlock.getAnonymous(); // fixme: Exception in thread \"system\" java.lang.InternalError: Enclosing method not found
-//         Method anonymousInStaticBlockEnclosingMethod = anonymousInStaticBlock.getClass().getEnclosingMethod();
+//         Object anonymousInStaticBlock = AnonymousStaticBlock.getAnonymous();
+//         Method anonymousInStaticBlockEnclosingMethod = anonymousInStaticBlock.getClass().getEnclosingMethod();  // fixme: Exception in thread \"system\" java.lang.InternalError: Enclosing method not found
 //         System.out.println("AnonymousClass in static block enclosing method: " + (anonymousInStaticBlockEnclosingMethod != null ? anonymousInStaticBlockEnclosingMethod.getName() : "null"));
     }
 
