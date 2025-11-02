@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use assert_cmd::Command;
+use assert_cmd::{cargo_bin_cmd, Command};
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use std::{env, fs, iter};
@@ -215,7 +215,7 @@ pub fn assert_file_with_args(
 }
 
 fn get_command(arguments: &[&str]) -> Command {
-    let mut cmd = Command::cargo_bin("rusty-jvm").expect("Failed to locate rusty-jvm binary");
+    let mut cmd = cargo_bin_cmd!("rusty-jvm");
     cmd.current_dir(TEST_PATH.as_path()).args(arguments);
     cmd
 }
