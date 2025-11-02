@@ -18,7 +18,7 @@ public class UnsafeUsage {
         compareAndSetLong();
         compareAndExchangeLong();
         getReferenceAcquire();
-        //modifyClassFieldValue(); // todo: leads to java.lang.ClassLoader.scl is null
+        modifyClassFieldValue();
         getSetStaticField();
         putInt();
         putIntVolatile();
