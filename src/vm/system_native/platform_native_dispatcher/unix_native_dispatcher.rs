@@ -36,7 +36,7 @@ fn get_cwd(stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
         .collect::<Vec<_>>();
 
     // Allocate the byte array in the heap and return its reference
-    let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values("[b", &cwd));
+    let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values("[B", &cwd));
 
     ThrowingResult::ok(array_ref)
 }
