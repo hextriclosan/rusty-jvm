@@ -163,7 +163,7 @@ pub(crate) fn arraycopy(
             };
             format!(
                 "arraycopy: last destination index {} out of bounds for {}[{}]",
-                dest_pos + length,
+                dest_pos as u32 + length as u32,
                 dest_array,
                 dest_len
             )
@@ -230,7 +230,7 @@ pub(crate) fn arraycopy(
     ThrowingResult::ok(())
 }
 fn to_external(internal_name: &str) -> String {
-    internal_name.replace("/", ".")
+    internal_name.replace('/', ".")
 }
 fn is_primitive_array(array_name: &str) -> bool {
     matches!(
