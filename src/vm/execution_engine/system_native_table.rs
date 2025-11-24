@@ -120,7 +120,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/lang/System:nanoTime:()J", Basic(nano_time_wrp));
     table.insert(
         "java/lang/System:arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
-        Basic(arraycopy_wrp),
+        WithMutStackFrames(arraycopy_wrp),
     );
     table.insert("java/lang/System:registerNatives:()V", Basic(void_stub));
     table.insert(
