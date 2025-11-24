@@ -331,11 +331,27 @@ fn should_do_interface_and_abstract_class() {
 fn should_do_native_call_on_system_array_copy() {
     assert_success(
         "samples.nativecall.system.NativeCallSystemArrayCopy",
-        r#"intArr(): [1, 2, 20, 30, 40, 6]
-longArr(): [1, 2, 128849018920, 214748364860, 300647710800, 6]
-intArrOverlapping(): [10, 10, 20, 30, 40, 50]
-longArrOverlapping(): [42949672980, 42949672980, 128849018920, 214748364860, 300647710800, 386547056740]
-upcasting(): [10, 20, 30]
+        r#"=== POSITIVE CASES ===
+positive_intArrayCopy: [1, 2, 20, 30, 40]
+positive_longArrayCopy: [1, 2, 128849018920, 214748364860, 300647710800, 6]
+positive_overlappingInt: [10, 10, 20, 30, 40, 50]
+positive_overlappingLong: [42949672980, 42949672980, 128849018920, 214748364860, 300647710800, 386547056740]
+positive_upcasting: [10, 20, 30]
+positive_runtimeCompatible: [3.14, 2.71, 1.41]
+=== NEGATIVE CASES ===
+negative_nullSrc: java.lang.NullPointerException
+negative_nullDest: java.lang.NullPointerException
+negative_srcNotArray: java.lang.ArrayStoreException: arraycopy: source type java.lang.String is not an array
+negative_destNotArray: java.lang.ArrayStoreException: arraycopy: destination type java.lang.Long is not an array
+negative_srcPrimitive_destReference: java.lang.ArrayStoreException: arraycopy: type mismatch: can not copy long[] into object array[]
+negative_srcReference_destPrimitive: java.lang.ArrayStoreException: arraycopy: type mismatch: can not copy object array[] into long[]
+negative_differentPrimitiveTypes: java.lang.ArrayStoreException: arraycopy: type mismatch: can not copy long[] into int[]
+negative_incompatibleReferences: java.lang.ArrayStoreException: arraycopy: element type mismatch: can not cast one of the elements of java.lang.Number[] to the type of the destination array, java.lang.Double destination after copying: [3.0, 2.0, 1.41]
+negative_srcPosNegative: java.lang.ArrayIndexOutOfBoundsException: arraycopy: source index -1 out of bounds for long[3]
+negative_destPosNegative: java.lang.ArrayIndexOutOfBoundsException: arraycopy: destination index -1 out of bounds for long[3]
+negative_lengthNegative: java.lang.ArrayIndexOutOfBoundsException: arraycopy: length -1 is negative
+negative_srcPosPlusLengthTooBig: java.lang.ArrayIndexOutOfBoundsException: arraycopy: last source index 4 out of bounds for long[3]
+negative_destPosPlusLengthTooBig: java.lang.ArrayIndexOutOfBoundsException: arraycopy: last destination index 4 out of bounds for long[3]
 "#,
     );
 }

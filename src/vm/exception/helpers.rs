@@ -37,6 +37,17 @@ pub fn throw_file_not_found_exception(
     Ok(())
 }
 
+pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()> {
+    construct_exception_and_throw(
+        "java/lang/NullPointerException",
+        "<init>:()V",
+        &[],
+        stack_frames,
+    )?;
+
+    Ok(())
+}
+
 pub fn throw_null_pointer_exception_with_message(
     message: &str,
     stack_frames: &mut StackFrames,
@@ -122,6 +133,35 @@ fn throw_index_out_of_bounds_exception(
     let args = vec![StackValueKind::from(message_ref)];
     construct_exception_and_throw(
         "java/lang/IndexOutOfBoundsException",
+        "<init>:(Ljava/lang/String;)V",
+        &args,
+        stack_frames,
+    )?;
+
+    Ok(())
+}
+
+pub fn throw_array_index_out_of_bounds_exception_with_message(
+    message: &str,
+    stack_frames: &mut StackFrames,
+) -> Result<()> {
+    let message_ref = StringPoolHelper::get_string(message)?;
+    let args = vec![StackValueKind::from(message_ref)];
+    construct_exception_and_throw(
+        "java/lang/ArrayIndexOutOfBoundsException",
+        "<init>:(Ljava/lang/String;)V",
+        &args,
+        stack_frames,
+    )?;
+
+    Ok(())
+}
+
+pub fn throw_array_store_exception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
+    let message_ref = StringPoolHelper::get_string(message)?;
+    let args = vec![StackValueKind::from(message_ref)];
+    construct_exception_and_throw(
+        "java/lang/ArrayStoreException",
         "<init>:(Ljava/lang/String;)V",
         &args,
         stack_frames,
