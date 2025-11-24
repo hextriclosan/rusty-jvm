@@ -39,7 +39,7 @@ impl StringPoolHelper {
     // todo: consider creating all CPool strings like this
     fn create_empty_string() -> Result<i32> {
         let byte_array_ref =
-            with_heap_write_lock(|heap| heap.create_array_with_values("[b", &vec![]));
+            with_heap_write_lock(|heap| heap.create_array_with_values("[B", &vec![]));
         let args = vec![byte_array_ref.into(), 0.into() /*coder LATIN1*/];
         let string_instance_ref = Executor::invoke_args_constructor(
             "java/lang/String",
