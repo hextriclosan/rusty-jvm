@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::heap::java_instance::Array;
 use crate::vm::helper::clazz_ref;
 use crate::vm::method_area::java_method::JavaMethod;
@@ -59,34 +59,23 @@ fn resolve_method_and_args(
     method_or_constructor_ref: i32,
     args_ref: i32,
 ) -> Result<(Arc<JavaMethod>, Vec<StackValueKind>)> {
-    let (clazz_ref, slot, entire_array_args, parameter_types) = with_heap_read_lock(|heap| {
-        let method_name = heap.get_instance_name(method_or_constructor_ref)?;
-        let clazz_ref =
-            heap.get_object_field_value(method_or_constructor_ref, method_name.as_str(), "clazz")?
-                [0];
-        let slot =
-            heap.get_object_field_value(method_or_constructor_ref, method_name.as_str(), "slot")?
-                [0];
-        let parameter_types_ref = heap.get_object_field_value(
-            method_or_constructor_ref,
-            method_name.as_str(),
-            "parameterTypes",
-        )?[0];
+    let method_name = HEAP.get_instance_name(method_or_constructor_ref)?;
+    let clazz_ref =
+        HEAP.get_object_field_value(method_or_constructor_ref, method_name.as_str(), "clazz")?[0];
+    let slot =
+        HEAP.get_object_field_value(method_or_constructor_ref, method_name.as_str(), "slot")?[0];
+    let parameter_types_ref = HEAP.get_object_field_value(
+        method_or_constructor_ref,
+        method_name.as_str(),
+        "parameterTypes",
+    )?[0];
 
-        let entire_array_args = if args_ref != 0 {
-            heap.get_entire_array(args_ref)?
-        } else {
-            Array::new("[Ljava/lang/Object;", 0)
-        };
-        let parameter_types = heap.get_entire_array(parameter_types_ref)?;
-
-        Ok::<(i32, i32, Array, Array), Error>((
-            clazz_ref,
-            slot,
-            entire_array_args,
-            parameter_types,
-        ))
-    })?;
+    let entire_array_args = if args_ref != 0 {
+        HEAP.get_entire_array(args_ref)?
+    } else {
+        Array::new("[Ljava/lang/Object;", 0)
+    };
+    let parameter_types = HEAP.get_entire_array(parameter_types_ref)?;
 
     let jc = with_method_area(|a| {
         let clazz_name = a.get_from_reflection_table(clazz_ref)?;

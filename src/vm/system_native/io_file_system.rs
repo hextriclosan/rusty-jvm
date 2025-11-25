@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use bitflags::bitflags;
@@ -236,8 +236,6 @@ fn check_access_impl(path: &Path, mode: Access) -> bool {
 }
 
 fn extract_path(file_ref: i32) -> Result<i32> {
-    Ok(
-        with_heap_read_lock(|heap| heap.get_object_field_value(file_ref, "java/io/File", "path"))?
-            [0],
-    )
+    let raw = HEAP.get_object_field_value(file_ref, "java/io/File", "path")?;
+    Ok(raw[0])
 }

@@ -3,7 +3,7 @@ use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::static_init::StaticInit;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::vec_to_i64;
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
@@ -34,7 +34,7 @@ pub fn invoke_exact(
     method_args: &[i32],
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    let handle_name = with_heap_read_lock(|heap| heap.get_instance_name(handle_ref))?;
+    let handle_name = HEAP.get_instance_name(handle_ref)?;
     if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
         return direct_method_handle_invocation(
             handle_ref,
@@ -67,9 +67,7 @@ fn direct_method_handle_invocation(
     stack_frames: &mut StackFrames,
     handle_name: &String,
 ) -> Result<()> {
-    let member_name_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(handle_ref, &handle_name, "member")
-    })?[0];
+    let member_name_ref = HEAP.get_object_field_value(handle_ref, &handle_name, "member")?[0];
     let member_name = MemberName::new(member_name_ref)?;
     let reference_kind = member_name.reference_kind();
 
@@ -102,13 +100,10 @@ fn bound_method_handle_invocation(
         print_species(handle_ref, 0)?;
     }
 
-    let lambda_form_ref =
-        with_heap_read_lock(|heap| heap.get_object_field_value(handle_ref, handle_name, "form"))?
-            [0];
+    let lambda_form_ref = HEAP.get_object_field_value(handle_ref, handle_name, "form")?[0];
 
-    let vmentry_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(lambda_form_ref, "java/lang/invoke/LambdaForm", "vmentry")
-    })?[0];
+    let vmentry_ref =
+        HEAP.get_object_field_value(lambda_form_ref, "java/lang/invoke/LambdaForm", "vmentry")?[0];
 
     let member_name = MemberName::new(vmentry_ref)?;
     let class_name_to_load = member_name.class_name();
@@ -147,12 +142,10 @@ fn bound_method_handle_invocation(
 
 fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
     let ind = " ".repeat(indent * 2);
-    let handle_name = with_heap_read_lock(|heap| heap.get_instance_name(handle_ref))?;
+    let handle_name = HEAP.get_instance_name(handle_ref)?;
     eprint!("{ind}{handle_name} ");
     if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
-        let member_name_ref = with_heap_read_lock(|heap| {
-            heap.get_object_field_value(handle_ref, &handle_name, "member")
-        })?[0];
+        let member_name_ref = HEAP.get_object_field_value(handle_ref, &handle_name, "member")?[0];
         let member_name = MemberName::new(member_name_ref)?;
         eprintln!("{}.{}", member_name.class_name(), member_name.name());
     } else if handle_name.starts_with(BOUND_METHOD_HANDLE) {
@@ -167,15 +160,11 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
         for (c, type_) in args_name {
             match type_ {
                 'L' => {
-                    let arg_ref = with_heap_read_lock(|heap| {
-                        heap.get_object_field_value(handle_ref, &handle_name, &c)
-                    })?[0];
+                    let arg_ref = HEAP.get_object_field_value(handle_ref, &handle_name, &c)?[0];
                     print_species(arg_ref, indent + 1)?;
                 }
                 'J' => {
-                    let raw = with_heap_read_lock(|heap| {
-                        heap.get_object_field_value(handle_ref, &handle_name, &c)
-                    })?;
+                    let raw = HEAP.get_object_field_value(handle_ref, &handle_name, &c)?;
                     let long = vec_to_i64(&raw);
                     eprintln!("{ind}  long={long}")
                 }
@@ -232,8 +221,7 @@ fn invoke_exact_method(
             let reference = method_args
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
-            let instance_type_class_name =
-                with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
+            let instance_type_class_name = HEAP.get_instance_name(*reference)?;
 
             let type_obj_ref = member_name.type_obj_ref();
             let method_type = MethodType::new(type_obj_ref)?;
@@ -324,8 +312,7 @@ fn mimic_new(
         method_area.create_instance_with_default_fields(&class_name)
     })?;
 
-    let instanceref =
-        with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
+    let instanceref = HEAP.create_instance(instance_with_default_fields);
 
     let stack_frame = last_frame_mut(stack_frames)?;
     stack_frame.push(instanceref)?; // NEW opcode
@@ -344,9 +331,7 @@ fn invoke_exact_get_field(
 ) -> Result<()> {
     let (instance_ref, class_name, field_name, _) = prepare_field(member_name, method_args)?;
 
-    let value = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(instance_ref, &class_name, &field_name)
-    })?;
+    let value = HEAP.get_object_field_value(instance_ref, &class_name, &field_name)?;
     let last_frame = last_frame_mut(stack_frames)?;
     value.iter().try_for_each(|val| last_frame.push(*val))?;
 
@@ -356,9 +341,7 @@ fn invoke_exact_get_field(
 fn invoke_exact_put_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
     let (instance_ref, class_name, field_name, args) = prepare_field(member_name, method_args)?;
 
-    with_heap_write_lock(|heap| {
-        heap.set_object_field_value(instance_ref, &class_name, &field_name, args)
-    })
+    HEAP.set_object_field_value(instance_ref, &class_name, &field_name, args)
 }
 
 fn invoke_exact_get_static_field(
@@ -385,7 +368,7 @@ fn prepare_field(
 ) -> Result<(i32, String, String, Vec<i32>)> {
     let instance_ref = method_args[0];
     let args = method_args[1..].to_vec();
-    let class_name = with_heap_read_lock(|heap| heap.get_instance_name(instance_ref))?;
+    let class_name = HEAP.get_instance_name(instance_ref)?;
 
     let jc = with_method_area(|area| area.get(class_name.as_str()))?;
     let member_name_ref = member_name.member_name_ref();

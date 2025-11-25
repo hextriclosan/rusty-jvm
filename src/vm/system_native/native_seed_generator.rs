@@ -1,5 +1,5 @@
 use crate::vm::error::Result;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use rand::rand_core::OsRng;
 use rand::TryRngCore;
 
@@ -10,9 +10,7 @@ pub(crate) fn native_generate_seed_wrp(args: &[i32]) -> Result<Vec<i32>> {
 }
 
 fn native_generate_seed(byte_array_ref: i32) -> Result<bool> {
-    with_heap_write_lock(|h| {
-        let mut raw_data = h.get_entire_raw_data_mut(byte_array_ref)?;
-        OsRng.try_fill_bytes(raw_data.as_mut_slice())?;
-        Ok(true)
-    })
+    let mut raw_data = HEAP.get_entire_raw_data_mut(byte_array_ref)?;
+    OsRng.try_fill_bytes(raw_data.as_mut_slice())?;
+    Ok(true)
 }

@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::undecorate;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
@@ -118,8 +118,7 @@ impl ReflectionClassLoader {
 
         reflection_instance.set_field_value("java/lang/Class", "module", vec![module_ref])?;
 
-        let reflection_reference =
-            with_heap_write_lock(|heap| heap.create_instance(reflection_instance));
+        let reflection_reference = HEAP.create_instance(reflection_instance);
 
         with_method_area(|method_area| {
             method_area.put_to_reflection_table(reflection_reference, this_class_name)?;

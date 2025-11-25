@@ -1,7 +1,7 @@
 use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i64::AutoDashMapI64;
 use crate::vm::error::{Error, Result};
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::system_native::zip::common::DEFAULT_WINDOW_BITS;
 use miniz_oxide::deflate::core::{create_comp_flags_from_zip_params, CompressorOxide};
@@ -80,18 +80,14 @@ fn deflater_deflate_bytes_bytes(
     })?;
     let comp = entry.value_mut();
 
-    let stream_result = with_heap_write_lock(|h| {
-        let input = {
-            let input_array = h.get_entire_raw_data(input_array_ref)?;
-            input_array[input_off as usize..(input_off + input_len) as usize].to_vec()
-        };
+    let input = {
+        let input_array = HEAP.get_entire_raw_data(input_array_ref)?;
+        input_array[input_off as usize..(input_off + input_len) as usize].to_vec()
+    };
 
-        let mut output_array = h.get_entire_raw_data_mut(output_array_ref)?;
-        let output = &mut output_array[output_off as usize..(output_off + output_len) as usize];
-        let stream_result = deflate(comp, &input, output, MZFlush::new(flush)?);
-
-        Ok::<StreamResult, Error>(stream_result)
-    })?;
+    let mut output_array = HEAP.get_entire_raw_data_mut(output_array_ref)?;
+    let output = &mut output_array[output_off as usize..(output_off + output_len) as usize];
+    let stream_result = deflate(comp, &input, output, MZFlush::new(flush)?);
 
     check_deflate_status(stream_result)
 }

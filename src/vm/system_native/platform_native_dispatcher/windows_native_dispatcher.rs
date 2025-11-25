@@ -1,8 +1,8 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_internal_error;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
@@ -534,35 +534,30 @@ fn get_volume_information0(
     let volume_name_ref = unwrap_or_return_err!(wchar_to_string_ref(&volume_name));
     let filesystem_name_ref = unwrap_or_return_err!(wchar_to_string_ref(&filesystem_name));
 
-    let result = with_heap_write_lock(|heap| {
-        heap.set_object_field_value(
-            volume_information_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
-            "volumeName",
-            vec![volume_name_ref],
-        )?;
-        heap.set_object_field_value(
-            volume_information_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
-            "fileSystemName",
-            vec![filesystem_name_ref],
-        )?;
-
-        heap.set_object_field_value(
-            volume_information_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
-            "volumeSerialNumber",
-            vec![volume_serial_number as i32],
-        )?;
-        heap.set_object_field_value(
-            volume_information_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
-            "flags",
-            vec![flags as i32],
-        )?;
-        Ok::<(), Error>(())
-    });
-    unwrap_or_return_err!(result);
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        volume_information_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
+        "volumeName",
+        vec![volume_name_ref],
+    ));
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        volume_information_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
+        "fileSystemName",
+        vec![filesystem_name_ref],
+    ));
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        volume_information_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
+        "volumeSerialNumber",
+        vec![volume_serial_number as i32],
+    ));
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        volume_information_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
+        "flags",
+        vec![flags as i32],
+    ));
 
     ThrowingResult::ok(())
 }
@@ -675,28 +670,24 @@ fn find_first_file0(
     let name_ref = unwrap_or_return_err!(wchar_to_string_ref(&c_file_name));
     let attributes = data.dwFileAttributes as i32;
 
-    let result = with_heap_write_lock(|heap| {
-        heap.set_object_field_value(
-            first_file_obj_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
-            "handle",
-            i64_to_vec(handle as i64),
-        )?;
-        heap.set_object_field_value(
-            first_file_obj_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
-            "name",
-            vec![name_ref],
-        )?;
-        heap.set_object_field_value(
-            first_file_obj_ref,
-            "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
-            "attributes",
-            vec![attributes],
-        )?;
-        Ok::<(), Error>(())
-    });
-    let _res = unwrap_or_return_err!(result);
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        first_file_obj_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
+        "handle",
+        i64_to_vec(handle as i64),
+    ));
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        first_file_obj_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
+        "name",
+        vec![name_ref],
+    ));
+    unwrap_or_return_err!(HEAP.set_object_field_value(
+        first_file_obj_ref,
+        "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
+        "attributes",
+        vec![attributes],
+    ));
 
     ThrowingResult::ok(())
 }

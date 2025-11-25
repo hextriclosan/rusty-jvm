@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -33,7 +33,7 @@ pub fn throw_exception_with_ref(
     throwable_ref: i32,
     stack_frames: &mut StackFrames,
 ) -> Result<(String, i16)> {
-    let exception_name = with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
+    let exception_name = HEAP.get_instance_name(throwable_ref)?;
     trace!("<THROWING> -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
     let found_exception_handler = unwind_stack(throwable_ref, stack_frames)?;
 
@@ -46,7 +46,7 @@ pub fn throw_exception_with_ref(
 }
 
 fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i16> {
-    let exception_name = with_heap_read_lock(|heap| heap.get_instance_name(throwable_ref))?;
+    let exception_name = HEAP.get_instance_name(throwable_ref)?;
     while !stack_frames.is_empty() {
         let stack_frame = last_frame_mut(stack_frames)?;
         let exception_table = stack_frame.exception_table();

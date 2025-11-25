@@ -1,7 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::{throw_file_not_found_exception, throw_ioexception};
 use crate::vm::exception::throwing_result::ThrowingResult;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode::FileOutputStream;
 use crate::vm::system_native::platform_file::PlatformFile;
@@ -103,8 +103,7 @@ fn write_bytes(
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
-    let array =
-        unwrap_or_return_err!(with_heap_read_lock(|heap| heap.get_entire_array(bytes_ref)));
+    let array = unwrap_or_return_err!(HEAP.get_entire_array(bytes_ref));
     let raw = array.get_entire_value();
     let mut vec = Vec::with_capacity(raw.len());
     for i in off..off + len {

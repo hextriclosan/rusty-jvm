@@ -13,7 +13,7 @@ use windows_impl::open0;
 #[cfg(unix)]
 mod unix_impl;
 use crate::vm::exception::helpers::{check_bounds, throw_ioexception};
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i32toi64;
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
 #[cfg(unix)]
@@ -103,13 +103,10 @@ fn write_bytes0(
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
 
-    let ret = with_heap_read_lock(|h| {
-        let input_array = h.get_entire_raw_data(bytes_ref)?;
-        let input = &input_array[offset as usize..(offset + len) as usize];
-        file.write_all(input)?;
-        Ok::<_, Error>(())
-    });
-    unwrap_or_return_err!(ret);
+    let input_array = unwrap_or_return_err!(HEAP.get_entire_raw_data(bytes_ref));
+    let input = &input_array[offset as usize..(offset + len) as usize];
+    unwrap_or_return_err!(file.write_all(input));
+
     ThrowingResult::ok(())
 }
 
@@ -150,14 +147,11 @@ pub(super) fn read_bytes0(
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
 
-    let result = with_heap_read_lock(|h| {
-        let mut input_array = h.get_entire_raw_data_mut(bytes_ref)?;
-        let mut input = &mut input_array[offset as usize..(offset + len) as usize];
-        let read = file.read(&mut input)?;
-        Ok::<_, Error>(read)
-    });
+    let mut input_array = unwrap_or_return_err!(HEAP.get_entire_raw_data_mut(bytes_ref));
+    let mut input = &mut input_array[offset as usize..(offset + len) as usize];
+    let read = file.read(&mut input);
 
-    match result {
+    match read {
         Ok(n) if n == 0 => ThrowingResult::ok(-1),
         Ok(n) => ThrowingResult::ok(n as i32),
         Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),

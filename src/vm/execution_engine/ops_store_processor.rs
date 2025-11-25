@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -79,7 +79,7 @@ fn handle_array_store<T: StackValue + Display + Copy>(
     let index = stack_frame.pop();
     let arrayref: i32 = stack_frame.pop();
     let raw_value = value.to_vec();
-    with_heap_write_lock(|heap| heap.set_array_value(arrayref, index, raw_value))?;
+    HEAP.set_array_value(arrayref, index, raw_value)?;
 
     stack_frame.incr_pc();
     trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");

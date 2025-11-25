@@ -2,7 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -83,7 +83,7 @@ fn handle_array_load<T: StackValue + Display + Copy>(
         )?;
         return Ok(());
     }
-    let raw_value = with_heap_read_lock(|heap| heap.get_array_value(arrayref, index))?;
+    let raw_value = HEAP.get_array_value(arrayref, index)?;
 
     let value: T = T::from_vec(&raw_value);
     stack_frame.push(value)?;

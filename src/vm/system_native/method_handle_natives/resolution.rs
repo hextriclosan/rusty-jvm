@@ -1,5 +1,5 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::method_handle_natives::member_name::{
     set_reference_kind, MemberName,
@@ -87,14 +87,13 @@ pub(crate) fn member_name_init(member_name_ref: i32, obj_ref: i32) -> Result<()>
     const MN_IS_METHOD: i32 = 0x00010000; // method (not constructor)
     const MN_IS_CONSTRUCTOR: i32 = 0x00020000; // constructor
 
-    let obj_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
+    let obj_name = HEAP.get_instance_name(obj_ref)?;
 
     match obj_name.as_str() {
         "java/lang/reflect/Method" => {
             // fill in vmtarget, vmindex while we have Method ref in hand:
-            let modifiers = with_heap_read_lock(|h| {
-                h.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")
-            })?[0];
+            let modifiers =
+                HEAP.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")?[0];
             let method_flags = MethodFlags::from_bits_truncate(modifiers as u16);
             let kind = if method_flags.contains(MethodFlags::ACC_STATIC) {
                 REF_invokeStatic
@@ -132,14 +131,10 @@ fn init_from_method_or_constructor(
     kind: ReferenceKind,
     internal_flag: i32,
 ) -> Result<()> {
-    let obj_name = with_heap_read_lock(|heap| heap.get_instance_name(obj_ref))?;
-    let (clazz_ref, modifiers, slot) = with_heap_read_lock(|h| {
-        let clazz_ref = h.get_object_field_value(obj_ref, obj_name.as_str(), "clazz")?[0];
-        let modifiers = h.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")?[0];
-        let slot = h.get_object_field_value(obj_ref, obj_name.as_str(), "slot")?[0];
-
-        Ok::<(i32, i32, i32), Error>((clazz_ref, modifiers, slot))
-    })?;
+    let obj_name = HEAP.get_instance_name(obj_ref)?;
+    let clazz_ref = HEAP.get_object_field_value(obj_ref, obj_name.as_str(), "clazz")?[0];
+    let modifiers = HEAP.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")?[0];
+    let slot = HEAP.get_object_field_value(obj_ref, obj_name.as_str(), "slot")?[0];
 
     let resolved_method_name = ResolvedMethodName::new_create_instance(clazz_ref, slot as i64)?;
     resolved_method_name.propagate_all()?;
@@ -148,27 +143,24 @@ fn init_from_method_or_constructor(
     let enriched_with_kind = set_reference_kind(modifiers, kind);
     let enriched_with_internal_flags = enriched_with_kind | internal_flag;
 
-    with_heap_write_lock(|h| {
-        h.set_object_field_value(
-            member_name_ref,
-            "java/lang/invoke/MemberName",
-            "clazz",
-            vec![clazz_ref],
-        )?;
-        h.set_object_field_value(
-            member_name_ref,
-            "java/lang/invoke/MemberName",
-            "flags",
-            vec![enriched_with_internal_flags],
-        )?;
-        h.set_object_field_value(
-            member_name_ref,
-            "java/lang/invoke/MemberName",
-            "method",
-            vec![method_ref],
-        )?;
+    HEAP.set_object_field_value(
+        member_name_ref,
+        "java/lang/invoke/MemberName",
+        "clazz",
+        vec![clazz_ref],
+    )?;
+    HEAP.set_object_field_value(
+        member_name_ref,
+        "java/lang/invoke/MemberName",
+        "flags",
+        vec![enriched_with_internal_flags],
+    )?;
+    HEAP.set_object_field_value(
+        member_name_ref,
+        "java/lang/invoke/MemberName",
+        "method",
+        vec![method_ref],
+    )?;
 
-        Ok::<(), Error>(())
-    })?;
     Ok(())
 }

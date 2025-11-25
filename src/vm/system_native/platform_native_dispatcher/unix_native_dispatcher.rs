@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::throwing_result::ThrowingResult;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::unix_helpers::{
@@ -36,7 +36,7 @@ fn get_cwd(stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
         .collect::<Vec<_>>();
 
     // Allocate the byte array in the heap and return its reference
-    let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values("[B", &cwd));
+    let array_ref = HEAP.create_array_with_values("[B", &cwd);
 
     ThrowingResult::ok(array_ref)
 }
@@ -214,52 +214,48 @@ fn cstring_from_i64(ptr_value: i64) -> Result<CString> {
 
 fn copy_stat_attributes(attr_ref: i32, stat: FileStat) -> Result<()> {
     let name = "sun/nio/fs/UnixFileAttributes";
-    with_heap_write_lock(|heap| {
-        heap.set_object_field_value(attr_ref, name, "st_mode", vec![stat.st_mode as i32])?;
-        heap.set_object_field_value(attr_ref, name, "st_ino", i64_to_vec(stat.st_ino as i64))?;
-        heap.set_object_field_value(attr_ref, name, "st_nlink", vec![stat.st_nlink as i32])?;
-        heap.set_object_field_value(attr_ref, name, "st_uid", vec![stat.st_uid as i32])?;
-        heap.set_object_field_value(attr_ref, name, "st_gid", vec![stat.st_gid as i32])?;
-        heap.set_object_field_value(attr_ref, name, "st_size", i64_to_vec(stat.st_size as i64))?;
-        heap.set_object_field_value(
-            attr_ref,
-            name,
-            "st_atime_sec",
-            i64_to_vec(stat.st_atime as i64),
-        )?;
-        heap.set_object_field_value(
-            attr_ref,
-            name,
-            "st_mtime_sec",
-            i64_to_vec(stat.st_mtime as i64),
-        )?;
-        heap.set_object_field_value(
-            attr_ref,
-            name,
-            "st_ctime_sec",
-            i64_to_vec(stat.st_ctime as i64),
-        )?;
-        heap.set_object_field_value(
-            attr_ref,
-            name,
-            "st_atime_nsec",
-            i64_to_vec(stat.st_atime_nsec),
-        )?;
-        heap.set_object_field_value(
-            attr_ref,
-            name,
-            "st_mtime_nsec",
-            i64_to_vec(stat.st_mtime_nsec),
-        )?;
-        heap.set_object_field_value(
-            attr_ref,
-            name,
-            "st_ctime_nsec",
-            i64_to_vec(stat.st_ctime_nsec),
-        )?;
-
-        Ok::<(), Error>(())
-    })
+    HEAP.set_object_field_value(attr_ref, name, "st_mode", vec![stat.st_mode as i32])?;
+    HEAP.set_object_field_value(attr_ref, name, "st_ino", i64_to_vec(stat.st_ino as i64))?;
+    HEAP.set_object_field_value(attr_ref, name, "st_nlink", vec![stat.st_nlink as i32])?;
+    HEAP.set_object_field_value(attr_ref, name, "st_uid", vec![stat.st_uid as i32])?;
+    HEAP.set_object_field_value(attr_ref, name, "st_gid", vec![stat.st_gid as i32])?;
+    HEAP.set_object_field_value(attr_ref, name, "st_size", i64_to_vec(stat.st_size as i64))?;
+    HEAP.set_object_field_value(
+        attr_ref,
+        name,
+        "st_atime_sec",
+        i64_to_vec(stat.st_atime as i64),
+    )?;
+    HEAP.set_object_field_value(
+        attr_ref,
+        name,
+        "st_mtime_sec",
+        i64_to_vec(stat.st_mtime as i64),
+    )?;
+    HEAP.set_object_field_value(
+        attr_ref,
+        name,
+        "st_ctime_sec",
+        i64_to_vec(stat.st_ctime as i64),
+    )?;
+    HEAP.set_object_field_value(
+        attr_ref,
+        name,
+        "st_atime_nsec",
+        i64_to_vec(stat.st_atime_nsec),
+    )?;
+    HEAP.set_object_field_value(
+        attr_ref,
+        name,
+        "st_mtime_nsec",
+        i64_to_vec(stat.st_mtime_nsec),
+    )?;
+    HEAP.set_object_field_value(
+        attr_ref,
+        name,
+        "st_ctime_nsec",
+        i64_to_vec(stat.st_ctime_nsec),
+    )
 }
 
 pub fn realpath0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
@@ -288,7 +284,7 @@ fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i3
         .collect::<Vec<_>>();
 
     // Allocate the byte array in the heap and return its reference
-    let array_ref = with_heap_write_lock(|heap| heap.create_array_with_values("[B", &path_bytes));
+    let array_ref = HEAP.create_array_with_values("[B", &path_bytes);
 
     ThrowingResult::ok(array_ref)
 }

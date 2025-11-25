@@ -5,7 +5,7 @@ use crate::vm::exception::helpers::{
 };
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i64_to_vec, undecorate};
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
@@ -60,8 +60,8 @@ pub(crate) fn arraycopy(
         throw_and_return!(throw_null_pointer_exception(stack_frames))
     }
 
-    let src_name = unwrap_or_return_err!(with_heap_read_lock(|h| h.get_instance_name(src_ref)));
-    let dest_name = unwrap_or_return_err!(with_heap_read_lock(|h| h.get_instance_name(dest_ref)));
+    let src_name = unwrap_or_return_err!(HEAP.get_instance_name(src_ref));
+    let dest_name = unwrap_or_return_err!(HEAP.get_instance_name(dest_ref));
     if !src_name.starts_with('[') || !dest_name.starts_with('[') {
         let msg = if !src_name.starts_with('[') {
             format!(
@@ -114,8 +114,8 @@ pub(crate) fn arraycopy(
         }
     }
 
-    let src_len = unwrap_or_return_err!(with_heap_read_lock(|h| h.get_array_len(src_ref)));
-    let dest_len = unwrap_or_return_err!(with_heap_read_lock(|h| h.get_array_len(dest_ref)));
+    let src_len = unwrap_or_return_err!(HEAP.get_array_len(src_ref));
+    let dest_len = unwrap_or_return_err!(HEAP.get_array_len(dest_ref));
     if src_pos < 0 || dest_pos < 0 || length < 0 {
         let msg = if src_pos < 0 {
             let src_array = if primitive {
@@ -192,16 +192,12 @@ pub(crate) fn arraycopy(
         (0, length, 1)
     };
     while i != end {
-        let value_to_set = unwrap_or_return_err!(with_heap_read_lock(
-            |h| h.get_array_value(src_ref, src_pos + i)
-        ));
+        let value_to_set = unwrap_or_return_err!(HEAP.get_array_value(src_ref, src_pos + i));
 
         if let Some(ref dest_element_type) = dest_element_type_name {
             let element_ref = value_to_set[0];
             if element_ref != 0 {
-                let element_type_name = unwrap_or_return_err!(with_heap_read_lock(
-                    |h| h.get_instance_name(element_ref)
-                ));
+                let element_type_name = unwrap_or_return_err!(HEAP.get_instance_name(element_ref));
                 if !unwrap_or_return_err!(InstanceChecker::checkcast(
                     &element_type_name,
                     &dest_element_type
@@ -218,11 +214,7 @@ pub(crate) fn arraycopy(
             }
         }
 
-        unwrap_or_return_err!(with_heap_write_lock(|h| h.set_array_value(
-            dest_ref,
-            dest_pos + i,
-            value_to_set
-        )));
+        unwrap_or_return_err!(HEAP.set_array_value(dest_ref, dest_pos + i, value_to_set,));
 
         i += step;
     }

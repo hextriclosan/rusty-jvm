@@ -1,6 +1,6 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
@@ -32,14 +32,10 @@ pub struct MemberName {
 
 impl MemberName {
     pub fn new(member_name_ref: i32) -> Result<Self> {
-        let (flags, class_ref, name_ref, type_obj_ref) = with_heap_read_lock(|heap| {
-            let flags = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "flags")?[0];
-            let class_ref = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "clazz")?[0];
-            let name_ref = heap.get_object_field_value(member_name_ref, MEMBER_NAME, "name")?[0];
-            let type_obj_ref =
-                heap.get_object_field_value(member_name_ref, MEMBER_NAME, "type")?[0];
-            Ok::<(i32, i32, i32, i32), Error>((flags, class_ref, name_ref, type_obj_ref))
-        })?;
+        let flags = HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "flags")?[0];
+        let class_ref = HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "clazz")?[0];
+        let name_ref = HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "name")?[0];
+        let type_obj_ref = HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "type")?[0];
 
         let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
         let name = get_utf8_string_by_ref(name_ref)?;
@@ -62,9 +58,7 @@ impl MemberName {
     }
 
     pub fn propagate_flags(&mut self, flags: i32) -> Result<()> {
-        with_heap_write_lock(|heap| {
-            heap.set_object_field_value(self.member_name_ref, MEMBER_NAME, "flags", vec![flags])
-        })?;
+        HEAP.set_object_field_value(self.member_name_ref, MEMBER_NAME, "flags", vec![flags])?;
         self.flags = flags;
         Ok(())
     }
@@ -82,14 +76,12 @@ impl MemberName {
 
     fn propagate_method_ref(&self) -> Result<()> {
         if let Some(method) = self.method.as_ref() {
-            with_heap_write_lock(|heap| {
-                heap.set_object_field_value(
-                    self.member_name_ref,
-                    MEMBER_NAME,
-                    "method",
-                    vec![method.resolved_method_name_ref()],
-                )
-            })?;
+            HEAP.set_object_field_value(
+                self.member_name_ref,
+                MEMBER_NAME,
+                "method",
+                vec![method.resolved_method_name_ref()],
+            )?;
         }
         Ok(())
     }
@@ -97,7 +89,7 @@ impl MemberName {
     // This method returns ref to an array of 2 elements: Object[] {Long vmindex, Object vmtarget}
     pub fn get_member_vm_info(&self) -> Result<i32> {
         let reference_kind = self.reference_kind();
-        let array_ref = with_heap_write_lock(|heap| heap.create_array("[Ljava/lang/Object;", 2));
+        let array_ref = HEAP.create_array("[Ljava/lang/Object;", 2);
         // vmindex it is an index of the method in the vtable, HotSpot uses negative value for methods that don't need dynamic dispatch
         // We don't have vtable (yet), thus we use -2 for all methods that are not either of virtual or interface
         let vmindex = match reference_kind {
@@ -117,17 +109,16 @@ impl MemberName {
             _ => self.member_name_ref,
         };
 
-        with_heap_write_lock(|heap| heap.set_array_value(array_ref, 0, vec![long_instance_ref]))?;
-        with_heap_write_lock(|heap| heap.set_array_value(array_ref, 1, vec![vmtarget]))?;
+        HEAP.set_array_value(array_ref, 0, vec![long_instance_ref])?;
+        HEAP.set_array_value(array_ref, 1, vec![vmtarget])?;
 
         Ok(array_ref)
     }
 }
 
 fn load_method(member_name_ref: i32) -> Result<Option<ResolvedMethodName>> {
-    let resolved_method_name_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(member_name_ref, MEMBER_NAME, "method")
-    })?[0];
+    let resolved_method_name_ref =
+        HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "method")?[0];
 
     if resolved_method_name_ref == 0 {
         return Ok(None);

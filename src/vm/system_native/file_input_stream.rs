@@ -1,7 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::{throw_file_not_found_exception, throw_ioexception};
 use crate::vm::exception::throwing_result::ThrowingResult;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode::FileInputStream;
@@ -150,16 +150,14 @@ fn read_bytes(
         Ok(n) => n,
         Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
     };
-    let array = with_heap_write_lock(|heap| heap.get_entire_array(bytes_ref));
+    let array = HEAP.get_entire_array(bytes_ref);
     let mut array = unwrap_or_return_err!(array);
 
     for i in 0..read_bytes {
         unwrap_or_return_err!(array.set_value(off + i as i32, vec![buffer[i] as i8 as i32]));
     }
 
-    unwrap_or_return_err!(with_heap_write_lock(
-        |heap| heap.set_entire_array(bytes_ref, array)
-    ));
+    unwrap_or_return_err!(HEAP.set_entire_array(bytes_ref, array));
 
     ThrowingResult::ok(read_bytes as i32)
 }

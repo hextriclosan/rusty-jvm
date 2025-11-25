@@ -7,7 +7,7 @@ use crate::vm::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::execution_engine::static_init::StaticInit;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{argument_length, get_length};
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::method_area::field::FieldValue;
@@ -83,14 +83,12 @@ pub(crate) fn process(
                 (class_name, field_name, objectref)
             };
 
-            let value = with_heap_read_lock(|heap| {
-                heap.get_object_field_value_throwing(
-                    objectref,
-                    class_name.as_str(),
-                    field_name.as_str(),
-                    stack_frames,
-                )
-            });
+            let value = HEAP.get_object_field_value_throwing(
+                objectref,
+                class_name.as_str(),
+                field_name.as_str(),
+                stack_frames,
+            );
 
             let value = unwrap_result_or_return_default!(value, ());
 
@@ -121,14 +119,12 @@ pub(crate) fn process(
 
             let objectref = stack_frame.pop();
 
-            with_heap_write_lock(|heap| {
-                heap.set_object_field_value(
-                    objectref,
-                    class_name.as_str(),
-                    field_name.as_str(),
-                    value.clone(),
-                )
-            })?;
+            HEAP.set_object_field_value(
+                objectref,
+                class_name.as_str(),
+                field_name.as_str(),
+                value.clone(),
+            )?;
 
             trace!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value:?}");
             stack_frame.incr_pc();
@@ -152,8 +148,7 @@ pub(crate) fn process(
                 return Ok(());
             }
 
-            let class_name_by_instance =
-                with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
+            let class_name_by_instance = HEAP.get_instance_name(*reference)?;
 
             let exact_implementation = with_method_area(|method_area| {
                 method_area
@@ -262,7 +257,7 @@ pub(crate) fn process(
                 return Ok(());
             }
 
-            let instance_name = with_heap_read_lock(|heap| heap.get_instance_name(*reference))?;
+            let instance_name = HEAP.get_instance_name(*reference)?;
             let java_method = with_method_area(|method_area| {
                 method_area
                     .lookup_for_implementation(&instance_name, &full_signature) // first looking for method in parent and above classes
@@ -325,8 +320,7 @@ pub(crate) fn process(
                 method_area.create_instance_with_default_fields(&class_to_invoke_new_for)
             })?;
 
-            let instanceref =
-                with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
+            let instanceref = HEAP.create_instance(instance_with_default_fields);
             stack_frame.push(instanceref)?;
 
             trace!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
@@ -354,7 +348,7 @@ pub(crate) fn process(
 
             let length = stack_frame.pop();
 
-            let arrayref = with_heap_write_lock(|heap| heap.create_array(type_name, length));
+            let arrayref = HEAP.create_array(type_name, length);
             stack_frame.push(arrayref)?;
 
             stack_frame.incr_pc();
@@ -376,7 +370,7 @@ pub(crate) fn process(
                     ))
                 })?;
             let class_of_array = format!("[L{class_of_array};");
-            let arrayref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
+            let arrayref = HEAP.create_array(&class_of_array, length);
             stack_frame.push(arrayref)?;
 
             stack_frame.incr_pc();
@@ -388,8 +382,7 @@ pub(crate) fn process(
                 stack_frame.pop()
             };
 
-            let throwing_result =
-                with_heap_read_lock(|heap| heap.get_array_len_throwing(arrayref, stack_frames));
+            let throwing_result = HEAP.get_array_len_throwing(arrayref, stack_frames);
             let len = unwrap_result_or_return_default!(throwing_result, ());
 
             let stack_frame = last_frame_mut(stack_frames)?;
@@ -434,8 +427,7 @@ pub(crate) fn process(
                         ))
                     })?;
 
-                let instance_class_name =
-                    with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
+                let instance_class_name = HEAP.get_instance_name(objectref)?;
 
                 let possible_cast = InstanceChecker::checkcast(&instance_class_name, &class_name)?;
                 if !possible_cast {
@@ -467,8 +459,7 @@ pub(crate) fn process(
                         ))
                     })?;
 
-                let instance_class_name =
-                    with_heap_read_lock(|heap| heap.get_instance_name(objectref))?;
+                let instance_class_name = HEAP.get_instance_name(objectref)?;
 
                 let instanse_of = InstanceChecker::checkcast(&instance_class_name, &class_name)?;
                 objectref = if instanse_of { 1 } else { 0 };

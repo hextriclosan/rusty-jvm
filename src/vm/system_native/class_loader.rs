@@ -1,5 +1,5 @@
 use crate::vm::error::Result;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, vec_to_i64};
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
@@ -51,7 +51,7 @@ fn define_class0(
         get_utf8_string_by_ref(name_ref)?,
         increment_counter()
     );
-    let buf = with_heap_read_lock(|heap| heap.get_entire_array(buf_ref))?;
+    let buf = HEAP.get_entire_array(buf_ref)?;
 
     let vec = buf.get_entire_value();
     let byte_code: Vec<_> = vec
@@ -99,10 +99,8 @@ fn define_class2(
     _source_ref: i32,
 ) -> Result<i32> {
     let internal_name = get_utf8_string_by_ref(name_ref)?.replace(".", "/");
-    let addr = with_heap_read_lock(|h| {
-        let instance_name = h.get_instance_name(byte_buf_ref)?;
-        h.get_object_field_value(byte_buf_ref, &instance_name, "address")
-    })?;
+    let instance_name = HEAP.get_instance_name(byte_buf_ref)?;
+    let addr = HEAP.get_object_field_value(byte_buf_ref, &instance_name, "address")?;
     let addr = vec_to_i64(&addr);
 
     let addr = addr as usize as *const u8;

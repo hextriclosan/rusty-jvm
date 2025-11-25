@@ -2,7 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::exception::common::construct_exception_and_throw;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 use crate::{throw_and_return, unwrap_or_return_err};
@@ -107,7 +107,7 @@ pub fn check_bounds(
         ));
     }
 
-    let arr_len = match with_heap_read_lock(|h| h.get_array_len_throwing(arr_ref, stack_frames)) {
+    let arr_len = match HEAP.get_array_len_throwing(arr_ref, stack_frames) {
         ThrowingResult::Result(result) => unwrap_or_return_err!(result),
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };

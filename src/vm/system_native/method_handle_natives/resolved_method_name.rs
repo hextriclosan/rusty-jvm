@@ -1,6 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i64_to_vec, vec_to_i64};
 use getset::CopyGetters;
 
@@ -44,40 +44,33 @@ impl ResolvedMethodName {
     }
 
     fn propagate_vmholder(&self) -> Result<()> {
-        with_heap_write_lock(|heap| {
-            heap.set_object_field_value(
-                self.resolved_method_name_ref,
-                RESOLVED_METHOD_NAME,
-                "vmholder",
-                vec![self.vmholder],
-            )
-        })?;
-        Ok(())
+        HEAP.set_object_field_value(
+            self.resolved_method_name_ref,
+            RESOLVED_METHOD_NAME,
+            "vmholder",
+            vec![self.vmholder],
+        )
     }
 
     fn propagate_vmtarget(&self) -> Result<()> {
-        with_heap_write_lock(|heap| {
-            heap.set_object_field_value(
-                self.resolved_method_name_ref,
-                RESOLVED_METHOD_NAME,
-                "vmtarget",
-                i64_to_vec(self.vmtarget),
-            )
-        })?;
-        Ok(())
+        HEAP.set_object_field_value(
+            self.resolved_method_name_ref,
+            RESOLVED_METHOD_NAME,
+            "vmtarget",
+            i64_to_vec(self.vmtarget),
+        )
     }
 }
 
 fn load_vmholder(resolved_method_name_ref: i32) -> Result<i32> {
-    let vmholder_class_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(resolved_method_name_ref, RESOLVED_METHOD_NAME, "vmholder")
-    })?[0];
+    let vmholder_class_ref =
+        HEAP.get_object_field_value(resolved_method_name_ref, RESOLVED_METHOD_NAME, "vmholder")?
+            [0];
     Ok(vmholder_class_ref)
 }
 
 fn load_vmtarget(resolved_method_name_ref: i32) -> Result<i64> {
-    let vmtarget_raw = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(resolved_method_name_ref, RESOLVED_METHOD_NAME, "vmtarget")
-    })?;
+    let vmtarget_raw =
+        HEAP.get_object_field_value(resolved_method_name_ref, RESOLVED_METHOD_NAME, "vmtarget")?;
     Ok(vec_to_i64(&vmtarget_raw))
 }
