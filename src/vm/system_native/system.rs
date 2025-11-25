@@ -214,7 +214,7 @@ pub(crate) fn arraycopy(
             }
         }
 
-        unwrap_or_return_err!(HEAP.set_array_value(dest_ref, dest_pos + i, value_to_set,));
+        unwrap_or_return_err!(HEAP.set_array_value(dest_ref, dest_pos + i, value_to_set));
 
         i += step;
     }

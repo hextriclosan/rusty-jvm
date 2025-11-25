@@ -106,6 +106,7 @@ fn static_field_base0(field_ref: i32) -> Result<i32> {
     Ok(class_ref)
 }
 
+// todo: thread-safety - not atomic
 pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
@@ -127,7 +128,7 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
                 vec![x],
                 ValueType::Int.into(),
             )?;
-            Ok::<bool, Error>(true)
+            Ok(true)
         } else {
             Ok(false)
         }
@@ -147,6 +148,7 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
     updated
 }
 
+// todo: thread-safety - not volatile
 pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
@@ -284,12 +286,15 @@ pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
         todo!("implement get_int for null object");
     }
 }
+
+// todo: thread-safety - not volatile
 pub(crate) fn get_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    get_int_wrp(args) // todo! make me volatile
+    get_int_wrp(args)
 }
 
+// todo: thread-safety - not volatile
 pub(crate) fn get_boolean_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let ret = get_int_wrp(args)?; // todo! make me volatile (and boolean)
+    let ret = get_int_wrp(args)?;
     Ok(vec![if ret[0] != 0 { 1 } else { 0 }])
 }
 
@@ -326,10 +331,12 @@ fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
     }
 }
 
+// todo: thread-safety - not volatile
 pub(crate) fn get_long_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    get_long_wrp(args) // todo! make me volatile
+    get_long_wrp(args)
 }
 
+// todo: thread-safety - not atomic
 pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
@@ -345,6 +352,7 @@ fn compare_and_set_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Res
     Ok(updated)
 }
 
+// todo: thread-safety - not atomic
 pub(crate) fn compare_and_exchange_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
@@ -422,8 +430,9 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
     }
 }
 
+// todo: thread-safety - not volatile
 pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_reference_wrp(args) // todo! make me volatile
+    put_reference_wrp(args)
 }
 
 pub(crate) fn put_char_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -440,8 +449,9 @@ pub(crate) fn put_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     put_value_wrapper(args, ValueType::Int)
 }
 
+// todo: thread-safety - not volatile
 pub(crate) fn put_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_int_wrp(args) // todo! make me volatile
+    put_int_wrp(args)
 }
 
 pub(crate) fn put_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
