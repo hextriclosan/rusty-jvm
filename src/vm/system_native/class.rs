@@ -4,7 +4,7 @@ use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{strip_nest_host, undecorate};
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
@@ -84,9 +84,7 @@ fn init_class_name(class_ref: i32) -> Result<i32> {
 
     let string_ref = StringPoolHelper::get_string(&class_name)?;
 
-    with_heap_write_lock(|heap| {
-        heap.set_object_field_value(class_ref, "java/lang/Class", "name", vec![string_ref])
-    })?;
+    HEAP.set_object_field_value(class_ref, "java/lang/Class", "name", vec![string_ref])?;
 
     Ok(string_ref)
 }
@@ -144,9 +142,7 @@ fn get_interfaces0(class_ref: i32) -> Result<i32> {
         interface_refs
     })?;
 
-    let result_ref = with_heap_write_lock(|heap| {
-        heap.create_array_with_values("[Ljava/lang/Class;", &interface_refs)
-    });
+    let result_ref = HEAP.create_array_with_values("[Ljava/lang/Class;", &interface_refs);
     Ok(result_ref)
 }
 
@@ -199,9 +195,7 @@ fn get_declared_fields(class_ref: i32, public_only: bool) -> Result<i32> {
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let result_ref = with_heap_write_lock(|heap| {
-        heap.create_array_with_values("[Ljava/lang/reflect/Field;", &fields_info_ref)
-    });
+    let result_ref = HEAP.create_array_with_values("[Ljava/lang/reflect/Field;", &fields_info_ref);
 
     Ok(result_ref)
 }
@@ -234,9 +228,7 @@ fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let result_ref = with_heap_write_lock(|heap| {
-        heap.create_array_with_values("[Ljava/lang/reflect/Method;", &method_refs)
-    });
+    let result_ref = HEAP.create_array_with_values("[Ljava/lang/reflect/Method;", &method_refs);
     Ok(result_ref)
 }
 
@@ -258,9 +250,8 @@ fn get_declared_constructors(class_ref: i32) -> Result<i32> {
         .map(|java_method| java_method.reflection_ref())
         .collect::<Result<Vec<_>>>()?;
 
-    let result_ref = with_heap_write_lock(|heap| {
-        heap.create_array_with_values("[Ljava/lang/reflect/Constructor;", &method_refs)
-    });
+    let result_ref =
+        HEAP.create_array_with_values("[Ljava/lang/reflect/Constructor;", &method_refs);
     Ok(result_ref)
 }
 
@@ -280,13 +271,10 @@ fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
         let name_ref = StringPoolHelper::get_string(&name)?;
         let descriptor_ref = StringPoolHelper::get_string(&descriptor)?;
 
-        let array_ref = with_heap_write_lock(|heap| {
-            heap.create_array_with_values(
-                "[Ljava/lang/reflect/Method;",
-                &[class_name_ref, name_ref, descriptor_ref],
-            )
-        });
-
+        let array_ref = HEAP.create_array_with_values(
+            "[Ljava/lang/reflect/Method;",
+            &[class_name_ref, name_ref, descriptor_ref],
+        );
         Ok(array_ref) // new Object[] {class_name, name, descriptor}
     } else {
         Ok(0)
@@ -313,8 +301,7 @@ fn get_raw_annotations(reference: i32) -> Result<i32> {
                 .iter()
                 .map(|x| *x as i32)
                 .collect::<Vec<_>>();
-            let annotations =
-                with_heap_write_lock(|heap| heap.create_array_with_values("[B", &vec));
+            let annotations = HEAP.create_array_with_values("[B", &vec);
             annotations
         })
         .unwrap_or(0);
@@ -376,8 +363,7 @@ fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> Result<bool>
 
     let this_class_name =
         with_method_area(|method_area| method_area.get_from_reflection_table(this_class_ref))?;
-    let class_name_to_check =
-        with_heap_read_lock(|heap| heap.get_instance_name(obj_ref_to_check))?;
+    let class_name_to_check = HEAP.get_instance_name(obj_ref_to_check)?;
 
     InstanceChecker::checkcast(&class_name_to_check, &this_class_name)
 }
@@ -390,9 +376,7 @@ pub(crate) fn get_constant_pool_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     const NAME: &'static str = "jdk/internal/reflect/ConstantPool";
     let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
-    with_heap_write_lock(|heap| {
-        heap.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])
-    })?;
+    HEAP.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])?;
 
     Ok(constant_pool_ref)
 }

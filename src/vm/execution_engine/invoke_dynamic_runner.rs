@@ -5,7 +5,7 @@ use crate::vm::execution_engine::ldc_resolution_manager::{
 };
 use crate::vm::execution_engine::ops_reference_processor::prepare_invoke_context;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
 use crate::vm::method_area::attributes_helper::BootstrapMethodInfo;
 use crate::vm::method_area::method_area::with_method_area;
@@ -149,7 +149,7 @@ impl InvokeDynamicRunner {
             args,
         )?[0];
 
-        let call_site_name = with_heap_read_lock(|h| h.get_instance_name(call_site_ref))?;
+        let call_site_name = HEAP.get_instance_name(call_site_ref)?;
 
         let method_handle_dynamic_invoked_ref = Executor::invoke_non_static_method(
             &call_site_name,
@@ -164,19 +164,15 @@ impl InvokeDynamicRunner {
         current_class_name: &str,
         bootstrap_info: &BootstrapInfo,
     ) -> Result<[StackValueKind; 6]> {
-        let arguments_ref = with_heap_write_lock(|heap| {
-            let bootstrap_args = bootstrap_info.bootstrap_args();
-            let array_ref = heap.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32);
+        let bootstrap_args = bootstrap_info.bootstrap_args();
+        let arguments_ref = HEAP.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32);
 
-            bootstrap_args
-                .iter()
-                .enumerate()
-                .try_for_each(|(index, some_ref)| {
-                    heap.set_array_value(array_ref, index as i32, vec![*some_ref])
-                })?;
-
-            Ok::<i32, Error>(array_ref)
-        })?;
+        bootstrap_args
+            .iter()
+            .enumerate()
+            .try_for_each(|(index, some_ref)| {
+                HEAP.set_array_value(arguments_ref, index as i32, vec![*some_ref])
+            })?;
 
         let call_site_clazz = clazz_ref("java/lang/invoke/CallSite")?;
 

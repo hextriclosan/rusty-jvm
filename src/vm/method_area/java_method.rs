@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, undecorate};
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
@@ -150,9 +150,8 @@ impl JavaMethod {
             .map(|t| t.to_string())
             .map(|t| clazz_ref(undecorate(&t)))
             .collect::<Result<Vec<_>>>()?;
-        let parameter_type_refs = with_heap_write_lock(|heap| {
-            heap.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs)
-        });
+        let parameter_type_refs =
+            HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
 
         let return_type = self.method_descriptor.return_type().to_string();
         let return_type_ref = clazz_ref(&return_type)?;
@@ -169,9 +168,8 @@ impl JavaMethod {
                 clazz_ref(&exception_type)
             })
             .collect::<Result<Vec<_>>>()?;
-        let exception_type_refs = with_heap_write_lock(|heap| {
-            heap.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs)
-        });
+        let exception_type_refs =
+            HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
 
         let modifiers = self.access_flags;
 
@@ -187,8 +185,7 @@ impl JavaMethod {
                     .iter()
                     .map(|x| *x as i32)
                     .collect::<Vec<_>>();
-                let annotations =
-                    with_heap_write_lock(|heap| heap.create_array_with_values("[B", &vec));
+                let annotations = HEAP.create_array_with_values("[B", &vec);
                 annotations
             })
             .unwrap_or(0);
@@ -243,9 +240,8 @@ impl JavaMethod {
             .map(|t| t.to_string())
             .map(|t| clazz_ref(undecorate(&t)))
             .collect::<Result<Vec<_>>>()?;
-        let parameter_type_refs = with_heap_write_lock(|heap| {
-            heap.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs)
-        });
+        let parameter_type_refs =
+            HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
 
         let jc = with_method_area(|area| area.get(&self.class_name))?;
         let cpool_helper = jc.cpool_helper();
@@ -259,9 +255,8 @@ impl JavaMethod {
                 clazz_ref(&exception_type)
             })
             .collect::<Result<Vec<_>>>()?;
-        let checked_exception_type_refs = with_heap_write_lock(|heap| {
-            heap.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs)
-        });
+        let checked_exception_type_refs =
+            HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
 
         let modifiers = self.access_flags;
 
@@ -277,8 +272,7 @@ impl JavaMethod {
                     .iter()
                     .map(|x| *x as i32)
                     .collect::<Vec<_>>();
-                let annotations =
-                    with_heap_write_lock(|heap| heap.create_array_with_values("[B", &vec));
+                let annotations = HEAP.create_array_with_values("[B", &vec);
                 annotations
             })
             .unwrap_or(0);

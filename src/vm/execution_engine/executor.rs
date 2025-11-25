@@ -1,6 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::engine::Engine;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrame;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -41,8 +41,7 @@ impl Executor {
             method_area.create_instance_with_default_fields(class_name)
         })?;
 
-        let instance_ref =
-            with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
+        let instance_ref = HEAP.create_instance(instance_with_default_fields);
         Self::exec(class_name, Self::INIT_METHOD, &[instance_ref.into()], None)?;
 
         Ok(instance_ref)
@@ -58,8 +57,7 @@ impl Executor {
             method_area.create_instance_with_default_fields(&class_name)
         })?;
 
-        let instance_ref =
-            with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
+        let instance_ref = HEAP.create_instance(instance_with_default_fields);
 
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(instance_ref.into());
@@ -74,8 +72,7 @@ impl Executor {
             method_area.create_instance_with_default_fields("java/lang/Thread")
         })?;
 
-        let thread_obj_ref =
-            with_heap_write_lock(|heap| heap.create_instance(instance_with_default_fields));
+        let thread_obj_ref = HEAP.create_instance(instance_with_default_fields);
         with_method_area(|area| area.set_system_thread_id(thread_obj_ref))?; //save primordial thread id
 
         let mut new_args = Vec::with_capacity(args.len() + 1);

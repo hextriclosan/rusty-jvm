@@ -1,6 +1,6 @@
 use crate::vm::error::Error;
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::Result;
@@ -55,14 +55,12 @@ fn define_module0(
             let to_patch = guard.take();
             if let Some(to_patch) = to_patch {
                 for obj_ref in to_patch.iter() {
-                    with_heap_write_lock(|h| {
-                        h.set_object_field_value(
-                            *obj_ref,
-                            "java/lang/Class",
-                            "module",
-                            vec![this_module_ref],
-                        )
-                    })?;
+                    HEAP.set_object_field_value(
+                        *obj_ref,
+                        "java/lang/Class",
+                        "module",
+                        vec![this_module_ref],
+                    )?;
                 }
             } else {
                 return Err(Error::new_execution("Patching has already been performed"));

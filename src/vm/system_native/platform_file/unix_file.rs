@@ -1,7 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::throwing_result::ThrowingResult;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::get_handle;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode;
@@ -35,16 +35,12 @@ impl PlatformFile {
         let posix_fd = file.into_raw_fd(); // move ownership out of file
         let fd = posix_fd as i32;
 
-        let fd_ref = with_heap_write_lock(|heap| {
-            heap.get_object_field_value(output_stream_ref, mode.as_ref(), "fd")
-        })?[0];
+        let fd_ref = HEAP.get_object_field_value(output_stream_ref, mode.as_ref(), "fd")?[0];
         Self::set_fd(fd_ref, fd)
     }
 
     fn set_fd(fd_ref: i32, fd: i32) -> Result<()> {
-        with_heap_read_lock(|heap| {
-            heap.set_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", vec![fd])
-        })
+        HEAP.set_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", vec![fd])
     }
 
     pub fn get_by_raw_id(
@@ -52,8 +48,7 @@ impl PlatformFile {
         mode: Mode,
         stack_frames: &mut StackFrames,
     ) -> ThrowingResult<ManuallyDrop<File>> {
-        let fd_ref =
-            with_heap_read_lock(|heap| heap.get_object_field_value(obj_ref, mode.as_ref(), "fd"));
+        let fd_ref = HEAP.get_object_field_value(obj_ref, mode.as_ref(), "fd");
         let fd_ref = unwrap_or_return_err!(fd_ref)[0];
         Self::get_by_fd(fd_ref, stack_frames)
     }

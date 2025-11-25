@@ -1,23 +1,19 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::with_heap_read_lock;
+use crate::vm::heap::heap::HEAP;
 
 const STRING_CLASS_NAME: &str = "java/lang/String";
 const VALUE_FIELD: &str = "value";
 const CODER_FIELD: &str = "coder";
 
 pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> Result<String> {
-    let array_ref = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(string_ref, STRING_CLASS_NAME, VALUE_FIELD)
-    })?;
+    let array_ref = HEAP.get_object_field_value(string_ref, STRING_CLASS_NAME, VALUE_FIELD)?;
     let array_ref = array_ref[0];
     // todo: re-check race condition between calls
-    let coder = with_heap_read_lock(|heap| {
-        heap.get_object_field_value(string_ref, STRING_CLASS_NAME, CODER_FIELD)
-    })?;
+    let coder = HEAP.get_object_field_value(string_ref, STRING_CLASS_NAME, CODER_FIELD)?;
     let coder = coder[0] as u8;
 
-    let array_content = with_heap_read_lock(|heap| heap.get_entire_array(array_ref))?;
+    let array_content = HEAP.get_entire_array(array_ref)?;
     let array_content = array_content
         .get_entire_value()
         .iter()

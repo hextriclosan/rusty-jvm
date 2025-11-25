@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::heap::{with_heap_read_lock, with_heap_write_lock};
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_value::StackValue;
@@ -78,13 +78,11 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
     let class_of_array = "java/lang/String";
     let class_of_array = format!("[L{class_of_array};");
     let length = props.len() as i32;
-    let array_ref = with_heap_write_lock(|heap| heap.create_array(&class_of_array, length));
+    let array_ref = HEAP.create_array(&class_of_array, length);
 
     for (index, prop) in props.iter().enumerate() {
         let string_ref = StringPoolHelper::get_string(prop)?;
-        with_heap_write_lock(|heap| {
-            heap.set_array_value(array_ref, index as i32, vec![string_ref])
-        })?
+        HEAP.set_array_value(array_ref, index as i32, vec![string_ref])?
     }
 
     Ok(array_ref)
@@ -92,17 +90,13 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
 
 #[cfg(unix)]
 pub fn get_handle(fd_ref: i32) -> Result<i32> {
-    with_heap_read_lock(|heap| {
-        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?;
-        Ok::<i32, Error>(raw[0])
-    })
+    let raw = HEAP.get_object_field_value(fd_ref, "java/io/FileDescriptor", "fd")?;
+    Ok(raw[0])
 }
 #[cfg(windows)]
 pub fn get_handle(fd_ref: i32) -> Result<i64> {
-    with_heap_read_lock(|heap| {
-        let raw = heap.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
-        Ok::<i64, Error>(vec_to_i64(&raw))
-    })
+    let raw = HEAP.get_object_field_value(fd_ref, "java/io/FileDescriptor", "handle")?;
+    Ok(vec_to_i64(&raw))
 }
 
 pub fn decorate(type_name: String) -> String {

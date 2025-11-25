@@ -5,7 +5,7 @@ use crate::vm::execution_engine::ops_comparison_processor::branch1arg;
 use crate::vm::execution_engine::ops_load_processor::handle_load;
 use crate::vm::execution_engine::ops_math_processor::increment;
 use crate::vm::execution_engine::ops_store_processor::handle_store;
-use crate::vm::heap::heap::with_heap_write_lock;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
@@ -111,13 +111,12 @@ fn handle_pos_and_store<T: StackValue + Display + Copy>(
 fn create_n_array(dimensions: &[i32], signature: &str, current_level: usize) -> Result<i32> {
     let current_length = dimensions[current_level];
     let current_signature = &signature[current_level..];
-    let arrayref =
-        with_heap_write_lock(|heap| heap.create_array(current_signature, current_length));
+    let arrayref = HEAP.create_array(current_signature, current_length);
 
     if current_level < dimensions.len() - 1 {
         for i in 0..current_length {
             let next_ref = create_n_array(dimensions, signature, current_level + 1)?;
-            with_heap_write_lock(|heap| heap.set_array_value(arrayref, i, vec![next_ref]))?;
+            HEAP.set_array_value(arrayref, i, vec![next_ref])?;
         }
     }
 
