@@ -11,7 +11,7 @@ pub enum JarError {
         source: std::io::Error,
         path: PathBuf,
     },
-    #[snafu(display("Zip error : {source}"))]
+    #[snafu(display("Zip error: {source}"))]
     Zip {
         #[snafu(source)]
         source: zip::result::ZipError,

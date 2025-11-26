@@ -1458,6 +1458,7 @@ name = "rusty-jar"
 version = "0.0.1"
 dependencies = [
  "assert_matches",
+ "clap",
  "snafu",
  "zip",
 ]
