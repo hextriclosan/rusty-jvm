@@ -1,0 +1,23 @@
+[package]
+name = "rusty-jar"
+version = "0.0.1"
+edition = "2024"
+description = "A Rust library and CLI tool for working with JAR files used in the Java ecosystem."
+documentation = "https://docs.rs/rusty-jar"
+homepage = "https://github.com/hextriclosan/rusty-jvm/tree/main/rusty-jar"
+repository = "https://github.com/hextriclosan/rusty-jvm"
+readme = "README.md"
+keywords = ["jvm", "java", "jar"]
+categories = ["command-line-utilities"]
+license = "MIT"
+exclude = ["tests/**"]
+
+workspace = ".."
+
+[dependencies]
+snafu = "0.8.9"
+zip = "6.0.0"
+clap = { version = "4.5.53", features = ["derive"] }
+
+[dev-dependencies]
+assert_matches = "1.5.0"
