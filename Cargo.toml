@@ -14,7 +14,7 @@ license = "MIT"
 exclude = [".*", "docs/**", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
 
 [workspace]
-members = ["jclassfile", "jdescriptor", "jimage-rs"]
+members = ["jclassfile", "jdescriptor", "jimage-rs", "rusty-jar"]
 
 [dependencies]
 clap = "4.5.45"
