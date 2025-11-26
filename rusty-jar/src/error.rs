@@ -16,7 +16,7 @@ pub enum JarError {
         #[snafu(source)]
         source: zip::result::ZipError,
     },
-    #[snafu(display("Entry is absent: {entry_name}"))]
+    #[snafu(display("Entry not found: {entry_name}"))]
     EntryNotFound { entry_name: String },
 }
 

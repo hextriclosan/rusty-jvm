@@ -7,7 +7,7 @@ use std::io::Write;
 use std::path;
 use std::path::{Path, PathBuf};
 
-/// A fictional tool to inspect and extract from jimage files.
+/// A tool to inspect and extract from jimage files.
 #[derive(Parser, Debug)]
 #[command(name = "jimage-rs", version, about)]
 struct Cli {

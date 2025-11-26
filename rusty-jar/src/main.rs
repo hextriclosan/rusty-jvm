@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-/// A fictional tool to inspect and extract from JAR files.
+/// A tool to inspect and extract from JAR files.
 #[derive(Parser, Debug)]
 #[command(name = "rusty-jar", version, about)]
 struct Cli {
