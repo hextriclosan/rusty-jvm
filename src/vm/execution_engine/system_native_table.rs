@@ -228,6 +228,17 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(add_exports0_wrp),
     );
     table.insert(
+        "java/lang/Shutdown:beforeHalt:()V",
+        Basic(void_stub), // todo: implement me
+    );
+    table.insert(
+        "java/lang/Shutdown:halt0:(I)V",
+        Basic(|args: &[i32]| {
+            let status = args[0];
+            std::process::exit(status);
+        }),
+    );
+    table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
         Basic(void_stub),
     );

@@ -2884,6 +2884,18 @@ Gavin: 5
 }
 
 #[test]
+fn should_support_jep512_args() {
+    assert_success_with_args(
+        "CompactSourceFilesArgsExample",
+        &["Monica", "Eve", "Jessica"],
+        r#"Monica: 6
+Eve: 3
+Jessica: 7
+"#,
+    );
+}
+
+#[test]
 fn should_create_temp_file_and_parse_xml() {
     assert_success(
         "samples.io.xmlstringtofileexample.XmlStringToFileExample",
@@ -3182,6 +3194,17 @@ Number Format:   1,234,567.89
 Currency Format: $1,234,567.89
 Date Format:     sábado, 24 de agosto de 1991
 
+"#,
+    );
+}
+
+#[test]
+fn should_print_error_and_exit_if_no_main_method() {
+    assert_failure(
+        "samples.nomainmethod.NoMainMethod",
+        r#"Error: Main method not found in class samples.nomainmethod.NoMainMethod, please define the main method as:
+   public static void main(String[] args)
+or a JavaFX application class must extend javafx.application.Application
 "#,
     );
 }
