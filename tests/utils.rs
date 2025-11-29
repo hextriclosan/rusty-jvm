@@ -164,13 +164,14 @@ pub fn assert_failure(entry: &str, expected: &str) {
 }
 
 fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
-    let args = iter::once(entry)
-        .chain(arguments.iter().copied())
-        .collect::<Vec<_>>();
-    get_command(&args)
-        .assert()
-        .failure()
-        .stderr(expected.to_string());
+    assert_with_all_args(
+        &[],
+        entry,
+        arguments,
+        "",
+        expected,
+        ExecutionResult::Failure,
+    )
 }
 
 pub fn get_output(entry: &str) -> String {

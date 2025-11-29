@@ -229,7 +229,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Shutdown:beforeHalt:()V",
-        Basic(void_stub), //todo: implement me
+        Basic(void_stub), // todo: implement me
     );
     table.insert(
         "java/lang/Shutdown:halt0:(I)V",

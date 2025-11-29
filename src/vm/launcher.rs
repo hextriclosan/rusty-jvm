@@ -1,4 +1,4 @@
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::create_array_of_strings;
@@ -24,12 +24,14 @@ pub fn resolve_and_execute_main_method(class_name: &str, args: &[String]) -> Res
     let launcher_helper = with_method_area(|a| a.get("sun/launcher/LauncherHelper"))?;
     let static_main = launcher_helper
         .static_field("isStaticMain")
-        .unwrap()
+        .ok_or_else(|| {
+            Error::new_execution("Error getting isStaticMain field from LauncherHelper")
+        })?
         .raw_value()?[0]
         != 0;
     let no_arg_main = launcher_helper
         .static_field("noArgMain")
-        .unwrap()
+        .ok_or_else(|| Error::new_execution("Error getting noArgMain field from LauncherHelper"))?
         .raw_value()?[0]
         != 0;
 
