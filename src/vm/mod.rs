@@ -50,8 +50,16 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     let internal_name = &main_class_name.replace('.', "/");
     StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
 
-    resolve_and_execute_main_method(internal_name, arguments.program_args())
-        .and_then(|_| invoke_shutdown_hooks())
+    match resolve_and_execute_main_method(internal_name, arguments.program_args()) {
+        Ok(_) => {
+            invoke_shutdown_hooks()?;
+            Ok(())
+        }
+        Err(e) => {
+            invoke_shutdown_hooks()?;
+            Err(e)
+        }
+    }
 }
 
 fn invoke_shutdown_hooks() -> Result<()> {
