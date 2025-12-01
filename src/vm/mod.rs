@@ -55,10 +55,11 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
             invoke_shutdown_hooks()?;
             Ok(())
         }
-        Err(e) => {
+        Err(e) if e.is_uncaught_exception() => {
             invoke_shutdown_hooks()?;
             Err(e)
         }
+        Err(e) => Err(e),
     }
 }
 
