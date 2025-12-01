@@ -97,6 +97,7 @@ fn assert_success_with_args_with_stderr(
         expected_stdout,
         expected_stderr,
         ExecutionResult::Success,
+        0,
     )
 }
 
@@ -113,6 +114,7 @@ fn assert_failure_with_args_with_stderr(
         expected_stdout,
         expected_stderr,
         ExecutionResult::Failure,
+        1,
     )
 }
 
@@ -123,6 +125,7 @@ pub fn assert_with_all_args(
     expected_stdout: &str,
     expected_stderr: &str,
     expected_result: ExecutionResult,
+    expected_exit_code: i32,
 ) {
     let args = program_args
         .iter()
@@ -142,6 +145,10 @@ pub fn assert_with_all_args(
         Err(e) => panic!("Failed to get output: {:?}", e),
     };
     let output = assert.get_output();
+    let actual_exit_code = output
+        .status
+        .code()
+        .expect("Process exit code is None: the process may have been terminated by a signal");
     let actual_stdout = String::from_utf8(output.stdout.clone())
         .expect("Failed to convert stdout to string")
         .replace("\r\n", "\n"); // normalize line endings for windows
@@ -153,6 +160,7 @@ pub fn assert_with_all_args(
 
     assert_eq!(actual_stdout, expected_stdout);
     assert_eq!(actual_stderr, expected_stderr);
+    assert_eq!(actual_exit_code, expected_exit_code);
 }
 
 pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected_stdout: &str) {
@@ -171,6 +179,7 @@ fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
         "",
         expected,
         ExecutionResult::Failure,
+        1,
     )
 }
 

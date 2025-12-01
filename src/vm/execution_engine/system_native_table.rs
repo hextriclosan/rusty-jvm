@@ -235,7 +235,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/lang/Shutdown:halt0:(I)V",
         Basic(|args: &[i32]| {
             let status = args[0];
-            std::process::exit(status);
+            std::process::exit(status); // fixme: by doing this we skip destructors and other shutdown hooks, later it might be an issue
         }),
     );
     table.insert(

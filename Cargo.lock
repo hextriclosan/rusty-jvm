@@ -1498,6 +1498,7 @@ dependencies = [
  "rand",
  "realpath-ext",
  "regex",
+ "rstest",
  "serde",
  "serde_json",
  "strum",

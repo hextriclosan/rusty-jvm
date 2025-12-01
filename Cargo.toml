@@ -59,6 +59,7 @@ regex = "1.11.1"
 mockall = "0.14.0"
 tempfile = "3.21.0"
 itertools = "0.14.0"
+rstest = "0.26.1"
 
 [build-dependencies]
 anyhow = "1.0.99"
