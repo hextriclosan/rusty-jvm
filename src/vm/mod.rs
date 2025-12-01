@@ -36,7 +36,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 ///
 /// * `arguments` - The arguments for the Java program.
 /// * `std_dir` - The path to the standard library directory containing core Java classes.
-pub fn run(arguments: &Arguments, java_home: &Path) -> Result<Vec<i32>> {
+pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     JAVA_HOME
         .set(java_home.to_path_buf())
         .map_err(|e| Error::new_execution(&format!("JAVA_HOME already set: {e:?}")))?;
@@ -50,8 +50,13 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<Vec<i32>> {
     let internal_name = &main_class_name.replace('.', "/");
     StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
 
-    resolve_and_execute_main_method(internal_name, arguments.program_args())?;
-    Ok(vec![])
+    resolve_and_execute_main_method(internal_name, arguments.program_args())
+        .and_then(|_| invoke_shutdown_hooks())
+}
+
+fn invoke_shutdown_hooks() -> Result<()> {
+    Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])?;
+    Ok(())
 }
 
 fn prelude() -> Result<()> {

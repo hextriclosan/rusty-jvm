@@ -3,6 +3,7 @@ mod utils;
 use std::env;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 use utils::assert_success;
 
 #[test]
@@ -359,10 +360,12 @@ negative_destPosPlusLengthTooBig: java.lang.ArrayIndexOutOfBoundsException: arra
 use crate::utils::{
     assert_failure, assert_file_with_args, assert_success_with_args, assert_success_with_stderr,
     get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
-    is_bigendian, line_ending, map_library_name, tmp_file,
+    is_bigendian, line_ending, map_library_name, tmp_file, ExecutionResult,
 };
 use itertools::Itertools;
+use rand::Rng;
 use regex::Regex;
+use rstest::rstest;
 use serde_json::Value;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
@@ -2462,7 +2465,8 @@ Options:
         &[],
         expected_stdout,
         "",
-        utils::ExecutionResult::Success,
+        ExecutionResult::Success,
+        0,
     );
 }
 
@@ -2475,7 +2479,8 @@ fn should_print_version_message() {
         &[],
         expected_stdout,
         "",
-        utils::ExecutionResult::Success,
+        ExecutionResult::Success,
+        0,
     );
 }
 
@@ -3206,5 +3211,54 @@ fn should_print_error_and_exit_if_no_main_method() {
    public static void main(String[] args)
 or a JavaFX application class must extend javafx.application.Application
 "#,
+    );
+}
+
+#[test]
+fn should_delete_file_on_exit() {
+    let temp_dir_path = env::temp_dir();
+    let file_name = format!("delete_on_exit_{}.txt", rand::rng().random::<u64>());
+    let file_path = Path::new(&temp_dir_path).join(file_name);
+    let expected_content = "tru-la-la-la!";
+    {
+        let mut file =
+            File::create_new(&file_path).expect("Failed to create file for DeleteOnExitDemo test");
+        write!(file, "{expected_content}")
+            .expect("Failed to write to file for DeleteOnExitDemo test");
+    }
+
+    assert_success_with_args(
+        "samples.io.file.deleteonexitdemo.DeleteOnExitDemo",
+        &[file_path.to_str().unwrap()],
+        &format!("{expected_content}"),
+    );
+
+    assert!(
+        !file_path.exists(),
+        "File {} was not deleted on exit",
+        file_path.display()
+    );
+}
+
+#[rstest]
+#[case::success(0, ExecutionResult::Success, 0)]
+#[case::failure(1, ExecutionResult::Failure, 1)]
+#[case::failure(2, ExecutionResult::Failure, 2)]
+#[case::failure(3, ExecutionResult::Failure, 3)]
+#[case::failure(1000, ExecutionResult::Failure, 232)]
+#[case::failure(-2, ExecutionResult::Failure, 254)]
+fn should_exit_with_given_code(
+    #[case] given_exit_code: i32,
+    #[case] result: ExecutionResult,
+    #[case] expected_exit_code: i32,
+) {
+    utils::assert_with_all_args(
+        &[],
+        "samples.shutdown.exitwithcodedemo.ExitWithCodeDemo",
+        &[&given_exit_code.to_string()],
+        &format!("Exiting with code: {given_exit_code}"),
+        "",
+        result,
+        expected_exit_code,
     );
 }
