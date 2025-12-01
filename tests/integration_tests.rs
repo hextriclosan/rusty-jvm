@@ -3229,7 +3229,7 @@ fn should_delete_file_on_exit() {
     assert_success_with_args(
         "samples.io.file.deleteonexitdemo.DeleteOnExitDemo",
         &[file_path.to_str().unwrap()],
-        &format!("{expected_content}"),
+        expected_content,
     );
 
     assert!(
