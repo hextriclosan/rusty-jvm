@@ -145,7 +145,10 @@ pub fn assert_with_all_args(
         Err(e) => panic!("Failed to get output: {:?}", e),
     };
     let output = assert.get_output();
-    let actual_exit_code = output.status.code().unwrap();
+    let actual_exit_code = output
+        .status
+        .code()
+        .expect("Process exit code is None: the process may have been terminated by a signal");
     let actual_stdout = String::from_utf8(output.stdout.clone())
         .expect("Failed to convert stdout to string")
         .replace("\r\n", "\n"); // normalize line endings for windows

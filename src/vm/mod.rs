@@ -35,7 +35,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 /// # Arguments
 ///
 /// * `arguments` - The arguments for the Java program.
-/// * `std_dir` - The path to the standard library directory containing core Java classes.
+/// * `java_home` - The path to the Java home directory.
 pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     JAVA_HOME
         .set(java_home.to_path_buf())
