@@ -363,7 +363,6 @@ use crate::utils::{
     is_bigendian, line_ending, map_library_name, tmp_file, ExecutionResult,
 };
 use itertools::Itertools;
-use rand::Rng;
 use regex::Regex;
 use rstest::rstest;
 use serde_json::Value;
@@ -3217,7 +3216,7 @@ or a JavaFX application class must extend javafx.application.Application
 #[test]
 fn should_delete_file_on_exit() {
     let temp_dir_path = env::temp_dir();
-    let file_name = format!("delete_on_exit_{}.txt", rand::rng().random::<u64>());
+    let file_name = format!("delete_on_exit_{}.txt", rand::random::<u64>());
     let file_path = Path::new(&temp_dir_path).join(file_name);
     let expected_content = "tru-la-la-la!";
     {
@@ -3240,17 +3239,42 @@ fn should_delete_file_on_exit() {
     );
 }
 
+#[cfg(not(windows))]
 #[rstest]
 #[case::success(0, ExecutionResult::Success, 0)]
 #[case::failure(1, ExecutionResult::Failure, 1)]
 #[case::failure(2, ExecutionResult::Failure, 2)]
 #[case::failure(3, ExecutionResult::Failure, 3)]
-#[case::failure(1000, ExecutionResult::Failure, 232)]
+#[case::failure(123456789, ExecutionResult::Failure, 21)]
 #[case::failure(-2, ExecutionResult::Failure, 254)]
 fn should_exit_with_given_code(
     #[case] given_exit_code: i32,
     #[case] result: ExecutionResult,
     #[case] expected_exit_code: i32,
+) {
+    should_exit_with_given_code_impl(given_exit_code, result, expected_exit_code);
+}
+
+#[cfg(windows)]
+#[rstest]
+#[case::success(0, ExecutionResult::Success, 0)]
+#[case::failure(1, ExecutionResult::Failure, 1)]
+#[case::failure(2, ExecutionResult::Failure, 2)]
+#[case::failure(3, ExecutionResult::Failure, 3)]
+#[case::failure(123456789, ExecutionResult::Failure, 123456789)]
+#[case::failure(-2, ExecutionResult::Failure, -2)]
+fn should_exit_with_given_code(
+    #[case] given_exit_code: i32,
+    #[case] result: ExecutionResult,
+    #[case] expected_exit_code: i32,
+) {
+    should_exit_with_given_code_impl(given_exit_code, result, expected_exit_code);
+}
+
+fn should_exit_with_given_code_impl(
+    given_exit_code: i32,
+    result: ExecutionResult,
+    expected_exit_code: i32,
 ) {
     utils::assert_with_all_args(
         &[],
