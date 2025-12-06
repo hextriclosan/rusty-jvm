@@ -5,6 +5,7 @@ pub(crate) mod field;
 pub(crate) mod instance_checker;
 pub(crate) mod java_class;
 pub(crate) mod java_method;
+pub(crate) mod loaded_classes;
 pub(crate) mod method_area;
 pub(crate) mod module_helper;
 pub(crate) mod primitives_helper;

@@ -1,6 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, vec_to_i64};
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -130,7 +131,7 @@ fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
 
     // Check if the class is already loaded and exists
     // If it does not exist, we return 0 (null reference)
-    if let Err(_) = with_method_area(|a| a.get(internal_name)) {
+    if let Err(_) = CLASSES.get(internal_name) {
         return Ok(0);
     }
 
@@ -147,7 +148,7 @@ pub(crate) fn find_loaded_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn find_loaded_class(name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = &name.replace('.', "/");
-    if let Some(_) = with_method_area(|a| a.get_only_loaded(internal_name))? {
+    if CLASSES.is_loaded(internal_name) {
         clazz_ref(internal_name)
     } else {
         Ok(0)

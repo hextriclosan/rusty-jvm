@@ -17,6 +17,7 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::launcher::resolve_and_execute_main_method;
 use crate::vm::method_area::java_class::JavaClass;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
@@ -98,7 +99,7 @@ fn init() -> Result<()> {
     put_synthetic_instance_field("java/lang/invoke/ResolvedMethodName", "vmtarget", "J", 0)?;
     StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
 
-    let lc = with_method_area(|area| area.get("jdk/internal/misc/UnsafeConstants"))?;
+    let lc = CLASSES.get("jdk/internal/misc/UnsafeConstants")?;
     let big_endian = lc.static_field("BIG_ENDIAN").unwrap();
     big_endian.set_raw_value(vec![if is_bigendian() { 1 } else { 0 }])?;
 
@@ -137,7 +138,7 @@ fn put_synthetic_instance_field(
     type_descriptor: &str,
     flags: u16,
 ) -> Result<()> {
-    let lc = with_method_area(|area| area.get(class_name))?;
+    let lc = CLASSES.get(class_name)?;
     let raw_java_class = Arc::into_raw(lc) as *mut JavaClass;
     let result = unsafe {
         (*raw_java_class).put_instance_field_descriptor(

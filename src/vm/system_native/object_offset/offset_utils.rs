@@ -1,4 +1,5 @@
 use crate::vm::error::Result;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
@@ -8,12 +9,12 @@ pub(crate) fn object_field_offset_by_refs(class_ref: i32, string_ref: i32) -> Re
     object_field_offset_by_names(&class_name, &field_name)
 }
 pub(crate) fn object_field_offset_by_names(class_name: &str, field_name: &str) -> Result<i64> {
-    let jc = with_method_area(|area| area.get(class_name))?;
+    let jc = CLASSES.get(class_name)?;
     let offset = jc.get_field_offset(&format!("{class_name}.{field_name}"))?;
     Ok(offset)
 }
 
 pub(crate) fn static_field_offset_by_names(class_name: &str, field_name: &str) -> Result<i64> {
-    let jc = with_method_area(|area| area.get(class_name))?;
+    let jc = CLASSES.get(class_name)?;
     jc.get_static_field_offset(field_name)
 }

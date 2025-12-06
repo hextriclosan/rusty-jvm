@@ -4,6 +4,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::java_class::STATIC_FIELDS_START;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::object_offset::offset_utils::{
     object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
@@ -133,7 +134,7 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
             Ok(false)
         }
     } else {
-        let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+        let jc = CLASSES.get(class_name.as_str())?;
         let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
         let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?[0];
 
@@ -165,11 +166,11 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
         if class_name == "java/lang/Class" {
             // Special case for java/lang/Class<T>, in fact it is getting of static field of T
             let t_name = with_method_area(|area| area.get_from_reflection_table(obj_ref))?;
-            let t_jc = with_method_area(|area| area.get(t_name.as_str()))?;
+            let t_jc = CLASSES.get(t_name.as_str())?;
             let static_field = t_jc.get_static_field_by_offset(offset)?;
             static_field.raw_value()?
         } else {
-            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let jc = CLASSES.get(class_name.as_str())?;
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
             HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?
         }
@@ -275,7 +276,7 @@ pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
         } else {
             let class_name = HEAP.get_instance_name(obj_ref)?;
 
-            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let jc = CLASSES.get(class_name.as_str())?;
 
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
@@ -319,7 +320,7 @@ fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
         } else {
             let class_name = HEAP.get_instance_name(obj_ref)?;
 
-            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let jc = CLASSES.get(class_name.as_str())?;
 
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
@@ -381,7 +382,7 @@ fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Resul
 
     let class_name = HEAP.get_instance_name(obj_ref)?;
 
-    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+    let jc = CLASSES.get(class_name.as_str())?;
 
     let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
@@ -418,11 +419,11 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
         if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
             // Special case for java/lang/Class<T>, in fact it is modification of static field of T
             let t_name = with_method_area(|area| area.get_from_reflection_table(obj_ref))?;
-            let t_jc = with_method_area(|area| area.get(t_name.as_str()))?;
+            let t_jc = CLASSES.get(t_name.as_str())?;
             let static_field = t_jc.get_static_field_by_offset(offset)?;
             static_field.set_raw_value(vec![ref_value])
         } else {
-            let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+            let jc = CLASSES.get(class_name.as_str())?;
             let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
 
             HEAP.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
@@ -516,7 +517,7 @@ fn put_value_via_object(
     if class_name.starts_with('[') {
         HEAP.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value, value_type.into())
     } else {
-        let jc = with_method_area(|area| area.get(&class_name))?;
+        let jc = CLASSES.get(&class_name)?;
         let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
         HEAP.set_object_field_value(obj_ref, &class_name, &field_name, raw_value)
     }
@@ -571,7 +572,7 @@ pub(crate) fn should_be_initialized0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn should_be_initialized0(class_ref: i32) -> Result<bool> {
     with_method_area(|method_area| {
         let name = method_area.get_from_reflection_table(class_ref)?;
-        let rc = method_area.get(&name)?;
+        let rc = CLASSES.get(&name)?; // fixme!!! get Klass directly via class_ref
 
         let guard = rc.static_fields_init_state().lock();
         Ok(guard.get_inner_state() != Initialized)

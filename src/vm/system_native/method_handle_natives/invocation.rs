@@ -7,6 +7,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::vec_to_i64;
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
@@ -108,7 +109,7 @@ fn bound_method_handle_invocation(
     let member_name = MemberName::new(vmentry_ref)?;
     let class_name_to_load = member_name.class_name();
 
-    let jc = with_method_area(|method_area| method_area.get(class_name_to_load))?;
+    let jc = CLASSES.get(class_name_to_load)?;
 
     // todo: hide this block into MemberName struct
     let type_obj_ref = member_name.type_obj_ref();
@@ -295,7 +296,7 @@ fn extract_resolved(member_name: &MemberName) -> Result<(String, Arc<JavaMethod>
     let method_index = resolved_method_name.vmtarget();
     let (class_name, method_to_invoke) = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(vmholder_class_ref)?;
-        let jc = method_area.get(&class_name)?;
+        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from clazz_ref directly
         Ok::<(String, Arc<JavaMethod>), Error>((class_name, jc.get_method_by_index(method_index)?))
     })?;
 
@@ -370,7 +371,7 @@ fn prepare_field(
     let args = method_args[1..].to_vec();
     let class_name = HEAP.get_instance_name(instance_ref)?;
 
-    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+    let jc = CLASSES.get(class_name.as_str())?;
     let member_name_ref = member_name.member_name_ref();
     let offset = get_field_offset(member_name_ref)?;
     let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
@@ -384,7 +385,7 @@ fn prepare_static_field(
     let args = method_args.to_vec();
     let class_name = member_name.class_name();
 
-    let jc = with_method_area(|area| area.get(class_name.as_str()))?;
+    let jc = CLASSES.get(class_name.as_str())?;
     let member_name_ref = member_name.member_name_ref();
     let offset = get_static_field_offset(member_name_ref)?;
     let field = jc.get_static_field_by_offset(offset)?;

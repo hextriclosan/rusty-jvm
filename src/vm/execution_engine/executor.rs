@@ -1,6 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::engine::Engine;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrame;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -94,7 +95,7 @@ impl Executor {
         args: &[StackValueKind],
         detailed_reason: Option<&str>,
     ) -> Result<Vec<i32>> {
-        let java_class = with_method_area(|area| area.get(class_name))?;
+        let java_class = CLASSES.get(class_name)?;
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
         Self::set_stack_arguments(&mut stack_frame, args)?;

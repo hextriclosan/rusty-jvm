@@ -1,14 +1,14 @@
 use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
-use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance};
-use crate::vm::helper::undecorate;
+use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase};
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::module_helper::Modules;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
@@ -44,8 +44,7 @@ pub(crate) struct MethodArea {
     jimage: JImage,
     modules_mapping: HashMap<String, String>,
     modules: Arc<Modules>,
-    loaded_classes: RwLock<HashMap<String, Arc<JavaClass>>>,
-    javaclass_by_reflectionref: RwLock<HashMap<i32, String>>,
+    javaclass_by_reflectionref: RwLock<HashMap<i32, String>>, // fixme!!! delete me!
     ldc_resolution_manager: LdcResolutionManager,
     system_thread_id: OnceCell<i32>, // initial thread, spawned by VM
     system_thread_group_id: OnceCell<i32>, // initial thread group, created by VM
@@ -63,8 +62,6 @@ impl MethodArea {
             Error::new_execution("JAVA_HOME not set, cannot initialize MethodArea")
         })?;
         let modules = java_home.join("lib").join("modules");
-        let synthetic_classes = Self::generate_synthetic_classes();
-
         let jimage = JImage::open(modules)?;
         let modules_mapping = jimage
             .resource_names_iter()
@@ -73,63 +70,19 @@ impl MethodArea {
             .map(|result| result.map(|(module, name)| (name, module)))
             .collect::<Result<HashMap<_, _>>>()?;
 
+        for java_class in Self::generate_synthetic_classes() {
+            CLASSES.insert_auto(Arc::clone(&java_class));
+        }
+
         Ok(Self {
             jimage,
             modules_mapping,
             modules: Arc::new(Modules::new()),
-            loaded_classes: RwLock::new(synthetic_classes),
             javaclass_by_reflectionref: RwLock::default(),
             ldc_resolution_manager: LdcResolutionManager::default(),
             system_thread_id: OnceCell::new(),
             system_thread_group_id: OnceCell::new(),
         })
-    }
-
-    pub(crate) fn get(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
-        self.get_impl(fully_qualified_class_name, true)?
-            .ok_or_else(|| {
-                Error::new_execution(&format!("Class {fully_qualified_class_name} not found"))
-            })
-    }
-
-    pub(crate) fn get_only_loaded(
-        &self,
-        fully_qualified_class_name: &str,
-    ) -> Result<Option<Arc<JavaClass>>> {
-        self.get_impl(fully_qualified_class_name, false)
-    }
-
-    fn get_impl(
-        &self,
-        fully_qualified_class_name: &str,
-        load_if_not_loaded: bool,
-    ) -> Result<Option<Arc<JavaClass>>> {
-        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        if let Some(java_class) = self.loaded_classes.read()?.get(fully_qualified_class_name) {
-            return Ok(Some(Arc::clone(java_class)));
-        }
-
-        if !load_if_not_loaded {
-            return Ok(None);
-        }
-
-        if fully_qualified_class_name.starts_with('[') {
-            let arc = Self::generate_synthetic_array_class(fully_qualified_class_name);
-            self.loaded_classes
-                .write()?
-                .insert(fully_qualified_class_name.to_string(), Arc::clone(&arc));
-            return Ok(Some(arc));
-        }
-
-        //todo: make me thread-safe if move to multithreaded jvm
-        let java_class = self.load_class_file(fully_qualified_class_name)?;
-        self.loaded_classes.write()?.insert(
-            fully_qualified_class_name.to_string(),
-            Arc::clone(&java_class),
-        );
-        trace!("<CLASS LOADED> -> {}", java_class.this_class_name());
-
-        Ok(Some(java_class))
     }
 
     pub(crate) fn create_metaclass(
@@ -139,22 +92,23 @@ impl MethodArea {
     ) -> Result<(String, String)> {
         let (internal, external) = derive_internal_and_external_names(fully_qualified_class_name);
 
-        if let Some(jc) = self.loaded_classes.read()?.get(&internal) {
+        if let Ok(jc) = CLASSES.get(&internal) {
             return Ok((jc.this_class_name().clone(), jc.external_name().clone()));
         }
 
         let class_file = parse(bytecode)?;
         let (_, java_class) =
             self.to_java_class(class_file, internal.clone(), external.clone())?;
-        self.loaded_classes
-            .write()?
-            .insert(internal.clone(), Arc::clone(&java_class));
+        CLASSES.insert_auto(Arc::clone(&java_class));
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok((internal, external))
     }
 
-    fn load_class_file(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
+    pub(crate) fn load_class_file(
+        &self,
+        fully_qualified_class_name: &str,
+    ) -> Result<Arc<JavaClass>> {
         let class_file_path = format!("{fully_qualified_class_name}.class");
         if let Some(module) = self.modules_mapping.get(&class_file_path) {
             let resource_path = format!("/{module}/{class_file_path}");
@@ -448,7 +402,7 @@ impl MethodArea {
         class_name: &str,
         field_name: &str,
     ) -> Result<(String, Arc<FieldValue>)> {
-        let rc = self.get(class_name)?;
+        let rc = CLASSES.get(class_name)?;
 
         if rc.is_interface() {
             self.lookup_for_static_field_in_interface(&rc, class_name, field_name)
@@ -507,7 +461,7 @@ impl MethodArea {
         class_name: &str,
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
-        let rc = self.get(class_name).ok()?;
+        let rc = CLASSES.get(class_name).ok()?;
 
         if let Some(java_method) = rc.try_get_method(full_method_signature) {
             Some(Arc::clone(&java_method))
@@ -522,7 +476,7 @@ impl MethodArea {
         class_name: &str,
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
-        let rc = self.get(class_name).ok()?;
+        let rc = CLASSES.get(class_name).ok()?;
         if let Some(java_method) =
             // lookup in interfaces for default methods
             self.lookup_in_interface_hierarchy(rc.interfaces(), full_method_signature)
@@ -541,7 +495,7 @@ impl MethodArea {
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
         for interface_name in interfaces.iter() {
-            if let Some(interface_class) = self.get(interface_name).ok() {
+            if let Some(interface_class) = CLASSES.get(interface_name).ok() {
                 if let Some(java_method) = interface_class.try_get_method(full_method_signature) {
                     return Some(java_method);
                 }
@@ -563,7 +517,7 @@ impl MethodArea {
         class_name: &str,
         field_name: &str,
     ) -> Option<TypeDescriptor> {
-        let rc = self.get(class_name).ok()?;
+        let rc = CLASSES.get(class_name).ok()?;
 
         if let Some(type_descriptor) = rc.instance_field_descriptor(field_name) {
             Some(type_descriptor.clone())
@@ -575,11 +529,11 @@ impl MethodArea {
     }
 
     pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
-        let jc = with_method_area(|area| area.get(class_name))?;
-        Ok(JavaInstance::new(
-            class_name.to_string(),
+        let (id, jc) = CLASSES.get_with_id(class_name)?;
+        Ok(JavaInstance::Base(JavaInstanceBase::new(
+            id,
             jc.instance_fields_hierarchy()?.clone(),
-        ))
+        )))
     }
 
     pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
@@ -587,7 +541,7 @@ impl MethodArea {
         class_name: &str,
         instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
     ) -> Result<()> {
-        let rc = self.get(class_name)?;
+        let rc = CLASSES.get(class_name)?;
         if let Some(parent_class_name) = rc.parent().as_ref() {
             self.lookup_and_fill_instance_fields_hierarchy(
                 parent_class_name,
@@ -624,15 +578,10 @@ impl MethodArea {
             })
     }
 
-    fn generate_synthetic_classes() -> HashMap<String, Arc<JavaClass>> {
+    fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {
         PRIMITIVE_TYPE_BY_CODE
             .keys()
-            .map(|class_name| {
-                (
-                    class_name.to_string(),
-                    Self::generate_synthetic_class(class_name),
-                )
-            })
+            .map(|class_name| Self::generate_synthetic_class(class_name))
             .collect()
     }
 
@@ -657,7 +606,7 @@ impl MethodArea {
         ))
     }
 
-    fn generate_synthetic_array_class(array_class_name: &str) -> Arc<JavaClass> {
+    pub(crate) fn generate_synthetic_array_class(array_class_name: &str) -> Arc<JavaClass> {
         let (internal, external) = derive_internal_and_external_names(array_class_name);
         Arc::new(JavaClass::new(
             IndexMap::new(),

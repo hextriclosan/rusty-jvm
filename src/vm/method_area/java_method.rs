@@ -4,7 +4,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, undecorate};
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
 use derive_new::new;
 use getset::{CopyGetters, Getters};
@@ -155,7 +155,7 @@ impl JavaMethod {
         let return_type = self.method_descriptor.return_type().to_string();
         let return_type_ref = clazz_ref(&return_type)?;
 
-        let jc = with_method_area(|area| area.get(&self.class_name))?;
+        let jc = CLASSES.get(&self.class_name)?;
         let cpool_helper = jc.cpool_helper();
         let exception_type_clazz_refs = self
             .exception_indexes
@@ -242,7 +242,7 @@ impl JavaMethod {
         let parameter_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
 
-        let jc = with_method_area(|area| area.get(&self.class_name))?;
+        let jc = CLASSES.get(&self.class_name)?; // fixme!!! get Klass from klass_id
         let cpool_helper = jc.cpool_helper();
         let exception_type_clazz_refs = self
             .exception_indexes

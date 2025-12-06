@@ -1,7 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::engine::Engine;
 use crate::vm::method_area::java_class::{InnerState, JavaClass};
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use std::sync::atomic::AtomicU32;
 use tracing::trace;
 
@@ -12,7 +12,7 @@ static COUNTER: AtomicU32 = AtomicU32::new(0);
 impl StaticInit {
     const STATIC_INIT_METHOD: &'static str = "<clinit>:()V";
     pub fn initialize(java_class_name: &str) -> Result<()> {
-        let java_class = with_method_area(|area| area.get(java_class_name))?;
+        let java_class = CLASSES.get(java_class_name)?;
         Self::initialize_java_class(&java_class)
     }
 
@@ -35,7 +35,7 @@ impl StaticInit {
                 guard.set_inner_state(InnerState::Initializing);
 
                 if let Some(parent_name) = java_class.parent() {
-                    let jc = with_method_area(|area| area.get(parent_name))?;
+                    let jc = CLASSES.get(parent_name)?;
                     Self::initialization_impl(&jc)?;
                 }
 

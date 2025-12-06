@@ -8,6 +8,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
 use crate::vm::method_area::attributes_helper::BootstrapMethodInfo;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -221,7 +222,7 @@ impl InvokeDynamicRunner {
         current_class_name: &str,
         invokedynamic_index: u16,
     ) -> Result<BootstrapInfo> {
-        let jc = with_method_area(|area| area.get(current_class_name))?;
+        let jc = CLASSES.get(current_class_name)?;
         let attributes_helper = jc.attributes_helper();
         let bootstrap_method_info = attributes_helper.get_bootstrap_method(
             jc.cpool_helper(),

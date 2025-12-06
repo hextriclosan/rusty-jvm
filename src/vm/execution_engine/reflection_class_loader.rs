@@ -2,6 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::undecorate;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use jdescriptor::TypeDescriptor;
@@ -16,9 +17,7 @@ pub struct ReflectionClassLoader {
 
 impl ReflectionClassLoader {
     pub fn load(&self, for_class: &str) -> Result<i32> {
-        let class_modifiers = with_method_area(|area| {
-            Ok::<u16, Error>(area.get(for_class)?.class_modifiers().bits())
-        })?;
+        let class_modifiers = CLASSES.get(for_class)?.class_modifiers().bits();
 
         let component_type_ref_empty = 0;
         if !for_class.starts_with('[') && !for_class.ends_with(';') {
@@ -30,9 +29,7 @@ impl ReflectionClassLoader {
             TypeDescriptor::Array(value, dimension) => {
                 let component_ref_name = value.as_ref().to_string();
                 let component_name = undecorate(&component_ref_name);
-                let component_flags = with_method_area(|area| {
-                    Ok::<u16, Error>(area.get(&component_name)?.class_modifiers().bits())
-                })?;
+                let component_flags = CLASSES.get(&component_name)?.class_modifiers().bits();
 
                 let mut array_ref = self.get_or_create(
                     &component_ref_name,
