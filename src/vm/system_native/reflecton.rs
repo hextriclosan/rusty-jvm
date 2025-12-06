@@ -1,5 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::helper::strip_nest_host;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
@@ -29,9 +30,7 @@ fn get_class_access_flags(class_ref: i32) -> Result<i32> {
     let class_name =
         with_method_area(|method_area| method_area.get_from_reflection_table(class_ref))?;
 
-    let flags = with_method_area(|method_area| {
-        Ok(method_area.get(&class_name)?.class_modifiers().bits() as i32)
-    });
+    let flags = Ok(CLASSES.get(&class_name)?.class_modifiers().bits() as i32);
     flags
 }
 

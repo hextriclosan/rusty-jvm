@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::method_handle_natives::member_name::{
     set_reference_kind, MemberName,
@@ -37,7 +38,7 @@ fn resolve_method(member_name: &mut MemberName) -> Result<i32> {
     let full_method_signature = format!("{method_name}:{ptype_names}{rtype_name}");
 
     let class_name = member_name.class_name();
-    let arc = with_method_area(|area| area.get(class_name))?;
+    let arc = CLASSES.get(class_name)?;
     let (method_index, method) = match arc.get_method_full(&full_method_signature) {
         Some((method_index, method)) => (method_index, method),
         None => {
@@ -65,7 +66,7 @@ fn resolve_static_field(member_name: &mut MemberName) -> Result<i32> {
     let class_name = member_name.class_name();
     let static_field_name = member_name.name();
 
-    let jc = with_method_area(|area| area.get(class_name))?;
+    let jc = CLASSES.get(class_name)?;
     let field_info = jc.field_info(static_field_name).ok_or_else(|| {
         Error::new_execution(&format!(
             "Static field not found: {class_name}:{static_field_name}"

@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use derive_new::new;
@@ -58,7 +59,7 @@ impl StackFramesUtil {
             }
             let class_ref = with_method_area(|area| area.load_reflection_class(&class_name))?;
 
-            let jc = with_method_area(|area| area.get(&class_name))?;
+            let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass by class_ref?
             let method_name = frame.method_name();
             let method = jc.get_method(method_name)?;
             let method_raw = Arc::as_ptr(&method) as i64;

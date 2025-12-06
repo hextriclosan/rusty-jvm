@@ -2,7 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::create_array_of_strings;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::loaded_classes::CLASSES;
 
 // refer: sun.launcher.LauncherHelper
 const CLASS: i32 = 1;
@@ -21,7 +21,7 @@ pub fn resolve_and_execute_main_method(class_name: &str, args: &[String]) -> Res
         ],
     )?[0];
 
-    let launcher_helper = with_method_area(|a| a.get("sun/launcher/LauncherHelper"))?;
+    let launcher_helper = CLASSES.get("sun/launcher/LauncherHelper")?;
     let static_main = launcher_helper
         .static_field("isStaticMain")
         .ok_or_else(|| {

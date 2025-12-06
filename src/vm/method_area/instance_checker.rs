@@ -1,5 +1,5 @@
 use crate::vm::error::Result;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::loaded_classes::CLASSES;
 
 pub(crate) struct InstanceChecker {}
 
@@ -12,7 +12,7 @@ impl InstanceChecker {
             return Ok(base_of);
         }
 
-        let class = with_method_area(|method_area| method_area.get(class_cast_to))?;
+        let class = CLASSES.get(class_cast_to)?;
         if class.is_interface() {
             if let Some(implements) = Self::implements(class_cast_to, class_cast_from) {
                 return Ok(implements);
@@ -45,15 +45,14 @@ impl InstanceChecker {
             return Some(true);
         }
 
-        let class = with_method_area(|method_area| method_area.get(child)).ok()?;
+        let class = CLASSES.get(child).ok()?;
         let class_name = class.parent().clone()?;
 
         Self::is_base_of(base, &class_name)
     }
 
     fn implements(interface: &str, implementor: &str) -> Option<bool> {
-        let class_implementor =
-            with_method_area(|method_area| method_area.get(implementor)).ok()?;
+        let class_implementor = CLASSES.get(implementor).ok()?;
 
         let interfaces = class_implementor.interfaces();
         for interface_name in interfaces.iter() {

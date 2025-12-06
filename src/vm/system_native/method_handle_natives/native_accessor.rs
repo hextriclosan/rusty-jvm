@@ -4,6 +4,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::heap::java_instance::Array;
 use crate::vm::helper::clazz_ref;
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_value::{StackValue, StackValueKind};
 use std::sync::Arc;
@@ -79,7 +80,7 @@ fn resolve_method_and_args(
 
     let jc = with_method_area(|a| {
         let clazz_name = a.get_from_reflection_table(clazz_ref)?;
-        a.get(&clazz_name)
+        CLASSES.get(&clazz_name) // fixme!!! get Klass from clazz_ref directly
     })?;
 
     let method = jc.get_method_by_index(slot as i64)?;
