@@ -7,7 +7,7 @@ use crate::vm::execution_engine::ops_math_processor::increment;
 use crate::vm::execution_engine::ops_store_processor::handle_store;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -50,7 +50,7 @@ pub(crate) fn process(
             let class_index = stack_frame.extract_two_bytes();
             let dimension_number = stack_frame.extract_one_byte();
 
-            let rc = with_method_area(|method_area| method_area.get(current_class_name))?;
+            let rc = CLASSES.get(current_class_name)?;
             let cpool_helper = rc.cpool_helper();
             let class_name = cpool_helper
                 .get_class_name(class_index as u16)

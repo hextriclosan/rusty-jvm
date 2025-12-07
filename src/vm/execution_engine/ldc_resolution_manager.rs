@@ -5,7 +5,7 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -30,7 +30,7 @@ impl LdcResolutionManager {
             return Ok(value[0]);
         }
 
-        let java_class = with_method_area(|method_area| method_area.get(current_class_name))?;
+        let java_class = CLASSES.get(current_class_name)?;
         let cpool_helper = java_class.cpool_helper();
 
         let result = if let Some(value) = cpool_helper.get_integer(cpoolindex) {
@@ -83,7 +83,7 @@ impl LdcResolutionManager {
             return Ok(vec_to_i64(value));
         }
 
-        let java_class = with_method_area(|method_area| method_area.get(current_class_name))?;
+        let java_class = CLASSES.get(current_class_name)?;
         let cpool_helper = java_class.cpool_helper();
 
         let result = if let Some(value) = cpool_helper.get_long(cpoolindex) {
@@ -208,7 +208,7 @@ pub fn resolve_method_handle(
 /// Returns `Result<i32>` containing a reference to the new `MethodHandles$Lookup` object on success,
 /// or an error if any step fails.
 fn build_lookup_for_class(current_class_name: &str) -> Result<i32> {
-    let jc_lookup = with_method_area(|a| a.get("java/lang/invoke/MethodHandles$Lookup"))?;
+    let jc_lookup = CLASSES.get("java/lang/invoke/MethodHandles$Lookup")?;
     StaticInit::initialize_java_class(&jc_lookup)?;
     let impl_lookup = jc_lookup
         .static_field("IMPL_LOOKUP")

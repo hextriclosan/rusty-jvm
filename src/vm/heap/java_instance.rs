@@ -1,16 +1,32 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::heap::java_instance::JavaInstance::{Base, Class};
 use crate::vm::method_area::field::FieldValue;
+use crate::vm::method_area::java_class::JavaClass;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use derive_new::new;
 use indexmap::IndexMap;
 use serde::Serialize;
+use std::sync::Arc;
 
 pub type ClassName = String;
 pub type FieldNameType = String;
 
 #[derive(Debug, Serialize, Clone, new)]
-pub(crate) struct JavaInstance {
-    instance_name: String,
+pub(crate) struct JavaInstanceBase {
+    klass_id: usize,
     fields: IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
+}
+
+#[derive(Debug, Serialize, Clone, new)]
+pub(crate) struct JavaInstanceClass {
+    instance: JavaInstanceBase,
+    mirror_klass_id: usize,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub(crate) enum JavaInstance {
+    Base(JavaInstanceBase),
+    Class(JavaInstanceClass),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -230,8 +246,9 @@ impl JavaInstance {
         starting_from_class_name: &str,
         field_name_type: &str,
     ) -> Option<&FieldValue> {
-        match self.fields.get_index_of(starting_from_class_name) {
-            Some(start_index) => self
+        let instance = self.get_instance();
+        match instance.fields.get_index_of(starting_from_class_name) {
+            Some(start_index) => instance
                 .fields
                 .iter()
                 .take(start_index + 1)
@@ -241,13 +258,28 @@ impl JavaInstance {
         }
     }
 
+    fn get_instance(&self) -> &JavaInstanceBase {
+        match self {
+            Base(instance) => instance,
+            Class(class_instance) => &class_instance.instance,
+        }
+    }
+
+    fn get_instance_mut(&mut self) -> &mut JavaInstanceBase {
+        match self {
+            Base(ref mut instance) => instance,
+            Class(ref mut class_instance) => &mut class_instance.instance,
+        }
+    }
+
     fn lookup_for_field_mut(
         &mut self,
         starting_from_class_name: &str,
         field_name_type: &str,
     ) -> Option<&mut FieldValue> {
-        match self.fields.get_index_of(starting_from_class_name) {
-            Some(start_index) => self
+        let instance = self.get_instance_mut();
+        match instance.fields.get_index_of(starting_from_class_name) {
+            Some(start_index) => instance
                 .fields
                 .iter_mut()
                 .take(start_index + 1)
@@ -257,7 +289,12 @@ impl JavaInstance {
         }
     }
 
-    pub fn instance_name(&self) -> &str {
-        &self.instance_name
+    pub fn klass(&self) -> Result<Arc<JavaClass>> {
+        let instance = self.get_instance();
+        CLASSES.get_by_id(instance.klass_id)
+    }
+
+    pub fn instance_name(&self) -> Result<String> {
+        self.klass().map(|klass| klass.this_class_name().clone()) // fixme!!! cloning string
     }
 }

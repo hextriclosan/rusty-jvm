@@ -107,23 +107,19 @@ impl Heap {
     }
 
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {
-        self.data
-            .get(objectref)
-            .and_then(|entry| match entry.value() {
-                Object(java_instance) => {
-                    let name = java_instance.instance_name().to_string();
-                    Some(name)
-                }
+        if let Some(entry) = self.data.get(objectref) {
+            match entry.value() {
+                Object(java_instance) => java_instance.instance_name(),
                 Arr(array) => {
                     let name = array.type_name().to_string();
-                    Some(name)
+                    Ok(name)
                 }
-            })
-            .ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "error getting object from heap by ref {objectref}"
-                ))
-            })
+            }
+        } else {
+            Err(Error::new_execution(&format!(
+                "error getting object from heap by ref {objectref}"
+            )))
+        }
     }
 
     pub(crate) fn create_array(&self, type_name: &str, len: i32) -> i32 {

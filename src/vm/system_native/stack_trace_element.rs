@@ -3,6 +3,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::vec_to_i64;
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::throwable::NATIVE_METHOD;
 
@@ -33,7 +34,7 @@ fn init_stack_trace_elements(
 
         let jc = {
             let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
-            with_method_area(|area| area.get(&class_name))?
+            CLASSES.get(&class_name)? // fixme!!! get Klass from class_ref directly
         };
 
         let class_name_ref = {

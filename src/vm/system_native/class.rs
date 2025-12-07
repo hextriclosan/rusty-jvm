@@ -9,6 +9,7 @@ use crate::vm::helper::{strip_nest_host, undecorate};
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -27,7 +28,7 @@ pub(crate) fn get_superclass_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_superclass(clazz_ref: i32) -> Result<i32> {
     let current_clazz_ref = with_method_area(|method_area| {
         let name = method_area.get_from_reflection_table(clazz_ref)?;
-        let rc = method_area.get(&name)?;
+        let rc = CLASSES.get(&name)?; // fixme!!! get Klass from class_ref directly
         let parent = if !rc.is_interface() {
             rc.parent().clone()
         } else {
@@ -77,7 +78,7 @@ fn init_class_name(class_ref: i32) -> Result<i32> {
     let class_name = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
         let class_name = undecorate(&class_name);
-        let jc = method_area.get(class_name)?;
+        let jc = CLASSES.get(class_name)?; // fixme!!! get Klass from class_ref directly
         let class_name = jc.external_name();
         Ok::<String, Error>(class_name.to_string())
     })?;
@@ -132,7 +133,7 @@ pub(crate) fn get_interfaces0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_interfaces0(class_ref: i32) -> Result<i32> {
     let interface_refs = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        let jc = method_area.get(&class_name)?;
+        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from class_ref directly
         let interfaces = jc.interfaces();
 
         let interface_refs = interfaces
@@ -154,7 +155,7 @@ pub(crate) fn get_declaring_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_declaring_class0(clazz_ref: i32) -> Result<i32> {
     let declaring_class_ref = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(clazz_ref)?;
-        let jc = method_area.get(&class_name)?;
+        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from class_ref directly
         let declaring_class_ref = jc
             .declaring_class()
             .as_ref()
@@ -180,7 +181,7 @@ pub(crate) fn get_declared_fields0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_declared_fields(class_ref: i32, public_only: bool) -> Result<i32> {
     let jc = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        method_area.get(&class_name)
+        CLASSES.get(&class_name) // fixme!!! get Klass from class_ref directly
     })?;
 
     let fields_info = jc.get_fields_info();
@@ -209,7 +210,7 @@ pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
     let java_methods = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        let jc = method_area.get(&class_name)?;
+        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from class_ref directly
         Ok::<Vec<Arc<JavaMethod>>, Error>(jc.get_methods())
     })?;
 
@@ -240,7 +241,7 @@ pub(crate) fn get_declared_constructors0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_declared_constructors(class_ref: i32) -> Result<i32> {
     let java_methods = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        let jc = method_area.get(&class_name)?;
+        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from class_ref directly
         Ok::<Vec<Arc<JavaMethod>>, Error>(jc.get_methods())
     })?;
 
@@ -263,7 +264,7 @@ pub(crate) fn get_enclosing_method0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     if let Some((class_name, name, descriptor)) = with_method_area(|method_area| {
         let class_name = method_area.get_from_reflection_table(class_ref)?;
-        let jc = method_area.get(&class_name)?;
+        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from class_ref directly
         Ok::<Option<(String, String, String)>, Error>(jc.enclosing_method().clone())
     })? {
         let class_name_ref =
@@ -290,7 +291,7 @@ pub(crate) fn get_raw_annotations_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_raw_annotations(reference: i32) -> Result<i32> {
     let annotations_raw = with_method_area(|method_area| {
         let name = method_area.get_from_reflection_table(reference)?;
-        let rc = method_area.get(&name)?;
+        let rc = CLASSES.get(&name)?; // fixme!!! get Klass from class_ref directly
         let annotations_raw = rc.annotations_raw().clone();
         Ok::<Option<Vec<u8>>, Error>(annotations_raw)
     })?;
@@ -405,7 +406,7 @@ pub(crate) fn is_record0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn is_record0(clazz_ref: i32) -> Result<bool> {
     let rc = with_method_area(|method_area| {
         let name = method_area.get_from_reflection_table(clazz_ref)?;
-        let rc = method_area.get(&name)?;
+        let rc = CLASSES.get(&name)?; // fixme!!! get Klass from class_ref directly
         Ok::<_, Error>(rc)
     })?;
 
