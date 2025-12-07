@@ -30,8 +30,8 @@ fn get_class_access_flags(class_ref: i32) -> Result<i32> {
     let class_name =
         with_method_area(|method_area| method_area.get_from_reflection_table(class_ref))?;
 
-    let flags = Ok(CLASSES.get(&class_name)?.class_modifiers().bits() as i32);
-    flags
+    let flags = CLASSES.get(&class_name)?.class_modifiers().bits() as i32;
+    Ok(flags)
 }
 
 pub(crate) fn reflection_are_nest_mates_wrp(args: &[i32]) -> Result<Vec<i32>> {

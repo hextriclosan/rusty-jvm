@@ -109,10 +109,7 @@ impl Heap {
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {
         if let Some(entry) = self.data.get(objectref) {
             match entry.value() {
-                Object(java_instance) => match java_instance.instance_name() {
-                    Ok(name) => Ok(name),
-                    Err(e) => Err(e),
-                },
+                Object(java_instance) => java_instance.instance_name(),
                 Arr(array) => {
                     let name = array.type_name().to_string();
                     Ok(name)
