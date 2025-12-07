@@ -23,7 +23,7 @@ pub(crate) struct JavaInstanceClass {
     mirror_klass_id: usize,
 }
 
-#[derive(Debug, Serialize, Clone, new)]
+#[derive(Debug, Serialize, Clone)]
 pub(crate) enum JavaInstance {
     Base(JavaInstanceBase),
     Class(JavaInstanceClass),
