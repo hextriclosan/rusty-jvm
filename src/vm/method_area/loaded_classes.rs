@@ -5,6 +5,7 @@ use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use indexmap::IndexMap;
 use parking_lot::RwLock;
 use std::sync::{Arc, LazyLock};
+use tracing::trace;
 
 pub(crate) static CLASSES: LazyLock<LoadedClasses> = LazyLock::new(LoadedClasses::default);
 
@@ -41,14 +42,24 @@ impl LoadedClasses {
             .contains_key(fully_qualified_class_name)
     }
 
-    /// Inserts class into loaded classes map if not already present
+    /// Inserts class into loaded classes, returns existing if already present
     ///
     /// Used by:
     /// - MethodArea::new() to insert synthetic classes for primitive types
     /// - MethodArea::create_metaclass() to create class dynamically from bytecode byte-array
-    pub fn insert_klass(&self, klass: Arc<JavaClass>) {
-        let this_class_name = klass.this_class_name().to_string();
-        self.get_or_create_impl(&this_class_name, klass);
+    pub fn insert_klass(&self, klass: Arc<JavaClass>) -> (usize, String, Arc<JavaClass>) {
+        let mut writer = self.loaded_classes.write();
+        let fully_qualified_class_name = klass.this_class_name();
+        // Double check locking, maybe another thread created it while we waited for the lock
+        if let Some((id, key, klass)) = writer.get_full(fully_qualified_class_name) {
+            return (id, key.to_string(), Arc::clone(klass));
+        }
+
+        let name = fully_qualified_class_name.to_string();
+        let (id, _value) = writer.insert_full(name.clone(), Arc::clone(&klass));
+        trace!("<CLASS LOADED> -> {}", fully_qualified_class_name);
+
+        (id, name, Arc::clone(&klass))
     }
 
     /// Gets class by name, loading it if necessary
@@ -73,23 +84,6 @@ impl LoadedClasses {
             with_method_area(|a| a.load_class_file(fully_qualified_class_name))?
         };
 
-        Ok(self.get_or_create_impl(fully_qualified_class_name, klass))
-    }
-
-    fn get_or_create_impl(
-        &self,
-        fully_qualified_class_name: &str,
-        klass: Arc<JavaClass>,
-    ) -> (usize, String, Arc<JavaClass>) {
-        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        let mut writer = self.loaded_classes.write();
-        // Double check locking, maybe another thread created it while we waited for the lock
-        if let Some((id, key, klass)) = writer.get_full(fully_qualified_class_name) {
-            return (id, key.to_string(), Arc::clone(klass));
-        }
-
-        let name = fully_qualified_class_name.to_string();
-        let (id, _value) = writer.insert_full(name.clone(), Arc::clone(&klass));
-        (id, name, Arc::clone(&klass))
+        Ok(self.insert_klass(klass))
     }
 }
