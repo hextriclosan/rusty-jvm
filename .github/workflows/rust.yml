@@ -46,14 +46,17 @@ jobs:
 
       - name: Install sccache (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           choco install sccache
-          echo "::add-path::C:\\ProgramData\\chocolatey\\bin"
+          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
 
       - name: Verify sccache
+        shell: bash
         run: |
-          which sccache || where sccache
-          sccache --version
+          echo "PATH=$PATH"
+          command -v sccache || echo "sccache NOT FOUND"
+          sccache --version || echo "Cannot run sccache"
           echo "RUSTC_WRAPPER=$RUSTC_WRAPPER"
 
       # Cache sccache itself
