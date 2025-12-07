@@ -295,7 +295,6 @@ impl JavaInstance {
     }
 
     pub fn instance_name(&self) -> Result<String> {
-        self.klass()
-            .map(|klass| klass.this_class_name().clone()) // fixme!!! cloning string
+        self.klass().map(|klass| klass.this_class_name().clone()) // fixme!!! cloning string
     }
 }

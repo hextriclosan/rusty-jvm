@@ -2,15 +2,15 @@ use crate::vm::error::{Error, Result};
 use crate::vm::helper::undecorate;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
-use std::sync::{Arc, LazyLock};
 use indexmap::IndexMap;
 use parking_lot::RwLock;
+use std::sync::{Arc, LazyLock};
 
 pub(crate) static CLASSES: LazyLock<LoadedClasses> = LazyLock::new(LoadedClasses::default);
 
 #[derive(Debug, Default)]
 pub(crate) struct LoadedClasses {
-    loaded_classes: RwLock<IndexMap<String, Arc<JavaClass>>>
+    loaded_classes: RwLock<IndexMap<String, Arc<JavaClass>>>,
 }
 
 impl LoadedClasses {
@@ -36,15 +36,16 @@ impl LoadedClasses {
     /// Used by java/lang/ClassLoader:findLoadedClass0
     pub fn is_loaded(&self, fully_qualified_class_name: &str) -> bool {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        self.loaded_classes.read().contains_key(fully_qualified_class_name)
+        self.loaded_classes
+            .read()
+            .contains_key(fully_qualified_class_name)
     }
-
 
     /// Inserts class into loaded classes map if not already present
     ///
     /// Used by:
     /// - MethodArea::new() to insert synthetic classes for primitive types
-    /// - MethodArea::create_metaclass() to create class dynamically form bytecode byte-array
+    /// - MethodArea::create_metaclass() to create class dynamically from bytecode byte-array
     pub fn insert_klass(&self, klass: Arc<JavaClass>) {
         let this_class_name = klass.this_class_name().to_string();
         self.get_or_create_impl(&this_class_name, klass);
@@ -54,7 +55,10 @@ impl LoadedClasses {
     /// Multistage loading will be here including using class loaders
     ///
     /// Used by MethodArea::create_instance_with_default_fields(), instances creation entry point
-    pub fn get_full(&self, fully_qualified_class_name: &str) -> Result<(usize, String, Arc<JavaClass>)> {
+    pub fn get_full(
+        &self,
+        fully_qualified_class_name: &str,
+    ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
         {
             let reader = self.loaded_classes.read();
@@ -75,7 +79,7 @@ impl LoadedClasses {
     fn get_or_create_impl(
         &self,
         fully_qualified_class_name: &str,
-        klass: Arc<JavaClass>
+        klass: Arc<JavaClass>,
     ) -> (usize, String, Arc<JavaClass>) {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
         let mut writer = self.loaded_classes.write();
