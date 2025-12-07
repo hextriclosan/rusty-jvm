@@ -1,79 +1,91 @@
-use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
-use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
 use crate::vm::helper::undecorate;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
-use dashmap::DashMap;
 use std::sync::{Arc, LazyLock};
+use indexmap::IndexMap;
+use parking_lot::RwLock;
 
 pub(crate) static CLASSES: LazyLock<LoadedClasses> = LazyLock::new(LoadedClasses::default);
 
+#[derive(Debug, Default)]
 pub(crate) struct LoadedClasses {
-    loaded_classes: AutoDashMapI32<Arc<JavaClass>>,
-    index_by_name: DashMap<String, i32>,
-}
-
-impl Default for LoadedClasses {
-    fn default() -> Self {
-        Self {
-            loaded_classes: AutoDashMapI32::new(1),
-            index_by_name: DashMap::default(),
-        }
-    }
+    loaded_classes: RwLock<IndexMap<String, Arc<JavaClass>>>
 }
 
 impl LoadedClasses {
-    pub fn get_by_id(&self, id: i32) -> Result<Arc<JavaClass>> {
+    /// Gets class by its internal id
+    ///
+    /// Used by Object.header.klass_id
+    pub fn get_by_id(&self, id: usize) -> Result<Arc<JavaClass>> {
         self.loaded_classes
-            .get(id)
-            .and_then(|class| Some(Arc::clone(class.value())))
+            .read()
+            .get_index(id)
+            .map(|(_key, klass)| Arc::clone(klass))
             .ok_or_else(|| Error::new_execution(&format!("Class with id {id} not found")))
     }
 
+    /// Used by various places where class is needed by name
     pub fn get(&self, fully_qualified_class_name: &str) -> Result<Arc<JavaClass>> {
-        self.get_with_id(fully_qualified_class_name)
-            .map(|(_, klass)| klass)
+        self.get_full(fully_qualified_class_name)
+            .map(|(_id, _key, klass)| klass)
     }
 
-    /// Get loaded class by its fully qualified name.
-    /// If the class is not loaded, loads and returns it.
-    /// Multistage loading will be here including using class loaders
-    pub fn get_with_id(&self, fully_qualified_class_name: &str) -> Result<(i32, Arc<JavaClass>)> {
-        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        if let Some(id) = self.index_by_name.get(fully_qualified_class_name) {
-            let id = *id.value();
-            let klass = self.get_by_id(id)?;
-            return Ok((id, klass));
-        }
-
-        if fully_qualified_class_name.starts_with('[') {
-            let arc = MethodArea::generate_synthetic_array_class(fully_qualified_class_name);
-            let id = self.insert_auto(Arc::clone(&arc));
-            return Ok((id, arc));
-        }
-
-        let klass = with_method_area(|a| a.load_class_file(fully_qualified_class_name))?;
-
-        let id = self.insert_auto(Arc::clone(&klass));
-
-        Ok((id, klass))
-    }
-
+    /// Checks if class is already loaded
+    ///
+    /// Used by java/lang/ClassLoader:findLoadedClass0
     pub fn is_loaded(&self, fully_qualified_class_name: &str) -> bool {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        self.index_by_name.contains_key(fully_qualified_class_name)
+        self.loaded_classes.read().contains_key(fully_qualified_class_name)
     }
 
-    pub fn insert_auto(&self, klass: Arc<JavaClass>) -> i32 {
-        let this_class_name = klass.this_class_name().to_string();
 
-        if self.index_by_name.contains_key(&this_class_name) {
-            unreachable!("The class with name {} is already loaded", this_class_name);
+    /// Inserts class into loaded classes map if not already present
+    ///
+    /// Used by:
+    /// - MethodArea::new() to insert synthetic classes for primitive types
+    /// - MethodArea::create_metaclass() to create class dynamically form bytecode byte-array
+    pub fn insert_klass(&self, klass: Arc<JavaClass>) {
+        let this_class_name = klass.this_class_name().to_string();
+        self.get_or_create_impl(&this_class_name, klass);
+    }
+
+    /// Gets class by name, loading it if necessary
+    /// Multistage loading will be here including using class loaders
+    ///
+    /// Used by MethodArea::create_instance_with_default_fields(), instances creation entry point
+    pub fn get_full(&self, fully_qualified_class_name: &str) -> Result<(usize, String, Arc<JavaClass>)> {
+        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
+        {
+            let reader = self.loaded_classes.read();
+            if let Some((id, key, klass)) = reader.get_full(fully_qualified_class_name) {
+                return Ok((id, key.to_string(), Arc::clone(klass)));
+            }
         }
 
-        let id = self.loaded_classes.insert_auto(klass);
-        self.index_by_name.insert(this_class_name, id);
-        id
+        let klass = if fully_qualified_class_name.starts_with('[') {
+            MethodArea::generate_synthetic_array_class(fully_qualified_class_name)
+        } else {
+            with_method_area(|a| a.load_class_file(fully_qualified_class_name))?
+        };
+
+        Ok(self.get_or_create_impl(fully_qualified_class_name, klass))
+    }
+
+    fn get_or_create_impl(
+        &self,
+        fully_qualified_class_name: &str,
+        klass: Arc<JavaClass>
+    ) -> (usize, String, Arc<JavaClass>) {
+        let fully_qualified_class_name = undecorate(fully_qualified_class_name);
+        let mut writer = self.loaded_classes.write();
+        // Double check locking, maybe another thread created it while we waited for the lock
+        if let Some((id, key, klass)) = writer.get_full(fully_qualified_class_name) {
+            return (id, key.to_string(), Arc::clone(klass));
+        }
+
+        let name = fully_qualified_class_name.to_string();
+        let (id, _value) = writer.insert_full(name.clone(), Arc::clone(&klass));
+        (id, name, Arc::clone(&klass))
     }
 }

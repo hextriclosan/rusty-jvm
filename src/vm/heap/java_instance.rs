@@ -13,14 +13,14 @@ pub type FieldNameType = String;
 
 #[derive(Debug, Serialize, Clone, new)]
 pub(crate) struct JavaInstanceBase {
-    klass_id: i32,
+    klass_id: usize,
     fields: IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
 }
 
 #[derive(Debug, Serialize, Clone, new)]
 pub(crate) struct JavaInstanceClass {
     instance: JavaInstanceBase,
-    klass_id: i32,
+    mirror_klass_id: usize,
 }
 
 #[derive(Debug, Serialize, Clone, new)]
@@ -289,14 +289,13 @@ impl JavaInstance {
         }
     }
 
-    pub fn klass(&self) -> Arc<JavaClass> {
+    pub fn klass(&self) -> Result<Arc<JavaClass>> {
         let instance = self.get_instance();
-        CLASSES
-            .get_by_id(instance.klass_id)
-            .expect("klass not found for instance")
+        CLASSES.get_by_id(instance.klass_id)
     }
 
-    pub fn instance_name(&self) -> String {
-        self.klass().this_class_name().clone()
+    pub fn instance_name(&self) -> Result<String> {
+        self.klass()
+            .map(|klass| klass.this_class_name().clone()) // fixme!!! cloning string
     }
 }

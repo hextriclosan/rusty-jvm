@@ -111,8 +111,13 @@ impl Heap {
             .get(objectref)
             .and_then(|entry| match entry.value() {
                 Object(java_instance) => {
-                    let name = java_instance.instance_name().to_string();
-                    Some(name)
+                    match java_instance.instance_name() {
+                        Ok(name) => Some(name),
+                        Err(e) => {
+                            eprintln!("Error getting instance name: {}", e);
+                            None
+                        },
+                    }
                 }
                 Arr(array) => {
                     let name = array.type_name().to_string();

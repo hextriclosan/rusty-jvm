@@ -71,7 +71,7 @@ impl MethodArea {
             .collect::<Result<HashMap<_, _>>>()?;
 
         for java_class in Self::generate_synthetic_classes() {
-            CLASSES.insert_auto(Arc::clone(&java_class));
+            CLASSES.insert_klass(Arc::clone(&java_class));
         }
 
         Ok(Self {
@@ -99,7 +99,7 @@ impl MethodArea {
         let class_file = parse(bytecode)?;
         let (_, java_class) =
             self.to_java_class(class_file, internal.clone(), external.clone())?;
-        CLASSES.insert_auto(Arc::clone(&java_class));
+        CLASSES.insert_klass(Arc::clone(&java_class));
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok((internal, external))
@@ -529,7 +529,7 @@ impl MethodArea {
     }
 
     pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
-        let (id, jc) = CLASSES.get_with_id(class_name)?;
+        let (id, _key, jc) = CLASSES.get_full(class_name)?;
         Ok(JavaInstance::Base(JavaInstanceBase::new(
             id,
             jc.instance_fields_hierarchy()?.clone(),
