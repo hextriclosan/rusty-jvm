@@ -13,8 +13,6 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_TEST_DEBUG: 0
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build-and-test:
@@ -39,11 +37,6 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      # sccache install + cache (handled internally)
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      # Rust target cache
       - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
         with:
