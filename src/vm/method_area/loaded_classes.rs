@@ -47,19 +47,22 @@ impl LoadedClasses {
     /// Used by:
     /// - MethodArea::new() to insert synthetic classes for primitive types
     /// - MethodArea::create_metaclass() to create class dynamically from bytecode byte-array
-    pub fn insert_klass(&self, klass: Arc<JavaClass>) -> (usize, String, Arc<JavaClass>) {
+    pub fn insert_klass(&self, klass: Arc<JavaClass>) -> Result<(usize, String, Arc<JavaClass>)> {
         let mut writer = self.loaded_classes.write();
         let fully_qualified_class_name = klass.this_class_name();
         // Double check locking, maybe another thread created it while we waited for the lock
         if let Some((id, key, klass)) = writer.get_full(fully_qualified_class_name) {
-            return (id, key.to_string(), Arc::clone(klass));
+            return Ok((id, key.to_string(), Arc::clone(klass)));
         }
 
         let name = fully_qualified_class_name.to_string();
         let (id, _value) = writer.insert_full(name.clone(), Arc::clone(&klass));
         trace!("<CLASS LOADED> -> {}", fully_qualified_class_name);
 
-        (id, name, Arc::clone(&klass))
+        // create corresponding Class instance here
+        // put id to mirror_klass_id of JavaInstanceClass
+
+        Ok((id, name, Arc::clone(&klass)))
     }
 
     /// Gets class by name, loading it if necessary
@@ -84,6 +87,6 @@ impl LoadedClasses {
             with_method_area(|a| a.load_class_file(fully_qualified_class_name))?
         };
 
-        Ok(self.insert_klass(klass))
+        self.insert_klass(klass)
     }
 }

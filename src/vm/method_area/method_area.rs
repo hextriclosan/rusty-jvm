@@ -1,7 +1,7 @@
 use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
-use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase};
+use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase, JavaInstanceClass};
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
@@ -71,7 +71,7 @@ impl MethodArea {
             .collect::<Result<HashMap<_, _>>>()?;
 
         for java_class in Self::generate_synthetic_classes() {
-            CLASSES.insert_klass(Arc::clone(&java_class));
+            let _ = CLASSES.insert_klass(Arc::clone(&java_class))?;
         }
 
         Ok(Self {
@@ -99,7 +99,7 @@ impl MethodArea {
         let class_file = parse(bytecode)?;
         let (_, java_class) =
             self.to_java_class(class_file, internal.clone(), external.clone())?;
-        CLASSES.insert_klass(Arc::clone(&java_class));
+        let _ = CLASSES.insert_klass(Arc::clone(&java_class))?;
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok((internal, external))
@@ -533,6 +533,14 @@ impl MethodArea {
         Ok(JavaInstance::Base(JavaInstanceBase::new(
             id,
             jc.instance_fields_hierarchy()?.clone(),
+        )))
+    }
+
+    pub fn create_class_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
+        let (id, _key, jc) = CLASSES.get_full(class_name)?;
+        Ok(JavaInstance::Class(JavaInstanceClass::new(
+            JavaInstanceBase::new(id, jc.instance_fields_hierarchy()?.clone()),
+            0,
         )))
     }
 

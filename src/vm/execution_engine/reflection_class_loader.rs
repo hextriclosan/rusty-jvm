@@ -54,6 +54,7 @@ impl ReflectionClassLoader {
         component_type_ref: i32,
         modifiers: u16,
     ) -> Result<i32> {
+        let class_name = undecorate(class_name);
         let mut class_type_map = self.class_type_instance_by_name.write()?;
         if let Some(&reflection_ref) = class_type_map.get(class_name) {
             return Ok(reflection_ref);
