@@ -37,12 +37,6 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-targets: "all"
-          cache-on-failure: true
-
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:
