@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use assert_cmd::{cargo_bin_cmd, Command};
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{env, fs, iter};
 use tempfile::TempDir;
@@ -98,6 +99,7 @@ fn assert_success_with_args_with_stderr(
         expected_stderr,
         ExecutionResult::Success,
         0,
+        HashMap::default(),
     )
 }
 
@@ -115,6 +117,7 @@ fn assert_failure_with_args_with_stderr(
         expected_stderr,
         ExecutionResult::Failure,
         1,
+        HashMap::default(),
     )
 }
 
@@ -126,6 +129,7 @@ pub fn assert_with_all_args(
     expected_stderr: &str,
     expected_result: ExecutionResult,
     expected_exit_code: i32,
+    envs: HashMap<String, String>,
 ) {
     let args = program_args
         .iter()
@@ -133,7 +137,7 @@ pub fn assert_with_all_args(
         .chain(iter::once(entry))
         .chain(arguments.iter().copied())
         .collect::<Vec<_>>();
-    let assert = get_command(&args).assert();
+    let assert = get_command(&args, envs).assert();
     let assert = if expected_result == ExecutionResult::Success {
         assert.try_success()
     } else {
@@ -180,6 +184,7 @@ fn assert_failure_with_args(entry: &str, arguments: &[&str], expected: &str) {
         expected,
         ExecutionResult::Failure,
         1,
+        HashMap::default(),
     )
 }
 
@@ -196,7 +201,7 @@ pub fn get_output_with_args(entry: &str, arguments: &[&str]) -> String {
 }
 
 pub fn get_output_with_raw_args(args: &[&str]) -> String {
-    let output = get_command(&args)
+    let output = get_command(&args, HashMap::default())
         .output()
         .expect("Failed to execute process");
 
@@ -224,9 +229,11 @@ pub fn assert_file_with_args(
     );
 }
 
-fn get_command(arguments: &[&str]) -> Command {
+fn get_command(arguments: &[&str], envs: HashMap<String, String>) -> Command {
     let mut cmd = cargo_bin_cmd!("rusty-jvm");
-    cmd.current_dir(TEST_PATH.as_path()).args(arguments);
+    cmd.current_dir(TEST_PATH.as_path())
+        .args(arguments)
+        .envs(&envs);
     cmd
 }
 
