@@ -14,7 +14,7 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_TEST_DEBUG: 0
   SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: sccache
+  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build-and-test:
@@ -39,38 +39,11 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      # Install sccache per OS
-      - name: Install sccache (Ubuntu/macOS)
-        if: runner.os != 'Windows'
+      # sccache install + cache (handled internally)
+      - name: Install sccache
         uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Install sccache (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          choco install sccache
-          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
-
-      - name: Verify sccache
-        shell: bash
-        run: |
-          echo "PATH=$PATH"
-          command -v sccache || echo "sccache NOT FOUND"
-          sccache --version || echo "Cannot run sccache"
-          echo "RUSTC_WRAPPER=$RUSTC_WRAPPER"
-
-      # Cache sccache itself
-      - name: Cache sccache directory
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/sccache
-            C:/Users/runneradmin/AppData/Local/sccache
-          key: sccache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            sccache-${{ runner.os }}-
-
-      # Cache Cargo dependencies
+      # Rust target cache
       - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
         with:
