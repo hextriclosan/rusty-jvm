@@ -1,5 +1,6 @@
 mod utils;
 
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::Write;
@@ -357,6 +358,7 @@ negative_destPosPlusLengthTooBig: java.lang.ArrayIndexOutOfBoundsException: arra
     );
 }
 
+use crate::utils::ExecutionResult::Success;
 use crate::utils::{
     assert_failure, assert_file_with_args, assert_success_with_args, assert_success_with_stderr,
     get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
@@ -2466,6 +2468,7 @@ Options:
         "",
         ExecutionResult::Success,
         0,
+        HashMap::default(),
     );
 }
 
@@ -2480,6 +2483,7 @@ fn should_print_version_message() {
         "",
         ExecutionResult::Success,
         0,
+        HashMap::default(),
     );
 }
 
@@ -3284,5 +3288,21 @@ fn should_exit_with_given_code_impl(
         "",
         result,
         expected_exit_code,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_run_without_core_classes() {
+    let env_vars = HashMap::from([("SKIP_JAVA_CORE_INIT".to_string(), "".to_string())]);
+    utils::assert_with_all_args(
+        &[],
+        "samples.system.loadwithoutcoreclasses.SystemLoadWithoutCoreClasses",
+        &[],
+        "",
+        "",
+        Success,
+        0,
+        env_vars,
     );
 }

@@ -23,11 +23,19 @@ use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
 use crate::Arguments;
+use once_cell::sync::Lazy;
+use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
+
+pub(crate) static JAVA_CORE_INIT: Lazy<bool> = Lazy::new(|| {
+    env::var("SKIP_JAVA_CORE_INIT")
+        .map(|_| false)
+        .unwrap_or(true)
+});
 
 /// Launches the Rusty Java Virtual Machine with the given arguments.
 ///
@@ -65,7 +73,9 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 }
 
 fn invoke_shutdown_hooks() -> Result<()> {
-    Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])?;
+    if *JAVA_CORE_INIT {
+        Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])?;
+    }
     Ok(())
 }
 
@@ -74,7 +84,9 @@ fn prelude() -> Result<()> {
 
     MethodArea::init()?;
 
-    init()?;
+    if *JAVA_CORE_INIT {
+        init()?;
+    }
 
     Ok(())
 }
