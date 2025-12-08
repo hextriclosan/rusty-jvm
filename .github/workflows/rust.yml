@@ -43,20 +43,8 @@ jobs:
       - name: Install sccache
         uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-llvm-cov
-
-      - name: Run tests with coverage
-        run: cargo llvm-cov --locked --workspace --lcov --output-path lcov.info
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
+      - name: Run tests
+        run: cargo test --workspace
 
   test-on-s390x:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
