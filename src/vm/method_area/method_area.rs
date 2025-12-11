@@ -94,7 +94,7 @@ impl MethodArea {
         let class_file = parse(bytecode)?;
         let (_, java_class) =
             self.to_java_class(class_file, internal.clone(), external.clone())?;
-        let _ = CLASSES.insert_klass(Arc::clone(&java_class))?;
+        CLASSES.insert_klass(Arc::clone(&java_class))?;
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok((internal, external))
@@ -577,30 +577,6 @@ impl MethodArea {
             external,
             None,
             IndexSet::new(),
-            ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
-            None,
-            None,
-            None,
-            None,
-        ))
-    }
-
-    pub(crate) fn generate_synthetic_array_class(array_class_name: &str) -> Arc<JavaClass> {
-        let (internal, external) = derive_internal_and_external_names(array_class_name);
-        Arc::new(JavaClass::new(
-            IndexMap::new(),
-            IndexMap::new(),
-            IndexMap::new(),
-            IndexMap::new(),
-            CPoolHelper::new(&Vec::new()),
-            AttributesHelper::new(&Vec::new()),
-            internal,
-            external,
-            Some("java/lang/Object".to_string()),
-            IndexSet::from([
-                "java/lang/Cloneable".to_string(),
-                "java/io/Serializable".to_string(),
-            ]),
             ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
             None,
             None,

@@ -11,6 +11,13 @@ public class InspectModule {
         printModuleInfo(String.class);  // java.base
         printModuleInfo(XMLReader.class);  // java.xml
         printModuleInfo(InspectModule.class);  // this class
+
+        Module javaBaseModule = String.class.getModule();
+        Module stringArrayModule = String[].class.getModule();
+        Module doubleModule = double.class.getModule();
+        Module doubleArrayModule = double[].class.getModule();
+//         System.out.println("String.class, String[], double.class, double[] have the same module: " +
+//             (javaBaseModule == stringArrayModule && javaBaseModule == doubleModule && javaBaseModule == doubleArrayModule)); // todo: should be true
     }
 
     private static void printModuleInfo(Class<?> clazz) {
