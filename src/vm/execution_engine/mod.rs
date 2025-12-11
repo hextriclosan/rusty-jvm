@@ -15,7 +15,6 @@ mod ops_math_processor;
 mod ops_reference_processor;
 mod ops_stack_processor;
 mod ops_store_processor;
-pub(crate) mod reflection_class_loader;
 pub(crate) mod static_init;
 pub(crate) mod string_pool_helper;
 mod system_native_table;

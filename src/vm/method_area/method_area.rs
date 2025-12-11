@@ -1,7 +1,8 @@
 use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
-use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase, JavaInstanceClass};
+use crate::vm::heap::heap::HEAP;
+use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase};
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
@@ -25,7 +26,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use tracing::trace;
 
 static METHOD_AREA: OnceCell<MethodArea> = OnceCell::new();
@@ -44,7 +45,6 @@ pub(crate) struct MethodArea {
     jimage: JImage,
     modules_mapping: HashMap<String, String>,
     modules: Arc<Modules>,
-    javaclass_by_reflectionref: RwLock<HashMap<i32, String>>, // fixme!!! delete me!
     ldc_resolution_manager: LdcResolutionManager,
     system_thread_id: OnceCell<i32>, // initial thread, spawned by VM
     system_thread_group_id: OnceCell<i32>, // initial thread group, created by VM
@@ -70,15 +70,10 @@ impl MethodArea {
             .map(|result| result.map(|(module, name)| (name, module)))
             .collect::<Result<HashMap<_, _>>>()?;
 
-        for java_class in Self::generate_synthetic_classes() {
-            let _ = CLASSES.insert_klass(Arc::clone(&java_class))?;
-        }
-
         Ok(Self {
             jimage,
             modules_mapping,
             modules: Arc::new(Modules::new()),
-            javaclass_by_reflectionref: RwLock::default(),
             ldc_resolution_manager: LdcResolutionManager::default(),
             system_thread_id: OnceCell::new(),
             system_thread_group_id: OnceCell::new(),
@@ -536,14 +531,6 @@ impl MethodArea {
         )))
     }
 
-    pub fn create_class_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
-        let (id, _key, jc) = CLASSES.get_full(class_name)?;
-        Ok(JavaInstance::Class(JavaInstanceClass::new(
-            JavaInstanceBase::new(id, jc.instance_fields_hierarchy()?.clone()),
-            0,
-        )))
-    }
-
     pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
         &self,
         class_name: &str,
@@ -563,30 +550,14 @@ impl MethodArea {
         Ok(())
     }
 
-    pub(crate) fn put_to_reflection_table(
-        &self,
-        reflection_ref: i32,
-        java_class_name: &str,
-    ) -> Result<()> {
-        self.javaclass_by_reflectionref
-            .write()?
-            .insert(reflection_ref, java_class_name.to_string());
-        Ok(())
+    pub(crate) fn get_from_reflection_table(&self, clazz_ref: i32) -> Result<String> {
+        let klass_id = HEAP.get_mirror_klass_id(clazz_ref)?;
+        let klass = CLASSES.get_by_id(klass_id)?;
+
+        Ok(klass.this_class_name().to_string()) // fixme!!! FOR REFACTORING
     }
 
-    pub(crate) fn get_from_reflection_table(&self, reflection_ref: i32) -> Result<String> {
-        self.javaclass_by_reflectionref
-            .read()?
-            .get(&reflection_ref)
-            .and_then(|class_name| Some(class_name.clone()))
-            .ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "error getting class name by reflection ref {reflection_ref}"
-                ))
-            })
-    }
-
-    fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {
+    pub(crate) fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {
         PRIMITIVE_TYPE_BY_CODE
             .keys()
             .map(|class_name| Self::generate_synthetic_class(class_name))
@@ -649,7 +620,8 @@ impl MethodArea {
     }
 
     pub(crate) fn load_reflection_class(&self, name: &str) -> Result<i32> {
-        self.ldc_resolution_manager.load_reflection_class(name)
+        let arc = CLASSES.get(name)?;
+        arc.mirror_clazz_ref() // fixme!!! FOR REFACTORING
     }
 
     pub fn system_thread_id(&self) -> Result<i32> {

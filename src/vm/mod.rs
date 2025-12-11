@@ -84,6 +84,15 @@ fn prelude() -> Result<()> {
 
     MethodArea::init()?;
 
+    // preload essential classes including breaking circular dependencies
+    let _object_klass = CLASSES.get("java/lang/Object")?;
+    let _klass_klass = CLASSES.get("java/lang/Class")?;
+    CLASSES.post_construct()?;
+
+    for java_class in MethodArea::generate_synthetic_classes() {
+        let _ = CLASSES.insert_klass(Arc::clone(&java_class))?;
+    }
+
     if *JAVA_CORE_INIT {
         init()?;
     }
@@ -130,17 +139,17 @@ fn init() -> Result<()> {
 
     StaticInit::initialize("java/lang/reflect/Method")?;
     Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
-    let init_phase2_result = Executor::invoke_static_method(
-        "java/lang/System",
-        "initPhase2:(ZZ)I",
-        &[1.into(), 1.into()],
-    )?[0];
-    if init_phase2_result != 0 {
-        return Err(Error::new_execution(&format!(
-            "System.initPhase2 returned error code {init_phase2_result}"
-        )));
-    }
-    Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[])?;
+    // let init_phase2_result = Executor::invoke_static_method(
+    //     "java/lang/System",
+    //     "initPhase2:(ZZ)I",
+    //     &[1.into(), 1.into()],
+    // )?[0];
+    // if init_phase2_result != 0 {
+    //     return Err(Error::new_execution(&format!(
+    //         "System.initPhase2 returned error code {init_phase2_result}"
+    //     )));
+    // }
+    // Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[])?;
     Ok(())
 }
 

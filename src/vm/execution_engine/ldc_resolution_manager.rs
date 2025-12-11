@@ -1,6 +1,5 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::execution_engine::reflection_class_loader::ReflectionClassLoader;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, i64_to_vec, vec_to_i64};
@@ -15,7 +14,6 @@ type Value = Vec<i32>;
 
 #[derive(Debug, Default)]
 pub struct LdcResolutionManager {
-    reflection_class_loader: ReflectionClassLoader,
     cache: RwLock<HashMap<String, HashMap<CPoolIndex, Value>>>,
 }
 
@@ -69,8 +67,9 @@ impl LdcResolutionManager {
         Ok(result)
     }
 
-    pub fn load_reflection_class(&self, class_name: &str) -> Result<i32> {
-        self.reflection_class_loader.load(&class_name)
+    fn load_reflection_class(&self, class_name: &str) -> Result<i32> {
+        let klass = CLASSES.get(class_name)?;
+        klass.mirror_clazz_ref() // Fixme!!! FOR REFACTORING
     }
 
     pub fn resolve_ldc2_w(&self, current_class_name: &str, cpoolindex: u16) -> Result<i64> {
