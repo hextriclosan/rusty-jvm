@@ -1,6 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::helper::clazz_ref;
 use murmur3::murmur3_32;
 use std::io::Cursor;
 
@@ -13,8 +13,7 @@ pub(crate) fn get_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_class(obj_ref: i32) -> Result<i32> {
     let instance_name = HEAP.get_instance_name(obj_ref)?;
 
-    let reflection_ref =
-        with_method_area(|method_area| method_area.load_reflection_class(&instance_name))?;
+    let reflection_ref = clazz_ref(&instance_name)?;
 
     Ok(reflection_ref)
 }

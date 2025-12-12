@@ -1,7 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::i64_to_vec;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::helper::{clazz_ref, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::invocation::invoke_exact;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
@@ -85,8 +84,7 @@ pub(crate) fn method_handle_natives_static_field_base_wrp(args: &[i32]) -> Resul
 fn static_field_base(member_name_ref: i32) -> Result<i32> {
     let member_name = MemberName::new(member_name_ref)?;
     let class_name = member_name.class_name();
-    let class_ref = with_method_area(|area| area.load_reflection_class(class_name))?;
-    Ok(class_ref)
+    clazz_ref(class_name)
 }
 
 // By not setting a value for `box` we break the check loop on the Java side so, just bypassing the check

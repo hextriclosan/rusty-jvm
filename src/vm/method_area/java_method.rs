@@ -155,8 +155,8 @@ impl JavaMethod {
         let return_type = self.method_descriptor.return_type().to_string();
         let return_type_ref = clazz_ref(&return_type)?;
 
-        let jc = CLASSES.get(&self.class_name)?;
-        let cpool_helper = jc.cpool_helper();
+        let klass = CLASSES.get(&self.class_name)?;
+        let cpool_helper = klass.cpool_helper();
         let exception_type_clazz_refs = self
             .exception_indexes
             .iter()
@@ -242,8 +242,8 @@ impl JavaMethod {
         let parameter_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
 
-        let jc = CLASSES.get(&self.class_name)?; // fixme!!! get Klass from klass_id
-        let cpool_helper = jc.cpool_helper();
+        let klass = CLASSES.get(&self.class_name)?;
+        let cpool_helper = klass.cpool_helper();
         let exception_type_clazz_refs = self
             .exception_indexes
             .iter()

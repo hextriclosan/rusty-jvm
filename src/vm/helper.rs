@@ -1,10 +1,12 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::java_class::JavaClass;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_value::StackValue;
 use jdescriptor::TypeDescriptor;
+use std::sync::Arc;
 
 pub fn i32toi64(high: i32, low: i32) -> i64 {
     let high_converted = (high as i64) << 32;
@@ -29,10 +31,12 @@ pub fn vec_to_i64(value: &[i32]) -> i64 {
 }
 
 pub fn clazz_ref(class_name: &str) -> Result<i32> {
-    with_method_area(|area| {
-        let clazz_ref = area.load_reflection_class(class_name)?;
-        Ok::<i32, Error>(clazz_ref)
-    })
+    CLASSES.get(class_name)?.mirror_clazz_ref()
+}
+
+pub fn klass(clazz_ref: i32) -> Result<Arc<JavaClass>> {
+    HEAP.get_mirror_klass_id(clazz_ref)
+        .map(|klass_id| CLASSES.get_by_id(klass_id))?
 }
 
 pub fn get_length(type_descriptor: &TypeDescriptor) -> Result<i32> {

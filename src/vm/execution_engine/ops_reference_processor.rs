@@ -55,8 +55,8 @@ pub(crate) fn process(
                 let (fields_class_name, field_value) =
                     method_area.lookup_for_static_field(&class_name, &field_name)?;
 
-                let jc = CLASSES.get(&fields_class_name)?;
-                let field_info = jc
+                let klass = CLASSES.get(&fields_class_name)?;
+                let field_info = klass
                     .field_info(&field_name)
                     .ok_or(Error::new_execution("Error getting field info"))?;
                 let len = get_length(field_info.type_descriptor())?;
@@ -212,8 +212,8 @@ pub(crate) fn process(
                     current_class_name,
                     CPoolHelper::get_full_method_info,
                 )?;
-            let rc = CLASSES.get(&class_name_to_start_lookup_from)?;
-            StaticInit::initialize_java_class(&rc)?;
+            let klass = CLASSES.get(&class_name_to_start_lookup_from)?;
+            StaticInit::initialize_java_class(&klass)?;
             let java_method = with_method_area(|method_area| {
                 method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
                     .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokestatic")))
@@ -287,8 +287,8 @@ pub(crate) fn process(
             let invokedynamic_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
 
-            let jc = CLASSES.get(current_class_name)?;
-            let invoke_dynamic_runner = jc.invoke_dynamic_runner();
+            let klass = CLASSES.get(current_class_name)?;
+            let invoke_dynamic_runner = klass.invoke_dynamic_runner();
             invoke_dynamic_runner
                 .run(stack_frames, current_class_name, invokedynamic_index)
                 .map_err(|e| {
@@ -303,8 +303,8 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
 
-            let rc = CLASSES.get(current_class_name)?;
-            let cpool_helper = rc.cpool_helper();
+            let klass = CLASSES.get(current_class_name)?;
+            let cpool_helper = klass.cpool_helper();
 
             let class_to_invoke_new_for = cpool_helper
                 .get_class_name(class_constpool_index)
@@ -359,8 +359,8 @@ pub(crate) fn process(
             let length = stack_frame.pop();
 
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
-            let rc = CLASSES.get(current_class_name)?;
-            let cpool_helper = rc.cpool_helper();
+            let klass = CLASSES.get(current_class_name)?;
+            let cpool_helper = klass.cpool_helper();
 
             let class_of_array = cpool_helper
                 .get_class_name(class_constpool_index)
@@ -417,8 +417,8 @@ pub(crate) fn process(
             let objectref = stack_frame.pop();
 
             if objectref != 0 {
-                let rc = CLASSES.get(current_class_name)?;
-                let cpool_helper = rc.cpool_helper();
+                let klass = CLASSES.get(current_class_name)?;
+                let cpool_helper = klass.cpool_helper();
                 let class_name = cpool_helper
                     .get_class_name(class_constpool_index)
                     .ok_or_else(|| {
@@ -449,8 +449,8 @@ pub(crate) fn process(
             let mut objectref = stack_frame.pop();
 
             if objectref != 0 {
-                let rc = CLASSES.get(current_class_name)?;
-                let cpool_helper = rc.cpool_helper();
+                let klass = CLASSES.get(current_class_name)?;
+                let cpool_helper = klass.cpool_helper();
                 let class_name = cpool_helper
                     .get_class_name(class_constpool_index)
                     .ok_or_else(|| {
@@ -547,8 +547,8 @@ fn get_class_name_and_signature_by_index<F>(
 where
     F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>,
 {
-    let rc = CLASSES.get(current_class_name)?;
-    let cpool_helper = rc.cpool_helper();
+    let klass = CLASSES.get(current_class_name)?;
+    let cpool_helper = klass.cpool_helper();
     let (class_name, method_name, method_descriptor) = cpool_getter(cpool_helper, index)
         .ok_or_else(|| {
             Error::new_constant_pool(&format!(
@@ -565,8 +565,8 @@ fn get_field_info(
 ) -> Result<(String, String)> {
     let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
 
-    let rc = CLASSES.get(current_class_name)?;
-    let cpool_helper = rc.cpool_helper();
+    let klass = CLASSES.get(current_class_name)?;
+    let cpool_helper = klass.cpool_helper();
 
     let (class_name, field_name, _) = cpool_helper
         .get_full_field_info(fieldref_constpool_index)

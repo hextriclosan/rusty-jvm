@@ -1,10 +1,8 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::vec_to_i64;
+use crate::vm::helper::{klass, vec_to_i64};
 use crate::vm::method_area::java_method::JavaMethod;
-use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::throwable::NATIVE_METHOD;
 
 const NATIVE_MARKER: i32 = -2;
@@ -32,13 +30,9 @@ fn init_stack_trace_elements(
     for index in 0..depth {
         let class_ref = HEAP.get_array_value(class_array_ref, index)?[0];
 
-        let jc = {
-            let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
-            CLASSES.get(&class_name)? // fixme!!! get Klass from class_ref directly
-        };
-
+        let klass = klass(class_ref)?;
         let class_name_ref = {
-            let external_name = jc.external_name();
+            let external_name = klass.external_name();
             StringPoolHelper::get_string(external_name)?
         };
 
@@ -50,7 +44,7 @@ fn init_stack_trace_elements(
         };
 
         let file_name_ref = {
-            let source_file = jc.source_file().as_deref().unwrap_or("Unknown");
+            let source_file = klass.source_file().as_deref().unwrap_or("Unknown");
             StringPoolHelper::get_string(source_file)?
         };
 

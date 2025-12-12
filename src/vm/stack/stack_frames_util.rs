@@ -1,6 +1,5 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use derive_new::new;
 use getset::CopyGetters;
@@ -57,17 +56,17 @@ impl StackFramesUtil {
             if class_name == throwable_name {
                 break;
             }
-            let class_ref = with_method_area(|area| area.load_reflection_class(&class_name))?;
 
-            let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass by class_ref?
+            let klass = CLASSES.get(&class_name)?;
             let method_name = frame.method_name();
-            let method = jc.get_method(method_name)?;
+            let method = klass.get_method(method_name)?;
             let method_raw = Arc::as_ptr(&method) as i64;
 
             let pc = frame.ex_pc();
             let line_numbers = frame.line_numbers();
             let instruction_line_num = Self::extract_line_number(line_numbers, pc);
 
+            let class_ref = klass.mirror_clazz_ref()?;
             let native = method.is_native();
 
             stack_trace.push(StackElement::new(

@@ -1,7 +1,5 @@
 use crate::vm::error::Result;
-use crate::vm::helper::strip_nest_host;
-use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 
@@ -15,10 +13,7 @@ pub(crate) fn reflection_get_caller_class_wrp(
 
 fn get_caller_class(stack_frames: &StackFrames) -> Result<i32> {
     let caller_name = StackFramesUtil::get_caller_class_name(stack_frames)?;
-    let reflection_ref =
-        with_method_area(|method_area| method_area.load_reflection_class(&caller_name))?;
-
-    Ok(reflection_ref)
+    clazz_ref(&caller_name)
 }
 
 pub(crate) fn reflection_get_class_access_flags_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -27,10 +22,8 @@ pub(crate) fn reflection_get_class_access_flags_wrp(args: &[i32]) -> Result<Vec<
     Ok(vec![flags])
 }
 fn get_class_access_flags(class_ref: i32) -> Result<i32> {
-    let class_name =
-        with_method_area(|method_area| method_area.get_from_reflection_table(class_ref))?;
-
-    let flags = CLASSES.get(&class_name)?.class_modifiers().bits() as i32;
+    let klass = klass(class_ref)?;
+    let flags = klass.class_modifiers().bits() as i32;
     Ok(flags)
 }
 
@@ -42,10 +35,10 @@ pub(crate) fn reflection_are_nest_mates_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![if mates { 1 } else { 0 }])
 }
 fn are_nest_mates(current_class_ref: i32, member_class_ref: i32) -> Result<bool> {
-    let current_class_name =
-        with_method_area(|area| area.get_from_reflection_table(current_class_ref))?;
-    let member_class_name =
-        with_method_area(|area| area.get_from_reflection_table(member_class_ref))?;
+    let current_klass = klass(current_class_ref)?;
+    let member_klass = klass(member_class_ref)?;
+    let current_class_name = current_klass.this_class_name();
+    let member_class_name = member_klass.this_class_name();
 
     let current_class_nest_host =
         strip_nest_host(&current_class_name).unwrap_or(current_class_name.as_str());

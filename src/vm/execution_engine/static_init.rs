@@ -35,8 +35,8 @@ impl StaticInit {
                 guard.set_inner_state(InnerState::Initializing);
 
                 if let Some(parent_name) = java_class.parent() {
-                    let jc = CLASSES.get(parent_name)?;
-                    Self::initialization_impl(&jc)?;
+                    let klass = CLASSES.get(parent_name)?;
+                    Self::initialization_impl(&klass)?;
                 }
 
                 let curr_counter = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
