@@ -58,8 +58,7 @@ impl StackFramesUtil {
                 break;
             }
 
-            let class_ref = clazz_ref(&class_name)?;
-            let jc = klass(class_ref)?;
+            let jc = CLASSES.get(&class_name)?;
             let method_name = frame.method_name();
             let method = jc.get_method(method_name)?;
             let method_raw = Arc::as_ptr(&method) as i64;
@@ -68,6 +67,7 @@ impl StackFramesUtil {
             let line_numbers = frame.line_numbers();
             let instruction_line_num = Self::extract_line_number(line_numbers, pc);
 
+            let class_ref = jc.mirror_clazz_ref()?;
             let native = method.is_native();
 
             stack_trace.push(StackElement::new(
