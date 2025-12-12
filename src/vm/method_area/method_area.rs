@@ -1,7 +1,6 @@
 use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
-use crate::vm::heap::heap::HEAP;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase};
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::class_modifiers::ClassModifier;
@@ -550,13 +549,6 @@ impl MethodArea {
         Ok(())
     }
 
-    pub(crate) fn get_from_reflection_table(&self, clazz_ref: i32) -> Result<String> {
-        let klass_id = HEAP.get_mirror_klass_id(clazz_ref)?;
-        let klass = CLASSES.get_by_id(klass_id)?;
-
-        Ok(klass.this_class_name().to_string()) // fixme!!! FOR REFACTORING
-    }
-
     pub(crate) fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {
         PRIMITIVE_TYPE_BY_CODE
             .keys()
@@ -593,11 +585,6 @@ impl MethodArea {
     pub(crate) fn resolve_ldc2_w(&self, current_class_name: &str, cpoolindex: u16) -> Result<i64> {
         self.ldc_resolution_manager
             .resolve_ldc2_w(current_class_name, cpoolindex)
-    }
-
-    pub(crate) fn load_reflection_class(&self, name: &str) -> Result<i32> {
-        let arc = CLASSES.get(name)?;
-        arc.mirror_clazz_ref() // fixme!!! FOR REFACTORING
     }
 
     pub fn system_thread_id(&self) -> Result<i32> {

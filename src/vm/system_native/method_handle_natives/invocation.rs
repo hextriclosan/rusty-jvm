@@ -4,7 +4,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::vec_to_i64;
+use crate::vm::helper::{klass, vec_to_i64};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -293,13 +293,12 @@ fn extract_resolved(member_name: &MemberName) -> Result<(String, Arc<JavaMethod>
     })?;
 
     let vmholder_class_ref = resolved_method_name.vmholder();
-    let method_index = resolved_method_name.vmtarget();
-    let (class_name, method_to_invoke) = with_method_area(|method_area| {
-        let class_name = method_area.get_from_reflection_table(vmholder_class_ref)?;
-        let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass from clazz_ref directly
-        Ok::<(String, Arc<JavaMethod>), Error>((class_name, jc.get_method_by_index(method_index)?))
-    })?;
+    let jc = klass(vmholder_class_ref)?;
 
+    let class_name = jc.this_class_name().to_owned();
+
+    let method_index = resolved_method_name.vmtarget();
+    let method_to_invoke = jc.get_method_by_index(method_index)?;
     Ok((class_name, method_to_invoke))
 }
 

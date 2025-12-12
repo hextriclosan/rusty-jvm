@@ -2,10 +2,8 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::heap::java_instance::Array;
-use crate::vm::helper::clazz_ref;
+use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::java_method::JavaMethod;
-use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_value::{StackValue, StackValueKind};
 use std::sync::Arc;
 
@@ -78,11 +76,7 @@ fn resolve_method_and_args(
     };
     let parameter_types = HEAP.get_entire_array(parameter_types_ref)?;
 
-    let jc = with_method_area(|a| {
-        let clazz_name = a.get_from_reflection_table(clazz_ref)?;
-        CLASSES.get(&clazz_name) // fixme!!! get Klass from clazz_ref directly
-    })?;
-
+    let jc = klass(clazz_ref)?;
     let method = jc.get_method_by_index(slot as i64)?;
     let entire_value = entire_array_args.get_entire_value();
     let args = entire_value

@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use derive_new::new;
 use getset::CopyGetters;
@@ -57,9 +57,9 @@ impl StackFramesUtil {
             if class_name == throwable_name {
                 break;
             }
-            let class_ref = with_method_area(|area| area.load_reflection_class(&class_name))?;
 
-            let jc = CLASSES.get(&class_name)?; // fixme!!! get Klass by class_ref?
+            let class_ref = clazz_ref(&class_name)?;
+            let jc = klass(class_ref)?;
             let method_name = frame.method_name();
             let method = jc.get_method(method_name)?;
             let method_raw = Arc::as_ptr(&method) as i64;

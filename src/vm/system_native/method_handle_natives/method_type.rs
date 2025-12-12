@@ -1,7 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::decorate;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::helper::{decorate, klass};
 use getset::Getters;
 
 const METHOD_TYPE: &'static str = "java/lang/invoke/MethodType";
@@ -34,7 +33,7 @@ fn generate_parameters(ptype_class_refs: i32) -> Result<String> {
     let mut ptype_names = Vec::with_capacity(len as usize);
     for i in 0..len {
         let ptype_class_ref = HEAP.get_array_value(ptype_class_refs, i)?[0];
-        let ptype_name = with_method_area(|area| area.get_from_reflection_table(ptype_class_ref))?;
+        let ptype_name = klass(ptype_class_ref)?.this_class_name().to_owned();
         ptype_names.push(decorate(ptype_name));
     }
     let ptype_names_string = format!("({})", ptype_names.join(""));
@@ -42,6 +41,6 @@ fn generate_parameters(ptype_class_refs: i32) -> Result<String> {
 }
 
 fn generate_return_type(rtype_class_ref: i32) -> Result<String> {
-    let rtype_name = with_method_area(|area| area.get_from_reflection_table(rtype_class_ref))?;
+    let rtype_name = klass(rtype_class_ref)?.this_class_name().to_owned();
     Ok(decorate(rtype_name))
 }

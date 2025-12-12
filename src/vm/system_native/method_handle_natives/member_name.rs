@@ -1,7 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::helper::klass;
 use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind::{
@@ -37,7 +37,7 @@ impl MemberName {
         let name_ref = HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "name")?[0];
         let type_obj_ref = HEAP.get_object_field_value(member_name_ref, MEMBER_NAME, "type")?[0];
 
-        let class_name = with_method_area(|area| area.get_from_reflection_table(class_ref))?;
+        let class_name = klass(class_ref)?.this_class_name().to_owned();
         let name = get_utf8_string_by_ref(name_ref)?;
         let reference_kind = get_reference_kind(flags)?;
         let method = load_method(member_name_ref)?;

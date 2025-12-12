@@ -1,9 +1,8 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::helper::klass;
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::java_class::JavaClass;
-use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
 use jclassfile::constant_pool::ConstantPool;
 use std::sync::Arc;
 
@@ -86,9 +85,5 @@ fn get_tag_at0(oop_ref: i32, index: i32) -> Result<u8> {
 
 fn extract_java_class(constant_pool_oop_ref: i32) -> Result<Arc<JavaClass>> {
     let clazz_ref = constant_pool_oop_ref; // oop_ref is actually clazz_ref (so far)
-    let jc = with_method_area(|method_area| {
-        let class_name = method_area.get_from_reflection_table(clazz_ref)?;
-        CLASSES.get(&class_name) // fixme!!! get Klass from class_ref directly
-    })?;
-    Ok(jc)
+    klass(clazz_ref)
 }

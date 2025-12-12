@@ -38,7 +38,7 @@ impl LdcResolutionManager {
         } else if let Some(value) = cpool_helper.get_string(cpoolindex) {
             StringPoolHelper::get_string(&value)?
         } else if let Some(class_name) = cpool_helper.get_class_name(cpoolindex) {
-            self.load_reflection_class(&class_name)?
+            clazz_ref(&class_name)?
         } else if let Some(method_type) = cpool_helper.get_method_type(cpoolindex) {
             build_methodtype_ref(&method_type)?
         } else if let Some((reference_kind, class_name, name, descriptor)) =
@@ -65,11 +65,6 @@ impl LdcResolutionManager {
             .insert(cpoolindex, vec![result]);
 
         Ok(result)
-    }
-
-    fn load_reflection_class(&self, class_name: &str) -> Result<i32> {
-        let klass = CLASSES.get(class_name)?;
-        klass.mirror_clazz_ref() // Fixme!!! FOR REFACTORING
     }
 
     pub fn resolve_ldc2_w(&self, current_class_name: &str, cpoolindex: u16) -> Result<i64> {

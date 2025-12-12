@@ -1,7 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::method_handle_natives::member_name::{
     set_reference_kind, MemberName,
 };
@@ -51,9 +50,7 @@ fn resolve_method(member_name: &mut MemberName) -> Result<i32> {
     let enriched_flags = current_flags | flags_to_enrich_with;
     member_name.propagate_flags(enriched_flags)?;
 
-    let this_class_name = arc.this_class_name();
-    let reflection_ref =
-        with_method_area(|method_area| method_area.load_reflection_class(this_class_name))?;
+    let reflection_ref = arc.mirror_clazz_ref()?;
 
     let resolved_method_name =
         ResolvedMethodName::new_create_instance(reflection_ref, method_index as i64)?;
