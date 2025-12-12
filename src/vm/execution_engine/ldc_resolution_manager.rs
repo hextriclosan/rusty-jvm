@@ -202,9 +202,9 @@ pub fn resolve_method_handle(
 /// Returns `Result<i32>` containing a reference to the new `MethodHandles$Lookup` object on success,
 /// or an error if any step fails.
 fn build_lookup_for_class(current_class_name: &str) -> Result<i32> {
-    let jc_lookup = CLASSES.get("java/lang/invoke/MethodHandles$Lookup")?;
-    StaticInit::initialize_java_class(&jc_lookup)?;
-    let impl_lookup = jc_lookup
+    let lookup_klass = CLASSES.get("java/lang/invoke/MethodHandles$Lookup")?;
+    StaticInit::initialize_java_class(&lookup_klass)?;
+    let impl_lookup = lookup_klass
         .static_field("IMPL_LOOKUP")
         .ok_or(Error::new_execution("Error getting IMPL_LOOKUP field"))?;
 

@@ -30,9 +30,9 @@ fn init_stack_trace_elements(
     for index in 0..depth {
         let class_ref = HEAP.get_array_value(class_array_ref, index)?[0];
 
-        let jc = klass(class_ref)?;
+        let klass = klass(class_ref)?;
         let class_name_ref = {
-            let external_name = jc.external_name();
+            let external_name = klass.external_name();
             StringPoolHelper::get_string(external_name)?
         };
 
@@ -44,7 +44,7 @@ fn init_stack_trace_elements(
         };
 
         let file_name_ref = {
-            let source_file = jc.source_file().as_deref().unwrap_or("Unknown");
+            let source_file = klass.source_file().as_deref().unwrap_or("Unknown");
             StringPoolHelper::get_string(source_file)?
         };
 

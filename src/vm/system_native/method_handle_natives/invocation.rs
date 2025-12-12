@@ -109,8 +109,6 @@ fn bound_method_handle_invocation(
     let member_name = MemberName::new(vmentry_ref)?;
     let class_name_to_load = member_name.class_name();
 
-    let jc = CLASSES.get(class_name_to_load)?;
-
     // todo: hide this block into MemberName struct
     let type_obj_ref = member_name.type_obj_ref();
     let method_type = MethodType::new(type_obj_ref)?;
@@ -119,8 +117,10 @@ fn bound_method_handle_invocation(
     let rtype_name = method_type.rtype_name();
     let full_method_signature = format!("{method_name}:{ptype_names}{rtype_name}");
 
+    let klass = CLASSES.get(class_name_to_load)?;
     let method_to_invoke = Arc::clone(
-        jc.get_methods()
+        klass
+            .get_methods()
             .iter()
             .find(|m| m.name_signature() == full_method_signature)
             .ok_or(Error::new_execution(&format!(
@@ -293,12 +293,12 @@ fn extract_resolved(member_name: &MemberName) -> Result<(String, Arc<JavaMethod>
     })?;
 
     let vmholder_class_ref = resolved_method_name.vmholder();
-    let jc = klass(vmholder_class_ref)?;
+    let klass = klass(vmholder_class_ref)?;
 
-    let class_name = jc.this_class_name().to_owned();
+    let class_name = klass.this_class_name().to_owned();
 
     let method_index = resolved_method_name.vmtarget();
-    let method_to_invoke = jc.get_method_by_index(method_index)?;
+    let method_to_invoke = klass.get_method_by_index(method_index)?;
     Ok((class_name, method_to_invoke))
 }
 
@@ -370,10 +370,10 @@ fn prepare_field(
     let args = method_args[1..].to_vec();
     let class_name = HEAP.get_instance_name(instance_ref)?;
 
-    let jc = CLASSES.get(class_name.as_str())?;
+    let klass = CLASSES.get(class_name.as_str())?;
     let member_name_ref = member_name.member_name_ref();
     let offset = get_field_offset(member_name_ref)?;
-    let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+    let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
     Ok((instance_ref, class_name, field_name, args))
 }
 
@@ -384,9 +384,9 @@ fn prepare_static_field(
     let args = method_args.to_vec();
     let class_name = member_name.class_name();
 
-    let jc = CLASSES.get(class_name.as_str())?;
+    let klass = CLASSES.get(class_name.as_str())?;
     let member_name_ref = member_name.member_name_ref();
     let offset = get_static_field_offset(member_name_ref)?;
-    let field = jc.get_static_field_by_offset(offset)?;
+    let field = klass.get_static_field_by_offset(offset)?;
     Ok((field, args))
 }

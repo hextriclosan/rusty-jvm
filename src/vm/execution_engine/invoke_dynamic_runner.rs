@@ -222,10 +222,10 @@ impl InvokeDynamicRunner {
         current_class_name: &str,
         invokedynamic_index: u16,
     ) -> Result<BootstrapInfo> {
-        let jc = CLASSES.get(current_class_name)?;
-        let attributes_helper = jc.attributes_helper();
+        let klass = CLASSES.get(current_class_name)?;
+        let attributes_helper = klass.attributes_helper();
         let bootstrap_method_info = attributes_helper.get_bootstrap_method(
-            jc.cpool_helper(),
+            klass.cpool_helper(),
             invokedynamic_index,
         ).ok_or_else(|| {
             Error::new_constant_pool(&format!(

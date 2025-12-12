@@ -1,5 +1,4 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::StackFrames;
 use derive_new::new;
@@ -58,16 +57,16 @@ impl StackFramesUtil {
                 break;
             }
 
-            let jc = CLASSES.get(&class_name)?;
+            let klass = CLASSES.get(&class_name)?;
             let method_name = frame.method_name();
-            let method = jc.get_method(method_name)?;
+            let method = klass.get_method(method_name)?;
             let method_raw = Arc::as_ptr(&method) as i64;
 
             let pc = frame.ex_pc();
             let line_numbers = frame.line_numbers();
             let instruction_line_num = Self::extract_line_number(line_numbers, pc);
 
-            let class_ref = jc.mirror_clazz_ref()?;
+            let class_ref = klass.mirror_clazz_ref()?;
             let native = method.is_native();
 
             stack_trace.push(StackElement::new(

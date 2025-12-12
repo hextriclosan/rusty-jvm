@@ -74,8 +74,8 @@ fn resolve_and_execute_main_method_ordinary(class_name: &str, args: &[String]) -
 }
 
 fn resolve_and_execute_main_method_no_init(class_name: &str, args: &[String]) -> Result<()> {
-    let jc = CLASSES.get(class_name)?;
-    if let Some((_index, _method)) = jc.get_method_full("main:([Ljava/lang/String;)V") {
+    let klass = CLASSES.get(class_name)?;
+    if let Some((_index, _method)) = klass.get_method_full("main:([Ljava/lang/String;)V") {
         let args_array_ref = create_array_of_strings(args)?;
         let _ = Executor::invoke_static_method(
             class_name,

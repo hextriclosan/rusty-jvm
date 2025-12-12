@@ -10,12 +10,12 @@ pub(crate) fn object_field_offset_by_refs(class_ref: i32, string_ref: i32) -> Re
     object_field_offset_by_names(class_name, &field_name)
 }
 pub(crate) fn object_field_offset_by_names(class_name: &str, field_name: &str) -> Result<i64> {
-    let jc = CLASSES.get(class_name)?;
-    let offset = jc.get_field_offset(&format!("{class_name}.{field_name}"))?;
+    let klass = CLASSES.get(class_name)?;
+    let offset = klass.get_field_offset(&format!("{class_name}.{field_name}"))?;
     Ok(offset)
 }
 
 pub(crate) fn static_field_offset_by_names(class_name: &str, field_name: &str) -> Result<i64> {
-    let jc = CLASSES.get(class_name)?;
-    jc.get_static_field_offset(field_name)
+    let klass = CLASSES.get(class_name)?;
+    klass.get_static_field_offset(field_name)
 }

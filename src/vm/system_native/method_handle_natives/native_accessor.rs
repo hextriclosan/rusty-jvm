@@ -76,8 +76,8 @@ fn resolve_method_and_args(
     };
     let parameter_types = HEAP.get_entire_array(parameter_types_ref)?;
 
-    let jc = klass(clazz_ref)?;
-    let method = jc.get_method_by_index(slot as i64)?;
+    let klass = klass(clazz_ref)?;
+    let method = klass.get_method_by_index(slot as i64)?;
     let entire_value = entire_array_args.get_entire_value();
     let args = entire_value
         .iter()

@@ -63,8 +63,8 @@ fn resolve_static_field(member_name: &mut MemberName) -> Result<i32> {
     let class_name = member_name.class_name();
     let static_field_name = member_name.name();
 
-    let jc = CLASSES.get(class_name)?;
-    let field_info = jc.field_info(static_field_name).ok_or_else(|| {
+    let klass = CLASSES.get(class_name)?;
+    let field_info = klass.field_info(static_field_name).ok_or_else(|| {
         Error::new_execution(&format!(
             "Static field not found: {class_name}:{static_field_name}"
         ))

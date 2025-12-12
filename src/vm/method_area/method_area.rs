@@ -523,10 +523,10 @@ impl MethodArea {
     }
 
     pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
-        let (id, _key, jc) = CLASSES.get_full(class_name)?;
+        let (id, _key, klass) = CLASSES.get_full(class_name)?;
         Ok(JavaInstance::Base(JavaInstanceBase::new(
             id,
-            jc.instance_fields_hierarchy()?.clone(),
+            klass.instance_fields_hierarchy()?.clone(),
         )))
     }
 

@@ -21,8 +21,8 @@ pub(crate) fn get_superclass_wrp(args: &[i32]) -> Result<Vec<i32>> {
 
     Ok(vec![super_clazz_ref])
 }
-fn get_superclass(clazz_ref_: i32) -> Result<i32> {
-    let klass = klass(clazz_ref_)?;
+fn get_superclass(class_ref: i32) -> Result<i32> {
+    let klass = klass(class_ref)?;
     let parent = if !klass.is_interface() {
         klass.parent().clone()
     } else {
@@ -112,8 +112,8 @@ pub(crate) fn get_interfaces0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![interfaces_ref])
 }
 fn get_interfaces0(class_ref: i32) -> Result<i32> {
-    let jc = klass(class_ref)?;
-    let interfaces = jc.interfaces();
+    let klass = klass(class_ref)?;
+    let interfaces = klass.interfaces();
 
     let interface_refs = interfaces
         .iter()
@@ -130,8 +130,8 @@ pub(crate) fn get_declaring_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![declaring_class_ref])
 }
 fn get_declaring_class0(class_ref: i32) -> Result<i32> {
-    let jc = klass(class_ref)?;
-    let declaring_class_ref = jc
+    let klass = klass(class_ref)?;
+    let declaring_class_ref = klass
         .declaring_class()
         .as_ref()
         .map(|declaring_class| {
@@ -151,9 +151,9 @@ pub(crate) fn get_declared_fields0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 }
 
 fn get_declared_fields(class_ref: i32, public_only: bool) -> Result<i32> {
-    let jc = klass(class_ref)?;
+    let klass = klass(class_ref)?;
 
-    let fields_info = jc.get_fields_info();
+    let fields_info = klass.get_fields_info();
     let fields_info_ref = fields_info
         .iter()
         .filter_map(|field_info| {
@@ -177,8 +177,8 @@ pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![methods_ref])
 }
 fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
-    let jc = klass(class_ref)?;
-    let java_methods = jc.get_methods();
+    let klass = klass(class_ref)?;
+    let java_methods = klass.get_methods();
 
     let method_refs = java_methods
         .iter()
@@ -205,8 +205,8 @@ pub(crate) fn get_declared_constructors0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![constructors_ref])
 }
 fn get_declared_constructors(class_ref: i32) -> Result<i32> {
-    let jc = klass(class_ref)?;
-    let java_methods = jc.get_methods();
+    let klass = klass(class_ref)?;
+    let java_methods = klass.get_methods();
     let method_refs = java_methods
         .iter()
         .filter(|java_method| java_method.name() == "<init>")
@@ -224,8 +224,8 @@ pub(crate) fn get_enclosing_method0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![enclosing_method_ref])
 }
 fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
-    let jc = klass(class_ref)?;
-    if let Some((class_name, name, descriptor)) = jc.enclosing_method() {
+    let klass = klass(class_ref)?;
+    if let Some((class_name, name, descriptor)) = klass.enclosing_method() {
         let class_name_ref = clazz_ref(&class_name)?;
         let name_ref = StringPoolHelper::get_string(&name)?;
         let descriptor_ref = StringPoolHelper::get_string(&descriptor)?;
@@ -335,7 +335,7 @@ fn get_nest_host0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
 
     let nest_host_class_ref = strip_nest_host(klass.this_class_name())
-        .map(|name| clazz_ref(&name))
+        .map(|name| clazz_ref(name))
         .unwrap_or(Ok(class_ref));
 
     nest_host_class_ref

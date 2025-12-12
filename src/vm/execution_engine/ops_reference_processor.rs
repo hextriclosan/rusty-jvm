@@ -55,8 +55,8 @@ pub(crate) fn process(
                 let (fields_class_name, field_value) =
                     method_area.lookup_for_static_field(&class_name, &field_name)?;
 
-                let jc = CLASSES.get(&fields_class_name)?;
-                let field_info = jc
+                let klass = CLASSES.get(&fields_class_name)?;
+                let field_info = klass
                     .field_info(&field_name)
                     .ok_or(Error::new_execution("Error getting field info"))?;
                 let len = get_length(field_info.type_descriptor())?;
@@ -287,8 +287,8 @@ pub(crate) fn process(
             let invokedynamic_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
 
-            let jc = CLASSES.get(current_class_name)?;
-            let invoke_dynamic_runner = jc.invoke_dynamic_runner();
+            let klass = CLASSES.get(current_class_name)?;
+            let invoke_dynamic_runner = klass.invoke_dynamic_runner();
             invoke_dynamic_runner
                 .run(stack_frames, current_class_name, invokedynamic_index)
                 .map_err(|e| {

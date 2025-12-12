@@ -129,8 +129,8 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
             Ok(false)
         }
     } else {
-        let jc = CLASSES.get(class_name.as_str())?;
-        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+        let klass = CLASSES.get(class_name.as_str())?;
+        let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
         let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?[0];
 
         if result == expected {
@@ -164,8 +164,8 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
             let static_field = t_jc.get_static_field_by_offset(offset)?;
             static_field.raw_value()?
         } else {
-            let jc = CLASSES.get(class_name.as_str())?;
-            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            let klass = CLASSES.get(class_name.as_str())?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
             HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?
         }
     };
@@ -270,9 +270,9 @@ pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
         } else {
             let class_name = HEAP.get_instance_name(obj_ref)?;
 
-            let jc = CLASSES.get(class_name.as_str())?;
+            let klass = CLASSES.get(class_name.as_str())?;
 
-            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
 
             let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
             Ok(result[0])
@@ -314,9 +314,9 @@ fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
         } else {
             let class_name = HEAP.get_instance_name(obj_ref)?;
 
-            let jc = CLASSES.get(class_name.as_str())?;
+            let klass = CLASSES.get(class_name.as_str())?;
 
-            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
 
             let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
             Ok(vec_to_i64(&result))
@@ -376,9 +376,9 @@ fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Resul
 
     let class_name = HEAP.get_instance_name(obj_ref)?;
 
-    let jc = CLASSES.get(class_name.as_str())?;
+    let klass = CLASSES.get(class_name.as_str())?;
 
-    let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+    let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
 
     let bytes = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
     let old_value = i32toi64(bytes[0], bytes[1]);
@@ -416,8 +416,8 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
             let static_field = t_jc.get_static_field_by_offset(offset)?;
             static_field.set_raw_value(vec![ref_value])
         } else {
-            let jc = CLASSES.get(class_name.as_str())?;
-            let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+            let klass = CLASSES.get(class_name.as_str())?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
 
             HEAP.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
         }
@@ -510,8 +510,8 @@ fn put_value_via_object(
     if class_name.starts_with('[') {
         HEAP.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value, value_type.into())
     } else {
-        let jc = CLASSES.get(&class_name)?;
-        let (class_name, field_name) = jc.get_field_name_by_offset(offset)?;
+        let klass = CLASSES.get(&class_name)?;
+        let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
         HEAP.set_object_field_value(obj_ref, &class_name, &field_name, raw_value)
     }
 }

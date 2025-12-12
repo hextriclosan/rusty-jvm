@@ -15,12 +15,12 @@ pub(crate) fn constant_pool_get_utf8_at0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![string_ref])
 }
 fn get_utf8(oop_ref: i32, index: i32) -> Result<i32> {
-    let jc = extract_java_class(oop_ref)?;
-    let cpool_helper = jc.cpool_helper();
+    let klass = extract_java_class(oop_ref)?;
+    let cpool_helper = klass.cpool_helper();
     let utf8 = cpool_helper.get_utf8(index as u16).ok_or_else(|| {
         Error::new_constant_pool(&format!(
             "error getting utf8 by cpool index={index} in {}",
-            jc.this_class_name()
+            klass.this_class_name()
         ))
     })?;
     let string_ref = StringPoolHelper::get_string(&utf8)?;
@@ -36,8 +36,8 @@ pub(crate) fn constant_pool_get_size0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![size])
 }
 fn get_size0(oop_ref: i32) -> Result<i32> {
-    let jc = extract_java_class(oop_ref)?;
-    Ok(jc.cpool_helper().raw_cpool().len() as i32)
+    let klass = extract_java_class(oop_ref)?;
+    Ok(klass.cpool_helper().raw_cpool().len() as i32)
 }
 
 pub(crate) fn constant_pool_get_tag_at0_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -49,13 +49,13 @@ pub(crate) fn constant_pool_get_tag_at0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![tag_byte_value as i32])
 }
 fn get_tag_at0(oop_ref: i32, index: i32) -> Result<u8> {
-    let jc = extract_java_class(oop_ref)?;
-    let raw_pool = jc.cpool_helper().raw_cpool();
+    let klass = extract_java_class(oop_ref)?;
+    let raw_pool = klass.cpool_helper().raw_cpool();
 
     let constant = raw_pool.get(index as usize).ok_or_else(|| {
         Error::new_constant_pool(&format!(
             "error getting tag by cpool index={index} in {}",
-            jc.this_class_name()
+            klass.this_class_name()
         ))
     })?;
 
