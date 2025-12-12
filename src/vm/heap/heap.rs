@@ -5,6 +5,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
 use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
+use crate::vm::heap::java_instance::JavaInstance::Class;
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
 use crate::vm::stack::stack_frame::StackFrames;
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
@@ -120,6 +121,20 @@ impl Heap {
                 "error getting object from heap by ref {objectref}"
             )))
         }
+    }
+
+    pub fn get_mirror_klass_id(&self, clazz_ref: i32) -> Result<usize> {
+        self.data
+            .get(clazz_ref)
+            .and_then(|entry| match entry.value() {
+                Object(Class(java_instance_class)) => Some(java_instance_class.mirror_klass_id()),
+                _ => None,
+            })
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
+                    "error getting mirror klass id from heap by ref {clazz_ref}"
+                ))
+            })
     }
 
     pub(crate) fn create_array(&self, type_name: &str, len: i32) -> i32 {

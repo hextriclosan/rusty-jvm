@@ -4,6 +4,7 @@ use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use derive_new::new;
+use getset::CopyGetters;
 use indexmap::IndexMap;
 use serde::Serialize;
 use std::sync::Arc;
@@ -17,9 +18,10 @@ pub(crate) struct JavaInstanceBase {
     fields: IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
 }
 
-#[derive(Debug, Serialize, Clone, new)]
+#[derive(Debug, Serialize, Clone, new, CopyGetters)]
 pub(crate) struct JavaInstanceClass {
     instance: JavaInstanceBase,
+    #[getset(get_copy = "pub")]
     mirror_klass_id: usize,
 }
 

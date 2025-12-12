@@ -84,6 +84,14 @@ fn prelude() -> Result<()> {
 
     MethodArea::init()?;
 
+    // preload essential classes including breaking circular dependencies
+    CLASSES.pre_construct()?;
+    CLASSES.post_construct()?;
+
+    for java_class in MethodArea::generate_synthetic_classes() {
+        CLASSES.insert_klass(Arc::clone(&java_class))?;
+    }
+
     if *JAVA_CORE_INIT {
         init()?;
     }
@@ -141,8 +149,21 @@ fn init() -> Result<()> {
         )));
     }
     Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[])?;
+
+    let module_ref = Executor::invoke_args_constructor(
+        "java/lang/Module",
+        "<init>:(Ljava/lang/ClassLoader;)V",
+        &[0.into()], // todo use proper classloader here
+        Some("module for reflection class"),
+    )?;
+    UNNAMED_MODULE_REF
+        .set(module_ref)
+        .map_err(|e| Error::new_execution(&format!("MODULE_REF already set: {e:?}")))?;
+
     Ok(())
 }
+
+pub(crate) static UNNAMED_MODULE_REF: OnceLock<i32> = OnceLock::new();
 
 fn put_synthetic_instance_field(
     class_name: &str,

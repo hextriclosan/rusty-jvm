@@ -13,7 +13,7 @@ use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
 use parking_lot::ReentrantMutex;
 use std::cell::RefCell;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 pub const STATIC_FIELDS_START: i64 = i32::MAX as i64;
 
@@ -55,6 +55,7 @@ pub(crate) struct JavaClass {
     source_file: Option<String>,
     #[get = "pub"]
     invoke_dynamic_runner: InvokeDynamicRunner,
+    mirror_clazz_ref: OnceLock<i32>,
 }
 
 #[derive(Debug, Default)]
@@ -123,6 +124,7 @@ impl JavaClass {
             enclosing_method,
             source_file,
             invoke_dynamic_runner: InvokeDynamicRunner::default(),
+            mirror_clazz_ref: OnceLock::default(),
         }
     }
 
@@ -311,6 +313,24 @@ impl JavaClass {
             });
 
             Ok(fields_offset_mapping)
+        })
+    }
+
+    pub fn inject_mirror_clazz_ref(&self, mirror_class_ref: i32) -> Result<()> {
+        self.mirror_clazz_ref.set(mirror_class_ref).map_err(|e| {
+            Error::new_execution(&format!(
+                "{}: attempt to re-initialize mirror_clazz_ref {} -> {}",
+                self.this_class_name, e, mirror_class_ref
+            ))
+        })
+    }
+
+    pub fn mirror_clazz_ref(&self) -> Result<i32> {
+        self.mirror_clazz_ref.get().copied().ok_or_else(|| {
+            Error::new_execution(&format!(
+                "{}: mirror_clazz_ref is not initialized",
+                self.this_class_name
+            ))
         })
     }
 }
