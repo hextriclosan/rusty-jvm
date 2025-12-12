@@ -396,24 +396,24 @@ impl MethodArea {
         class_name: &str,
         field_name: &str,
     ) -> Result<(String, Arc<FieldValue>)> {
-        let rc = CLASSES.get(class_name)?;
+        let klass = CLASSES.get(class_name)?;
 
-        if rc.is_interface() {
-            self.lookup_for_static_field_in_interface(&rc, class_name, field_name)
+        if klass.is_interface() {
+            self.lookup_for_static_field_in_interface(&klass, class_name, field_name)
         } else {
-            self.lookup_for_static_field_in_class(&rc, class_name, field_name)
+            self.lookup_for_static_field_in_class(&klass, class_name, field_name)
         }
     }
 
     fn lookup_for_static_field_in_class(
         &self,
-        rc: &Arc<JavaClass>,
+        klass: &Arc<JavaClass>,
         class_name: &str,
         field_name: &str,
     ) -> Result<(String, Arc<FieldValue>)> {
-        match rc.static_field(field_name) {
+        match klass.static_field(field_name) {
             Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
-            None => match rc.parent() {
+            None => match klass.parent() {
                 Some(parent_class_name) => {
                     self.lookup_for_static_field(&parent_class_name, field_name)
                 }
@@ -426,14 +426,14 @@ impl MethodArea {
 
     fn lookup_for_static_field_in_interface(
         &self,
-        rc: &Arc<JavaClass>,
+        klass: &Arc<JavaClass>,
         class_name: &str,
         field_name: &str,
     ) -> Result<(String, Arc<FieldValue>)> {
-        match rc.static_field(field_name) {
+        match klass.static_field(field_name) {
             Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
             None => {
-                let interfaces = rc.interfaces();
+                let interfaces = klass.interfaces();
                 for interface_name in interfaces.iter() {
                     match self.lookup_for_static_field(&interface_name, field_name) {
                         Ok((interface_class_name, field)) => {
@@ -455,12 +455,12 @@ impl MethodArea {
         class_name: &str,
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
-        let rc = CLASSES.get(class_name).ok()?;
+        let klass = CLASSES.get(class_name).ok()?;
 
-        if let Some(java_method) = rc.try_get_method(full_method_signature) {
+        if let Some(java_method) = klass.try_get_method(full_method_signature) {
             Some(Arc::clone(&java_method))
         } else {
-            let parent_class_name = rc.parent().as_ref()?;
+            let parent_class_name = klass.parent().as_ref()?;
             self.lookup_for_implementation(parent_class_name, full_method_signature)
         }
     }
@@ -470,16 +470,16 @@ impl MethodArea {
         class_name: &str,
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
-        let rc = CLASSES.get(class_name).ok()?;
+        let klass = CLASSES.get(class_name).ok()?;
         if let Some(java_method) =
             // lookup in interfaces for default methods
-            self.lookup_in_interface_hierarchy(rc.interfaces(), full_method_signature)
+            self.lookup_in_interface_hierarchy(klass.interfaces(), full_method_signature)
         {
             return Some(java_method);
         }
 
         // if not found in interfaces of current class, lookup in parent class
-        let parent_class_name = rc.parent().as_ref()?;
+        let parent_class_name = klass.parent().as_ref()?;
         self.lookup_for_implementation_interface(parent_class_name, full_method_signature)
     }
 
@@ -511,12 +511,12 @@ impl MethodArea {
         class_name: &str,
         field_name: &str,
     ) -> Option<TypeDescriptor> {
-        let rc = CLASSES.get(class_name).ok()?;
+        let klass = CLASSES.get(class_name).ok()?;
 
-        if let Some(type_descriptor) = rc.instance_field_descriptor(field_name) {
+        if let Some(type_descriptor) = klass.instance_field_descriptor(field_name) {
             Some(type_descriptor.clone())
         } else {
-            let parent_class_name = rc.parent().clone()?;
+            let parent_class_name = klass.parent().clone()?;
 
             self.lookup_for_field_descriptor(&parent_class_name, field_name)
         }
@@ -535,15 +535,15 @@ impl MethodArea {
         class_name: &str,
         instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
     ) -> Result<()> {
-        let rc = CLASSES.get(class_name)?;
-        if let Some(parent_class_name) = rc.parent().as_ref() {
+        let klass = CLASSES.get(class_name)?;
+        if let Some(parent_class_name) = klass.parent().as_ref() {
             self.lookup_and_fill_instance_fields_hierarchy(
                 parent_class_name,
                 instance_fields_hierarchy,
             )?;
         };
 
-        let instance_fields = rc.default_value_instance_fields();
+        let instance_fields = klass.default_value_instance_fields();
         instance_fields_hierarchy.insert(class_name.to_string(), instance_fields);
 
         Ok(())

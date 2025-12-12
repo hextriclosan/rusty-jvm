@@ -50,8 +50,8 @@ pub(crate) fn process(
             let class_index = stack_frame.extract_two_bytes();
             let dimension_number = stack_frame.extract_one_byte();
 
-            let rc = CLASSES.get(current_class_name)?;
-            let cpool_helper = rc.cpool_helper();
+            let klass = CLASSES.get(current_class_name)?;
+            let cpool_helper = klass.cpool_helper();
             let class_name = cpool_helper
                 .get_class_name(class_index as u16)
                 .ok_or_else(|| {

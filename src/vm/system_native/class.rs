@@ -247,8 +247,8 @@ pub(crate) fn get_raw_annotations_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![raw_annotations_ref])
 }
 fn get_raw_annotations(class_ref: i32) -> Result<i32> {
-    let rc = klass(class_ref)?;
-    let annotations_raw = rc.annotations_raw().to_owned();
+    let klass = klass(class_ref)?;
+    let annotations_raw = klass.annotations_raw().to_owned();
     let annotations_ref = annotations_raw
         .map(|annotations_raw| {
             let vec = annotations_raw
@@ -347,10 +347,9 @@ pub(crate) fn is_record0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![if record { 1 } else { 0 }])
 }
 fn is_record0(clazz_ref: i32) -> Result<bool> {
-    let rc = klass(clazz_ref)?;
-
-    let record = rc.class_modifiers().contains(ClassModifier::Final)
-        && rc
+    let klass = klass(clazz_ref)?;
+    let record = klass.class_modifiers().contains(ClassModifier::Final)
+        && klass
             .parent()
             .as_ref()
             .map_or(false, |p| p == "java/lang/Record");

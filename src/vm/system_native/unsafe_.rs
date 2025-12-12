@@ -559,8 +559,8 @@ pub(crate) fn should_be_initialized0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![if result { 1 } else { 0 }])
 }
 fn should_be_initialized0(class_ref: i32) -> Result<bool> {
-    let rc = klass(class_ref)?;
-    let guard = rc.static_fields_init_state().lock();
+    let klass = klass(class_ref)?;
+    let guard = klass.static_fields_init_state().lock();
     Ok(guard.get_inner_state() != Initialized)
 }
 
