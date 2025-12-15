@@ -47,9 +47,9 @@ To run the Java code, you must have **JDK 25 (LTS)** installed on your machine a
 
 Ensure the following are set up:
 
-- A machine running **Windows**, **macOS**, or **Linux**
-- **JDK 25 (LTS)** installed and configured
-- **Rust** installed and configured
+- A machine running **Windows**, **MacOS**, or **Linux**
+- **Rust** installed
+- **JDK 25 (LTS)** installed with the `JAVA_HOME` environment variable set
 
 ### Example Program: Count Fruits
 Create a file named `FruitCount.java` with the following content:
@@ -87,7 +87,7 @@ public class FruitCount {
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
 
 [//]: # (links)
-[platforms-image]: https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-blue
+[platforms-image]: https://img.shields.io/badge/platforms-Linux%20%7C%20MacOS%20%7C%20Windows-blue
 [crate-image]: https://img.shields.io/crates/v/rusty-jvm.svg
 [crate-link]: https://crates.io/crates/rusty-jvm
 [docs-image]: https://docs.rs/rusty-jvm/badge.svg
