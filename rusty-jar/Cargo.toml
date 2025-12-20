@@ -16,7 +16,7 @@ workspace = ".."
 
 [dependencies]
 snafu = "0.8.9"
-zip = "6.0.0"
+zip = "7.0.0"
 clap = { version = "4.5.53", features = ["derive"] }
 
 [dev-dependencies]
