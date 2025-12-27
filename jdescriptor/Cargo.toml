@@ -14,8 +14,8 @@ keywords = ["java", "bytecode", "descriptor", "parser", "jvm"]
 categories = ["parser-implementations", "parsing", "development-tools::ffi"]
 
 [dependencies]
-serde = { version = "1.0.219", features = ["derive"] }
-thiserror = "2.0.15"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
 
 [dev-dependencies]
 rstest = "0.26.1"
