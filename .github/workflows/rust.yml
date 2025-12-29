@@ -9,13 +9,6 @@ on:
     - cron: '0 3 * * *'     # Runs daily at 03:00 UTC
   workflow_dispatch:        # Manual trigger support
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: 0
-  CARGO_PROFILE_TEST_DEBUG: 0
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
-
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -39,31 +32,8 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      # sccache install + cache (handled internally)
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      # Rust target cache
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-targets: "all"
-          cache-on-failure: true
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-llvm-cov
-
-      - name: Run tests with coverage
-        run: cargo llvm-cov --locked --workspace --lcov --output-path lcov.info
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
+      - name: Run tests
+        run: cargo test --workspace
 
   test-on-s390x:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
