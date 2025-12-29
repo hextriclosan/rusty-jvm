@@ -6,15 +6,8 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '0 3 * * *'     # Runs daily at 03:00 UTC
+    - cron: '0 3 * * *'     # Daily at 03:00 UTC
   workflow_dispatch:        # Manual trigger support
-
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: 0
-  CARGO_PROFILE_TEST_DEBUG: 0
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build-and-test:
@@ -31,7 +24,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: 25
 
       - name: Set up Rust
@@ -39,16 +32,68 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      # sccache install + cache (handled internally)
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
 
-      # Rust target cache
-      - name: Cache Cargo Dependencies
+      - name: Run tests
+        run: cargo test --workspace --locked
+
+
+  test-on-s390x:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: build-and-test (linux big-endian)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Cache Rust (s390x)
         uses: Swatinem/rust-cache@v2
         with:
-          cache-targets: "all"
-          cache-on-failure: true
+          cache-targets: s390x-unknown-linux-gnu
+
+      - name: Install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Run tests on s390x (Big Endian)
+        run: |
+          unset RUSTC_WRAPPER
+          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+
+  build-and-test-with-coverage:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt, llvm-tools-preview
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
@@ -64,32 +109,3 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
-
-  test-on-s390x:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    name: build-and-test (linux big-endian)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-targets: "s390x-unknown-linux-gnu"
-
-      - name: Install cross
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
-
-      - name: Run tests on s390x (Big Endian)
-        run: |
-          unset RUSTC_WRAPPER
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
