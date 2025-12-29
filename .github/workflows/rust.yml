@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '0 3 * * *'     # Runs daily at 03:00 UTC
+    - cron: '0 3 * * *'     # Daily at 03:00 UTC
   workflow_dispatch:        # Manual trigger support
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: 25
 
       - name: Set up Rust
@@ -32,13 +32,18 @@ jobs:
         with:
           components: clippy, rustfmt
 
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
+
 
   test-on-s390x:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,10 +54,10 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Cache Cargo Dependencies
+      - name: Cache Rust (s390x)
         uses: Swatinem/rust-cache@v2
         with:
-          cache-targets: "s390x-unknown-linux-gnu"
+          cache-targets: s390x-unknown-linux-gnu
 
       - name: Install cross
         uses: taiki-e/install-action@v2
@@ -73,19 +78,21 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: 25
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
