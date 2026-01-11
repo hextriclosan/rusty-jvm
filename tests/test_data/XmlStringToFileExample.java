@@ -13,7 +13,7 @@ public class XmlStringToFileExample {
     public static void main(String[] args) throws Exception {
         // 1. Create temp file
         File tempFile = File.createTempFile("person", ".xml");
-        //tempFile.deleteOnExit(); //fixme: Runtime.exit(0) logging failed: Cannot invoke "java/lang/Module.getClassLoader:()Ljava/lang/ClassLoader;" because "<VAR_NAME>" is null
+        tempFile.deleteOnExit();
 
         // 2. XML content as string
         String xmlContent = """
