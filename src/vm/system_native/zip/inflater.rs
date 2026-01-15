@@ -126,6 +126,10 @@ fn check_inflate_status(stream_result: StreamResult) -> Result<i64> {
             // throw InternalError here
             return Err(Error::new_execution(&format!("Inflate error: {status:?}")));
         }
+        Err(_) => {
+            // throw InternalError here
+            return Err(Error::new_execution(&format!("Unknown inflate error: {status:?}")));
+        }
     };
 
     // Pack into jlong like OpenJDK java code assumes
