@@ -117,6 +117,10 @@ fn check_deflate_status(stream_result: StreamResult) -> Result<i64> {
             // throw InternalError here
             return Err(Error::new_execution(&format!("Deflate error: {status:?}")));
         }
+        Err(_) => {
+            // throw InternalError here
+            return Err(Error::new_execution(&format!("Unknown deflate error: {status:?}")));
+        }
     };
 
     // Pack into jlong like OpenJDK java code assumes
