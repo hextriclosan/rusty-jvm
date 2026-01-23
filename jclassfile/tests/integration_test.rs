@@ -1310,7 +1310,7 @@ fn should_load_and_parse_record() {
     assert_eq!(actual_class_file, expected_class_file)
 }
 
-// sould be able to parse https://github.com/google/guava/blob/0bf87046267ce281b6335430679fbd59135a1303/guava/src/com/google/common/base/CharMatcher.java#L1487-L1489   
+// should be able to parse https://github.com/google/guava/blob/0bf87046267ce281b6335430679fbd59135a1303/guava/src/com/google/common/base/CharMatcher.java#L1487-L1489   
 #[test]
 fn should_load_and_parse_invalid_cesu8_strings() {
     let bytes = include_bytes!("test_data/InvalidCESU8.class");
