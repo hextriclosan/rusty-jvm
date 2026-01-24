@@ -506,19 +506,6 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 [[package]]
 name = "jclassfile"
 version = "0.3.0"
-dependencies = [
- "bitflags 2.10.0",
- "cesu8",
- "derive-new",
- "getset",
- "num-traits",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "jclassfile"
-version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0db25e44b0823f2136abf3999fb1c3365991692d6f2a22670746098d8380fd"
 dependencies = [
@@ -527,6 +514,19 @@ dependencies = [
  "derive-new",
  "getset",
  "num-traits",
+]
+
+[[package]]
+name = "jclassfile"
+version = "0.4.0"
+dependencies = [
+ "bitflags 2.10.0",
+ "cesu8",
+ "derive-new",
+ "getset",
+ "num-traits",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1253,7 +1253,7 @@ dependencies = [
  "iana-time-zone",
  "indexmap",
  "itertools",
- "jclassfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jclassfile 0.3.0",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libloading",
