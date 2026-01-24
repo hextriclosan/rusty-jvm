@@ -8,4 +8,5 @@ interface Mutf8 {
     String threeByteSnowman = "☃";
     String fourByteGothicLetterHwair = "𐍈";
     String fourByteEmoji = "😂";
+    String withNonValidSequences = "a\ud800\ud800💔\ud800b";
 }

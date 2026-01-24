@@ -1318,7 +1318,7 @@ fn should_load_and_parse_mutf8_strings() {
     let expected_class_file = ClassFile::new(
         0xCAFEBABE,
         0,
-        66,
+        69,
         vec![
             Empty, //                                               0
             Class {
@@ -1419,10 +1419,22 @@ fn should_load_and_parse_mutf8_strings() {
             },
             Utf8 {
                 //                                                  25
+                value: "withNonValidSequences".into(),
+            },
+            String {
+                //                                                  26
+                string_index: 27,
+            },
+            Utf8 {
+                //                                                  27
+                value: "a??💔?b".into(),
+            },
+            Utf8 {
+                //                                                  28
                 value: "SourceFile".into(),
             },
             Utf8 {
-                //                                                  26
+                //                                                  29
                 value: "Mutf8.java".into(),
             },
         ],
@@ -1479,10 +1491,18 @@ fn should_load_and_parse_mutf8_strings() {
                     constantvalue_index: 23,
                 }],
             ),
+            FieldInfo::new(
+                FieldFlags::ACC_PUBLIC | FieldFlags::ACC_STATIC | FieldFlags::ACC_FINAL,
+                25,
+                6,
+                vec![ConstantValue {
+                    constantvalue_index: 26,
+                }],
+            ),
         ],
         vec![],
         vec![SourceFile {
-            sourcefile_index: 26,
+            sourcefile_index: 29,
         }],
     );
 
