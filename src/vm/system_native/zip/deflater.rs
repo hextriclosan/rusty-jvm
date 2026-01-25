@@ -119,7 +119,9 @@ fn check_deflate_status(stream_result: StreamResult) -> Result<i64> {
         }
         Err(_) => {
             // throw InternalError here
-            return Err(Error::new_execution(&format!("Unknown deflate error: {status:?}")));
+            return Err(Error::new_execution(&format!(
+                "Unknown deflate error: {status:?}"
+            )));
         }
     };
 
