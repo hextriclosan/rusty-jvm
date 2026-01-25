@@ -3309,5 +3309,8 @@ fn should_run_without_core_classes() {
 
 #[test]
 fn should_handle_non_valid_cesu8() {
-    assert_success("samples.strings.nonvalidcesu8.NonValidCESU8", "value: a??💔?b\n");
+    assert_success(
+        "samples.javacore.strings.nonvalidcesu8.NonValidCESU8",
+        "value: a??💔?b\n",
+    );
 }

@@ -128,7 +128,9 @@ fn check_inflate_status(stream_result: StreamResult) -> Result<i64> {
         }
         Err(_) => {
             // throw InternalError here
-            return Err(Error::new_execution(&format!("Unknown inflate error: {status:?}")));
+            return Err(Error::new_execution(&format!(
+                "Unknown inflate error: {status:?}"
+            )));
         }
     };
 
