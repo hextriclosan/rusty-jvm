@@ -6,7 +6,7 @@ use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
 use miniz_oxide::MZError;
 use num_enum::TryFromPrimitiveError;
-use rand::rand_core::OsError;
+use rand::rngs::SysError;
 use std::array::TryFromSliceError;
 use std::error::Error as StdError;
 use std::ffi::{NulError, OsString};
@@ -140,9 +140,9 @@ impl From<OsString> for Error {
     }
 }
 
-impl From<OsError> for Error {
-    fn from(value: OsError) -> Self {
-        Error::new_execution(&format!("OsError: {value}"))
+impl From<SysError> for Error {
+    fn from(value: SysError) -> Self {
+        Error::new_execution(&format!("SysError: {value}"))
     }
 }
 
