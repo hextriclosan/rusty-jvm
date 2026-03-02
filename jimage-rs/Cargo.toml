@@ -19,7 +19,7 @@ workspace = ".."
 memmap2 = "0.9.9"
 memchr = "2.7.6"
 flate2 = "1.1.5"
-snafu = "0.8.9"
+snafu = "0.9.0"
 clap = { version = "4.5.53", features = ["derive"] }
 byteorder = "1.5.0"
 
