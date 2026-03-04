@@ -9,12 +9,11 @@ use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::UNNAMED_MODULE_REF;
+use dashmap::DashMap;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
-use parking_lot::lock_api::RwLockWriteGuard;
-use parking_lot::{RawRwLock, RwLock};
 use std::ops::DerefMut;
-use std::sync::atomic::{AtomicI8, Ordering};
+use std::sync::atomic::{AtomicI8, AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock};
 use tracing::trace;
 
@@ -22,8 +21,17 @@ pub(crate) static CLASSES: LazyLock<LoadedClasses> = LazyLock::new(LoadedClasses
 
 #[derive(Debug, Default)]
 pub(crate) struct LoadedClasses {
-    loaded_classes: RwLock<IndexMap<String, Arc<JavaClass>>>,
+    loaded_classes: DashMap<String, Arc<ClassEntry>>,
+    mirror_index: DashMap<usize, Arc<ClassEntry>>,
+    next_id: AtomicUsize,
+
     construct_stage: AtomicI8,
+}
+
+#[derive(Debug)]
+struct ClassEntry {
+    class: Arc<JavaClass>,
+    mirror_id: usize,
 }
 
 const OBJECT: &str = "java/lang/Object";
@@ -33,17 +41,14 @@ impl LoadedClasses {
     /// Checks if class is already loaded
     pub fn is_loaded(&self, fully_qualified_class_name: &str) -> bool {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        self.loaded_classes
-            .read()
-            .contains_key(fully_qualified_class_name)
+        self.loaded_classes.contains_key(fully_qualified_class_name)
     }
 
     /// Gets class by its internal id
     pub fn get_by_id(&self, id: usize) -> Result<Arc<JavaClass>> {
-        self.loaded_classes
-            .read()
-            .get_index(id)
-            .map(|(_key, klass)| Arc::clone(klass))
+        self.mirror_index
+            .get(&id)
+            .map(|entry| Arc::clone(&entry.class))
             .ok_or_else(|| Error::new_execution(&format!("Class with id {id} not found")))
     }
 
@@ -60,11 +65,9 @@ impl LoadedClasses {
         fully_qualified_class_name: &str,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
-        {
-            let reader = self.loaded_classes.read();
-            if let Some((id, key, klass)) = reader.get_full(fully_qualified_class_name) {
-                return Ok((id, key.to_string(), Arc::clone(klass)));
-            }
+
+        if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
+            return Ok((id, key, klass));
         }
 
         // todo loading class can be called concurrently from multiple threads - not critical but it's better to handle that
@@ -77,46 +80,77 @@ impl LoadedClasses {
         self.insert_klass(klass)
     }
 
+    fn get_full_impl(
+        &self,
+        fully_qualified_class_name: &str,
+    ) -> Option<(usize, String, Arc<JavaClass>)> {
+        self.loaded_classes
+            .get(fully_qualified_class_name)
+            .map(|entry| {
+                (
+                    entry.value().mirror_id,
+                    entry.key().to_string(),
+                    Arc::clone(&entry.value().class),
+                )
+            })
+    }
+
     /// Inserts class into loaded classes, returns existing if already present
     /// Returns (klass_id, fully_qualified_class_name, klass)
     pub fn insert_klass(&self, klass: Arc<JavaClass>) -> Result<(usize, String, Arc<JavaClass>)> {
-        let mut writer = self.loaded_classes.write();
         let fully_qualified_class_name = klass.this_class_name();
         // Double check locking, maybe another thread created it while we waited for the lock
-        if let Some((id, key, klass)) = writer.get_full(fully_qualified_class_name) {
-            return Ok((id, key.to_string(), Arc::clone(klass)));
+        if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
+            return Ok((id, key.to_string(), Arc::clone(&klass)));
         }
 
         if !fully_qualified_class_name.starts_with('[') {
             // this is not an array class - insert directly
-            Self::perform_insertion(&klass, &mut writer, None)
+            self.perform_insertion(&klass, None)
         } else {
-            Self::perform_array_insertion(&klass, &mut writer)
+            self.perform_array_insertion(&klass)
         }
     }
 
+    fn insert_full_impl(&self, fully_qualified_class_name: &str, klass: Arc<JavaClass>) -> usize {
+        let entry = self
+            .loaded_classes
+            .entry(fully_qualified_class_name.to_string())
+            .or_insert_with(|| {
+                let id = self.next_id.fetch_add(1, Ordering::SeqCst);
+                let entry = Arc::new(ClassEntry {
+                    class: klass,
+                    mirror_id: id,
+                });
+
+                self.mirror_index.insert(id, Arc::clone(&entry));
+                entry
+            });
+
+        entry.value().mirror_id
+    }
+
     fn perform_insertion(
+        &self,
         klass: &Arc<JavaClass>,
-        writer: &mut RwLockWriteGuard<RawRwLock, IndexMap<String, Arc<JavaClass>>>,
         component_type_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
-        if let Some((id, key, klass)) = writer.get_full(fully_qualified_class_name) {
-            return Ok((id, key.to_string(), Arc::clone(klass)));
+        if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
+            return Ok((id, key.to_string(), Arc::clone(&klass)));
         }
 
-        let (klass_id, _value) =
-            writer.insert_full(fully_qualified_class_name.to_string(), Arc::clone(&klass));
+        let klass_id = self.insert_full_impl(fully_qualified_class_name, Arc::clone(&klass));
         trace!("<CLASS LOADED> -> {}", fully_qualified_class_name);
 
-        let (class_klass_id, _name, class_klass) = writer.get_full(CLASS).ok_or_else(|| {
+        let (class_klass_id, _name, class_klass) = self.get_full_impl(CLASS).ok_or_else(|| {
             Error::new_execution(&format!("{CLASS} class not found in loaded classes"))
         })?;
 
         Self::create_clazz_instance(
             &klass,
             klass_id,
-            class_klass,
+            &class_klass,
             class_klass_id,
             component_type_ref,
         )?;
@@ -129,45 +163,46 @@ impl LoadedClasses {
     }
 
     fn perform_array_insertion(
+        &self,
         array_klass: &Arc<JavaClass>,
-        writer: &mut RwLockWriteGuard<RawRwLock, IndexMap<String, Arc<JavaClass>>>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = array_klass.this_class_name();
         if let Ok(TypeDescriptor::Array(value, dimension)) =
             fully_qualified_class_name.parse::<TypeDescriptor>()
         {
-            // Create component class first
+            // Create a component class first
             let component_name = value.to_string();
             let component_name_undecorated = undecorate(&component_name);
-            let component_klass =
-                if let Some((_id, _name, klass)) = writer.get_full(component_name_undecorated) {
-                    Ok(Arc::clone(klass))
-                } else {
-                    with_method_area(|a| a.load_class_file(component_name_undecorated))
-                }?;
+            let component_klass = if let Some((_id, _name, klass)) =
+                self.get_full_impl(component_name_undecorated)
+            {
+                Ok(Arc::clone(&klass))
+            } else {
+                with_method_area(|a| a.load_class_file(component_name_undecorated))
+            }?;
 
-            let (_, _, component_klass) = Self::perform_insertion(&component_klass, writer, None)?;
+            let (_, _, component_klass) = self.perform_insertion(&component_klass, None)?;
 
             // Create array classes from component up to the full array class (except the last one which is created outside)
             let mut component_type_ref = component_klass.mirror_clazz_ref()?;
             for padding in (1..dimension as usize).rev() {
                 let name = &fully_qualified_class_name[padding..];
                 let (_klass_id, _name, klass) =
-                    if let Some((id, key, klass)) = writer.get_full(name) {
-                        // maybe sub-array class is already created, then just reuse it
-                        Ok((id, key.to_string(), Arc::clone(klass)))
+                    if let Some((id, key, klass)) = self.get_full_impl(name) {
+                        // if sub-array class is already created, we just reuse it
+                        Ok((id, key.to_string(), Arc::clone(&klass)))
                     } else {
                         // create sub-array class
                         let sub_array_klass = Self::generate_synthetic_array_class(name);
 
-                        Self::perform_insertion(&sub_array_klass, writer, Some(component_type_ref))
+                        self.perform_insertion(&sub_array_klass, Some(component_type_ref))
                     }?;
 
                 component_type_ref = klass.mirror_clazz_ref()?;
             }
 
-            // Finally create the full array class
-            Self::perform_insertion(&array_klass, writer, Some(component_type_ref))
+            // Finally, create the full array class
+            self.perform_insertion(&array_klass, Some(component_type_ref))
         } else {
             Err(Error::new_execution(&format!(
                 "Unexpected descriptor {fully_qualified_class_name}"
@@ -249,14 +284,12 @@ impl LoadedClasses {
     pub fn pre_construct(&self) -> Result<()> {
         let current_stage = self.construct_stage.fetch_add(1i8, Ordering::SeqCst);
         if current_stage == 0 {
-            let mut writer = self.loaded_classes.write();
-
             let object_klass = with_method_area(|a| a.load_class_file(OBJECT))?;
-            writer.insert_full(OBJECT.to_string(), Arc::clone(&object_klass));
+            self.insert_full_impl(OBJECT, Arc::clone(&object_klass));
             trace!("<CLASS LOADED> -> {OBJECT}");
 
             let class_klass = with_method_area(|a| a.load_class_file(CLASS))?;
-            writer.insert_full(CLASS.to_string(), Arc::clone(&class_klass));
+            self.insert_full_impl(CLASS, Arc::clone(&class_klass));
             trace!("<CLASS LOADED> -> {CLASS}");
 
             Ok(())
@@ -272,30 +305,28 @@ impl LoadedClasses {
     pub fn post_construct(&self) -> Result<()> {
         let current_stage = self.construct_stage.fetch_add(1i8, Ordering::SeqCst);
         if current_stage == 1 {
-            let reader = self.loaded_classes.read();
-
             // Create Class<Class> instance
             let (class_klass_id, _name, class_klass) =
-                reader.get_full(CLASS).ok_or_else(|| {
+                self.get_full_impl(CLASS).ok_or_else(|| {
                     Error::new_execution(&format!("{CLASS} class not found in loaded classes"))
                 })?;
             Self::create_clazz_instance(
                 &class_klass,
                 class_klass_id,
-                class_klass,
+                &class_klass,
                 class_klass_id,
                 None,
             )?;
 
             // Create Class<Object> instance
             let (object_klass_id, _name, object_klass) =
-                reader.get_full(OBJECT).ok_or_else(|| {
+                self.get_full_impl(OBJECT).ok_or_else(|| {
                     Error::new_execution(&format!("{OBJECT} class not found in loaded classes"))
                 })?;
             Self::create_clazz_instance(
                 &object_klass,
                 object_klass_id,
-                class_klass,
+                &class_klass,
                 class_klass_id,
                 None,
             )?;
