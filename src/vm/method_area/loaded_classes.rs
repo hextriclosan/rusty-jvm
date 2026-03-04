@@ -100,7 +100,6 @@ impl LoadedClasses {
     /// Returns (klass_id, fully_qualified_class_name, klass)
     pub fn insert_klass(&self, klass: Arc<JavaClass>) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
-        // Double check locking, maybe another thread created it while we waited for the lock
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
             return Ok((id, key.to_string(), Arc::clone(&klass)));
         }
