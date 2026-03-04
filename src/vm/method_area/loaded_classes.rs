@@ -10,6 +10,7 @@ use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::UNNAMED_MODULE_REF;
 use dashmap::DashMap;
+use derive_new::new;
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use std::ops::DerefMut;
@@ -22,16 +23,16 @@ pub(crate) static CLASSES: LazyLock<LoadedClasses> = LazyLock::new(LoadedClasses
 #[derive(Debug, Default)]
 pub(crate) struct LoadedClasses {
     loaded_classes: DashMap<String, Arc<ClassEntry>>,
-    mirror_index: DashMap<usize, Arc<ClassEntry>>,
+    id_index: DashMap<usize, Arc<ClassEntry>>,
     next_id: AtomicUsize,
 
     construct_stage: AtomicI8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, new)]
 struct ClassEntry {
-    class: Arc<JavaClass>,
-    mirror_id: usize,
+    klass: Arc<JavaClass>,
+    id: usize,
 }
 
 const OBJECT: &str = "java/lang/Object";
@@ -46,9 +47,9 @@ impl LoadedClasses {
 
     /// Gets class by its internal id
     pub fn get_by_id(&self, id: usize) -> Result<Arc<JavaClass>> {
-        self.mirror_index
+        self.id_index
             .get(&id)
-            .map(|entry| Arc::clone(&entry.class))
+            .map(|entry| Arc::clone(&entry.klass))
             .ok_or_else(|| Error::new_execution(&format!("Class with id {id} not found")))
     }
 
@@ -88,9 +89,9 @@ impl LoadedClasses {
             .get(fully_qualified_class_name)
             .map(|entry| {
                 (
-                    entry.value().mirror_id,
+                    entry.value().id,
                     entry.key().to_string(),
-                    Arc::clone(&entry.value().class),
+                    Arc::clone(&entry.value().klass),
                 )
             })
     }
@@ -118,16 +119,13 @@ impl LoadedClasses {
             .entry(fully_qualified_class_name.to_string())
             .or_insert_with(|| {
                 let id = self.next_id.fetch_add(1, Ordering::SeqCst);
-                let entry = Arc::new(ClassEntry {
-                    class: klass,
-                    mirror_id: id,
-                });
+                let entry = Arc::new(ClassEntry::new(klass, id));
 
-                self.mirror_index.insert(id, Arc::clone(&entry));
+                self.id_index.insert(id, Arc::clone(&entry));
                 entry
             });
 
-        entry.value().mirror_id
+        entry.value().id
     }
 
     fn perform_insertion(
