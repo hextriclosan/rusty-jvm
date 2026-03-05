@@ -29,7 +29,7 @@ public class AppClassLoaderDemo {
 
         // 5. Load a user-defined class
         Class<?> loadMe2 = appClassLoader.loadClass("samples.loader.appclassloaderdemo.LoadMe2");
-        ClassLoader loader2 = loadMe1.getClassLoader();
+        ClassLoader loader2 = loadMe2.getClassLoader();
         String loader2Name = (loader2 == appClassLoader) ? loader2.getName() : "NOT_APP_CLASS_LOADER";
         System.out.println("Loaded class: " + loadMe2.getName() + " by " + loader2Name);
 
