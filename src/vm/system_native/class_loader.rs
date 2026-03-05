@@ -36,7 +36,7 @@ pub(crate) fn define_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![class_ref])
 }
 fn define_class0(
-    _class_loader_ref: i32,
+    class_loader_ref: i32,
     _lookup_ref: i32,
     name_ref: i32,
     buf_ref: i32,
@@ -62,14 +62,15 @@ fn define_class0(
         .map(|v| v[0] as u8)
         .collect();
 
-    let (internal_name, ..) =
-        with_method_area(|method_area| method_area.create_metaclass(&name, &byte_code))?;
+    let (internal_name, ..) = with_method_area(|method_area| {
+        method_area.create_metaclass(&name, &byte_code, class_loader_ref)
+    })?;
     let clazz_ref = clazz_ref(&internal_name);
 
     clazz_ref
 }
 
-pub(crate) fn define_class2_wrp(args: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn define_class1_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let class_loader_ref = args[0];
     let name_ref = args[1];
     let byte_buf_ref = args[2];
@@ -77,7 +78,7 @@ pub(crate) fn define_class2_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let len = args[4];
     let protection_domain_ref = args[5];
     let source_ref = args[6];
-    let class_ref = define_class2(
+    let class_ref = define_class1(
         class_loader_ref,
         name_ref,
         byte_buf_ref,
@@ -89,19 +90,66 @@ pub(crate) fn define_class2_wrp(args: &[i32]) -> Result<Vec<i32>> {
 
     Ok(vec![class_ref])
 }
-
-fn define_class2(
-    _class_loader_ref: i32,
+fn define_class1(
+    class_loader_ref: i32,
     name_ref: i32,
-    byte_buf_ref: i32,
+    buf_ref: i32,
     off: i32,
     len: i32,
     _protection_domain_ref: i32,
     _source_ref: i32,
 ) -> Result<i32> {
     let internal_name = get_utf8_string_by_ref(name_ref)?.replace(".", "/");
-    let instance_name = HEAP.get_instance_name(byte_buf_ref)?;
-    let addr = HEAP.get_object_field_value(byte_buf_ref, &instance_name, "address")?;
+    let buf = HEAP.get_entire_array(buf_ref)?;
+
+    let vec = buf.get_entire_value();
+    let byte_code: Vec<_> = vec
+        .iter()
+        .skip(off as usize)
+        .take(len as usize)
+        .map(|v| v[0] as u8)
+        .collect();
+
+    let (name, ..) = with_method_area(|method_area| {
+        method_area.create_metaclass(&internal_name, &byte_code, class_loader_ref)
+    })?;
+    let clazz_ref = clazz_ref(&name);
+
+    clazz_ref
+}
+
+pub(crate) fn define_class2_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let class_loader_ref = args[0];
+    let name_ref = args[1];
+    let nio_byte_buf_ref = args[2];
+    let off = args[3];
+    let len = args[4];
+    let protection_domain_ref = args[5];
+    let source_ref = args[6];
+    let class_ref = define_class2(
+        class_loader_ref,
+        name_ref,
+        nio_byte_buf_ref,
+        off,
+        len,
+        protection_domain_ref,
+        source_ref,
+    )?;
+
+    Ok(vec![class_ref])
+}
+fn define_class2(
+    class_loader_ref: i32,
+    name_ref: i32,
+    nio_byte_buf_ref: i32,
+    off: i32,
+    len: i32,
+    _protection_domain_ref: i32,
+    _source_ref: i32,
+) -> Result<i32> {
+    let internal_name = get_utf8_string_by_ref(name_ref)?.replace(".", "/");
+    let instance_name = HEAP.get_instance_name(nio_byte_buf_ref)?;
+    let addr = HEAP.get_object_field_value(nio_byte_buf_ref, &instance_name, "address")?;
     let addr = vec_to_i64(&addr);
 
     let addr = addr as usize as *const u8;
@@ -112,8 +160,9 @@ fn define_class2(
     }
     let byte_code = unsafe { std::slice::from_raw_parts(addr.add(off as usize), len as usize) };
 
-    let (name, ..) =
-        with_method_area(|method_area| method_area.create_metaclass(&internal_name, &byte_code))?;
+    let (name, ..) = with_method_area(|method_area| {
+        method_area.create_metaclass(&internal_name, &byte_code, class_loader_ref)
+    })?;
     let clazz_ref = clazz_ref(&name);
 
     clazz_ref
@@ -129,9 +178,19 @@ fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = &name.replace('.', "/");
 
-    // Check if the class is already loaded and exists
-    // If it does not exist, we return 0 (null reference)
-    if let Err(_) = CLASSES.get(internal_name) {
+    let opt_klass = with_method_area(|a| {
+        let class_file_path = format!("{internal_name}.class");
+        if a.modules_mapping().contains_key(&class_file_path) {
+            Some(a.load_class_file(internal_name))
+        } else {
+            None
+        }
+    });
+    if let Some(klass) = opt_klass {
+        CLASSES.insert_klass(klass?, None)?;
+    }
+
+    if !CLASSES.is_loaded(internal_name) {
         return Ok(0);
     }
 

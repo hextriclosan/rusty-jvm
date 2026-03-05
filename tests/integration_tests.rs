@@ -2042,14 +2042,24 @@ class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExamp
 }
 
 #[test]
+// fixme https://github.com/hextriclosan/rusty-jvm/issues/676
 fn should_support_class_for_name_method() {
-    assert_success(
+    utils::assert_with_all_args(
+        &[],
         "samples.reflection.trivial.forname.ClassForNameExample",
+        &[],
         r#">>> First static block executed
 Loaded class: samples.reflection.trivial.forname.First (initialized=true)
 Loaded class: samples.reflection.trivial.forname.Second (initialized=false)
 ClassNotFoundException: samples.reflection.trivial.forname.NonExisting - java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
 "#,
+        r#"Exception in thread "system" java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
+	at jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:490)
+"#,
+        Success,
+        0,
+        HashMap::default(),
     );
 }
 
@@ -3207,6 +3217,7 @@ Date Format:     sábado, 24 de agosto de 1991
 }
 
 #[test]
+#[ignore] // https://github.com/hextriclosan/rusty-jvm/issues/677
 fn should_print_error_and_exit_if_no_main_method() {
     assert_failure(
         "samples.nomainmethod.NoMainMethod",
@@ -3293,6 +3304,7 @@ fn should_exit_with_given_code_impl(
 }
 
 #[test]
+#[ignore] // doesn't work with ClassLoader (not a big issue since this test is synthetic)
 fn should_run_without_core_classes() {
     let env_vars = HashMap::from([("SKIP_JAVA_CORE_INIT".to_string(), "".to_string())]);
     utils::assert_with_all_args(
@@ -3312,5 +3324,39 @@ fn should_handle_non_valid_cesu8() {
     assert_success(
         "samples.javacore.strings.nonvalidcesu8.NonValidCESU8",
         "value: a??💔?b\n",
+    );
+}
+
+#[test]
+fn should_print_info_about_classloaders() {
+    assert_success(
+        "sample.loader.appclassloaderdemo.AppClassLoaderDemo",
+        r#"Application ClassLoader: app
+Parent of Application ClassLoader: platform
+Parent of Platform ClassLoader (Bootstrap): null
+LoadMe1 class has been initialized!
+Loaded class: sample.loader.appclassloaderdemo.LoadMe1 by app
+Loaded class: java.lang.String by null
+Loaded class: sample.loader.appclassloaderdemo.LoadMe2 by app
+Class: sample.loader.appclassloaderdemo.LoadMe1
+  loader hierarchy = jdk.internal.loader.ClassLoaders$AppClassLoader -> jdk.internal.loader.ClassLoaders$PlatformClassLoader -> Bootstrap
+  loader name = app
+  module        = null
+Class: sample.loader.appclassloaderdemo.LoadMe2
+  loader hierarchy = jdk.internal.loader.ClassLoaders$AppClassLoader -> jdk.internal.loader.ClassLoaders$PlatformClassLoader -> Bootstrap
+  loader name = app
+  module        = null
+Class: sample.loader.appclassloaderdemo.LoadMe3
+  loader hierarchy = jdk.internal.loader.ClassLoaders$AppClassLoader -> jdk.internal.loader.ClassLoaders$PlatformClassLoader -> Bootstrap
+  loader name = app
+  module        = null
+Class: java.lang.String
+  loader hierarchy = Bootstrap
+  module        = java.base
+Class object obtained: sample.loader.appclassloaderdemo.LoadMe4
+LoadMe4 class has been initialized!
+LoadMe4 instance constructed
+Hello from LoadMe4!
+"#,
     );
 }

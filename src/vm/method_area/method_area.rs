@@ -1,7 +1,10 @@
 use crate::vm;
 use crate::vm::error::{Error, Result};
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
+use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase};
+use crate::vm::helper::klass;
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
@@ -12,7 +15,7 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::module_helper::Modules;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
-use crate::vm::{stack, JAVA_HOME};
+use crate::vm::{stack, JAVA_HOME, SYSTEM_CLASSLOADER_REF};
 use indexmap::{IndexMap, IndexSet};
 use jclassfile::class_file::{parse, ClassFile};
 use jclassfile::fields::{FieldFlags, FieldInfo};
@@ -83,17 +86,18 @@ impl MethodArea {
         &self,
         fully_qualified_class_name: &str,
         bytecode: &[u8],
+        class_loader_ref: i32,
     ) -> Result<(String, String)> {
         let (internal, external) = derive_internal_and_external_names(fully_qualified_class_name);
 
-        if let Ok(jc) = CLASSES.get(&internal) {
-            return Ok((jc.this_class_name().clone(), jc.external_name().clone()));
+        if CLASSES.is_loaded(&internal) {
+            return Ok((internal, external));
         }
 
         let class_file = parse(bytecode)?;
         let (_, java_class) =
             self.to_java_class(class_file, internal.clone(), external.clone())?;
-        CLASSES.insert_klass(Arc::clone(&java_class))?;
+        CLASSES.insert_klass(Arc::clone(&java_class), Some(class_loader_ref))?;
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
         Ok((internal, external))
@@ -119,10 +123,25 @@ impl MethodArea {
             }
         }
 
-        self.try_open_and_parse(&PathBuf::from(&class_file_path))?
-            .ok_or_else(|| {
-                Error::new_execution(&format!("error opening class file {class_file_path}"))
-            })
+        if class_file_path.starts_with("java/") {
+            self.try_open_and_parse(&PathBuf::from(&class_file_path))?
+                .ok_or_else(|| {
+                    Error::new_execution(&format!("error opening class file {class_file_path}"))
+                })
+        } else {
+            let external_name = fully_qualified_class_name.replace('/', ".");
+            let name_ref = StringPoolHelper::get_string(&external_name)?;
+            let clazz_ref = Executor::invoke_static_method(
+                "java/lang/Class",
+                "forName:(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;",
+                &[
+                    name_ref.into(),
+                    0.into(),
+                    SYSTEM_CLASSLOADER_REF.get().copied().unwrap_or(0).into(),
+                ],
+            )?[0];
+            klass(clazz_ref)
+        }
     }
 
     fn try_open_and_parse(&self, path: &PathBuf) -> Result<Option<Arc<JavaClass>>> {
