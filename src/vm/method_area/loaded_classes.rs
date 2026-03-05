@@ -78,7 +78,7 @@ impl LoadedClasses {
             with_method_area(|a| a.load_class_file(fully_qualified_class_name))?
         };
 
-        self.insert_klass(klass)
+        self.insert_klass(klass, None)
     }
 
     fn get_full_impl(
@@ -98,7 +98,11 @@ impl LoadedClasses {
 
     /// Inserts class into loaded classes, returns existing if already present
     /// Returns (klass_id, fully_qualified_class_name, klass)
-    pub fn insert_klass(&self, klass: Arc<JavaClass>) -> Result<(usize, String, Arc<JavaClass>)> {
+    pub fn insert_klass(
+        &self,
+        klass: Arc<JavaClass>,
+        class_loader_ref: Option<i32>,
+    ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
             return Ok((id, key.to_string(), Arc::clone(&klass)));
@@ -106,9 +110,9 @@ impl LoadedClasses {
 
         if !fully_qualified_class_name.starts_with('[') {
             // this is not an array class - insert directly
-            self.perform_insertion(&klass, None)
+            self.perform_insertion(&klass, None, class_loader_ref)
         } else {
-            self.perform_array_insertion(&klass)
+            self.perform_array_insertion(&klass, class_loader_ref)
         }
     }
 
@@ -131,6 +135,7 @@ impl LoadedClasses {
         &self,
         klass: &Arc<JavaClass>,
         component_type_ref: Option<i32>,
+        class_loader_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
@@ -150,6 +155,7 @@ impl LoadedClasses {
             &class_klass,
             class_klass_id,
             component_type_ref,
+            class_loader_ref,
         )?;
 
         Ok((
@@ -162,6 +168,7 @@ impl LoadedClasses {
     fn perform_array_insertion(
         &self,
         array_klass: &Arc<JavaClass>,
+        class_loader_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = array_klass.this_class_name();
         if let Ok(TypeDescriptor::Array(value, dimension)) =
@@ -178,7 +185,8 @@ impl LoadedClasses {
                 with_method_area(|a| a.load_class_file(component_name_undecorated))
             }?;
 
-            let (_, _, component_klass) = self.perform_insertion(&component_klass, None)?;
+            let (_, _, component_klass) =
+                self.perform_insertion(&component_klass, None, class_loader_ref)?;
 
             // Create array classes from component up to the full array class (except the last one which is created outside)
             let mut component_type_ref = component_klass.mirror_clazz_ref()?;
@@ -192,14 +200,18 @@ impl LoadedClasses {
                         // create sub-array class
                         let sub_array_klass = Self::generate_synthetic_array_class(name);
 
-                        self.perform_insertion(&sub_array_klass, Some(component_type_ref))
+                        self.perform_insertion(
+                            &sub_array_klass,
+                            Some(component_type_ref),
+                            class_loader_ref,
+                        )
                     }?;
 
                 component_type_ref = klass.mirror_clazz_ref()?;
             }
 
             // Finally, create the full array class
-            self.perform_insertion(&array_klass, Some(component_type_ref))
+            self.perform_insertion(&array_klass, Some(component_type_ref), class_loader_ref)
         } else {
             Err(Error::new_execution(&format!(
                 "Unexpected descriptor {fully_qualified_class_name}"
@@ -213,6 +225,7 @@ impl LoadedClasses {
         class_klass: &Arc<JavaClass>,
         class_klass_id: usize,
         component_type_ref: Option<i32>,
+        class_loader_ref: Option<i32>,
     ) -> Result<()> {
         let mut class_instance = JavaInstance::Class(JavaInstanceClass::new(
             JavaInstanceBase::new(
@@ -240,6 +253,12 @@ impl LoadedClasses {
         )?;
         let class_modifiers = klass.class_modifiers().bits();
         class_instance.set_field_value(CLASS, "modifiers", vec![class_modifiers as i32])?;
+
+        class_instance.set_field_value(
+            CLASS,
+            "classLoader",
+            vec![class_loader_ref.unwrap_or(0)],
+        )?;
 
         let (module_ref, patch) = with_method_area(|a| {
             let file_name = format!("{}.class", klass.this_class_name());
@@ -313,6 +332,7 @@ impl LoadedClasses {
                 &class_klass,
                 class_klass_id,
                 None,
+                None,
             )?;
 
             // Create Class<Object> instance
@@ -325,6 +345,7 @@ impl LoadedClasses {
                 object_klass_id,
                 &class_klass,
                 class_klass_id,
+                None,
                 None,
             )?;
 

@@ -87,16 +87,40 @@ pub(crate) fn for_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Res
 fn for_name0(
     name_ref: i32,
     initialize: bool,
-    _loader_ref: i32,
+    loader_ref: i32,
     _caller_ref: i32,
     stack_frames: &mut StackFrames,
 ) -> ThrowingResult<i32> {
     let name = unwrap_or_return_err!(get_utf8_string_by_ref(name_ref));
     let internal_name = name.replace('.', "/");
-    let reflection_ref = match clazz_ref(&internal_name) {
-        Ok(r) => r,
-        Err(_) => {
-            throw_and_return!(throw_class_not_found_exception(&name, stack_frames))
+    let reflection_ref = if loader_ref == 0 {
+        // it's a bootstrap class loader, so we load class directly with native code
+        match clazz_ref(&internal_name) {
+            Ok(r) => r,
+            Err(_) => {
+                throw_and_return!(throw_class_not_found_exception(&name, stack_frames))
+            }
+        }
+    } else {
+        // we have a class loader, so we use it to load the class
+        let res = Executor::invoke_non_static_method(
+            "java/lang/ClassLoader",
+            "loadClass:(Ljava/lang/String;)Ljava/lang/Class;",
+            loader_ref,
+            &[name_ref.into()],
+        );
+
+        match res {
+            Ok(vals) => vals[0],
+            Err(_) => {
+                // fixme: samples.reflection.trivial.forname.NonExisting prints stacktrace here
+                // https://github.com/hextriclosan/rusty-jvm/issues/676
+                // ```
+                // Exception in thread "system" java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
+                // 	at jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
+                // 	at java.lang.ClassLoader.loadClass(ClassLoader.java:490)```
+                throw_and_return!(throw_class_not_found_exception(&name, stack_frames));
+            }
         }
     };
 

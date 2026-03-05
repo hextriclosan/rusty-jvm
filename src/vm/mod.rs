@@ -37,6 +37,9 @@ pub(crate) static JAVA_CORE_INIT: Lazy<bool> = Lazy::new(|| {
         .unwrap_or(true)
 });
 
+pub(crate) static PLATFORM_CLASSLOADER_REF: OnceLock<i32> = OnceLock::new();
+pub(crate) static SYSTEM_CLASSLOADER_REF: OnceLock<i32> = OnceLock::new();
+
 /// Launches the Rusty Java Virtual Machine with the given arguments.
 ///
 /// This function initializes the JVM, loads the specified main class, and invokes its `main` method.
@@ -89,7 +92,7 @@ fn prelude() -> Result<()> {
     CLASSES.post_construct()?;
 
     for java_class in MethodArea::generate_synthetic_classes() {
-        CLASSES.insert_klass(Arc::clone(&java_class))?;
+        CLASSES.insert_klass(Arc::clone(&java_class), None)?;
     }
 
     if *JAVA_CORE_INIT {
@@ -150,10 +153,33 @@ fn init() -> Result<()> {
     }
     Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[])?;
 
+    PLATFORM_CLASSLOADER_REF
+        .set(
+            Executor::invoke_static_method(
+                "java/lang/ClassLoader",
+                "getPlatformClassLoader:()Ljava/lang/ClassLoader;",
+                &[],
+            )?[0],
+        )
+        .map_err(|_e| Error::new_execution("value already set"))?;
+    SYSTEM_CLASSLOADER_REF
+        .set(
+            Executor::invoke_static_method(
+                "java/lang/ClassLoader",
+                "getSystemClassLoader:()Ljava/lang/ClassLoader;",
+                &[],
+            )?[0],
+        )
+        .map_err(|_e| Error::new_execution("value already set"))?;
+
+    let system_classloader_ref = SYSTEM_CLASSLOADER_REF
+        .get()
+        .copied()
+        .ok_or_else(|| Error::new_execution("SYSTEM_CLASSLOADER_REF not set"))?;
     let module_ref = Executor::invoke_args_constructor(
         "java/lang/Module",
         "<init>:(Ljava/lang/ClassLoader;)V",
-        &[0.into()], // todo use proper classloader here
+        &[system_classloader_ref.into()],
         Some("module for reflection class"),
     )?;
     UNNAMED_MODULE_REF
