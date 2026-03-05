@@ -3330,30 +3330,30 @@ fn should_handle_non_valid_cesu8() {
 #[test]
 fn should_print_info_about_classloaders() {
     assert_success(
-        "sample.loader.appclassloaderdemo.AppClassLoaderDemo",
+        "samples.loader.appclassloaderdemo.AppClassLoaderDemo",
         r#"Application ClassLoader: app
 Parent of Application ClassLoader: platform
 Parent of Platform ClassLoader (Bootstrap): null
 LoadMe1 class has been initialized!
-Loaded class: sample.loader.appclassloaderdemo.LoadMe1 by app
+Loaded class: samples.loader.appclassloaderdemo.LoadMe1 by app
 Loaded class: java.lang.String by null
-Loaded class: sample.loader.appclassloaderdemo.LoadMe2 by app
-Class: sample.loader.appclassloaderdemo.LoadMe1
+Loaded class: samples.loader.appclassloaderdemo.LoadMe2 by app
+Class: samples.loader.appclassloaderdemo.LoadMe1
   loader hierarchy = jdk.internal.loader.ClassLoaders$AppClassLoader -> jdk.internal.loader.ClassLoaders$PlatformClassLoader -> Bootstrap
   loader name = app
   module        = null
-Class: sample.loader.appclassloaderdemo.LoadMe2
+Class: samples.loader.appclassloaderdemo.LoadMe2
   loader hierarchy = jdk.internal.loader.ClassLoaders$AppClassLoader -> jdk.internal.loader.ClassLoaders$PlatformClassLoader -> Bootstrap
   loader name = app
   module        = null
-Class: sample.loader.appclassloaderdemo.LoadMe3
+Class: samples.loader.appclassloaderdemo.LoadMe3
   loader hierarchy = jdk.internal.loader.ClassLoaders$AppClassLoader -> jdk.internal.loader.ClassLoaders$PlatformClassLoader -> Bootstrap
   loader name = app
   module        = null
 Class: java.lang.String
   loader hierarchy = Bootstrap
   module        = java.base
-Class object obtained: sample.loader.appclassloaderdemo.LoadMe4
+Class object obtained: samples.loader.appclassloaderdemo.LoadMe4
 LoadMe4 class has been initialized!
 LoadMe4 instance constructed
 Hello from LoadMe4!

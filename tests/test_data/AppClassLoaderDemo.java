@@ -1,4 +1,4 @@
-package sample.loader.appclassloaderdemo;
+package samples.loader.appclassloaderdemo;
 
 import java.lang.reflect.InvocationTargetException;
 import java.security.CodeSource;
@@ -18,7 +18,7 @@ public class AppClassLoaderDemo {
 
         // Example: Loading a user-defined class with the application class loader
 
-        Class<?> loadMe1 = Class.forName("sample.loader.appclassloaderdemo.LoadMe1", true, appClassLoader);
+        Class<?> loadMe1 = Class.forName("samples.loader.appclassloaderdemo.LoadMe1", true, appClassLoader);
         ClassLoader loader1 = loadMe1.getClassLoader();
         String loader1Name = (loader1 == appClassLoader) ? loader1.getName() : "NOT_APP_CLASS_LOADER";
         System.out.println("Loaded class: " + loadMe1.getName() + " by " + loader1Name);
@@ -28,8 +28,8 @@ public class AppClassLoaderDemo {
         System.out.println("Loaded class: " + stringClass.getName() + " by " + stringClass.getClassLoader());
 
         // 5. Load a user-defined class
-        Class<?> loadMe2 = appClassLoader.loadClass("sample.loader.appclassloaderdemo.LoadMe2");
-        ClassLoader loader2 = loadMe1.getClassLoader();
+        Class<?> loadMe2 = appClassLoader.loadClass("samples.loader.appclassloaderdemo.LoadMe2");
+        ClassLoader loader2 = loadMe2.getClassLoader();
         String loader2Name = (loader2 == appClassLoader) ? loader2.getName() : "NOT_APP_CLASS_LOADER";
         System.out.println("Loaded class: " + loadMe2.getName() + " by " + loader2Name);
 
@@ -39,7 +39,7 @@ public class AppClassLoaderDemo {
         printClassLoader(stringClass);
 
         // Load the class (this loads & links it, but does not run static block yet)
-        Class<?> loadMe4 = appClassLoader.loadClass("sample.loader.appclassloaderdemo.LoadMe4");
+        Class<?> loadMe4 = appClassLoader.loadClass("samples.loader.appclassloaderdemo.LoadMe4");
         System.out.println("Class object obtained: " + loadMe4.getName());
 
         // Trigger initialization (static block runs)
