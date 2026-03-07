@@ -774,6 +774,14 @@ fn get_attribute(
 
             PermittedSubclasses { classes }
         }
+        "SourceDebugExtension" => {
+            *start_from += attribute_length as usize;
+            SourceDebugExtension
+        }
+        "RuntimeInvisibleParameterAnnotations" => {
+            *start_from += attribute_length as usize;
+            RuntimeInvisibleParameterAnnotations
+        }
         _ => {
             return Err(Error::new_io(
                 InvalidData,
