@@ -1774,3 +1774,20 @@ fn should_serialize_to_string() {
         r#"{"magic":3405691582,"minor_version":0,"major_version":66,"constant_pool":["Empty",{"Class":{"name_index":2}},{"Utf8":{"value":"Mutf8"}},{"Class":{"name_index":4}},{"Utf8":{"value":"java/lang/Object"}},{"Utf8":{"value":"withZero"}},{"Utf8":{"value":"Ljava/lang/String;"}},{"Utf8":{"value":"ConstantValue"}},{"String":{"string_index":9}},{"Utf8":{"value":"\u0000abc"}},{"Utf8":{"value":"singleByteLatin"}},{"String":{"string_index":12}},{"Utf8":{"value":"A"}},{"Utf8":{"value":"twoByteUkrainian"}},{"String":{"string_index":15}},{"Utf8":{"value":"ї"}},{"Utf8":{"value":"threeByteSnowman"}},{"String":{"string_index":18}},{"Utf8":{"value":"☃"}},{"Utf8":{"value":"fourByteGothicLetterHwair"}},{"String":{"string_index":21}},{"Utf8":{"value":"𐍈"}},{"Utf8":{"value":"fourByteEmoji"}},{"String":{"string_index":24}},{"Utf8":{"value":"😂"}},{"Utf8":{"value":"SourceFile"}},{"Utf8":{"value":"Mutf8.java"}}],"access_flags":"ACC_INTERFACE | ACC_ABSTRACT","this_class":1,"super_class":3,"interfaces":[],"fields":[{"access_flags":"ACC_PUBLIC | ACC_STATIC | ACC_FINAL","name_index":5,"descriptor_index":6,"attributes":[{"ConstantValue":{"constantvalue_index":8}}]},{"access_flags":"ACC_PUBLIC | ACC_STATIC | ACC_FINAL","name_index":10,"descriptor_index":6,"attributes":[{"ConstantValue":{"constantvalue_index":11}}]},{"access_flags":"ACC_PUBLIC | ACC_STATIC | ACC_FINAL","name_index":13,"descriptor_index":6,"attributes":[{"ConstantValue":{"constantvalue_index":14}}]},{"access_flags":"ACC_PUBLIC | ACC_STATIC | ACC_FINAL","name_index":16,"descriptor_index":6,"attributes":[{"ConstantValue":{"constantvalue_index":17}}]},{"access_flags":"ACC_PUBLIC | ACC_STATIC | ACC_FINAL","name_index":19,"descriptor_index":6,"attributes":[{"ConstantValue":{"constantvalue_index":20}}]},{"access_flags":"ACC_PUBLIC | ACC_STATIC | ACC_FINAL","name_index":22,"descriptor_index":6,"attributes":[{"ConstantValue":{"constantvalue_index":23}}]}],"methods":[],"attributes":[{"SourceFile":{"sourcefile_index":26}}]}"#
     )
 }
+
+#[test]
+fn should_load_and_parse_kotlin_source_debug_extension() {
+    let bytes = include_bytes!("test_data/KotlinSourceDebugExtension.class");
+    let actual_class_file = parse(bytes).unwrap();
+
+    assert_eq!(actual_class_file.methods().len(), 2);
+
+    let has_source_debug_extension = actual_class_file
+        .attributes()
+        .iter()
+        .any(|attr| matches!(attr, SourceDebugExtension));
+    assert!(
+        has_source_debug_extension,
+        "expected SourceDebugExtension attribute in Kotlin class"
+    );
+}
