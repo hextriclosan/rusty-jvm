@@ -1,3 +1,9 @@
+# 0.5.0
+
+## What's Changed
+* Support for `RuntimeInvisibleParameterAnnotations` and `SourceDebugExtension` attributes (thanks [@exoego](https://github.com/exoego))
+
+
 # 0.4.0
 
 ## What's Changed
