@@ -1777,19 +1777,387 @@ fn should_serialize_to_string() {
 
 #[test]
 fn should_load_and_parse_kotlin_source_debug_extension() {
-    let bytes = include_bytes!("test_data/KotlinSourceDebugExtension.class");
+    let bytes = include_bytes!("test_data/KotlinSourceDebugExtensionKt.class");
     let actual_class_file = parse(bytes).unwrap();
 
-    assert_eq!(actual_class_file.methods().len(), 2);
+    let expected_class_file = ClassFile::new(
+        0xCAFEBABE,
+        0,
+        52,
+        vec![
+            Empty, //                                               0
+            Utf8 {
+                //                                                  1
+                value: "KotlinSourceDebugExtensionKt".into(),
+            },
+            Class {
+                //                                                  2
+                name_index: 1,
+            },
+            Utf8 {
+                //                                                  3
+                value: "java/lang/Object".into(),
+            },
+            Class {
+                //                                                  4
+                name_index: 3,
+            },
+            Utf8 {
+                //                                                  5
+                value: "f".into(),
+            },
+            Utf8 {
+                //                                                  6
+                value: "(Lkotlin/jvm/functions/Function0;)V".into(),
+            },
+            Utf8 {
+                //                                                  7
+                value: "(Lkotlin/jvm/functions/Function0<Lkotlin/Unit;>;)V".into(),
+            },
+            Utf8 {
+                //                                                  8
+                value: "Lorg/jetbrains/annotations/NotNull;".into(),
+            },
+            Utf8 {
+                //                                                  9
+                value: "block".into(),
+            },
+            String {
+                //                                                  10
+                string_index: 9,
+            },
+            Utf8 {
+                //                                                  11
+                value: "kotlin/jvm/internal/Intrinsics".into(),
+            },
+            Class {
+                //                                                  12
+                name_index: 11,
+            },
+            Utf8 {
+                //                                                  13
+                value: "checkNotNullParameter".into(),
+            },
+            Utf8 {
+                //                                                  14
+                value: "(Ljava/lang/Object;Ljava/lang/String;)V".into(),
+            },
+            NameAndType {
+                //                                                  15
+                name_index: 13,
+                descriptor_index: 14,
+            },
+            Methodref {
+                //                                                  16
+                class_index: 12,
+                name_and_type_index: 15,
+            },
+            Utf8 {
+                //                                                  17
+                value: "kotlin/jvm/functions/Function0".into(),
+            },
+            Class {
+                //                                                  18
+                name_index: 17,
+            },
+            Utf8 {
+                //                                                  19
+                value: "invoke".into(),
+            },
+            Utf8 {
+                //                                                  20
+                value: "()Ljava/lang/Object;".into(),
+            },
+            NameAndType {
+                //                                                  21
+                name_index: 19,
+                descriptor_index: 20,
+            },
+            InterfaceMethodref {
+                //                                                  22
+                class_index: 18,
+                name_and_type_index: 21,
+            },
+            Utf8 {
+                //                                                  23
+                value: "$i$f$f".into(),
+            },
+            Utf8 {
+                //                                                  24
+                value: "I".into(),
+            },
+            Utf8 {
+                //                                                  25
+                value: "Lkotlin/jvm/functions/Function0;".into(),
+            },
+            Utf8 {
+                //                                                  26
+                value: "main".into(),
+            },
+            Utf8 {
+                //                                                  27
+                value: "()V".into(),
+            },
+            Utf8 {
+                //                                                  28
+                value: "$i$a$-f-KotlinSourceDebugExtensionKt$main$1".into(),
+            },
+            Utf8 {
+                //                                                  29
+                value: "([Ljava/lang/String;)V".into(),
+            },
+            NameAndType {
+                //                                                  30
+                name_index: 26,
+                descriptor_index: 27,
+            },
+            Methodref {
+                //                                                  31
+                class_index: 2,
+                name_and_type_index: 30,
+            },
+            Utf8 {
+                //                                                  32
+                value: "args".into(),
+            },
+            Utf8 {
+                //                                                  33
+                value: "[Ljava/lang/String;".into(),
+            },
+            Utf8 {
+                //                                                  34
+                value: "Lkotlin/Metadata;".into(),
+            },
+            Utf8 {
+                //                                                  35
+                value: "mv".into(),
+            },
+            Integer {
+                //                                                  36
+                value: 2,
+            },
+            Integer {
+                //                                                  37
+                value: 3,
+            },
+            Integer {
+                //                                                  38
+                value: 0,
+            },
+            Utf8 {
+                //                                                  39
+                value: "k".into(),
+            },
+            Utf8 {
+                //                                                  40
+                value: "xi".into(),
+            },
+            Integer {
+                //                                                  41
+                value: 48,
+            },
+            Utf8 {
+                //                                                  42
+                value: "d1".into(),
+            },
+            Utf8 {
+                //                                                  43
+                value: "\0\u{e}\n\0\n\u{2}\u{10}\u{2}\n\0\n\u{2}\u{18}\u{2}\n\0\u{1a}\u{1a}\u{10}\0\u{1a}\u{2}0\u{1}2\u{c}\u{10}\u{2}\u{1a}\u{8}\u{12}\u{4}\u{12}\u{2}0\u{1}0\u{3}H\u{86}\u{8}ø\u{1}\0\u{1a}\u{6}\u{10}\u{4}\u{1a}\u{2}0\u{1}\u{82}\u{2}\u{7}\n\u{5}\u{8}\u{99}20\u{1}".into(),
+            },
+            Utf8 {
+                //                                                  44
+                value: "d2".into(),
+            },
+            Utf8 {
+                //                                                  45
+                value: "".into(),
+            },
+            Utf8 {
+                //                                                  46
+                value: "Lkotlin/Function0;".into(),
+            },
+            Utf8 {
+                //                                                  47
+                value: "KotlinSourceDebugExtension.kt".into(),
+            },
+            Utf8 {
+                //                                                  48
+                value: "Lkotlin/jvm/internal/SourceDebugExtension;".into(),
+            },
+            Utf8 {
+                //                                                  49
+                value: "value".into(),
+            },
+            Utf8 {
+                //                                                  50
+                value: "SMAP\nKotlinSourceDebugExtension.kt\nKotlin\n*S Kotlin\n*F\n+ 1 KotlinSourceDebugExtension.kt\nKotlinSourceDebugExtensionKt\n*L\n1#1,6:1\n1#1:7\n*S KotlinDebug\n*F\n+ 1 KotlinSourceDebugExtension.kt\nKotlinSourceDebugExtensionKt\n*L\n4#1:7\n*E\n".into(),
+            },
+            Utf8 {
+                //                                                  51
+                value: "Code".into(),
+            },
+            Utf8 {
+                //                                                  52
+                value: "LineNumberTable".into(),
+            },
+            Utf8 {
+                //                                                  53
+                value: "LocalVariableTable".into(),
+            },
+            Utf8 {
+                //                                                  54
+                value: "Signature".into(),
+            },
+            Utf8 {
+                //                                                  55
+                value: "RuntimeInvisibleParameterAnnotations".into(),
+            },
+            Utf8 {
+                //                                                  56
+                value: "SourceFile".into(),
+            },
+            Utf8 {
+                //                                                  57
+                value: "SourceDebugExtension".into(),
+            },
+            Utf8 {
+                //                                                  58
+                value: "RuntimeVisibleAnnotations".into(),
+            },
+            Utf8 {
+                //                                                  59
+                value: "RuntimeInvisibleAnnotations".into(),
+            },
+        ],
+        ClassFlags::ACC_PUBLIC | ClassFlags::ACC_SUPER | ClassFlags::ACC_FINAL,
+        2,
+        4,
+        vec![],
+        vec![],
+        vec![
+            MethodInfo::new(
+                MethodFlags::ACC_PUBLIC | MethodFlags::ACC_STATIC | MethodFlags::ACC_FINAL,
+                5,
+                6,
+                vec![Code {
+                    max_stack: 2,
+                    max_locals: 2,
+                    code: vec![42, 18, 10, 184, 0, 16, 3, 60, 42, 185, 0, 22, 1, 0, 87, 177],
+                    exception_table: vec![],
+                    attributes: vec![
+                        LineNumberTable {
+                            line_number_table: vec![LineNumberRecord::new(8, 1)],
+                        },
+                        LocalVariableTable {
+                            local_variable_table: vec![
+                                LocalVariableTableRecord::new(8, 8, 23, 24, 1, ),
+                                LocalVariableTableRecord::new(0, 16, 9, 25, 0, ),
+                            ],
+                        },
+                    ],
+                },
+                Signature {
+                    signature_index: 7,
+                },
+                RuntimeInvisibleParameterAnnotations {
+                     parameter_annotations: vec![vec![Annotation::new(8, vec![])]],
+                },
+                ],
+            ),
+            MethodInfo::new(
+                MethodFlags::ACC_PUBLIC | MethodFlags::ACC_STATIC | MethodFlags::ACC_FINAL,
+                26,
+                27,
+                vec![Code {
+                    max_stack: 1,
+                    max_locals: 2,
+                    code: vec![3, 59, 3, 60, 0, 0, 177],
+                    exception_table: vec![],
+                    attributes: vec![
+                        LineNumberTable {
+                            line_number_table: vec![
+                                LineNumberRecord::new(0, 4),
+                                LineNumberRecord::new(2, 7),
+                                LineNumberRecord::new(4, 4),
+                                LineNumberRecord::new(5, 7),
+                                LineNumberRecord::new(6, 5),
+                            ],
+                        },
+                        LocalVariableTable {
+                            local_variable_table: vec![
+                                LocalVariableTableRecord::new(4, 1, 28, 24, 1, ),
+                                LocalVariableTableRecord::new(2, 4, 23, 24, 0, ),
+                            ],
+                        },
+                    ],
+                },
+                ],
+            ),
 
-    let has_source_debug_extension = actual_class_file
-        .attributes()
-        .iter()
-        .any(|attr| matches!(attr, SourceDebugExtension));
-    assert!(
-        has_source_debug_extension,
-        "expected SourceDebugExtension attribute in Kotlin class"
+            MethodInfo::new(
+                MethodFlags::ACC_PUBLIC | MethodFlags::ACC_STATIC | MethodFlags::ACC_SYNTHETIC,
+                26,
+                29,
+                vec![Code {
+                    max_stack: 0,
+                    max_locals: 1,
+                    code: vec![184, 0, 31, 177],
+                    exception_table: vec![],
+                    attributes: vec![
+                        LocalVariableTable {
+                            local_variable_table: vec![LocalVariableTableRecord::new(0, 4, 32, 33, 0, )]
+                        },
+                    ],
+                },
+                ],
+            ),
+        ],
+        vec![
+            SourceFile {
+                sourcefile_index: 47,
+            },
+            SourceDebugExtension {
+                debug_extension: vec![83, 77, 65, 80, 10, 75, 111, 116, 108, 105, 110, 83, 111, 117, 114, 99, 101, 68, 101, 98, 117, 103, 69, 120, 116, 101, 110, 115, 105, 111, 110, 46, 107, 116, 10, 75, 111, 116, 108, 105, 110, 10, 42, 83, 32, 75, 111, 116, 108, 105, 110, 10, 42, 70, 10, 43, 32, 49, 32, 75, 111, 116, 108, 105, 110, 83, 111, 117, 114, 99, 101, 68, 101, 98, 117, 103, 69, 120, 116, 101, 110, 115, 105, 111, 110, 46, 107, 116, 10, 75, 111, 116, 108, 105, 110, 83, 111, 117, 114, 99, 101, 68, 101, 98, 117, 103, 69, 120, 116, 101, 110, 115, 105, 111, 110, 75, 116, 10, 42, 76, 10, 49, 35, 49, 44, 54, 58, 49, 10, 49, 35, 49, 58, 55, 10, 42, 83, 32, 75, 111, 116, 108, 105, 110, 68, 101, 98, 117, 103, 10, 42, 70, 10, 43, 32, 49, 32, 75, 111, 116, 108, 105, 110, 83, 111, 117, 114, 99, 101, 68, 101, 98, 117, 103, 69, 120, 116, 101, 110, 115, 105, 111, 110, 46, 107, 116, 10, 75, 111, 116, 108, 105, 110, 83, 111, 117, 114, 99, 101, 68, 101, 98, 117, 103, 69, 120, 116, 101, 110, 115, 105, 111, 110, 75, 116, 10, 42, 76, 10, 52, 35, 49, 58, 55, 10, 42, 69, 10],
+            },
+            RuntimeVisibleAnnotations {
+                annotations: vec![Annotation::new(34, vec![
+                    ElementValuePair::new(35, ArrayValue {
+                        tag: 91,
+                        values: vec![
+                            ConstValueIndex {
+                                tag: 73,
+                                const_value_index: 36,
+                            },
+                            ConstValueIndex {
+                                tag: 73,
+                                const_value_index: 37,
+                            },
+                            ConstValueIndex {
+                                tag: 73,
+                                const_value_index: 38,
+                            },
+                        ]
+                    }),
+                    ElementValuePair::new(39, ConstValueIndex { tag: 73, const_value_index: 36 }, ),
+                    ElementValuePair::new(40, ConstValueIndex { tag: 73, const_value_index: 41 }, ),
+                    ElementValuePair::new(42, ArrayValue { tag: 91, values: vec![ConstValueIndex { tag: 115, const_value_index: 43 }] }, ),
+                    ElementValuePair::new(44, ArrayValue { tag: 91, values: vec![
+                        ConstValueIndex { tag: 115, const_value_index: 5 },
+                        ConstValueIndex { tag: 115, const_value_index: 45 },
+                        ConstValueIndex { tag: 115, const_value_index: 9 },
+                        ConstValueIndex { tag: 115, const_value_index: 46 },
+                        ConstValueIndex { tag: 115, const_value_index: 26 },
+                    ] }, ),
+                ])],
+                raw: vec![0, 1, 0, 34, 0, 5, 0, 35, 91, 0, 3, 73, 0, 36, 73, 0, 37, 73, 0, 38, 0, 39, 73, 0, 36, 0, 40, 73, 0, 41, 0, 42, 91, 0, 1, 115, 0, 43, 0, 44, 91, 0, 5, 115, 0, 5, 115, 0, 45, 115, 0, 9, 115, 0, 46, 115, 0, 26],
+            },
+            RuntimeInvisibleAnnotations {
+                annotations: vec![Annotation::new(48, vec![ElementValuePair::new(49, ArrayValue { tag: 91, values: vec![ConstValueIndex { tag: 115, const_value_index: 50 }] })])],
+            }
+        ],
     );
+
+    assert_eq!(actual_class_file, expected_class_file)
 }
 
 #[test]

@@ -53,7 +53,9 @@ pub enum Attribute {
     Signature {
         signature_index: u16,
     },
-    SourceDebugExtension,
+    SourceDebugExtension {
+        debug_extension: Vec<u8>,
+    },
     LocalVariableTypeTable {
         local_variable_type_table: Vec<LocalVariableTypeTableRecord>,
     },
@@ -775,8 +777,10 @@ fn get_attribute(
             PermittedSubclasses { classes }
         }
         "SourceDebugExtension" => {
-            *start_from += attribute_length as usize;
-            SourceDebugExtension
+            let raw = get_bytes(&data, &mut start_from, attribute_length as usize)?;
+            let debug_extension = raw.into();
+
+            SourceDebugExtension { debug_extension }
         }
         _ => {
             return Err(Error::new_io(
