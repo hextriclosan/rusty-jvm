@@ -1835,7 +1835,7 @@ fn should_load_and_parse_runtime_invisible_parameter_annotations() {
             },
             Utf8 {
                 //                                                  8
-                value: "RuntimeInVisibleParameterAnnotations".into(),
+                value: "RuntimeInvisibleParameterAnnotations".into(),
             },
             Utf8 {
                 //                                                  9
@@ -1855,7 +1855,7 @@ fn should_load_and_parse_runtime_invisible_parameter_annotations() {
             },
             Utf8 {
                 //                                                  13
-                value: "LRuntimeInVisibleParameterAnnotations;".into(),
+                value: "LRuntimeInvisibleParameterAnnotations;".into(),
             },
             Utf8 {
                 //                                                  14
@@ -1879,19 +1879,15 @@ fn should_load_and_parse_runtime_invisible_parameter_annotations() {
             },
             Utf8 {
                 //                                                  19
-                value: "RuntimeInvisibleParameterAnnotations".into(),
-            },
-            Utf8 {
-                //                                                  20
                 value: "LA;".into(),
             },
             Utf8 {
-                //                                                  21
+                //                                                  20
                 value: "SourceFile".into(),
             },
             Utf8 {
-                //                                                  22
-                value: "RuntimeInVisibleParameterAnnotations.java".into(),
+                //                                                  21
+                value: "RuntimeInvisibleParameterAnnotations.java".into(),
             },
         ],
         ClassFlags::ACC_PUBLIC | ClassFlags::ACC_SUPER,
@@ -1950,13 +1946,13 @@ fn should_load_and_parse_runtime_invisible_parameter_annotations() {
                         )],
                     },
                     RuntimeInvisibleParameterAnnotations {
-                        parameter_annotations: vec![vec![Annotation::new(20, vec![])]],
+                        parameter_annotations: vec![vec![Annotation::new(19, vec![])]],
                     },
                 ],
             ),
         ],
         vec![SourceFile {
-            sourcefile_index: 22,
+            sourcefile_index: 21,
         }],
     );
 
