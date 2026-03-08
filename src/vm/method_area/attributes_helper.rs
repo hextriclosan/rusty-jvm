@@ -76,7 +76,7 @@ impl From<&Attribute> for AttributeType {
             Attribute::Deprecated => AttributeType::Deprecated,
             Attribute::EnclosingMethod { .. } => AttributeType::EnclosingMethod,
             Attribute::Signature { .. } => AttributeType::Signature,
-            Attribute::SourceDebugExtension => AttributeType::SourceDebugExtension,
+            Attribute::SourceDebugExtension { .. } => AttributeType::SourceDebugExtension,
             Attribute::LocalVariableTypeTable { .. } => AttributeType::LocalVariableTypeTable,
             Attribute::RuntimeVisibleAnnotations { .. } => {
                 AttributeType::RuntimeVisibleAnnotations
@@ -87,7 +87,7 @@ impl From<&Attribute> for AttributeType {
             Attribute::RuntimeVisibleParameterAnnotations { .. } => {
                 AttributeType::RuntimeVisibleParameterAnnotations
             }
-            Attribute::RuntimeInvisibleParameterAnnotations => {
+            Attribute::RuntimeInvisibleParameterAnnotations { .. } => {
                 AttributeType::RuntimeInvisibleParameterAnnotations
             }
             Attribute::AnnotationDefault { .. } => AttributeType::AnnotationDefault,
