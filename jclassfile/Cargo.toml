@@ -1,13 +1,13 @@
 [package]
 name = "jclassfile"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.70"
 authors = ["Igor Rudenko <iostream64@gmail.com>"]
 description = "Java class files parser"
 license = "MIT"
 homepage = "https://github.com/hextriclosan/rusty-jvm/tree/main/jclassfile"
-repository = "https://github.com/hextriclosan/rusty-jvm"
+repository = "https://github.com/hextriclosan/rusty-jvm/tree/main/jclassfile"
 documentation = "https://docs.rs/jclassfile"
 readme = "README.md"
 keywords = ["jvm", "java", "bytecode", "classfile", "parser"]
@@ -19,13 +19,13 @@ workspace = ".."
 [dependencies]
 num-traits = "0.2.19"
 cesu8 = "1.1.0"
-bitflags = "2.10.0"
+bitflags = "2.11.0"
 getset = "0.1.6"
 derive-new = "0.7.0"
 serde = { version = "1.0.228", optional = true, features = ["derive"] }
 
 [dev-dependencies]
-serde_json = "1.0.148"
+serde_json = "1.0.149"
 
 [features]
 default = []
