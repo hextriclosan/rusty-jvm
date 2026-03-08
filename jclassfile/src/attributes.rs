@@ -67,7 +67,9 @@ pub enum Attribute {
     RuntimeVisibleParameterAnnotations {
         parameter_annotations: Vec<Vec<Annotation>>,
     },
-    RuntimeInvisibleParameterAnnotations,
+    RuntimeInvisibleParameterAnnotations {
+        parameter_annotations: Vec<Vec<Annotation>>,
+    },
     AnnotationDefault {
         default_value: ElementValue,
         raw: Vec<u8>,
@@ -592,18 +594,16 @@ fn get_attribute(
             RuntimeInvisibleAnnotations { annotations }
         }
         "RuntimeVisibleParameterAnnotations" => {
-            let num_parameters: u8 = get_int(&data, &mut start_from)?;
-            let mut parameter_annotations = Vec::with_capacity(num_parameters as usize);
-            for _ in 0..num_parameters {
-                let num_annotations: u16 = get_int(&data, &mut start_from)?;
-                let mut annotations = Vec::with_capacity(num_annotations as usize);
-                for _ in 0..num_annotations {
-                    annotations.push(get_annotation(&data, &mut start_from)?);
-                }
-                parameter_annotations.push(annotations);
-            }
+            let parameter_annotations = get_parameter_annotations(&data, &mut start_from)?;
 
             RuntimeVisibleParameterAnnotations {
+                parameter_annotations,
+            }
+        }
+        "RuntimeInvisibleParameterAnnotations" => {
+            let parameter_annotations = get_parameter_annotations(&data, &mut start_from)?;
+
+            RuntimeInvisibleParameterAnnotations {
                 parameter_annotations,
             }
         }
@@ -778,10 +778,6 @@ fn get_attribute(
             *start_from += attribute_length as usize;
             SourceDebugExtension
         }
-        "RuntimeInvisibleParameterAnnotations" => {
-            *start_from += attribute_length as usize;
-            RuntimeInvisibleParameterAnnotations
-        }
         _ => {
             return Err(Error::new_io(
                 InvalidData,
@@ -880,6 +876,21 @@ fn get_type_annotation(data: &[u8], start_from: &mut usize) -> Result<TypeAnnota
         type_path,
         annotation,
     ))
+}
+
+fn get_parameter_annotations(data: &[u8], start_from: &mut usize) -> Result<Vec<Vec<Annotation>>> {
+    let num_parameters: u8 = get_int(&data, start_from)?;
+    let mut parameter_annotations = Vec::with_capacity(num_parameters as usize);
+    for _ in 0..num_parameters {
+        let num_annotations: u16 = get_int(&data, start_from)?;
+        let mut annotations = Vec::with_capacity(num_annotations as usize);
+        for _ in 0..num_annotations {
+            annotations.push(get_annotation(&data, start_from)?);
+        }
+        parameter_annotations.push(annotations);
+    }
+
+    Ok(parameter_annotations)
 }
 
 #[repr(u8)]
