@@ -1,5 +1,5 @@
-class KotlinSourceDebugExtension {
-    fun methodX() {
-        listOf("hello").forEach { println(it) }
-    }
+inline fun f(block: () -> Unit) = block()
+
+fun main() {
+    f { }
 }

@@ -39,7 +39,7 @@ The following sections of the Java Virtual Machine Specification (JVMS, Java SE 
   - [x] The Synthetic Attribute ([§4.7.8][jvms-4.7.8])
   - [x] The Signature Attribute ([§4.7.9][jvms-4.7.9])
   - [x] The SourceFile Attribute ([§4.7.10][jvms-4.7.10])
-  - [ ] The SourceDebugExtension Attribute ([§4.7.11][jvms-4.7.11])
+  - [x] The SourceDebugExtension Attribute ([§4.7.11][jvms-4.7.11])
   - [x] The LineNumberTable Attribute ([§4.7.12][jvms-4.7.12])
   - [x] The LocalVariableTable Attribute ([§4.7.13][jvms-4.7.13])
   - [x] The LocalVariableTypeTable Attribute ([§4.7.14][jvms-4.7.14])
