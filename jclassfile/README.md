@@ -52,7 +52,7 @@ The following sections of the Java Virtual Machine Specification (JVMS, Java SE 
   - [x] The RuntimeVisibleTypeAnnotations Attribute ([§4.7.20][jvms-4.7.20])
     - [x] The target_info union ([§4.7.20.1][jvms-4.7.20.1])
     - [x] The type_path structure ([§4.7.20.2][jvms-4.7.20.2])
-  - [ ] The RuntimeInvisibleTypeAnnotations Attribute ([§4.7.21][jvms-4.7.21])
+  - [x] The RuntimeInvisibleTypeAnnotations Attribute ([§4.7.21][jvms-4.7.21])
   - [x] The AnnotationDefault Attribute ([§4.7.22][jvms-4.7.22])
   - [x] The BootstrapMethods Attribute ([§4.7.23][jvms-4.7.23])
   - [x] The MethodParameters Attribute ([§4.7.24][jvms-4.7.24])
