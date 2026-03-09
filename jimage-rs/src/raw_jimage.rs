@@ -2,11 +2,11 @@ use memmap2::Mmap;
 
 /// A low-level view into the underlying memory-mapped JImage.
 #[derive(Debug)]
-pub struct RawJImage<'a> {
+pub struct RawJImage1<'a> {
     mmap: &'a Mmap,
 }
 
-impl<'a> RawJImage<'a> {
+impl<'a> RawJImage1<'a> {
     /// Creates a new `RawJImage` instance from a memory-mapped file.
     pub(crate) fn new(mmap: &'a Mmap) -> Self {
         Self { mmap }
