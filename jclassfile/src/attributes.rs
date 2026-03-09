@@ -85,7 +85,9 @@ pub enum Attribute {
     RuntimeVisibleTypeAnnotations {
         type_annotations: Vec<TypeAnnotation>,
     },
-    RuntimeInvisibleTypeAnnotations,
+    RuntimeInvisibleTypeAnnotations {
+        type_annotations: Vec<TypeAnnotation>,
+    },
     MethodParameters {
         parameters: Vec<MethodParameterRecord>,
     },
@@ -610,13 +612,14 @@ fn get_attribute(
             }
         }
         "RuntimeVisibleTypeAnnotations" => {
-            let num_annotations: u16 = get_int(&data, &mut start_from)?;
-            let mut type_annotations = Vec::with_capacity(num_annotations as usize);
-            for _ in 0..num_annotations {
-                type_annotations.push(get_type_annotation(&data, &mut start_from)?);
-            }
+            let type_annotations = get_type_annotations(&data, &mut start_from)?;
 
             RuntimeVisibleTypeAnnotations { type_annotations }
+        }
+        "RuntimeInvisibleTypeAnnotations" => {
+            let type_annotations = get_type_annotations(&data, &mut start_from)?;
+
+            RuntimeInvisibleTypeAnnotations { type_annotations }
         }
         "AnnotationDefault" => {
             let raw = read_byte_block(&data, *start_from, attribute_length as usize)?.to_vec();
@@ -880,6 +883,16 @@ fn get_type_annotation(data: &[u8], start_from: &mut usize) -> Result<TypeAnnota
         type_path,
         annotation,
     ))
+}
+
+fn get_type_annotations(data: &[u8], start_from: &mut usize) -> Result<Vec<TypeAnnotation>> {
+    let num_annotations: u16 = get_int(&data, start_from)?;
+    let mut type_annotations = Vec::with_capacity(num_annotations as usize);
+    for _ in 0..num_annotations {
+        type_annotations.push(get_type_annotation(&data, start_from)?);
+    }
+
+    Ok(type_annotations)
 }
 
 fn get_parameter_annotations(data: &[u8], start_from: &mut usize) -> Result<Vec<Vec<Annotation>>> {
