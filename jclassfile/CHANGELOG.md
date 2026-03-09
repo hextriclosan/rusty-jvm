@@ -1,3 +1,12 @@
+# 0.6.0
+
+## Breaking Changes
+* `Attribute::RuntimeInvisibleTypeAnnotations` changed from a unit variant to a struct variant carrying `type_annotations: Vec<TypeAnnotation>`. Update pattern matches from `Attribute::RuntimeInvisibleTypeAnnotations` to `Attribute::RuntimeInvisibleTypeAnnotations { type_annotations }`.
+
+## What's Changed
+* Support for `RuntimeInvisibleTypeAnnotations` attribute.
+
+
 # 0.5.0
 
 ## What's Changed
