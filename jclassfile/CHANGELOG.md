@@ -1,3 +1,9 @@
+# 0.6.0
+
+## What's Changed
+* Support for `RuntimeInvisibleTypeAnnotations` attribute
+
+
 # 0.5.0
 
 ## What's Changed
