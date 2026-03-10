@@ -96,7 +96,7 @@ impl From<&Attribute> for AttributeType {
             Attribute::RuntimeVisibleTypeAnnotations { .. } => {
                 AttributeType::RuntimeVisibleTypeAnnotations
             }
-            Attribute::RuntimeInvisibleTypeAnnotations => {
+            Attribute::RuntimeInvisibleTypeAnnotations { .. } => {
                 AttributeType::RuntimeInvisibleTypeAnnotations
             }
             Attribute::MethodParameters { .. } => AttributeType::MethodParameters,
