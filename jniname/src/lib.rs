@@ -15,6 +15,10 @@ pub enum Error {
 
 /// Generates the C-style JNI function name for a given Java class, method and descriptor.
 ///
+/// The `class` parameter must be in the internal JVM form (slash-separated), e.g.
+/// `"com/example/Test"`. Dot-separated source form (e.g. `"com.example.Test"`) is not
+/// accepted and will produce incorrect JNI names.
+///
 /// # Returns
 /// A tuple containing the simple and overloaded names of the function.
 /// The simple name is of the form `Java_<encoded_class>_<encoded_method>`, while the overloaded name is of the form `Java_<encoded_class>_<encoded_method>__<encoded_parameters>`.
