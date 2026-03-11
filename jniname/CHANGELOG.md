@@ -2,4 +2,4 @@
 
 ## What's Added
 Added support for
-* Convert Java method descriptor to the corresponding C-style JNI function name
+* Added support for converting Java method descriptor to the corresponding C-style JNI function name
