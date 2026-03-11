@@ -1,0 +1,19 @@
+[package]
+name = "jniname"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.61"
+authors = ["Igor Rudenko <iostream64@gmail.com>"]
+description = "Java method signature to C-style JNI function name converter"
+license = "MIT"
+homepage = "https://github.com/hextriclosan/rusty-jvm/tree/main/jniname"
+repository = "https://github.com/hextriclosan/rusty-jvm/tree/main/jniname"
+documentation = "https://docs.rs/jniname"
+readme = "README.md"
+keywords = ["java", "jni", "descriptor", "jvm"]
+categories = ["development-tools::ffi"]
+
+workspace = ".."
+
+[dependencies]
+jdescriptor = "0.2.0"
