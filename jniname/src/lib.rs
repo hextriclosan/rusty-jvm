@@ -5,6 +5,8 @@
 
 */
 
+use std::fmt::Write;
+
 use jdescriptor::MethodDescriptor;
 
 /// Represents the possible errors that can occur in the application.
@@ -65,7 +67,7 @@ fn encode_jni(s: &str) -> String {
             ';' => out.push_str("_2"),
             '[' => out.push_str("_3"),
             'A'..='Z' | 'a'..='z' | '0'..='9' => out.push(c),
-            _ => out.push_str(&format!("_0{:04x}", c as u32)),
+            _ => write!(out, "_0{:04x}", c as u32).expect("write to String is infallible"),
         }
     }
 
