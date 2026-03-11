@@ -5,7 +5,9 @@
 
 */
 
+use crate::Error::InvalidInput;
 use jdescriptor::MethodDescriptor;
+use std::fmt::Write;
 
 /// Represents the possible errors that can occur in the application.
 #[derive(Debug, PartialEq)]
@@ -14,6 +16,12 @@ pub enum Error {
 }
 
 /// Generates the C-style JNI function name for a given Java class, method and descriptor.
+///
+/// Refer to JNI Method Name Generation [specs](https://docs.oracle.com/en/java/javase/25/docs/specs/jni/design.html#resolving-native-method-names).
+///
+/// The `class` parameter must be in the internal JVM form (slash-separated), e.g.
+/// `"com/example/Test"`. Dot-separated source form (e.g. `"com.example.Test"`) is not
+/// accepted and will produce incorrect JNI names.
 ///
 /// # Returns
 /// A tuple containing the simple and overloaded names of the function.
@@ -30,14 +38,14 @@ pub enum Error {
 /// ```
 pub fn c_name(class: &str, method: &str, descriptor: &str) -> Result<(String, String), Error> {
     if class.is_empty() {
-        return Err(Error::InvalidInput("Class name is empty".to_string()));
+        return Err(InvalidInput("Class name is empty".to_string()));
     }
     if method.is_empty() {
-        return Err(Error::InvalidInput("Method name is empty".to_string()));
+        return Err(InvalidInput("Method name is empty".to_string()));
     }
     let parsed: MethodDescriptor = descriptor
         .parse()
-        .map_err(|e| Error::InvalidInput(format!("Invalid descriptor: {}", e)))?;
+        .map_err(|e| InvalidInput(format!("Invalid descriptor: {}", e)))?;
 
     let params = parsed
         .parameter_types()
@@ -46,30 +54,47 @@ pub fn c_name(class: &str, method: &str, descriptor: &str) -> Result<(String, St
         .collect::<Vec<_>>()
         .join("");
 
-    let class_part = encode_jni(class);
-    let method_part = encode_jni(method);
-    let params_part = encode_jni(&params);
+    let class_part = encode_jni(class)?;
+    let method_part = encode_jni(method)?;
+    let params_part = encode_jni(&params)?;
     let short_name = format!("Java_{}_{}", class_part, method_part);
     let long_name = format!("Java_{}_{}__{}", class_part, method_part, params_part);
 
     Ok((short_name, long_name))
 }
 
-fn encode_jni(s: &str) -> String {
+fn encode_jni(s: &str) -> Result<String, Error> {
     let mut out = String::with_capacity(s.len());
 
-    for c in s.chars() {
-        match c {
-            '/' => out.push('_'),
-            '_' => out.push_str("_1"),
-            ';' => out.push_str("_2"),
-            '[' => out.push_str("_3"),
-            'A'..='Z' | 'a'..='z' | '0'..='9' => out.push(c),
-            _ => out.push_str(&format!("_0{:04x}", c as u32)),
+    for unit in s.encode_utf16() {
+        const SLASH: u16 = b'/' as u16;
+        const UNDERSCORE: u16 = b'_' as u16;
+        const SEMICOLON: u16 = b';' as u16;
+        const ARR: u16 = b'[' as u16;
+        const A: u16 = b'A' as u16;
+        const Z: u16 = b'Z' as u16;
+        const AA: u16 = b'a' as u16;
+        const ZZ: u16 = b'z' as u16;
+        const DIGIT_0: u16 = b'0' as u16;
+        const DIGIT_9: u16 = b'9' as u16;
+        match unit {
+            SLASH => out.push('_'),
+            UNDERSCORE => out.push_str("_1"),
+            SEMICOLON => out.push_str("_2"),
+            ARR => out.push_str("_3"),
+            A..=Z | AA..=ZZ | DIGIT_0..=DIGIT_9 => {
+                // Safe: these are ASCII code units and thus valid Unicode scalar values.
+                out.push(
+                    char::from_u32(unit as u32)
+                        .ok_or_else(|| InvalidInput(format!("Invalid character: {:04x}", unit)))?,
+                );
+            }
+            _ => write!(out, "_0{:04x}", unit as u32)
+                .map_err(|e| InvalidInput(format!("Encoding error: {}", e)))?,
         }
     }
 
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -200,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn non_valid_inputs() {
+    fn invalid_inputs() {
         assert_eq!(c_name("", "foo", "()V"), err("Class name is empty"));
         assert_eq!(c_name("Test", "", "()V"), err("Method name is empty"));
         assert_eq!(
@@ -222,6 +247,6 @@ mod tests {
     }
 
     fn err(msg: &str) -> Result<(String, String), Error> {
-        Err(Error::InvalidInput(msg.to_string()))
+        Err(InvalidInput(msg.to_string()))
     }
 }

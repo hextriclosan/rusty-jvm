@@ -1,4 +1,4 @@
-# Java Bytecode Descriptor Parser for Rust
+# C-style JNI Function Name Generator
 
 [![Crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
@@ -6,7 +6,7 @@
 
 ## Introduction 
 
-A library for generating JC-style JNI function name from Java method descriptor according to [specs][jni].
+A library for generating C-style JNI function name from Java method descriptor according to [specs][jni].
 
 ## Usage
 
