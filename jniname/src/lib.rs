@@ -6,8 +6,7 @@
 */
 
 use crate::Error::InvalidInput;
-use jdescriptor::MethodDescriptor;
-use std::fmt::Write;
+use jdescriptor::{DescriptorError, MethodDescriptor};
 
 /// Represents the possible errors that can occur in the application.
 #[derive(Debug, PartialEq)]
@@ -45,56 +44,55 @@ pub fn c_name(class: &str, method: &str, descriptor: &str) -> Result<(String, St
     }
     let parsed: MethodDescriptor = descriptor
         .parse()
-        .map_err(|e| InvalidInput(format!("Invalid descriptor: {}", e)))?;
+        .map_err(|e: DescriptorError| InvalidInput(e.to_string()))?;
 
     let params = parsed
         .parameter_types()
-        .into_iter()
+        .iter()
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join("");
 
-    let class_part = encode_jni(class)?;
-    let method_part = encode_jni(method)?;
-    let params_part = encode_jni(&params)?;
+    let class_part = encode_jni(class);
+    let method_part = encode_jni(method);
+    let params_part = encode_jni(&params);
     let short_name = format!("Java_{}_{}", class_part, method_part);
     let long_name = format!("Java_{}_{}__{}", class_part, method_part, params_part);
 
     Ok((short_name, long_name))
 }
 
-fn encode_jni(s: &str) -> Result<String, Error> {
-    let mut out = String::with_capacity(s.len());
+fn encode_jni(s: &str) -> String {
+    const SLASH: u16 = b'/' as u16;
+    const UNDERSCORE: u16 = b'_' as u16;
+    const SEMICOLON: u16 = b';' as u16;
+    const LBRACKET: u16 = b'[' as u16;
+    const A: u16 = b'A' as u16;
+    const Z: u16 = b'Z' as u16;
+    const AA: u16 = b'a' as u16;
+    const ZZ: u16 = b'z' as u16;
+    const DIGIT_0: u16 = b'0' as u16;
+    const DIGIT_9: u16 = b'9' as u16;
 
+    let mut out = String::with_capacity(s.len() * 2);
     for unit in s.encode_utf16() {
-        const SLASH: u16 = b'/' as u16;
-        const UNDERSCORE: u16 = b'_' as u16;
-        const SEMICOLON: u16 = b';' as u16;
-        const ARR: u16 = b'[' as u16;
-        const A: u16 = b'A' as u16;
-        const Z: u16 = b'Z' as u16;
-        const AA: u16 = b'a' as u16;
-        const ZZ: u16 = b'z' as u16;
-        const DIGIT_0: u16 = b'0' as u16;
-        const DIGIT_9: u16 = b'9' as u16;
         match unit {
             SLASH => out.push('_'),
             UNDERSCORE => out.push_str("_1"),
             SEMICOLON => out.push_str("_2"),
-            ARR => out.push_str("_3"),
+            LBRACKET => out.push_str("_3"),
             A..=Z | AA..=ZZ | DIGIT_0..=DIGIT_9 => {
                 // Safe: these are ASCII code units and thus valid Unicode scalar values.
-                out.push(
-                    char::from_u32(unit as u32)
-                        .ok_or_else(|| InvalidInput(format!("Invalid character: {:04x}", unit)))?,
-                );
+                out.push(unit as u8 as char);
             }
-            _ => write!(out, "_0{:04x}", unit as u32)
-                .map_err(|e| InvalidInput(format!("Encoding error: {}", e)))?,
+            _ => {
+                use std::fmt::Write;
+                let _ = write!(out, "_0{:04x}", unit as u32);
+            }
         }
     }
 
-    Ok(out)
+    out
 }
 
 #[cfg(test)]
@@ -230,15 +228,15 @@ mod tests {
         assert_eq!(c_name("Test", "", "()V"), err("Method name is empty"));
         assert_eq!(
             c_name("Test", "foo", ""),
-            err("Invalid descriptor: Invalid descriptor: Method descriptor must start with '('.")
+            err("Invalid descriptor: Method descriptor must start with '('.")
         );
         assert_eq!(
             c_name("Test", "foo", "(III"),
-            err("Invalid descriptor: Unexpected end of input.")
+            err("Unexpected end of input.")
         );
         assert_eq!(
             c_name("Test", "foo", "(IM)V"),
-            err("Invalid descriptor: Invalid descriptor: Unrecognized type descriptor.")
+            err("Invalid descriptor: Unrecognized type descriptor.")
         );
     }
 

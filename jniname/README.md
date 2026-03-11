@@ -4,9 +4,9 @@
 [![Docs][docs-image]][docs-link]
 [![MIT Licensed][license-mit-image]][license-mit-link]
 
-## Introduction 
+## Introduction
 
-A library for generating C-style JNI function name from Java method descriptor according to [specs][jni].
+A library to generate C-style JNI function names from Java method descriptors according to [specs][jni].
 
 ## Usage
 
