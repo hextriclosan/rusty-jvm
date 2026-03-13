@@ -8,16 +8,7 @@ use crate::vm::stack::stack_value::StackValueKind;
 use crate::{throw_and_return, unwrap_or_return_err};
 
 pub fn throw_ioexception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    let message_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
-        "java/io/IOException",
-        "<init>:(Ljava/lang/String;)V",
-        &args,
-        stack_frames,
-    )?;
-
-    Ok(())
+    throw_exception_with_message("java/io/IOException", message, stack_frames)
 }
 
 pub fn throw_file_not_found_exception(
@@ -52,46 +43,19 @@ pub fn throw_null_pointer_exception_with_message(
     message: &str,
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    let message_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
-        "java/lang/NullPointerException",
-        "<init>:(Ljava/lang/String;)V",
-        &args,
-        stack_frames,
-    )?;
-
-    Ok(())
+    throw_exception_with_message("java/lang/NullPointerException", message, stack_frames)
 }
 
 pub fn throw_class_not_found_exception(
     message: &str,
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    let message_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
-        "java/lang/ClassNotFoundException",
-        "<init>:(Ljava/lang/String;)V",
-        &args,
-        stack_frames,
-    )?;
-
-    Ok(())
+    throw_exception_with_message("java/lang/ClassNotFoundException", message, stack_frames)
 }
 
 #[cfg(windows)]
 pub fn throw_internal_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    let message_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
-        "java/lang/InternalError",
-        "<init>:(Ljava/lang/String;)V",
-        &args,
-        stack_frames,
-    )?;
-
-    Ok(())
+    throw_exception_with_message("java/lang/InternalError", message, stack_frames)
 }
 
 pub fn check_bounds(
@@ -129,39 +93,37 @@ fn throw_index_out_of_bounds_exception(
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
     let message = format!("Index: {index}, Size: {size}");
-    let message_ref = StringPoolHelper::get_string(&message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
+    throw_exception_with_message(
         "java/lang/IndexOutOfBoundsException",
-        "<init>:(Ljava/lang/String;)V",
-        &args,
+        &message,
         stack_frames,
-    )?;
-
-    Ok(())
+    )
 }
 
 pub fn throw_array_index_out_of_bounds_exception_with_message(
     message: &str,
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    let message_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
+    throw_exception_with_message(
         "java/lang/ArrayIndexOutOfBoundsException",
-        "<init>:(Ljava/lang/String;)V",
-        &args,
+        message,
         stack_frames,
-    )?;
-
-    Ok(())
+    )
 }
 
 pub fn throw_array_store_exception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
+    throw_exception_with_message("java/lang/ArrayStoreException", message, stack_frames)
+}
+
+fn throw_exception_with_message(
+    class_name: &str,
+    message: &str,
+    stack_frames: &mut StackFrames,
+) -> Result<()> {
     let message_ref = StringPoolHelper::get_string(message)?;
     let args = vec![StackValueKind::from(message_ref)];
     construct_exception_and_throw(
-        "java/lang/ArrayStoreException",
+        class_name,
         "<init>:(Ljava/lang/String;)V",
         &args,
         stack_frames,
