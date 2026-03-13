@@ -8,7 +8,7 @@ use crate::vm::stack::stack_value::StackValueKind;
 use crate::{throw_and_return, unwrap_or_return_err};
 
 pub fn throw_ioexception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    throw_exception_with_message("java/io/IOException", &message, stack_frames)
+    throw_exception_with_message("java/io/IOException", message, stack_frames)
 }
 
 pub fn throw_file_not_found_exception(
@@ -43,19 +43,19 @@ pub fn throw_null_pointer_exception_with_message(
     message: &str,
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    throw_exception_with_message("java/lang/NullPointerException", &message, stack_frames)
+    throw_exception_with_message("java/lang/NullPointerException", message, stack_frames)
 }
 
 pub fn throw_class_not_found_exception(
     message: &str,
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    throw_exception_with_message("java/lang/ClassNotFoundException", &message, stack_frames)
+    throw_exception_with_message("java/lang/ClassNotFoundException", message, stack_frames)
 }
 
 #[cfg(windows)]
 pub fn throw_internal_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    throw_exception_with_message("java/lang/InternalError", &message, stack_frames)
+    throw_exception_with_message("java/lang/InternalError", message, stack_frames)
 }
 
 pub fn check_bounds(
