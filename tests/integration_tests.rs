@@ -3360,3 +3360,31 @@ Hello from LoadMe4!
 "#,
     );
 }
+
+#[test]
+fn should_load_native_library_and_call_native_method() {
+    utils::assert_with_all_args(
+        &[
+            "-Djava.library.path=../debug",
+            "--enable-native-access=ALL-UNNAMED", /* supress warning */
+        ],
+        "samples.javacore.loadlibrary.example.LoadLibraryExample",
+        &[],
+        r#"int sum(40, 2) = 42
+long sum(-99999999999999, 100000000000000) = 1
+double multiply(3.500000, 2.000000) = 7.000000
+isPositive(-5) = false
+Float value is: 3.1415
+int sumInstance(40, 2) = 42
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
