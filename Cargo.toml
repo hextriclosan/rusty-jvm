@@ -46,7 +46,7 @@ page_size = "0.6.0"
 memmap2 = "0.9.9"
 iana-time-zone = "0.1.64"
 jniname = "0.1.0"
-libffi = { version = "5.1.0", features = ["system"] }
+libffi = { version = "5.1.0" }
 lru = "0.16.3"
 
 [target.'cfg(windows)'.dependencies]
