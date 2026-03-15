@@ -5,7 +5,13 @@ use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::process::Command;
 use utils::assert_success;
+
+#[ctor::ctor]
+fn before_tests() {
+    ensure_jni_test_lib_is_built();
+}
 
 #[test]
 fn should_deal_with_abstract_class_without_interface_implementation() {
@@ -3359,6 +3365,15 @@ LoadMe4 instance constructed
 Hello from LoadMe4!
 "#,
     );
+}
+
+fn ensure_jni_test_lib_is_built() {
+    let status = Command::new("cargo")
+        .args(["build", "-p", "jni_test_lib"])
+        .status()
+        .expect("failed to run cargo build");
+
+    assert!(status.success(), "failed to build jni_test_lib");
 }
 
 #[test]

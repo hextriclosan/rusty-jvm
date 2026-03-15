@@ -35,9 +35,6 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
-      - name: Build
-        run: cargo build --workspace --locked
-
       - name: Run tests
         run: cargo test --workspace --locked
 
