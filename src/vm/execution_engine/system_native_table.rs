@@ -1,4 +1,4 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::Result;
 use crate::vm::execution_engine::system_native_table::NativeMethod::{
     Basic, WithMutStackFrames, WithStackFrames,
 };
@@ -18,6 +18,7 @@ use crate::vm::system_native::class_loader::{
 use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
+use crate::vm::system_native::dispatcher::invoke::invoke;
 use crate::vm::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::vm::system_native::file_input_stream::{
     file_input_stream_available0_wrp, file_input_stream_is_regular_file0_wrp,
@@ -45,7 +46,9 @@ use crate::vm::system_native::module::{
     add_exports0_wrp, add_exports_to_all0_wrp, add_reads0_wrp, define_module0_wrp,
 };
 use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
-use crate::vm::system_native::native_libraries::find_builtin_lib_wrp;
+use crate::vm::system_native::native_libraries::{
+    find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
+};
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::vm::system_native::platform_file_dispatcher::{
     allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp, file_dispatcher_map0_wrp,
@@ -691,10 +694,12 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(find_builtin_lib_wrp),
     );
     table.insert(
-        "jdk/internal/loader/NativeLibraries:load:(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z", // todo: should be implemented with shared library dynamic loading
-        Basic(|_args: &[i32]| {
-            Ok(vec![1]) // true
-        }),
+        "jdk/internal/loader/NativeLibraries:load:(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
+        WithMutStackFrames(native_libraries_load_wrp),
+    );
+    table.insert(
+        "jdk/internal/loader/NativeLibraries$NativeLibraryImpl:findEntry0:(JLjava/lang/String;)J",
+        Basic(native_libraries_find_entry0_wrp),
     );
     table.insert(
         "java/io/WinNTFileSystem:initIDs:()V", // this method is for caching `path` field from java/io/File for faster access in other native methods
@@ -1124,11 +1129,13 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
 pub(crate) fn invoke_native_method(
     method_signature: &str,
     args: &[i32],
+    is_static: bool,
     stack_frames: &mut StackFrames,
 ) -> Result<Vec<i32>> {
-    let native_method = SYSTEM_NATIVE_TABLE.get(method_signature).ok_or_else(|| {
-        Error::new_native(&format!("Native method {method_signature} not found"))
-    })?;
+    let native_method = match SYSTEM_NATIVE_TABLE.get(method_signature) {
+        Some(native_method) => native_method,
+        None => return invoke(method_signature, args, is_static),
+    };
 
     match native_method {
         Basic(method) => method(args),

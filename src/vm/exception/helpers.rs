@@ -115,6 +115,10 @@ pub fn throw_array_store_exception(message: &str, stack_frames: &mut StackFrames
     throw_exception_with_message("java/lang/ArrayStoreException", message, stack_frames)
 }
 
+pub fn throw_unsatisfied_link_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
+    throw_exception_with_message("java/lang/UnsatisfiedLinkError", message, stack_frames)
+}
+
 fn throw_exception_with_message(
     class_name: &str,
     message: &str,

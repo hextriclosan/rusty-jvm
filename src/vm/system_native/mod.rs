@@ -1,6 +1,7 @@
 pub(crate) mod class;
 pub(crate) mod class_loader;
 pub(crate) mod constant_pool;
+pub(crate) mod dispatcher;
 pub(crate) mod file_descriptor;
 pub(crate) mod file_input_stream;
 pub(crate) mod file_output_stream;

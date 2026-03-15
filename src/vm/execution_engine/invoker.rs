@@ -3,6 +3,7 @@ use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::system_native_table::invoke_native_method;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::stack::stack_frame::StackFrames;
+use jclassfile::methods::MethodFlags;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -31,7 +32,14 @@ pub(crate) fn invoke(
         let full_native_signature = format!("{class_name}:{full_signature}");
         trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
-        let result = invoke_native_method(&full_native_signature, &method_args, stack_frames)?;
+        let method_flags = MethodFlags::from_bits_truncate(java_method.access_flags() as u16);
+        let is_static = method_flags.contains(MethodFlags::ACC_STATIC);
+        let result = invoke_native_method(
+            &full_native_signature,
+            &method_args,
+            is_static,
+            stack_frames,
+        )?;
         for result_chunk in result.iter().rev() {
             last_frame_mut(stack_frames)?.push(*result_chunk)?;
         }
