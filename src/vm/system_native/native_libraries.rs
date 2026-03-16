@@ -116,8 +116,8 @@ pub(crate) fn native_libraries_find_entry0_wrp(args: &[i32]) -> Result<Vec<i32>>
     let handle = i32toi64(args[1], args[0]);
     let name_ref = args[2];
 
-    let id = native_libraries_find_entry0(handle, name_ref)?;
-    Ok(i64_to_vec(id))
+    let entry_id = native_libraries_find_entry0(handle, name_ref)?;
+    Ok(i64_to_vec(entry_id))
 }
 
 fn native_libraries_find_entry0(handle: i64, name_ref: i32) -> Result<i64> {

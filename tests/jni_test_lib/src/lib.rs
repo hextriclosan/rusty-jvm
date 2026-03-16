@@ -1,8 +1,18 @@
-use jni::EnvUnowned;
 use jni::objects::{JClass, JObject};
-use jni::sys::{jboolean, jdouble, jfloat, jint, jlong};
+use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong};
+use jni::EnvUnowned;
 
-#[unsafe(no_mangle)]
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__BB(
+    _env: EnvUnowned,
+    _class: JClass,
+    a: jbyte,
+    b: jbyte,
+) -> jbyte {
+    a + b
+}
+
+#[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__II(
     _env: EnvUnowned,
     _class: JClass,
@@ -12,7 +22,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a + b
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__JJ(
     _env: EnvUnowned,
     _class: JClass,
@@ -22,7 +32,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a + b
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_multiply(
     _env: EnvUnowned,
     _class: JClass,
@@ -32,7 +42,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a * b
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sumInstance(
     _env: EnvUnowned,
     _obj: JObject,
@@ -42,7 +52,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a + b
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_isPositive(
     _env: EnvUnowned,
     _class: JClass,
@@ -51,7 +61,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     (value > 0) as jboolean
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_printFloat(
     _env: EnvUnowned,
     _class: JClass,

@@ -21,7 +21,7 @@ pub(super) fn to_ffitype(type_descriptor: &TypeDescriptor) -> Type {
     }
 }
 
-pub(super) fn get_symbol_address(name: &String, native_libraries_ref: i32) -> Result<Option<i64>> {
+pub(super) fn get_symbol_address(name: &str, native_libraries_ref: i32) -> Result<Option<i64>> {
     let short_name_ref = StringPoolHelper::get_string(&name)?;
     let symbol_address = Executor::invoke_non_static_method(
         "jdk/internal/loader/NativeLibraries",

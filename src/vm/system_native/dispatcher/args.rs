@@ -42,7 +42,8 @@ pub(super) fn build_args(
     if !is_static {
         let obj_ref = args[i];
         i += 1;
-        storage.push(ArgStorage::Ptr(obj_ref as *mut c_void));
+        let ptr = obj_ref as usize as *mut c_void;
+        storage.push(ArgStorage::Ptr(ptr));
     }
 
     // todo: rework by analogy to StackValue/StackValueKind

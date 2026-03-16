@@ -3381,12 +3381,13 @@ fn should_load_native_library_and_call_native_method() {
     utils::assert_with_all_args(
         &[
             "-Djava.library.path=../debug",
-            "--enable-native-access=ALL-UNNAMED", /* supress warning */
+            // "--enable-native-access=ALL-UNNAMED", /* suppress warning */ todo implement and uncomment
         ],
         "samples.javacore.loadlibrary.example.LoadLibraryExample",
         &[],
-        r#"int sum(40, 2) = 42
-long sum(-99999999999999, 100000000000000) = 1
+        r#"byte sum(-128, 28) = -100
+int sum(40, 2) = 42
+long sum(-999999999999999, 1000000000) = -999998999999999
 double multiply(3.500000, 2.000000) = 7.000000
 isPositive(-5) = false
 Float value is: 3.1415

@@ -3,6 +3,7 @@ package samples.javacore.loadlibrary.example;
 class LoadLibraryExample {
 
     // Primitive operations
+    private static native byte sum(byte a, byte b);
     private static native int sum(int a, int b);
     private static native long sum(long a, long b);
     private static native double multiply(double a, double b);
@@ -28,13 +29,18 @@ class LoadLibraryExample {
     }
 
     public static void main(String[] args) {
+        byte byteFirst = -128;
+        byte byteSecond = 28;
+        byte byteResult = sum(byteFirst, byteSecond);
+        System.out.printf("byte sum(%d, %d) = %d%n", byteFirst, byteSecond, byteResult);
+
         int intFirst = 40;
         int intSecond = 2;
         int intResult = sum(intFirst, intSecond);
         System.out.printf("int sum(%d, %d) = %d%n", intFirst, intSecond, intResult);
 
-        long longFirst = -99_999_999_999_999L;
-        long longSecond = 100_000_000_000_000L;
+        long longFirst = -99_999_999_999_9999L;
+        long longSecond = 1000_000_000L;
         long longResult = sum(longFirst, longSecond);
         System.out.printf("long sum(%d, %d) = %d%n", longFirst, longSecond, longResult);
 

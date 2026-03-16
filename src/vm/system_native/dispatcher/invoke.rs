@@ -12,6 +12,11 @@ use std::ffi::c_void;
 
 pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> Result<Vec<i32>> {
     let split: Vec<_> = method_signature.split(":").collect();
+    if split.len() != 3 {
+        return Err(Error::new_native(&format!(
+            "Dynamic JNI dispatch requires full method descriptor (expected class:method:descriptor, got: {method_signature})"
+        )));
+    }
     let class_name = split[0];
     let method_name = split[1];
     let descriptor = split[2];
@@ -46,8 +51,8 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
 
     let fun_ptr: *mut c_void =
         std::ptr::with_exposed_provenance_mut::<c_void>(symbol_address as usize);
-    let env: *mut i32 = std::ptr::null_mut();
-    let clazz: *mut i32 = std::ptr::null_mut();
+    let env: *mut i32 = std::ptr::null_mut(); // todo add real JNIEnv*
+    let clazz: *mut i32 = std::ptr::null_mut(); // todo add real jclass
 
     let mut ffi_args = vec![Arg::new(&env)];
     if is_static {
@@ -85,8 +90,8 @@ fn call_native(
             | TypeDescriptor::Boolean
             | TypeDescriptor::Array(_, _)
             | TypeDescriptor::Object(_) => {
-                let resul: i32 = cif.call(code_ptr, args);
-                Ok(resul.to_vec())
+                let result: i32 = cif.call(code_ptr, args); // look like cif correctly truncates result to the corresponding return type, so no need to cast
+                Ok(result.to_vec())
             }
             TypeDescriptor::Float => {
                 let result: f32 = cif.call(code_ptr, args);
