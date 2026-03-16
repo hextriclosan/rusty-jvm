@@ -14,7 +14,7 @@ license = "MIT"
 exclude = [".*", "docs/**", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
 
 [workspace]
-members = ["jclassfile", "jdescriptor", "jimage-rs", "jniname"]
+members = ["jclassfile", "jdescriptor", "jimage-rs", "jniname", "tests/jni_test_lib"]
 
 [dependencies]
 clap = "4.5.53"
@@ -45,6 +45,9 @@ rand = "0.10.0"
 page_size = "0.6.0"
 memmap2 = "0.9.9"
 iana-time-zone = "0.1.64"
+jniname = "0.1.0"
+libffi = { version = "5.1.0" }
+lru = "0.16.3"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef", "fileapi", "winnt", "minwinbase", "securitybaseapi", "processthreadsapi", "sysinfoapi", "winerror", "handleapi", "errhandlingapi", "ntdef"] }
@@ -60,6 +63,7 @@ mockall = "0.14.0"
 tempfile = "3.24.0"
 itertools = "0.14.0"
 rstest = "0.26.1"
+ctor = "0.6.3"
 
 [build-dependencies]
 anyhow = "1.0.100"
