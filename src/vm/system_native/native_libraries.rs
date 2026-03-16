@@ -80,10 +80,14 @@ fn native_libraries_load(
     match unsafe { Library::new(&name) } {
         Ok(lib) => {
             let raw_ptr = lib.into_raw();
-            let lib = unsafe { Library::from_raw(raw_ptr) }; // recreating a previously moved object
             let entry = REGISTRY
                 .entry(raw_ptr as usize)
-                .or_insert_with(|| LibraryEntry::new(lib, DashMap::default()));
+                .or_insert_with(|| {
+                    // Safety: raw_ptr was just obtained from lib.into_raw() and is not yet
+                    // wrapped by another Library instance.
+                    let lib = unsafe { Library::from_raw(raw_ptr) };
+                    LibraryEntry::new(lib, DashMap::default())
+                });
             let result = HEAP.set_object_field_value(
                 native_lib_impl_ref,
                 "jdk/internal/loader/NativeLibraries$NativeLibraryImpl",
