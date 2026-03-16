@@ -2,6 +2,31 @@ use jdescriptor::TypeDescriptor;
 use libffi::middle::Arg;
 use std::ffi::c_void;
 
+/// A dereferenceable handle for a JNI `jobject`/`jarray`.
+///
+/// JNI expects object arguments to be passed as pointers that can be dereferenced to
+/// obtain the underlying object reference. `ObjHandle` boxes the VM heap handle (an `i32`
+/// key into the heap map) on the heap so that the raw pointer to it is valid for the
+/// lifetime of this struct. This prevents UB when native code dereferences the `jobject`
+/// argument it receives.
+pub(super) struct ObjHandle {
+    _storage: Box<i32>,
+    ptr: *mut c_void,
+}
+
+impl ObjHandle {
+    fn new(heap_ref: i32) -> Self {
+        let storage = Box::new(heap_ref);
+        // SAFETY: Box guarantees a stable heap allocation; the pointer remains valid as long
+        // as `_storage` is alive, which is the entire lifetime of this ObjHandle.
+        let ptr = Box::as_ptr(&storage) as *mut c_void;
+        ObjHandle {
+            _storage: storage,
+            ptr,
+        }
+    }
+}
+
 pub(super) enum ArgStorage {
     I32(i32),
     I64(i64),
@@ -11,7 +36,7 @@ pub(super) enum ArgStorage {
     I16(i16),
     U16(u16),
     U8(u8),
-    Ptr(*mut c_void),
+    ObjHandle(ObjHandle),
 }
 
 impl ArgStorage {
@@ -25,7 +50,7 @@ impl ArgStorage {
             ArgStorage::I16(v) => Arg::new(v),
             ArgStorage::U16(v) => Arg::new(v),
             ArgStorage::U8(v) => Arg::new(v),
-            ArgStorage::Ptr(v) => Arg::new(v),
+            ArgStorage::ObjHandle(h) => Arg::new(&h.ptr),
         }
     }
 }
@@ -42,8 +67,7 @@ pub(super) fn build_args(
     if !is_static {
         let obj_ref = args[i];
         i += 1;
-        let ptr = obj_ref as usize as *mut c_void;
-        storage.push(ArgStorage::Ptr(ptr));
+        storage.push(ArgStorage::ObjHandle(ObjHandle::new(obj_ref)));
     }
 
     // todo: rework by analogy to StackValue/StackValueKind
@@ -100,8 +124,7 @@ pub(super) fn build_args(
             }
 
             TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => {
-                let ptr = args[i] as usize as *mut c_void;
-                storage.push(ArgStorage::Ptr(ptr));
+                storage.push(ArgStorage::ObjHandle(ObjHandle::new(args[i])));
                 i += 1;
             }
 
