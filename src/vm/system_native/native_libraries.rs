@@ -17,7 +17,7 @@ use libloading::os::unix::*;
 use libloading::os::windows::*;
 use std::ffi::c_void;
 use std::sync::LazyLock;
-use tracing::{enabled, trace};
+use tracing::{enabled, trace, warn};
 
 static REGISTRY: LazyLock<DashMap<usize, LibraryEntry>> = LazyLock::new(DashMap::default);
 
@@ -124,7 +124,7 @@ fn native_libraries_find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
     let lib = match REGISTRY.get(&(handle as usize)) {
         Some(lib) => lib,
         None => {
-            eprintln!("Library not found in registry for handle: {handle}");
+            warn!("Library not found in registry for handle: {handle}");
             return Ok(0);
         }
     };

@@ -9,7 +9,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a: jbyte,
     b: jbyte,
 ) -> jbyte {
-    a + b
+    a.wrapping_add(b)
 }
 
 #[no_mangle]
@@ -19,7 +19,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a: jint,
     b: jint,
 ) -> jint {
-    a + b
+    a.wrapping_add(b)
 }
 
 #[no_mangle]
@@ -29,7 +29,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a: jlong,
     b: jlong,
 ) -> jlong {
-    a + b
+    a.wrapping_add(b)
 }
 
 #[no_mangle]
@@ -49,7 +49,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     a: jint,
     b: jint,
 ) -> jint {
-    a + b
+    a.wrapping_add(b)
 }
 
 #[no_mangle]
