@@ -15,7 +15,8 @@ use derive_new::new;
 use libloading::os::unix::*;
 #[cfg(windows)]
 use libloading::os::windows::*;
-use std::ffi::c_void;
+use std::ffi::{c_void, CString};
+use std::str::FromStr;
 use std::sync::LazyLock;
 use tracing::{enabled, trace, warn};
 
@@ -80,10 +81,12 @@ fn native_libraries_load(
     match unsafe { Library::new(&name) } {
         Ok(lib) => {
             let raw_ptr = lib.into_raw();
-            let lib = unsafe { Library::from_raw(raw_ptr) }; // recreating a previously moved object
-            let entry = REGISTRY
-                .entry(raw_ptr as usize)
-                .or_insert_with(|| LibraryEntry::new(lib, DashMap::default()));
+            let entry = REGISTRY.entry(raw_ptr as usize).or_insert_with(|| {
+                // Safety: raw_ptr was just obtained from lib.into_raw() and is not yet
+                // wrapped by another Library instance.
+                let lib = unsafe { Library::from_raw(raw_ptr) };
+                LibraryEntry::new(lib, DashMap::default())
+            });
             let result = HEAP.set_object_field_value(
                 native_lib_impl_ref,
                 "jdk/internal/loader/NativeLibraries$NativeLibraryImpl",
@@ -132,9 +135,10 @@ fn native_libraries_find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let entry = lib.value();
 
+    let c_name = CString::from_str(&name)?;
     let symbol = entry.symbols.entry(name.clone()).or_insert_with(|| {
         let sym: core::result::Result<Symbol<*const c_void>, libloading::Error> =
-            unsafe { entry.library.get(name.as_bytes()) };
+            unsafe { entry.library.get(c_name.as_bytes_with_nul()) };
         match sym {
             Ok(sym) => sym.as_raw_ptr() as usize,
             Err(_) => 0,
