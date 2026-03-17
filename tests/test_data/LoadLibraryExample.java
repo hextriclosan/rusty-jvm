@@ -24,6 +24,8 @@ class LoadLibraryExample {
     private static native void printMessage(String message);
     private static native void printFloat(float value);
 
+    private static native int getJniVersion();
+
     static {
         System.loadLibrary("jni_test_lib");
     }
@@ -67,5 +69,8 @@ class LoadLibraryExample {
         LoadLibraryExample obj = new LoadLibraryExample();
         int instanceResult = obj.sumInstance(intFirst, intSecond);
         System.out.printf("int sumInstance(%d, %d) = %d%n", intFirst, intSecond, instanceResult);
+
+        int jniVersion = getJniVersion();
+        System.out.printf("JNI version: 0x%08x%n", jniVersion);
     }
 }

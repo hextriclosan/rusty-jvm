@@ -4,6 +4,7 @@ mod exception;
 mod execution_engine;
 mod heap;
 mod helper;
+mod jni;
 mod launcher;
 mod method_area;
 mod properties;

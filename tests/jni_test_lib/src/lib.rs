@@ -1,5 +1,5 @@
 use jni::objects::{JClass, JObject};
-use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong};
+use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong, JNIEnv};
 use jni::EnvUnowned;
 
 #[no_mangle]
@@ -68,4 +68,15 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     value: jfloat,
 ) {
     println!("Float value is: {value}");
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_getJniVersion(
+    env: *mut JNIEnv,
+    _class: JClass,
+) -> jint {
+    unsafe {
+        let vtable = *env;
+        (((*vtable).v24).GetVersion)(env)
+    }
 }
