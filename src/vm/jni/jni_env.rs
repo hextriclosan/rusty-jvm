@@ -20,8 +20,8 @@ macro_rules! jni_stub {
     };
 }
 
-jni_stub!(DefineClass(*const i8, jobject, *const jbyte, jsize) -> jclass);
-jni_stub!(FindClass(*const i8) -> jclass);
+jni_stub!(DefineClass(*const c_char, jobject, *const jbyte, jsize) -> jclass);
+jni_stub!(FindClass(*const c_char) -> jclass);
 jni_stub!(FromReflectedMethod(jobject) -> jmethodID);
 jni_stub!(FromReflectedField(jobject) -> jfieldID);
 jni_stub!(ToReflectedMethod(jclass, jmethodID, jboolean) -> jobject);
@@ -29,11 +29,11 @@ jni_stub!(GetSuperclass(jclass) -> jclass);
 jni_stub!(IsAssignableFrom(jclass, jclass) -> jboolean);
 jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
 jni_stub!(Throw(jthrowable) -> jint);
-jni_stub!(ThrowNew(jclass, *const i8) -> jint);
+jni_stub!(ThrowNew(jclass, *const c_char) -> jint);
 jni_stub!(ExceptionOccurred() -> jthrowable);
 jni_stub!(ExceptionDescribe() -> ());
 jni_stub!(ExceptionClear() -> ());
-jni_stub!(FatalError(*const i8) -> !);
+jni_stub!(FatalError(*const c_char) -> !);
 jni_stub!(PushLocalFrame(jint) -> jint);
 jni_stub!(PopLocalFrame(jobject) -> jobject);
 jni_stub!(NewGlobalRef(jobject) -> jobject);
