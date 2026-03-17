@@ -1,36 +1,16 @@
 use crate::vm::jni::jni_impl::get_version;
 use std::ffi::c_void;
-use std::sync::LazyLock;
 
-pub(super) type JNIEnv = *const JNINativeInterface;
+pub(crate) type JNIEnv = *mut *const JNINativeInterface;
 
-struct EnvHolder {
-    env_inner: *const JNINativeInterface,
-}
-
-impl EnvHolder {
-    pub fn new() -> Self {
-        let env_inner: JNIEnv = &VTABLE;
-        Self { env_inner }
-    }
-
-    pub fn get(&self) -> *mut c_void {
-        &self.env_inner as *const _ as *mut c_void
-    }
-}
-
-unsafe impl Sync for EnvHolder {}
-unsafe impl Send for EnvHolder {}
-
-static JNI_ENV: LazyLock<EnvHolder> = LazyLock::new(EnvHolder::new);
-
-pub(crate) fn get_jni_env() -> *mut c_void {
-    JNI_ENV.get()
+pub(crate) fn get_jni_env() -> JNIEnv {
+    static mut ENV: *const JNINativeInterface = &VTABLE;
+    &raw mut ENV
 }
 
 #[repr(C)]
 #[allow(non_snake_case)]
-pub(super) struct JNINativeInterface {
+pub(crate) struct JNINativeInterface {
     pub reserved0: *mut c_void,
     pub reserved1: *mut c_void,
     pub reserved2: *mut c_void,
