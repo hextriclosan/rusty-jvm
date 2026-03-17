@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::clazz_ref;
+use crate::vm::jni::jni_env::get_jni_env;
 use crate::vm::stack::stack_value::StackValue;
 use crate::vm::system_native::dispatcher::args::build_args;
 use crate::vm::system_native::dispatcher::cif_cache::get_cif;
@@ -51,9 +52,9 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
 
     let fun_ptr: *mut c_void =
         std::ptr::with_exposed_provenance_mut::<c_void>(symbol_address as usize);
-    let env: *mut i32 = std::ptr::null_mut(); // todo add real JNIEnv*
     let clazz: *mut i32 = std::ptr::null_mut(); // todo add real jclass
 
+    let env = get_jni_env();
     let mut ffi_args = vec![Arg::new(&env)];
     if is_static {
         ffi_args.push(Arg::new(&clazz));

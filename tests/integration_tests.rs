@@ -3392,6 +3392,7 @@ double multiply(3.500000, 2.000000) = 7.000000
 isPositive(-5) = false
 Float value is: 3.1415
 int sumInstance(40, 2) = 42
+JNI version: 0x00180000
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module
