@@ -99,7 +99,8 @@ fn native_libraries_load(
 
             ThrowingResult::ok(true)
         }
-        Err(_) => {
+        Err(e) => {
+            eprintln!("Failed to load {name}: {e}");
             if throw_exception_if_fail {
                 throw_and_return!(throw_unsatisfied_link_error(
                     &format!("Failed to load {name}"),
