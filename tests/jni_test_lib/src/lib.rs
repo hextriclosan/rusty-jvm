@@ -76,7 +76,8 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     _class: JClass,
 ) -> jint {
     unsafe {
-        let vtable = *env;
-        (((*vtable).v24).GetVersion)(env)
+        let functions = &**env;
+        let function = functions.v24.GetVersion;
+        function(env)
     }
 }

@@ -1471,6 +1471,7 @@ dependencies = [
  "jclassfile 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jni-sys",
  "jniname 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libffi",
  "libloading",
