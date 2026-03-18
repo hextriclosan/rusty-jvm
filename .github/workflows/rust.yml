@@ -77,6 +77,15 @@ jobs:
           unset RUSTC_WRAPPER
           cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
 
+      - name: Dir list /project
+        run: ls -al /project
+
+      - name: Dir list /target
+        run: ls -al /target
+
+      - name: Dir list /target/debug
+        run: ls -al /target/debug
+
   build-and-test-with-coverage:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
