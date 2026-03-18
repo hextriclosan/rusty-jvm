@@ -14,10 +14,18 @@ pub enum ExecutionResult {
 
 pub(crate) static REPO_PATH: Lazy<PathBuf> =
     Lazy::new(|| env::current_dir().expect("Failed to get current directory"));
-pub(crate) static TEST_PATH: Lazy<PathBuf> = Lazy::new(|| {
-    let out_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into()))
-        .join("java_classes_for_tests");
 
+pub(crate) static TARGET_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    let out_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into()));
+    out_dir
+});
+pub(crate) static TEST_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    let out_dir = TARGET_PATH.join("java_classes_for_tests");
+
+    out_dir
+});
+pub(crate) static TEST_LIB_DIR_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    let out_dir = TARGET_PATH.join("debug");
     out_dir
 });
 

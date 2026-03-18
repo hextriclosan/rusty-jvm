@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use utils::assert_success;
 
@@ -368,7 +368,8 @@ use crate::utils::ExecutionResult::Success;
 use crate::utils::{
     assert_failure, assert_file_with_args, assert_success_with_args, assert_success_with_stderr,
     get_file_separator, get_os_name, get_output, get_output_with_raw_args, get_path_separator,
-    is_bigendian, line_ending, map_library_name, tmp_file, ExecutionResult,
+    is_bigendian, line_ending, map_library_name, tmp_file, ExecutionResult, REPO_PATH,
+    TARGET_PATH, TEST_LIB_DIR_PATH, TEST_PATH,
 };
 use itertools::Itertools;
 use regex::Regex;
@@ -3368,8 +3369,21 @@ Hello from LoadMe4!
 }
 
 fn ensure_jni_test_lib_is_built() {
+    // let target_dir = env::var("CARGO_TARGET_DIR")
+    //     .map(PathBuf::from)
+    //     .unwrap_or_else(|_| {
+    //         // fallback: workspace root / target
+    //         let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    //         p.pop(); // go to workspace root if this is a member
+    //         p.push("target");
+    //         p
+    //     });
+
+    eprintln!("!!!! target_dir: REPO_PATH={:?}, TARGET_PATH={:?}, TEST_LIB_DIR_PATH={:?}, TEST_PATH={:?}, CARGO_TARGET_DIR={:?}", *REPO_PATH, *TARGET_PATH, *TEST_LIB_DIR_PATH, *TEST_PATH, env::var("CARGO_TARGET_DIR"));
+
     let status = Command::new("cargo")
         .args(["build", "-p", "jni_test_lib"])
+        //.env("CARGO_TARGET_DIR", &target_dir)
         .status()
         .expect("failed to run cargo build");
 
@@ -3378,9 +3392,10 @@ fn ensure_jni_test_lib_is_built() {
 
 #[test]
 fn should_load_native_library_and_call_native_method() {
+    let lib_path = format!("-Djava.library.path={}", "../debug");
     utils::assert_with_all_args(
         &[
-            "-Djava.library.path=../debug",
+            &lib_path,
             // "--enable-native-access=ALL-UNNAMED", /* suppress warning */ todo implement and uncomment
         ],
         "samples.javacore.loadlibrary.example.LoadLibraryExample",
