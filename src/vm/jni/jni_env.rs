@@ -293,7 +293,8 @@ jni_stub!(IsVirtualThread(jobject) -> jboolean);
 jni_stub!(GetStringUTFLengthAsLong(jstring) -> jlong);
 
 struct Wrapper(JNINativeInterface_);
-static VTABLE: Wrapper = unsafe {
+unsafe impl Sync for Wrapper {}
+static VTABLE: Wrapper = {
     let mut x: JNINativeInterface_ = unsafe { std::mem::zeroed() };
 
     x.v24.GetVersion = get_version;
@@ -533,4 +534,3 @@ static VTABLE: Wrapper = unsafe {
 
     Wrapper(x)
 };
-unsafe impl Sync for Wrapper {}
