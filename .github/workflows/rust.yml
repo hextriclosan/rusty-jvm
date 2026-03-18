@@ -38,7 +38,8 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
-      - uses: taiki-e/install-action@v2
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
         with:
           tool: nextest
 
