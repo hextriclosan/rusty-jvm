@@ -9,6 +9,9 @@ on:
     - cron: '0 3 * * *'     # Daily at 03:00 UTC
   workflow_dispatch:        # Manual trigger support
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -35,8 +38,12 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
       - name: Run tests
-        run: cargo test --workspace --locked
+        run: cargo nextest run --workspace --locked
 
 
   test-on-s390x:
