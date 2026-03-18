@@ -1,5 +1,5 @@
 use crate::vm::jni::jni_env::get_jni_vm;
-use jni_sys::{jboolean, jint, JNIEnv, JavaVM, JNI_FALSE};
+use jni_sys::{jboolean, jint, JNIEnv, JavaVM, JNI_ERR, JNI_FALSE, JNI_OK};
 
 const JNI_VERSION_24: i32 = 0x00180000;
 
@@ -12,9 +12,14 @@ pub(super) extern "system" fn exception_check(_env: *mut JNIEnv) -> jboolean {
 }
 
 pub(super) extern "system" fn get_java_vm(_env: *mut JNIEnv, vm: *mut *mut JavaVM) -> jint {
+    if vm.is_null() {
+        return JNI_ERR;
+    }
+
+    let jni_vm = get_jni_vm();
     unsafe {
-        let jni_vm = get_jni_vm();
         *vm = jni_vm;
     }
-    0 // illustrates success
+
+    JNI_OK
 }
