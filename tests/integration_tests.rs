@@ -3383,10 +3383,15 @@ fn ensure_jni_test_lib_is_built() {
 
     eprintln!("!!!! target_dir: REPO_PATH={:?}, TARGET_PATH={:?}, TEST_LIB_DIR_PATH={:?}, TEST_PATH={:?}, CARGO_TARGET_DIR={:?}", *REPO_PATH, *TARGET_PATH, *TEST_LIB_DIR_PATH, *TEST_PATH, env::var("CARGO_TARGET_DIR"));
 
-    let status = Command::new("cargo")
-        .args(["build", "-p", "jni_test_lib"])
+    let mut cmd = Command::new("cargo");
+        cmd.args(["build", "-p", "jni_test_lib"]);
         //.env("CARGO_TARGET_DIR", &target_dir)
-        .status()
+
+    if let Ok(dir) = env::var("CARGO_TARGET_DIR") {
+        cmd.env("CARGO_TARGET_DIR", dir);
+    }
+
+    let status = cmd.status()
         .expect("failed to run cargo build");
 
     assert!(status.success(), "failed to build jni_test_lib");
