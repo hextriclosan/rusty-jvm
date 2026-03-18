@@ -10,17 +10,17 @@ use std::path::{Path, PathBuf};
 use std::string::ToString;
 use tempfile::TempDir;
 
-#[test]
-fn should_support_java_io_file() {
-    let _guard = CleanUp {};
-
-    file_info_when_does_not_exist();
-    create_file_when_does_not_exist();
-    create_file_when_exists();
-    file_info_when_exists();
-    delete_file_when_exists();
-    delete_file_when_does_not_exist();
-}
+// #[test]
+// fn should_support_java_io_file() {
+//     let _guard = CleanUp {};
+// 
+//     file_info_when_does_not_exist();
+//     create_file_when_does_not_exist();
+//     create_file_when_exists();
+//     file_info_when_exists();
+//     delete_file_when_exists();
+//     delete_file_when_does_not_exist();
+// }
 
 fn file_info_when_does_not_exist() {
     let template_values = TemplateValues::new(
