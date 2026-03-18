@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use nix::libc::dirfd;
 use utils::assert_success;
 use crate::utils::ExecutionResult::Success;
 
@@ -3384,7 +3385,7 @@ fn ensure_jni_test_lib_is_built() {
     eprintln!("!!!! target_dir: REPO_PATH={:?}, TARGET_PATH={:?}, TEST_LIB_DIR_PATH={:?}, TEST_PATH={:?}, CARGO_TARGET_DIR={:?}", *REPO_PATH, *TARGET_PATH, *TEST_LIB_DIR_PATH, *TEST_PATH, env::var("CARGO_TARGET_DIR"));
 
     let mut cmd = Command::new("cargo");
-        cmd.args(["build", "-p", "jni_test_lib"]);
+        cmd.args(["build", "-p", "jni_test_lib", "--target-dir", "/tmp"]);
         //.env("CARGO_TARGET_DIR", &target_dir)
 
     if let Ok(dir) = env::var("CARGO_TARGET_DIR") {
@@ -3399,7 +3400,10 @@ fn ensure_jni_test_lib_is_built() {
 
 #[test]
 fn should_load_native_library_and_call_native_method() {
-    let lib_path = format!("-Djava.library.path={}", "../debug");
+    let dir = env::current_dir().expect("Failed to get current directory");
+    eprintln!("!!! Current dir: {:?}", dir);
+
+    let lib_path = format!("-Djava.library.path={}", "/tmp/debug");
     utils::assert_with_all_args(
         &[
             &lib_path,
