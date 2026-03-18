@@ -1,10 +1,11 @@
+use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JObject};
-use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong, JNIEnv};
+use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong};
 use jni::EnvUnowned;
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__BB(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _class: JClass,
     a: jbyte,
     b: jbyte,
@@ -14,7 +15,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__II(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _class: JClass,
     a: jint,
     b: jint,
@@ -24,7 +25,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__JJ(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _class: JClass,
     a: jlong,
     b: jlong,
@@ -34,7 +35,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_multiply(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _class: JClass,
     a: jdouble,
     b: jdouble,
@@ -44,7 +45,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sumInstance(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _obj: JObject,
     a: jint,
     b: jint,
@@ -54,7 +55,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_isPositive(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _class: JClass,
     value: jint,
 ) -> jboolean {
@@ -63,7 +64,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_printFloat(
-    _env: EnvUnowned,
+    mut _env: EnvUnowned,
     _class: JClass,
     value: jfloat,
 ) {
@@ -72,12 +73,15 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_getJniVersion(
-    env: *mut JNIEnv,
+    mut unowned_env: EnvUnowned,
     _class: JClass,
 ) -> jint {
-    unsafe {
-        let functions = &**env;
-        let function = functions.v24.GetVersion;
-        function(env)
-    }
+    let version = unowned_env
+        .with_env(|env| {
+            let jni_version = env.version().expect("Failed to get JNI version");
+            Ok::<jint, jni::errors::Error>(jni_version.into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>();
+
+    version
 }
