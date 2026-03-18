@@ -322,6 +322,7 @@ jni_vm_stub!(DetachCurrentThread() -> jint);
 jni_vm_stub!(GetEnv(*mut *mut c_void, jint) -> jint);
 jni_vm_stub!(AttachCurrentThreadAsDaemon(*mut *mut c_void, *mut c_void) -> jint);
 
+#[repr(C)]
 struct Wrapper(JNINativeInterface_, JNIInvokeInterface_);
 unsafe impl Sync for Wrapper {}
 static VTABLE: Wrapper = {
