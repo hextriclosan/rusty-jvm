@@ -3399,7 +3399,7 @@ fn ensure_jni_test_lib_is_built() {
 
 #[test]
 fn should_load_native_library_and_call_native_method() {
-    let lib_path = format!("-Djava.library.path={}", "/target/debug");
+    let lib_path = format!("-Djava.library.path={}", "../debug");
     utils::assert_with_all_args(
         &[
             &lib_path,
