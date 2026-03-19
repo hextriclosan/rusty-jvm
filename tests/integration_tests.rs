@@ -2,7 +2,7 @@ mod utils;
 
 use crate::utils::{REPO_PATH, TARGET_PATH, TEST_LIB_DIR_PATH, TEST_PATH};
 use std::collections::HashMap;
-use std::env;
+use std::{env, fs};
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -3400,6 +3400,23 @@ fn ensure_jni_test_lib_is_built() {
 
 #[test]
 fn should_load_native_library_and_call_native_method() {
+
+    for dir in ["/project", "/target", "/target/debug", "/target/java_classes_for_tests", "/target/s390x-unknown-linux-gnu", "/target/s390x-unknown-linux-gnu/debug"] {
+        println!("Directory: {:?}", dir);
+
+        let path = Path::new(&dir);
+        if !path.exists() {
+            println!("  (does not exist)");
+            continue;
+        }
+
+        for entry in fs::read_dir(path).expect("Failed to read directory") {
+            let entry = entry.expect("Failed to read directory entry");
+            let file_name = entry.file_name();
+            println!("  {}", file_name.to_string_lossy());
+        }
+    }
+
     let dir = env::current_dir().expect("Failed to get current directory");
     eprintln!("!!! Current dir: {:?}", dir);
 
