@@ -1600,7 +1600,7 @@ Edge Case Example Constructors:
 --------------------------------
 Constructor: samples.reflection.trivial.declaredconstructors.EdgeCaseExample()
   Parameter types: []
-  Modifier:
+  Modifier: 
   Throws: []
   Declaring class: class samples.reflection.trivial.declaredconstructors.EdgeCaseExample
   Name: samples.reflection.trivial.declaredconstructors.EdgeCaseExample
@@ -1628,7 +1628,7 @@ Anonymous Class Constructors:
 --------------------------------
 Constructor: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1()
   Parameter types: []
-  Modifier:
+  Modifier: 
   Throws: []
   Declaring class: class samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
   Name: samples.reflection.trivial.declaredconstructors.DeclaredConstructorsExample$1
@@ -2599,7 +2599,7 @@ Information about field: i
 ------------------------------------------------
 String representation: int samples.reflection.trivial.declaredfields.Examinee$MyInner.i
 Class: class samples.reflection.trivial.declaredfields.Examinee$MyInner
-Modifiers:
+Modifiers: 
 Type: int
 Is Synthetic: false
 
