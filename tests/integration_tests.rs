@@ -3385,7 +3385,7 @@ fn ensure_jni_test_lib_is_built() {
     eprintln!("!!!! target_dir: REPO_PATH={:?}, TARGET_PATH={:?}, TEST_LIB_DIR_PATH={:?}, TEST_PATH={:?}, CARGO_TARGET_DIR={:?}", *REPO_PATH, *TARGET_PATH, *TEST_LIB_DIR_PATH, *TEST_PATH, env::var("CARGO_TARGET_DIR"));
 
     let mut cmd = Command::new("cargo");
-        cmd.args(["build", "-p", "jni_test_lib", "--target-dir", "/tmp"]);
+        cmd.args(["build", "-p", "jni_test_lib", "--target-dir", "/tmp", "--target", "s390x-unknown-linux-gnu",]);
         //.env("CARGO_TARGET_DIR", &target_dir)
 
     if let Ok(dir) = env::var("CARGO_TARGET_DIR") {
