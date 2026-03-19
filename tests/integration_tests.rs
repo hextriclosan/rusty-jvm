@@ -11,7 +11,7 @@ use nix::libc::dirfd;
 use utils::assert_success;
 use crate::utils::ExecutionResult::Success;
 
-//#[ctor::ctor]
+//              #[ctor::ctor]
 fn before_tests() {
     ensure_jni_test_lib_is_built();
 }
@@ -3420,35 +3420,35 @@ fn should_load_native_library_and_call_native_method() {
     let dir = env::current_dir().expect("Failed to get current directory");
     eprintln!("!!! Current dir: {:?}", dir);
 
-    let status = Command::new("ldd")
-        .arg("/tmp/debug/libjni_test_lib.so")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .expect("failed to run ldd");
+    // let status = Command::new("ldd")
+    //     .arg("/tmp/debug/libjni_test_lib.so")
+    //     .stdout(Stdio::inherit())
+    //     .stderr(Stdio::inherit())
+    //     .status()
+    //     .expect("failed to run ldd");
+    //
+    // println!("ldd Exit status: {}", status);
+    //
+    //
+    // let status = Command::new("ldd")
+    //     .arg("../debug/libjni_test_lib.so")
+    //     .stdout(Stdio::inherit())
+    //     .stderr(Stdio::inherit())
+    //     .status()
+    //     .expect("failed to run ldd");
+    //
+    // println!("ldd Exit status: {}", status);
 
-    println!("ldd Exit status: {}", status);
+    // let status = Command::new("ldd")
+    //     .arg("/target/s390x-unknown-linux-gnu/debug/libjni_test_lib.so")
+    //     .stdout(Stdio::inherit())
+    //     .stderr(Stdio::inherit())
+    //     .status()
+    //     .expect("failed to run ldd");
+    //
+    // println!("ldd Exit status: {}", status);
 
-
-    let status = Command::new("ldd")
-        .arg("../debug/libjni_test_lib.so")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .expect("failed to run ldd");
-
-    println!("ldd Exit status: {}", status);
-
-    let status = Command::new("ldd")
-        .arg("/target/s390x-unknown-linux-gnu/debug/libjni_test_lib.so")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .expect("failed to run ldd");
-
-    println!("ldd Exit status: {}", status);
-
-    let lib_path = format!("-Djava.library.path={}", "../debug");
+    let lib_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
     utils::assert_with_all_args(
         &[
             &lib_path,
