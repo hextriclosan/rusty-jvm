@@ -6,7 +6,7 @@ use std::{env, fs};
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use nix::libc::dirfd;
 use utils::assert_success;
 use crate::utils::ExecutionResult::Success;
@@ -3419,6 +3419,15 @@ fn should_load_native_library_and_call_native_method() {
 
     let dir = env::current_dir().expect("Failed to get current directory");
     eprintln!("!!! Current dir: {:?}", dir);
+
+    let status = Command::new("ldd")
+        .arg("/tmp/debug/libjni_test_lib.so")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .expect("failed to run ldd");
+
+    println!("ldd Exit status: {}", status);
 
     let lib_path = format!("-Djava.library.path={}", "/tmp/debug");
     utils::assert_with_all_args(
