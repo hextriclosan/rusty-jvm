@@ -43,6 +43,9 @@ jobs:
         with:
           tool: nextest
 
+      - name: Build jni_test_lib
+        run: cross build -p jni_test_lib
+
       - name: Run tests
         run: cargo nextest run --workspace --locked
 
@@ -72,10 +75,10 @@ jobs:
         with:
           tool: cross
 
-      - name: Run build on s390x (Big Endian)
+      - name: Build jni_test_lib on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER
-          cross build --workspace --target s390x-unknown-linux-gnu --verbose
+          cross build -p jni_test_lib --target s390x-unknown-linux-gnu
 
       - name: Run tests on s390x (Big Endian)
         run: |
@@ -112,6 +115,9 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov
+
+      - name: Build jni_test_lib
+        run: cross build -p jni_test_lib
 
       - name: Run tests with coverage
         run: cargo llvm-cov --locked --workspace --lcov --output-path lcov.info

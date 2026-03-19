@@ -19,10 +19,8 @@ fn main() -> anyhow::Result<()> {
     } else {
         without_target
     };
-
     println!("cargo:rustc-env=JNI_TEST_LIB_PATH={}", path.display());
 
-    println!("cargo:rerun-if-changed=tests/jni_test_lib");
     println!("cargo:rerun-if-changed=tests/test_data");
     let dest_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or(String::from("target")))
         .join("java_classes_for_tests");
