@@ -3401,7 +3401,7 @@ fn ensure_jni_test_lib_is_built() {
 #[test]
 fn should_load_native_library_and_call_native_method() {
 
-    for dir in ["/project", "/target", "/target/debug", "/target/java_classes_for_tests", "/target/s390x-unknown-linux-gnu", "/target/s390x-unknown-linux-gnu/debug"] {
+    for dir in ["/project", "/target", "/target/debug", "/target/java_classes_for_tests", "/target/s390x-unknown-linux-gnu", "/target/s390x-unknown-linux-gnu/debug", "/tmp", "/tmp/debug"] {
         println!("Directory: {:?}", dir);
 
         let path = Path::new(&dir);
