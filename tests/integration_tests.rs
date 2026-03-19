@@ -10,7 +10,10 @@ use utils::assert_success;
 
 #[ctor::ctor]
 fn before_tests() {
-    ensure_jni_test_lib_is_built();
+    let in_ci = env::var("GITHUB_ACTIONS").is_ok();
+    if !in_ci {
+        ensure_jni_test_lib_is_built();
+    }
 }
 
 #[test]
@@ -3378,9 +3381,10 @@ fn ensure_jni_test_lib_is_built() {
 
 #[test]
 fn should_load_native_library_and_call_native_method() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
     utils::assert_with_all_args(
         &[
-            "-Djava.library.path=../debug",
+            &lib_dir_path,
             // "--enable-native-access=ALL-UNNAMED", /* suppress warning */ todo implement and uncomment
         ],
         "samples.javacore.loadlibrary.example.LoadLibraryExample",

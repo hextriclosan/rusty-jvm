@@ -4,7 +4,23 @@ use std::process::{Command, Stdio};
 use std::{env, fs};
 
 fn main() -> anyhow::Result<()> {
-    println!("cargo:rerun-if-changed=tests/jni_test_lib");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
+    let target_dir = env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into());
+    let target = env::var("TARGET")?;
+    let profile = env::var("PROFILE")?;
+
+    let base = PathBuf::from(manifest_dir).join(target_dir);
+
+    let with_target = base.join(&target).join(&profile);
+    let without_target = base.join(&profile);
+
+    let path = if with_target.exists() {
+        with_target
+    } else {
+        without_target
+    };
+    println!("cargo:rustc-env=JNI_TEST_LIB_PATH={}", path.display());
+
     println!("cargo:rerun-if-changed=tests/test_data");
     let dest_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or(String::from("target")))
         .join("java_classes_for_tests");
