@@ -72,6 +72,11 @@ jobs:
         with:
           tool: cross
 
+      - name: Run build on s390x (Big Endian)
+        run: |
+          unset RUSTC_WRAPPER
+          cross build --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+
       - name: Run tests on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER

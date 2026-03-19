@@ -11,7 +11,7 @@ use nix::libc::dirfd;
 use utils::assert_success;
 use crate::utils::ExecutionResult::Success;
 
-#[ctor::ctor]
+//#[ctor::ctor]
 fn before_tests() {
     ensure_jni_test_lib_is_built();
 }
@@ -3429,7 +3429,17 @@ fn should_load_native_library_and_call_native_method() {
 
     println!("ldd Exit status: {}", status);
 
-    let lib_path = format!("-Djava.library.path={}", "/tmp/debug");
+
+    let status = Command::new("ldd")
+        .arg("../debug/libjni_test_lib.so")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .expect("failed to run ldd");
+
+    println!("ldd Exit status: {}", status);
+
+    let lib_path = format!("-Djava.library.path={}", "../debug");
     utils::assert_with_all_args(
         &[
             &lib_path,
