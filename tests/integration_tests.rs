@@ -3448,7 +3448,7 @@ fn should_load_native_library_and_call_native_method() {
 
     println!("ldd Exit status: {}", status);
 
-    let lib_path = format!("-Djava.library.path={}", "/target/s390x-unknown-linux-gnu/debug");
+    let lib_path = format!("-Djava.library.path={}", "../debug");
     utils::assert_with_all_args(
         &[
             &lib_path,
