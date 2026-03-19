@@ -68,8 +68,6 @@ fn native_libraries_load(
 ) -> ThrowingResult<bool> {
     let name = unwrap_or_return_err!(get_utf8_string_by_ref(name_ref));
 
-    eprintln!("!!! load: {name} (builtin: {_builtin})");
-
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
     if name
         .strip_prefix(sun_boot_library_path())
@@ -99,8 +97,7 @@ fn native_libraries_load(
 
             ThrowingResult::ok(true)
         }
-        Err(e) => {
-            eprintln!("Failed to load {name}: {e}");
+        Err(_) => {
             if throw_exception_if_fail {
                 throw_and_return!(throw_unsatisfied_link_error(
                     &format!("Failed to load {name}"),
@@ -136,7 +133,6 @@ fn native_libraries_find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
     };
 
     let name = get_utf8_string_by_ref(name_ref)?;
-    eprintln!("!!!! findEntry0: {name} (handle: {handle})");
     let entry = lib.value();
 
     let c_name = CString::from_str(&name)?;
