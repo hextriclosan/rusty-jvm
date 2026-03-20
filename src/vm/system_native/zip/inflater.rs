@@ -8,7 +8,9 @@ use miniz_oxide::inflate::stream::{inflate, InflateState};
 use miniz_oxide::{DataFormat, MZError, MZFlush, MZStatus, StreamResult};
 use std::sync::LazyLock;
 
-static REGISTRY: LazyLock<AutoDashMapI64<InflateState>> = LazyLock::new(|| AutoDashMapI64::new(1));
+static REGISTRY: LazyLock<AutoDashMapI64<InflateValue>> = LazyLock::new(|| AutoDashMapI64::new(1));
+
+struct InflateValue(InflateState, DataFormat);
 
 pub(crate) fn java_util_zip_inflater_initids_wrp(_args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![])
@@ -20,13 +22,14 @@ pub(crate) fn java_util_zip_inflater_init_wrp(args: &[i32]) -> Result<Vec<i32>> 
     Ok(i64_to_vec(addr))
 }
 fn inflater_init(nowrap: bool) -> i64 {
-    let inflate_state = InflateState::new(DataFormat::from_window_bits(if nowrap {
+    let data_format = DataFormat::from_window_bits(if nowrap {
         -DEFAULT_WINDOW_BITS
     } else {
         DEFAULT_WINDOW_BITS
-    }));
+    });
+    let inflate_state = InflateState::new(data_format);
 
-    let addr = REGISTRY.insert_auto(inflate_state);
+    let addr = REGISTRY.insert_auto(InflateValue(inflate_state, data_format));
     addr
 }
 
@@ -77,7 +80,7 @@ fn inflater_inflate_bytes_bytes(
 
     let mut output_array = HEAP.get_entire_raw_data_mut(output_array_ref)?;
     let output = &mut output_array[output_off as usize..(output_off + output_len) as usize];
-    let stream_result = inflate(inflate_state, &input, output, MZFlush::Sync);
+    let stream_result = inflate(&mut inflate_state.0, &input, output, MZFlush::Sync);
 
     check_inflate_status(stream_result)
 }
@@ -151,6 +154,27 @@ fn inflater_end(addr: i64) -> Result<()> {
     REGISTRY.remove(addr).ok_or_else(|| {
         Error::new_execution(&format!("Address {addr} does not exist in REGISTRY"))
     })?;
+
+    Ok(())
+}
+
+pub(crate) fn java_util_zip_inflater_reset_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let addr = i32toi64(args[1], args[0]);
+    inflater_reset(addr)?;
+
+    Ok(vec![])
+}
+fn inflater_reset(addr: i64) -> Result<()> {
+    let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
+        Error::new_execution(&format!(
+            "Inflater not found in registry for address: {}",
+            addr
+        ))
+    })?;
+
+    let data_format = entry.value().1;
+    let inflate_state = InflateState::new(data_format);
+    *entry.value_mut() = InflateValue(inflate_state, data_format);
 
     Ok(())
 }

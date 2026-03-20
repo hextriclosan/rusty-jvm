@@ -91,6 +91,7 @@ use crate::vm::system_native::zip::deflater::{
 use crate::vm::system_native::zip::inflater::{
     java_util_zip_inflater_end_wrp, java_util_zip_inflater_inflate_bytes_bytes_wrp,
     java_util_zip_inflater_init_wrp, java_util_zip_inflater_initids_wrp,
+    java_util_zip_inflater_reset_wrp,
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -796,6 +797,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/util/zip/Inflater:end:(J)V",
         Basic(java_util_zip_inflater_end_wrp),
+    );
+    table.insert(
+        "java/util/zip/Inflater:reset:(J)V",
+        Basic(java_util_zip_inflater_reset_wrp),
     );
     table.insert(
         "java/util/zip/CRC32:updateBytes0:(I[BII)I",

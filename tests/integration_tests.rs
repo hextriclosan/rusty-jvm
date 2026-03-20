@@ -3409,3 +3409,14 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
         HashMap::default(),
     );
 }
+
+#[test]
+fn should_zip_inflater_reset_method() {
+    assert_success(
+        "samples.zlib.inflaterresetdemo.InflaterResetDemo",
+        r#"Read from first stream: AAAAAAAAAAAAAAAA
+First stream partially processed
+Second stream result size: 5000
+"#,
+    );
+}
