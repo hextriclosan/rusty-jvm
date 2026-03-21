@@ -14,7 +14,7 @@ use windows_impl::open0;
 mod unix_impl;
 use crate::vm::exception::helpers::{check_bounds, throw_ioexception};
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::i32toi64;
+use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
 #[cfg(unix)]
 use unix_impl::open0;
@@ -156,4 +156,25 @@ pub(super) fn read_bytes0(
         Ok(n) => ThrowingResult::ok(n as i32),
         Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
     }
+}
+
+pub(crate) fn random_access_file_length0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let obj_ref = args[0];
+    let length = unwrap_result_or_return_default!(length0(obj_ref, stack_frames), vec![]);
+
+    Ok(i64_to_vec(length))
+}
+fn length0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
+    let mut file = match PlatformFile::get_by_raw_id(obj_ref, Mode::RandomAccessFile, stack_frames)
+    {
+        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    };
+
+    let length = unwrap_or_return_err!(file.seek(std::io::SeekFrom::End(0)));
+
+    ThrowingResult::ok(length as i64)
 }
