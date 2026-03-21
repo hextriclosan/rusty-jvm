@@ -3122,6 +3122,7 @@ fn should_support_locales() {
 fn should_support_random_access_files() {
     let file = NamedTempFile::new().expect("Failed to create temp file");
     let expected_out = r#"=== RandomAccessFile example ===
+RandomAccessFile length 41 bytes
 intValue = 0xDEADBEEF
 longValue = 0xFEEDFACE01020304
 doubleValue = 3.141592653589793

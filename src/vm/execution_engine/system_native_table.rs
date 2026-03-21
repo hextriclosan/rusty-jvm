@@ -55,8 +55,9 @@ use crate::vm::system_native::platform_file_dispatcher::{
     mapped_memory_utils_force0_wrp,
 };
 use crate::vm::system_native::random_access_file::{
-    random_access_file_open0_wrp, random_access_file_read_bytes0_wrp,
-    random_access_file_seek0_wrp, random_access_file_write_bytes0_wrp,
+    random_access_file_length0_wrp, random_access_file_open0_wrp,
+    random_access_file_read_bytes0_wrp, random_access_file_seek0_wrp,
+    random_access_file_write_bytes0_wrp,
 };
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
@@ -496,6 +497,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/io/RandomAccessFile:readBytes0:([BII)I",
         WithMutStackFrames(random_access_file_read_bytes0_wrp),
+    );
+    table.insert(
+        "java/io/RandomAccessFile:length0:()J",
+        WithMutStackFrames(random_access_file_length0_wrp),
     );
     table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",

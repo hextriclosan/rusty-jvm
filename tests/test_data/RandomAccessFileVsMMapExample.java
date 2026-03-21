@@ -50,6 +50,9 @@ public class RandomAccessFileVsMMapExample {
 
             writeString(raf, OFFSET_STRING_LEN, "HelloMMap");
 
+            long length = raf.length();
+            System.out.println("RandomAccessFile length " + length + " bytes");
+
             // Read back and print
             raf.seek(OFFSET_INT);
             int intValue = raf.readInt();
