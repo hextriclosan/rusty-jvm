@@ -16,7 +16,7 @@ use crate::vm::exception::helpers::{check_bounds, throw_ioexception};
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::system_native::platform_file::Mode::RandomAccessFile;
-use crate::vm::system_native::platform_file::{Mode, PlatformFile};
+use crate::vm::system_native::platform_file::{length, Mode, PlatformFile};
 #[cfg(unix)]
 use unix_impl::open0;
 
@@ -169,13 +169,5 @@ pub(crate) fn random_access_file_length0_wrp(
     Ok(i64_to_vec(length))
 }
 fn length0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
-    let file = match PlatformFile::get_by_raw_id(obj_ref, RandomAccessFile, stack_frames) {
-        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
-        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
-    };
-    let metadata = match file.metadata() {
-        Ok(m) => m,
-        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
-    };
-    ThrowingResult::ok(metadata.len() as i64)
+    length(obj_ref, RandomAccessFile, stack_frames)
 }

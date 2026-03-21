@@ -5,7 +5,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode::FileInputStream;
-use crate::vm::system_native::platform_file::PlatformFile;
+use crate::vm::system_native::platform_file::{length, PlatformFile};
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::fs::OpenOptions;
@@ -59,15 +59,7 @@ pub(crate) fn file_input_stream_length0_wrp(
     Ok(i64_to_vec(len))
 }
 fn length0(obj_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
-    let file = match PlatformFile::get_by_raw_id(obj_ref, FileInputStream, stack_frames) {
-        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
-        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
-    };
-    let metadata = match file.metadata() {
-        Ok(m) => m,
-        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
-    };
-    ThrowingResult::ok(metadata.len() as i64)
+    length(obj_ref, FileInputStream, stack_frames)
 }
 
 pub(crate) fn file_input_stream_position0_wrp(
