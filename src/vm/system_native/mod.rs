@@ -16,6 +16,7 @@ pub(crate) mod native_seed_generator;
 pub(crate) mod object;
 mod object_offset;
 mod platform_file;
+pub(crate) mod perf;
 pub(crate) mod platform_file_dispatcher;
 pub(crate) mod platform_native_dispatcher;
 pub(crate) mod platform_specific_files;

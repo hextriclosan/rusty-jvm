@@ -75,17 +75,87 @@ impl Drop for PerfFile {
     }
 }
 
-pub(crate) fn create_perf_file(arguments: &Arguments) -> Option<PerfFile> {
-    match try_create_perf_file(arguments) {
-        Ok(pf) => Some(pf),
-        Err(e) => {
-            tracing::warn!("Failed to create perf file: {e}");
-            None
-        }
+impl PerfFile {
+    /// Appends a new long (J) counter entry to the live memory-mapped perf file.
+    ///
+    /// `variability` and `units` are the JVM-level numeric constants
+    /// (e.g. `V_CONSTANT = 1`, `U_TICKS = 3`).  The method silently drops the
+    /// entry if the 64 KB capacity has already been exhausted.
+    pub(crate) fn create_long(&mut self, name: &str, variability: u8, units: u8, value: i64) {
+        let Some(mmap) = self.mmap.as_mut() else {
+            return;
+        };
+        let entry = make_long_entry(name, value, units, variability);
+        append_entry_to_mmap(mmap, entry);
+    }
+
+    /// Appends a new byte-array (B) counter entry to the live memory-mapped perf file.
+    ///
+    /// `value` is the raw bytes to store; `max_len` is the total reserved
+    /// capacity (including the null terminator).  The entry is zero-padded to
+    /// `max_len`.  The method silently drops the entry if the 64 KB capacity
+    /// has already been exhausted.
+    pub(crate) fn create_byte_array(
+        &mut self,
+        name: &str,
+        variability: u8,
+        units: u8,
+        value: &[u8],
+        max_len: usize,
+    ) {
+        let Some(mmap) = self.mmap.as_mut() else {
+            return;
+        };
+        // Reserve at least 1 byte so there is always space for the null terminator.
+        let data_len = max_len.max(1);
+        let mut data = vec![0u8; data_len];
+        // Copy value, leaving at least one zero byte at the end.
+        let copy_len = value.len().min(data_len.saturating_sub(1));
+        data[..copy_len].copy_from_slice(&value[..copy_len]);
+
+        let flags = if name.starts_with("java.") || name.starts_with("com.sun.") {
+            F_SUPPORTED
+        } else {
+            F_NONE
+        };
+        let entry = PerfEntry {
+            name: name.to_string(),
+            data_type: T_BYTE,
+            flags,
+            units,
+            variability,
+            vector_length: data_len as i32,
+            data,
+        };
+        append_entry_to_mmap(mmap, entry);
     }
 }
 
-fn try_create_perf_file(arguments: &Arguments) -> io::Result<PerfFile> {
+/// Appends a serialized `PerfEntry` to the mmap, then updates the `used` and
+/// `num_entries` fields in the prologue.
+fn append_entry_to_mmap(mmap: &mut MmapMut, entry: PerfEntry) {
+    let used = i32::from_ne_bytes(mmap[8..12].try_into().unwrap()) as usize;
+    let num_entries = i32::from_ne_bytes(mmap[28..32].try_into().unwrap());
+
+    let entry_bytes = serialize_entry(&entry);
+    let new_used = used + entry_bytes.len();
+
+    if new_used > PERFDATA_CAPACITY {
+        tracing::warn!(
+            "Perf file capacity exhausted, dropping counter '{}'",
+            entry.name
+        );
+        return;
+    }
+
+    mmap[used..new_used].copy_from_slice(&entry_bytes);
+    // Update prologue: used (offset 8) and num_entries (offset 28).
+    mmap[8..12].copy_from_slice(&(new_used as i32).to_ne_bytes());
+    mmap[28..32].copy_from_slice(&(num_entries + 1).to_ne_bytes());
+    let _ = mmap.flush();
+}
+
+pub(crate) fn try_create_perf_file(arguments: &Arguments) -> io::Result<PerfFile> {
     let pid = std::process::id();
     let perf_dir = get_hsperfdata_dir();
 
@@ -544,4 +614,184 @@ mod tests {
         }
         assert!(found, "sun.rt.jvmCapabilities counter not found");
     }
+
+    // ---- Tests for dynamic counter creation (create_long / create_byte_array) ----
+
+    /// Build a minimal PerfFile backed by a heap-allocated buffer instead of a
+    /// real memory-mapped file, for unit-testing append logic without I/O.
+    fn make_test_perf_file() -> PerfFile {
+        // Allocate an anonymous mmap (no backing file) large enough for the tests.
+        let mut mmap = memmap2::MmapOptions::new()
+            .len(PERFDATA_CAPACITY)
+            .map_anon()
+            .expect("anon mmap failed");
+
+        // Write a valid prologue so the append helpers can read used/num_entries.
+        let prologue_bytes = serialize(vec![]);
+        mmap[..prologue_bytes.len()].copy_from_slice(&prologue_bytes);
+
+        PerfFile {
+            mmap: Some(mmap),
+            path: std::path::PathBuf::new(), // no real path; Drop won't find file
+        }
+    }
+
+    fn read_used(mmap: &[u8]) -> usize {
+        i32::from_ne_bytes(mmap[8..12].try_into().unwrap()) as usize
+    }
+
+    fn read_num_entries(mmap: &[u8]) -> i32 {
+        i32::from_ne_bytes(mmap[28..32].try_into().unwrap())
+    }
+
+    fn read_counter_names(mmap: &[u8]) -> Vec<String> {
+        let total_used = read_used(mmap);
+        let mut pos = PERFDATA_PROLOGUE_SIZE;
+        let mut names = Vec::new();
+        while pos + 4 <= total_used {
+            let entry_len =
+                i32::from_ne_bytes(mmap[pos..pos + 4].try_into().unwrap()) as usize;
+            if entry_len == 0 {
+                break;
+            }
+            let name_off =
+                i32::from_ne_bytes(mmap[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            let name_start = pos + name_off;
+            let null_pos = mmap[name_start..]
+                .iter()
+                .position(|&b| b == 0)
+                .unwrap_or(0);
+            if let Ok(name) = std::str::from_utf8(&mmap[name_start..name_start + null_pos]) {
+                names.push(name.to_string());
+            }
+            pos += entry_len;
+        }
+        names
+    }
+
+    #[test]
+    fn test_create_long_appends_entry() {
+        let mut pf = make_test_perf_file();
+        let mmap_ref = pf.mmap.as_ref().unwrap();
+        let used_before = read_used(mmap_ref);
+        let entries_before = read_num_entries(mmap_ref);
+
+        pf.create_long("sun.os.hrt.frequency", V_CONSTANT, U_HERTZ, 1_000_000_000);
+
+        let mmap_ref = pf.mmap.as_ref().unwrap();
+        let used_after = read_used(mmap_ref);
+        let entries_after = read_num_entries(mmap_ref);
+
+        assert!(used_after > used_before, "used should increase after create_long");
+        assert_eq!(entries_after, entries_before + 1, "num_entries should increase by 1");
+
+        let names = read_counter_names(mmap_ref);
+        assert!(
+            names.contains(&"sun.os.hrt.frequency".to_string()),
+            "counter name not found in mmap"
+        );
+    }
+
+    #[test]
+    fn test_create_long_value_is_stored_correctly() {
+        let mut pf = make_test_perf_file();
+        pf.create_long("java.test.counter", V_CONSTANT, U_TICKS, 0x1234_5678_9abc_def0u64 as i64);
+
+        let mmap_ref = pf.mmap.as_ref().unwrap();
+        let total_used = read_used(mmap_ref);
+        let mut pos = PERFDATA_PROLOGUE_SIZE;
+        let mut found_value: Option<i64> = None;
+
+        while pos + 4 <= total_used {
+            let entry_len =
+                i32::from_ne_bytes(mmap_ref[pos..pos + 4].try_into().unwrap()) as usize;
+            if entry_len == 0 {
+                break;
+            }
+            let name_off =
+                i32::from_ne_bytes(mmap_ref[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            let name_start = pos + name_off;
+            let null_pos = mmap_ref[name_start..].iter().position(|&b| b == 0).unwrap_or(0);
+            let name = std::str::from_utf8(&mmap_ref[name_start..name_start + null_pos]).unwrap_or("");
+            if name == "java.test.counter" {
+                let data_offset =
+                    i32::from_ne_bytes(mmap_ref[pos + 16..pos + 20].try_into().unwrap()) as usize;
+                found_value = Some(i64::from_ne_bytes(
+                    mmap_ref[pos + data_offset..pos + data_offset + 8]
+                        .try_into()
+                        .unwrap(),
+                ));
+            }
+            pos += entry_len;
+        }
+        assert_eq!(
+            found_value,
+            Some(0x1234_5678_9abc_def0u64 as i64),
+            "stored long value mismatch"
+        );
+    }
+
+    #[test]
+    fn test_create_byte_array_appends_entry() {
+        let mut pf = make_test_perf_file();
+        let used_before = read_used(pf.mmap.as_ref().unwrap());
+
+        pf.create_byte_array("java.rt.vmName", V_CONSTANT, U_STRING, b"Rusty JVM", 32);
+
+        let mmap_ref = pf.mmap.as_ref().unwrap();
+        assert!(read_used(mmap_ref) > used_before);
+        let names = read_counter_names(mmap_ref);
+        assert!(names.contains(&"java.rt.vmName".to_string()));
+    }
+
+    #[test]
+    fn test_create_byte_array_respects_max_len() {
+        let mut pf = make_test_perf_file();
+        pf.create_byte_array("sun.rt.javaCommand", V_CONSTANT, U_STRING, b"MyClass", 64);
+
+        let mmap_ref = pf.mmap.as_ref().unwrap();
+        let total_used = read_used(mmap_ref);
+        let mut pos = PERFDATA_PROLOGUE_SIZE;
+
+        while pos + 4 <= total_used {
+            let entry_len =
+                i32::from_ne_bytes(mmap_ref[pos..pos + 4].try_into().unwrap()) as usize;
+            if entry_len == 0 {
+                break;
+            }
+            let name_off =
+                i32::from_ne_bytes(mmap_ref[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            let name_start = pos + name_off;
+            let null_pos = mmap_ref[name_start..].iter().position(|&b| b == 0).unwrap_or(0);
+            let name = std::str::from_utf8(&mmap_ref[name_start..name_start + null_pos]).unwrap_or("");
+            if name == "sun.rt.javaCommand" {
+                let vec_len =
+                    i32::from_ne_bytes(mmap_ref[pos + 8..pos + 12].try_into().unwrap()) as usize;
+                assert_eq!(vec_len, 64, "vector_length should equal max_len");
+
+                let data_offset =
+                    i32::from_ne_bytes(mmap_ref[pos + 16..pos + 20].try_into().unwrap()) as usize;
+                assert_eq!(&mmap_ref[pos + data_offset..pos + data_offset + 7], b"MyClass");
+            }
+            pos += entry_len;
+        }
+    }
+
+    #[test]
+    fn test_multiple_dynamic_entries_accumulate() {
+        let mut pf = make_test_perf_file();
+
+        pf.create_long("sun.gc.policy.maxPauseGap", V_CONSTANT, U_TICKS, 100);
+        pf.create_long("sun.gc.generation.0.space.0.capacity", V_CONSTANT, U_TICKS, 1024 * 1024);
+        pf.create_byte_array("java.rt.vmName", V_CONSTANT, U_STRING, b"Rusty JVM", 32);
+
+        let mmap_ref = pf.mmap.as_ref().unwrap();
+        assert_eq!(read_num_entries(mmap_ref), 3);
+
+        let names = read_counter_names(mmap_ref);
+        assert!(names.contains(&"sun.gc.policy.maxPauseGap".to_string()));
+        assert!(names.contains(&"sun.gc.generation.0.space.0.capacity".to_string()));
+        assert!(names.contains(&"java.rt.vmName".to_string()));
+    }
 }
+

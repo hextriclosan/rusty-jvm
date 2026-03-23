@@ -74,6 +74,11 @@ use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_pro
 use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
+use crate::vm::system_native::perf::{
+    perf_attach0_wrp, perf_create_byte_array_wrp, perf_create_long_wrp, perf_create_string_wrp,
+    perf_detach_wrp, perf_high_res_counter_wrp, perf_high_res_frequency_wrp,
+    perf_register_natives_wrp,
+};
 use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
     compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp,
@@ -742,6 +747,39 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/io/UnixFileSystem:checkAccess0:(Ljava/io/File;I)Z",
         Basic(check_access0_wrp),
+    );
+    // jdk.internal.perf.Perf native methods
+    table.insert(
+        "jdk/internal/perf/Perf:registerNatives:()V",
+        Basic(perf_register_natives_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:createLong:(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
+        Basic(perf_create_long_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:createByteArray:(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
+        Basic(perf_create_byte_array_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:createString:(Ljava/lang/String;IILjava/lang/String;I)Ljava/nio/ByteBuffer;",
+        Basic(perf_create_string_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:highResCounter:()J",
+        Basic(perf_high_res_counter_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:highResFrequency:()J",
+        Basic(perf_high_res_frequency_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:attach0:(I)Ljava/nio/ByteBuffer;",
+        Basic(perf_attach0_wrp),
+    );
+    table.insert(
+        "jdk/internal/perf/Perf:detach:(Ljava/nio/ByteBuffer;)V",
+        Basic(perf_detach_wrp),
     );
     table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
     table.insert("sun/nio/ch/IOUtil:iovMax:()I", Basic(iov_max_wrp));
