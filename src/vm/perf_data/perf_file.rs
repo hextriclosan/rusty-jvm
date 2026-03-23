@@ -1,4 +1,7 @@
 use crate::Arguments;
+use memmap2::MmapMut;
+use std::fs::OpenOptions;
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, fs, io};
 
@@ -28,6 +31,11 @@ const PERFDATA_ENTRY_HEADER_SIZE: usize = 20;
 // The `used` field in the prologue records how many bytes are actually in use.
 const PERFDATA_CAPACITY: usize = 64 * 1024;
 
+// jvmCapabilities is a 64-character string where each position is '0' or '1'.
+// Position 0: isAttachable (JVMTI attach mechanism supported).
+// rusty-jvm does not implement the attach mechanism, so all positions are '0'.
+const JVM_CAPABILITIES: &str = "0000000000000000000000000000000000000000000000000000000000000000";
+
 // Units
 const U_TICKS: u8 = 3;
 const U_STRING: u8 = 5;
@@ -47,23 +55,67 @@ const T_LONG: u8 = b'J'; // for long values
 const PERF_DIR_PREFIX: &str = "hsperfdata";
 const PERFDATA_MAX_STRING_LEN: usize = 1024;
 
-pub(crate) fn create_perf_file(arguments: &Arguments) {
-    if let Err(e) = try_create_perf_file(arguments) {
-        tracing::warn!("Failed to create perf file: {e}");
+/// Handle to a live perf (hsperfdata) file.
+///
+/// The file is memory-mapped for the lifetime of this handle — matching how
+/// OpenJDK manages its own hsperfdata file.  When the handle is dropped (i.e.
+/// when the JVM exits), the mapping is flushed, unmapped, and the file is
+/// deleted, so that `jps` / VisualVM no longer list the process.
+pub(crate) struct PerfFile {
+    mmap: Option<MmapMut>,
+    path: PathBuf,
+}
+
+impl Drop for PerfFile {
+    fn drop(&mut self) {
+        // Flush and unmap before removing the file (important on Windows,
+        // where you cannot delete a file that has an open mapping).
+        drop(self.mmap.take());
+        let _ = fs::remove_file(&self.path);
     }
 }
 
-fn try_create_perf_file(arguments: &Arguments) -> io::Result<()> {
+pub(crate) fn create_perf_file(arguments: &Arguments) -> Option<PerfFile> {
+    match try_create_perf_file(arguments) {
+        Ok(pf) => Some(pf),
+        Err(e) => {
+            tracing::warn!("Failed to create perf file: {e}");
+            None
+        }
+    }
+}
+
+fn try_create_perf_file(arguments: &Arguments) -> io::Result<PerfFile> {
     let pid = std::process::id();
     let perf_dir = get_hsperfdata_dir();
 
     fs::create_dir_all(&perf_dir)?;
 
     let file_path = perf_dir.join(pid.to_string());
-    let data = build_perf_data(arguments);
-    fs::write(&file_path, &data)?;
 
-    Ok(())
+    // Create / truncate the file and extend it to PERFDATA_CAPACITY bytes so
+    // that the JDK's native Perf.attach() can mmap it (it requires the file
+    // size to be a non-zero multiple of the OS page size).
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&file_path)?;
+    file.set_len(PERFDATA_CAPACITY as u64)?;
+
+    // SAFETY: We just created this file and hold the only file descriptor.
+    // No other process should be mapping it yet.
+    let mut mmap = unsafe { MmapMut::map_mut(&file)? };
+
+    let data = build_perf_data(arguments);
+    mmap[..data.len()].copy_from_slice(&data);
+    mmap.flush()?;
+
+    Ok(PerfFile {
+        mmap: Some(mmap),
+        path: file_path,
+    })
 }
 
 fn get_hsperfdata_dir() -> std::path::PathBuf {
@@ -149,6 +201,7 @@ fn make_long_entry(name: &str, value: i64, units: u8, variability: u8) -> PerfEn
 fn build_perf_data(arguments: &Arguments) -> Vec<u8> {
     let mut entries: Vec<PerfEntry> = Vec::new();
 
+    // --- runtime ---
     let java_command = {
         let mut cmd = arguments.entry_point().clone();
         for arg in arguments.program_args() {
@@ -159,28 +212,54 @@ fn build_perf_data(arguments: &Arguments) -> Vec<u8> {
     };
     entries.push(make_string_entry("sun.rt.javaCommand", &java_command, V_CONSTANT));
 
+    // NOTE: JDK 9+ uses java.rt.vmArgs / java.rt.vmFlags (not sun.rt.*).
+    // MonitoredVmUtil.jvmArgs() / jvmFlags() in JDK 17 read the java.rt.* names.
     let vm_args = arguments.jvm_options().join(" ");
-    entries.push(make_string_entry("sun.rt.vmArgs", &vm_args, V_CONSTANT));
+    entries.push(make_string_entry("java.rt.vmArgs", &vm_args, V_CONSTANT));
 
     let vm_flags = arguments.advanced_jvm_options().join(" ");
-    entries.push(make_string_entry("sun.rt.vmFlags", &vm_flags, V_CONSTANT));
+    entries.push(make_string_entry("java.rt.vmFlags", &vm_flags, V_CONSTANT));
 
-    entries.push(make_string_entry(
-        "java.rt.vmName",
-        "rusty-jvm",
-        V_CONSTANT,
-    ));
-    entries.push(make_string_entry(
-        "java.rt.vmVendor",
-        "rusty-jvm",
-        V_CONSTANT,
-    ));
+    entries.push(make_string_entry("java.rt.vmName", "Rusty JVM", V_CONSTANT));
+    entries.push(make_string_entry("java.rt.vmVendor", "rusty-jvm", V_CONSTANT));
     entries.push(make_string_entry(
         "java.rt.vmVersion",
         env!("CARGO_PKG_VERSION"),
         V_CONSTANT,
     ));
 
+    // jvmCapabilities: 64-char string, position 0 = isAttachable.
+    // rusty-jvm does not implement the JVMTI attach mechanism, so all zeros.
+    entries.push(make_string_entry(
+        "sun.rt.jvmCapabilities",
+        JVM_CAPABILITIES,
+        V_CONSTANT,
+    ));
+
+    // java.property.* counters used by VisualVM's overview panel and
+    // MonitoredVmUtil.vmVersion().
+    entries.push(make_string_entry(
+        "java.property.java.vm.name",
+        "Rusty JVM",
+        V_CONSTANT,
+    ));
+    entries.push(make_string_entry(
+        "java.property.java.vm.vendor",
+        "rusty-jvm",
+        V_CONSTANT,
+    ));
+    entries.push(make_string_entry(
+        "java.property.java.vm.version",
+        env!("CARGO_PKG_VERSION"),
+        V_CONSTANT,
+    ));
+    entries.push(make_string_entry(
+        "java.property.java.vm.info",
+        "interpreted mode",
+        V_CONSTANT,
+    ));
+
+    // --- HRT / timing ---
     entries.push(make_long_entry(
         "sun.os.hrt.frequency",
         1_000_000_000,
@@ -210,12 +289,7 @@ fn serialize(entries: Vec<PerfEntry>) -> Vec<u8> {
     let entries_total_size: usize = entry_bufs.iter().map(|b| b.len()).sum();
     let total_used = (PERFDATA_PROLOGUE_SIZE + entries_total_size) as i32;
 
-    // The file must be at least PERFDATA_CAPACITY bytes.
-    // The native Perf.attach() rejects files whose size is not a multiple of the OS
-    // page size; using 64 KB matches OpenJDK's default PerfDataMemorySize.
-    let file_size = PERFDATA_CAPACITY.max(total_used as usize);
-
-    let mut buf = Vec::with_capacity(file_size);
+    let mut buf = Vec::with_capacity(PERFDATA_PROLOGUE_SIZE + entries_total_size);
 
     // PerfDataPrologue (32 bytes)
     buf.extend_from_slice(&PERFDATA_MAGIC.to_ne_bytes()); // magic
@@ -235,9 +309,8 @@ fn serialize(entries: Vec<PerfEntry>) -> Vec<u8> {
         buf.extend_from_slice(&entry_buf);
     }
 
-    // Pad to file_size with zeros so the file size is a page-size multiple
-    buf.resize(file_size, 0u8);
-
+    // The caller (try_create_perf_file) writes this into a PERFDATA_CAPACITY-byte
+    // mmap; the remaining bytes are already zeroed by the OS.
     buf
 }
 
@@ -287,24 +360,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_file_size_is_capacity() {
-        let entries: Vec<PerfEntry> = Vec::new();
-        let data = serialize(entries);
-        assert_eq!(data.len(), PERFDATA_CAPACITY);
-    }
-
-    #[test]
-    fn test_prologue_at_start_of_capacity_file() {
-        let entries: Vec<PerfEntry> = Vec::new();
-        let data = serialize(entries);
-        // used = PERFDATA_PROLOGUE_SIZE (only the header when no entries)
-        let used = i32::from_ne_bytes(data[8..12].try_into().unwrap());
-        assert_eq!(used as usize, PERFDATA_PROLOGUE_SIZE);
-        // rest of file is zeros
-        assert!(data[PERFDATA_PROLOGUE_SIZE..].iter().all(|&b| b == 0));
-    }
-
-    #[test]
     fn test_magic_bytes() {
         let entries: Vec<PerfEntry> = Vec::new();
         let data = serialize(entries);
@@ -331,9 +386,16 @@ mod tests {
     fn test_entry_offset() {
         let entries: Vec<PerfEntry> = Vec::new();
         let data = serialize(entries);
-        let entry_offset =
-            i32::from_ne_bytes(data[24..28].try_into().unwrap());
+        let entry_offset = i32::from_ne_bytes(data[24..28].try_into().unwrap());
         assert_eq!(entry_offset, PERFDATA_PROLOGUE_SIZE as i32);
+    }
+
+    #[test]
+    fn test_used_equals_prologue_when_no_entries() {
+        let entries: Vec<PerfEntry> = Vec::new();
+        let data = serialize(entries);
+        let used = i32::from_ne_bytes(data[8..12].try_into().unwrap());
+        assert_eq!(used as usize, PERFDATA_PROLOGUE_SIZE);
     }
 
     #[test]
@@ -358,7 +420,8 @@ mod tests {
         assert_eq!(buf[15], V_CONSTANT);
 
         // name starts at name_offset
-        let name_bytes = &buf[name_offset as usize..name_offset as usize + "sun.rt.javaCommand".len()];
+        let name_bytes =
+            &buf[name_offset as usize..name_offset as usize + "sun.rt.javaCommand".len()];
         assert_eq!(name_bytes, b"sun.rt.javaCommand");
     }
 
@@ -388,7 +451,7 @@ mod tests {
 
     #[test]
     fn test_supported_flag_for_java_namespace() {
-        let entry = make_string_entry("java.rt.vmName", "rusty-jvm", V_CONSTANT);
+        let entry = make_string_entry("java.rt.vmName", "Rusty JVM", V_CONSTANT);
         let buf = serialize_entry(&entry);
         assert_eq!(buf[13], F_SUPPORTED); // flags byte
     }
@@ -407,6 +470,78 @@ mod tests {
 
         // num_entries is at offset 28
         let num_entries = i32::from_ne_bytes(data[28..32].try_into().unwrap());
-        assert_eq!(num_entries, 8); // 8 entries total
+        // 3 runtime strings (javaCommand, vmArgs, vmFlags)
+        // + 3 java.rt strings (vmName, vmVendor, vmVersion)
+        // + 1 sun.rt.jvmCapabilities
+        // + 4 java.property strings (vm.name, vm.vendor, vm.version, vm.info)
+        // + 2 longs (hrt.frequency, createVmBeginTime)
+        assert_eq!(num_entries, 13);
+    }
+
+    #[test]
+    fn test_vm_args_counter_uses_java_rt_namespace() {
+        let arguments = Arguments::new_with_entry_point("MainClass".to_string());
+        let data = build_perf_data(&arguments);
+
+        // Scan all entries for the vmArgs counter name
+        let entry_offset = PERFDATA_PROLOGUE_SIZE;
+        let total_used = i32::from_ne_bytes(data[8..12].try_into().unwrap()) as usize;
+        let mut pos = entry_offset;
+        let mut found_java_rt = false;
+        let mut found_sun_rt = false;
+        while pos < total_used {
+            let entry_len = i32::from_ne_bytes(data[pos..pos + 4].try_into().unwrap()) as usize;
+            if entry_len == 0 {
+                break;
+            }
+            let name_offset = i32::from_ne_bytes(data[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            let name_start = pos + name_offset;
+            let name_end = data[name_start..].iter().position(|&b| b == 0).unwrap_or(0) + name_start;
+            let name = std::str::from_utf8(&data[name_start..name_end]).unwrap_or("");
+            if name == "java.rt.vmArgs" {
+                found_java_rt = true;
+            }
+            if name == "sun.rt.vmArgs" {
+                found_sun_rt = true;
+            }
+            pos += entry_len;
+        }
+        assert!(found_java_rt, "java.rt.vmArgs counter not found");
+        assert!(!found_sun_rt, "old sun.rt.vmArgs counter should not be present");
+    }
+
+    #[test]
+    fn test_jvm_capabilities_present() {
+        let arguments = Arguments::new_with_entry_point("MainClass".to_string());
+        let data = build_perf_data(&arguments);
+
+        let entry_offset = PERFDATA_PROLOGUE_SIZE;
+        let total_used = i32::from_ne_bytes(data[8..12].try_into().unwrap()) as usize;
+        let mut pos = entry_offset;
+        let mut found = false;
+        while pos < total_used {
+            let entry_len = i32::from_ne_bytes(data[pos..pos + 4].try_into().unwrap()) as usize;
+            if entry_len == 0 {
+                break;
+            }
+            let name_offset = i32::from_ne_bytes(data[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            let name_start = pos + name_offset;
+            let name_end = data[name_start..].iter().position(|&b| b == 0).unwrap_or(0) + name_start;
+            let name = std::str::from_utf8(&data[name_start..name_end]).unwrap_or("");
+            if name == "sun.rt.jvmCapabilities" {
+                found = true;
+                // Verify the value is exactly 64 ASCII chars ('0' or '1')
+                let data_offset = i32::from_ne_bytes(data[pos + 16..pos + 20].try_into().unwrap()) as usize;
+                let vec_len = i32::from_ne_bytes(data[pos + 8..pos + 12].try_into().unwrap()) as usize;
+                assert_eq!(vec_len, 65, "jvmCapabilities vector_length should be 65 (64 chars + null)");
+                let cap_bytes = &data[pos + data_offset..pos + data_offset + 64];
+                assert!(
+                    cap_bytes.iter().all(|&b| b == b'0' || b == b'1'),
+                    "jvmCapabilities must contain only '0' or '1' characters"
+                );
+            }
+            pos += entry_len;
+        }
+        assert!(found, "sun.rt.jvmCapabilities counter not found");
     }
 }

@@ -59,7 +59,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 
     init_system_properties(arguments.system_properties().clone())?;
 
-    perf_data::create_perf_file(arguments);
+    let _perf_file = perf_data::create_perf_file(arguments);
 
     prelude()?;
 

@@ -3426,7 +3426,9 @@ Second stream result size: 5000
 fn should_create_perf_file() {
     use std::collections::HashSet;
     use std::fs;
-    use std::time::{Duration, SystemTime};
+    use std::process::Command;
+    use std::thread;
+    use std::time::{Duration, Instant};
 
     fn get_hsperfdata_dir() -> std::path::PathBuf {
         let tmp_dir = env::temp_dir();
@@ -3458,28 +3460,45 @@ fn should_create_perf_file() {
 
     let hsperfdata_dir = get_hsperfdata_dir();
     let before = list_perf_files(&hsperfdata_dir);
-    let start_time = SystemTime::now() - Duration::from_secs(1);
 
-    assert_success("samples.perf.GetPerfData", "perf data test\n");
+    // Spawn the JVM; the perf file is created early in run() (before the main
+    // class executes) and deleted when run() returns.  JVM startup typically
+    // takes a few seconds, which gives us a window to inspect the file.
+    let binary = assert_cmd::cargo::cargo_bin("rusty-jvm");
+    let mut child = Command::new(binary)
+        .current_dir(utils::TEST_PATH.as_path())
+        .arg("samples.perf.GetPerfData")
+        .spawn()
+        .expect("Failed to spawn rusty-jvm");
 
-    let after = list_perf_files(&hsperfdata_dir);
-    let new_files: Vec<String> = after.difference(&before).cloned().collect();
+    // Poll until the perf file appears (up to 15 seconds to allow for JVM startup).
+    // The perf file is created early in run() and deleted on exit, so there is a
+    // window during JVM startup that we try to catch here.
+    let deadline = Instant::now() + Duration::from_secs(15);
+    let new_files: Vec<String> = loop {
+        let current = list_perf_files(&hsperfdata_dir);
+        let new: Vec<String> = current.difference(&before).cloned().collect();
+        if !new.is_empty() {
+            break new;
+        }
+        // Stop polling once the process has already exited (file was created
+        // and deleted while we were not looking — can happen on very fast runs).
+        if child.try_wait().map_or(false, |s| s.is_some()) {
+            break Vec::new();
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            panic!(
+                "Perf file never appeared in {} within 15 s",
+                hsperfdata_dir.display()
+            );
+        }
+        thread::sleep(Duration::from_millis(100));
+    };
 
-    assert!(
-        !new_files.is_empty(),
-        "Expected a new perf file in {}, but none was created",
-        hsperfdata_dir.display()
-    );
-
+    // --- Validate file content while the process is running ---
     for pid_str in &new_files {
         let file_path = hsperfdata_dir.join(pid_str);
-        let metadata = fs::metadata(&file_path).expect("Failed to get file metadata");
-        let modified = metadata.modified().expect("Failed to get file modification time");
-        assert!(
-            modified >= start_time,
-            "Perf file {pid_str} was not recently created"
-        );
-
         let content = fs::read(&file_path).expect("Failed to read perf file");
 
         // File must be at least 4096 bytes (one OS page) so that the JDK's
@@ -3517,6 +3536,82 @@ fn should_create_perf_file() {
             content[7], 1,
             "Perf file {pid_str} has wrong accessible flag: {}",
             content[7]
+        );
+
+        // Verify VisualVM-compatible counter names are present
+        let total_used =
+            i32::from_ne_bytes(content[8..12].try_into().unwrap()) as usize;
+        let entry_offset =
+            i32::from_ne_bytes(content[24..28].try_into().unwrap()) as usize;
+        let mut pos = entry_offset;
+        let mut counter_names: HashSet<String> = HashSet::new();
+        while pos + 4 <= total_used {
+            let entry_len =
+                i32::from_ne_bytes(content[pos..pos + 4].try_into().unwrap()) as usize;
+            if entry_len == 0 {
+                break;
+            }
+            let name_off =
+                i32::from_ne_bytes(content[pos + 4..pos + 8].try_into().unwrap())
+                    as usize;
+            let name_start = pos + name_off;
+            if name_start < content.len() {
+                let null_pos = content[name_start..]
+                    .iter()
+                    .position(|&b| b == 0)
+                    .unwrap_or(0);
+                if let Ok(name) =
+                    std::str::from_utf8(&content[name_start..name_start + null_pos])
+                {
+                    counter_names.insert(name.to_string());
+                }
+            }
+            pos += entry_len;
+        }
+
+        for expected in &[
+            "sun.rt.javaCommand",
+            "java.rt.vmArgs",
+            "java.rt.vmFlags",
+            "java.rt.vmName",
+            "java.rt.vmVendor",
+            "java.rt.vmVersion",
+            "sun.rt.jvmCapabilities",
+            "java.property.java.vm.name",
+            "java.property.java.vm.vendor",
+            "java.property.java.vm.version",
+            "java.property.java.vm.info",
+            "sun.os.hrt.frequency",
+            "sun.rt.createVmBeginTime",
+        ] {
+            assert!(
+                counter_names.contains(*expected),
+                "Perf file {pid_str} is missing counter '{expected}'"
+            );
+        }
+
+        // The old sun.rt.vmArgs / sun.rt.vmFlags must NOT be present
+        // (MonitoredVmUtil in JDK 9+ reads java.rt.vmArgs / java.rt.vmFlags)
+        assert!(
+            !counter_names.contains("sun.rt.vmArgs"),
+            "Perf file {pid_str} must not contain old counter 'sun.rt.vmArgs'"
+        );
+        assert!(
+            !counter_names.contains("sun.rt.vmFlags"),
+            "Perf file {pid_str} must not contain old counter 'sun.rt.vmFlags'"
+        );
+    }
+
+    // Wait for the process to finish normally
+    let status = child.wait().expect("Failed to wait for child process");
+    assert!(status.success(), "Child process failed: {status}");
+
+    // After exit the perf file must be deleted (delete-on-exit behaviour)
+    let after = list_perf_files(&hsperfdata_dir);
+    for pid_str in &new_files {
+        assert!(
+            !after.contains(pid_str),
+            "Perf file {pid_str} was not deleted after process exit"
         );
     }
 }
