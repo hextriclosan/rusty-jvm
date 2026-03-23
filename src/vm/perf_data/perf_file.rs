@@ -63,7 +63,11 @@ fn try_create_perf_file(arguments: &Arguments) -> io::Result<()> {
 fn get_hsperfdata_dir() -> std::path::PathBuf {
     let tmp_dir = env::temp_dir();
     let username = get_username();
-    tmp_dir.join(format!("{}_{}", PERF_DIR_PREFIX, username))
+    let safe_username: String = username
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .collect();
+    tmp_dir.join(format!("{}_{}", PERF_DIR_PREFIX, safe_username))
 }
 
 fn get_username() -> String {
