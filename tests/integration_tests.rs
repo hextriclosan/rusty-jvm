@@ -3481,9 +3481,13 @@ fn should_create_perf_file() {
         );
 
         let content = fs::read(&file_path).expect("Failed to read perf file");
+
+        // File must be at least 4096 bytes (one OS page) so that the JDK's
+        // native Perf.attach() can mmap it without "Invalid PerfMemory size".
+        // We use 64 KB (OpenJDK's default PerfDataMemorySize).
         assert!(
-            content.len() >= 8,
-            "Perf file {pid_str} is too small: {} bytes",
+            content.len() >= 4096 && content.len() % 4096 == 0,
+            "Perf file {pid_str} size {} is not a page-aligned multiple (required by native Perf.attach())",
             content.len()
         );
 

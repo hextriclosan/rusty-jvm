@@ -22,6 +22,12 @@ const PERFDATA_BYTE_ORDER: u8 = 0;
 const PERFDATA_PROLOGUE_SIZE: usize = 32;
 const PERFDATA_ENTRY_HEADER_SIZE: usize = 20;
 
+// The perf file must be a multiple of the OS page size.
+// OpenJDK's native Perf.attach() checks: size >= page_size && size % page_size == 0.
+// We use 64 KB (OpenJDK's default PerfDataMemorySize) as the file capacity.
+// The `used` field in the prologue records how many bytes are actually in use.
+const PERFDATA_CAPACITY: usize = 64 * 1024;
+
 // Units
 const U_TICKS: u8 = 3;
 const U_STRING: u8 = 5;
@@ -204,7 +210,12 @@ fn serialize(entries: Vec<PerfEntry>) -> Vec<u8> {
     let entries_total_size: usize = entry_bufs.iter().map(|b| b.len()).sum();
     let total_used = (PERFDATA_PROLOGUE_SIZE + entries_total_size) as i32;
 
-    let mut buf = Vec::with_capacity(PERFDATA_PROLOGUE_SIZE + entries_total_size);
+    // The file must be at least PERFDATA_CAPACITY bytes.
+    // The native Perf.attach() rejects files whose size is not a multiple of the OS
+    // page size; using 64 KB matches OpenJDK's default PerfDataMemorySize.
+    let file_size = PERFDATA_CAPACITY.max(total_used as usize);
+
+    let mut buf = Vec::with_capacity(file_size);
 
     // PerfDataPrologue (32 bytes)
     buf.extend_from_slice(&PERFDATA_MAGIC.to_ne_bytes()); // magic
@@ -212,7 +223,7 @@ fn serialize(entries: Vec<PerfEntry>) -> Vec<u8> {
     buf.push(PERFDATA_MAJOR_VERSION); // major_version
     buf.push(PERFDATA_MINOR_VERSION); // minor_version
     buf.push(1u8); // accessible = 1 (data is valid)
-    buf.extend_from_slice(&total_used.to_ne_bytes()); // used
+    buf.extend_from_slice(&total_used.to_ne_bytes()); // used (actual bytes in use)
     buf.extend_from_slice(&0i32.to_ne_bytes()); // overflow
     buf.extend_from_slice(&0i64.to_ne_bytes()); // mod_time_stamp
     buf.extend_from_slice(&entry_offset.to_ne_bytes()); // entry_offset
@@ -223,6 +234,9 @@ fn serialize(entries: Vec<PerfEntry>) -> Vec<u8> {
     for entry_buf in entry_bufs {
         buf.extend_from_slice(&entry_buf);
     }
+
+    // Pad to file_size with zeros so the file size is a page-size multiple
+    buf.resize(file_size, 0u8);
 
     buf
 }
@@ -273,10 +287,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_prologue_size() {
+    fn test_file_size_is_capacity() {
         let entries: Vec<PerfEntry> = Vec::new();
         let data = serialize(entries);
-        assert_eq!(data.len(), PERFDATA_PROLOGUE_SIZE);
+        assert_eq!(data.len(), PERFDATA_CAPACITY);
+    }
+
+    #[test]
+    fn test_prologue_at_start_of_capacity_file() {
+        let entries: Vec<PerfEntry> = Vec::new();
+        let data = serialize(entries);
+        // used = PERFDATA_PROLOGUE_SIZE (only the header when no entries)
+        let used = i32::from_ne_bytes(data[8..12].try_into().unwrap());
+        assert_eq!(used as usize, PERFDATA_PROLOGUE_SIZE);
+        // rest of file is zeros
+        assert!(data[PERFDATA_PROLOGUE_SIZE..].iter().all(|&b| b == 0));
     }
 
     #[test]
