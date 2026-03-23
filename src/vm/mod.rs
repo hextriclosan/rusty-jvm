@@ -7,6 +7,7 @@ mod helper;
 mod jni;
 mod launcher;
 mod method_area;
+mod perf_data;
 mod properties;
 mod stack;
 mod system_native;
@@ -57,6 +58,8 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     validate_class_name(main_class_name)?;
 
     init_system_properties(arguments.system_properties().clone())?;
+
+    perf_data::create_perf_file(arguments);
 
     prelude()?;
 

@@ -3421,3 +3421,98 @@ Second stream result size: 5000
 "#,
     );
 }
+
+#[test]
+fn should_create_perf_file() {
+    use std::collections::HashSet;
+    use std::fs;
+    use std::time::{Duration, SystemTime};
+
+    fn get_hsperfdata_dir() -> std::path::PathBuf {
+        let tmp_dir = env::temp_dir();
+        #[cfg(not(target_os = "windows"))]
+        let username = env::var("USER")
+            .or_else(|_| env::var("LOGNAME"))
+            .unwrap_or_else(|_| "user".to_string());
+        #[cfg(target_os = "windows")]
+        let username = env::var("USERNAME").unwrap_or_else(|_| "user".to_string());
+        tmp_dir.join(format!("hsperfdata_{}", username))
+    }
+
+    fn list_perf_files(dir: &std::path::Path) -> HashSet<String> {
+        fs::read_dir(dir)
+            .map(|entries| {
+                entries
+                    .filter_map(|e| e.ok())
+                    .filter(|e| {
+                        e.file_name()
+                            .to_string_lossy()
+                            .chars()
+                            .all(|c| c.is_ascii_digit())
+                    })
+                    .map(|e| e.file_name().to_string_lossy().to_string())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    let hsperfdata_dir = get_hsperfdata_dir();
+    let before = list_perf_files(&hsperfdata_dir);
+    let start_time = SystemTime::now() - Duration::from_secs(1);
+
+    assert_success("samples.perf.GetPerfData", "perf data test\n");
+
+    let after = list_perf_files(&hsperfdata_dir);
+    let new_files: Vec<String> = after.difference(&before).cloned().collect();
+
+    assert!(
+        !new_files.is_empty(),
+        "Expected a new perf file in {}, but none was created",
+        hsperfdata_dir.display()
+    );
+
+    for pid_str in &new_files {
+        let file_path = hsperfdata_dir.join(pid_str);
+        let metadata = fs::metadata(&file_path).expect("Failed to get file metadata");
+        let modified = metadata.modified().expect("Failed to get file modification time");
+        assert!(
+            modified >= start_time,
+            "Perf file {pid_str} was not recently created"
+        );
+
+        let content = fs::read(&file_path).expect("Failed to read perf file");
+        assert!(
+            content.len() >= 8,
+            "Perf file {pid_str} is too small: {} bytes",
+            content.len()
+        );
+
+        // Magic bytes must always be {0xca, 0xfe, 0xc0, 0xc0}
+        assert_eq!(
+            &content[0..4],
+            &[0xca, 0xfe, 0xc0, 0xc0],
+            "Perf file {pid_str} has wrong magic bytes"
+        );
+
+        // byte_order must be 0 (big-endian) or 1 (little-endian)
+        assert!(
+            content[4] == 0 || content[4] == 1,
+            "Perf file {pid_str} has invalid byte_order: {}",
+            content[4]
+        );
+
+        // major_version must be 2
+        assert_eq!(
+            content[5], 2,
+            "Perf file {pid_str} has wrong major_version: {}",
+            content[5]
+        );
+
+        // accessible must be 1
+        assert_eq!(
+            content[7], 1,
+            "Perf file {pid_str} has wrong accessible flag: {}",
+            content[7]
+        );
+    }
+}
