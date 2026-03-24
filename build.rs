@@ -72,6 +72,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeUsage.java",
         "UnsafeObjectFieldOffset.java",
         "UnsafePutReferenceVolatileExample.java",
+        "UserPerfCounterExample.java",
     ];
 
     let mut normal_files = Vec::new();
@@ -159,6 +160,16 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "-d",
             ],
             "UnsafePutReferenceVolatileExample.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.perf=ALL-UNNAMED",
+                "--add-exports",
+                "java.management/sun.management.counter=ALL-UNNAMED",
+                "-d",
+            ],
+            "UserPerfCounterExample.java",
         ),
     ];
 

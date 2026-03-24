@@ -3421,3 +3421,16 @@ Second stream result size: 5000
 "#,
     );
 }
+
+#[test]
+fn should_create_and_use_perf_counter() {
+    assert_success(
+        "samples.perf.userperfcounterexample.UserPerfCounterExample",
+        r#"my.counter = 0
+my.counter = 10
+my.counter = 110
+my.counter = 111
+Created string: hello-perf
+"#,
+    );
+}

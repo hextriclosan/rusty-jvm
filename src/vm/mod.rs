@@ -7,6 +7,7 @@ mod helper;
 mod jni;
 mod launcher;
 mod method_area;
+mod perf_data;
 mod properties;
 mod stack;
 mod system_native;
@@ -20,6 +21,7 @@ use crate::vm::launcher::resolve_and_execute_main_method;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
+use crate::vm::perf_data::init_perf_file;
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
@@ -57,6 +59,8 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     validate_class_name(main_class_name)?;
 
     init_system_properties(arguments.system_properties().clone())?;
+
+    init_perf_file(arguments)?;
 
     prelude()?;
 
