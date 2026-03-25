@@ -237,7 +237,7 @@ impl PerfFile {
 
 fn get_hsperfdata_dir() -> Result<PathBuf> {
     let tmp_dir = env::temp_dir();
-    let username = whoami::username()?;
+    let username = resolve_username()?;
     let safe_username: String = username
         .chars()
         .map(|c| {
@@ -333,4 +333,14 @@ fn time_stamp_ns() -> Result<i64> {
     Ok(std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_nanos() as i64)
+}
+
+fn resolve_username() -> Result<String> {
+    if let Ok(username) = whoami::username() {
+        return Ok(username);
+    }
+
+    // Fallbacks
+    let username = env::var("USER").or_else(|_| env::var("LOGNAME"))?;
+    Ok(username)
 }

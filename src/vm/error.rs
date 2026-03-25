@@ -8,6 +8,7 @@ use miniz_oxide::MZError;
 use num_enum::TryFromPrimitiveError;
 use rand::rngs::SysError;
 use std::array::TryFromSliceError;
+use std::env::VarError;
 use std::error::Error as StdError;
 use std::ffi::{NulError, OsString};
 use std::fmt::{Debug, Display, Formatter};
@@ -179,6 +180,12 @@ impl From<GetTimezoneError> for Error {
 impl From<whoami::Error> for Error {
     fn from(error: whoami::Error) -> Self {
         Error::new_execution(&format!("whoami::Error: {error}"))
+    }
+}
+
+impl From<VarError> for Error {
+    fn from(error: VarError) -> Self {
+        Error::new_execution(&format!("VarError: {error}"))
     }
 }
 
