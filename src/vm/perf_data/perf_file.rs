@@ -7,6 +7,8 @@ use memmap2::MmapMut;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 use std::fs::OpenOptions;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{env, fs};
 
@@ -162,6 +164,9 @@ impl PerfFile {
             .open(&file_path)?;
         file.set_len(*PERFDATA_CAPACITY as u64)?;
 
+        #[cfg(unix)]
+        file.set_permissions(fs::Permissions::from_mode(0o600))?; // rw------- permissions for security
+
         // SAFETY: We just created this file and hold the only file descriptor.
         // No other process should be mapping it yet.
         let mut mmap = unsafe { MmapMut::map_mut(&file)? };
@@ -240,10 +245,7 @@ impl PerfFile {
         let _ = mmap.flush()?;
 
         self.names.insert(entry.name);
-        Ok((
-            mmap[data_offset..data_offset].as_ptr(),
-            data_end - data_offset,
-        ))
+        Ok((mmap[data_offset..data_end].as_ptr(), data_end - data_offset))
     }
 
     pub(crate) fn contains_name(&self, name: &str) -> bool {

@@ -53,7 +53,7 @@ fn perf_create_long(
         && variability != VVariable as i32
     {
         throw_and_return!(throw_illegal_argument_exception(
-            &format!("Invalid variability: {units}"),
+            &format!("Invalid variability: {variability}"),
             stack_frames
         ))
     }
@@ -123,7 +123,7 @@ fn perf_create_byte_array(
 
     if variability != VConstant as i32 && variability != VVariable as i32 {
         throw_and_return!(throw_illegal_argument_exception(
-            &format!("Invalid variability: {units}"),
+            &format!("Invalid variability: {variability}"),
             stack_frames
         ))
     }
