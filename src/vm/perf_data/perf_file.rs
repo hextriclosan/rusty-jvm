@@ -4,12 +4,21 @@ use crate::vm::perf_data::perf_file::Flags::{FNone, FSupported};
 use crate::vm::perf_data::perf_file::Units::UString;
 use crate::vm::perf_data::perf_file::Variability::VConstant;
 use memmap2::MmapMut;
+use once_cell::sync::Lazy;
+use std::collections::HashSet;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use std::{env, fs};
 
-const PERFDATA_CAPACITY: usize = 32 * 1024; // 32 KB
-
+static PERFDATA_CAPACITY: Lazy<usize> = Lazy::new(|| {
+    let base = 32 * 1024; // 32 KB
+    let page_size = page_size::get();
+    if base % page_size == 0 {
+        base
+    } else {
+        base + page_size - (base % page_size) // round up to page size
+    }
+});
 #[cfg(target_endian = "little")]
 const PERFDATA_MAGIC: i32 = 0xc0c0fecau32 as i32;
 #[cfg(target_endian = "big")]
@@ -101,7 +110,7 @@ enum DataTypes {
 
 #[repr(u8)]
 #[allow(dead_code)]
-enum Units {
+pub enum Units {
     UNone = 1,
     UBytes = 2,
     UTicks = 3,
@@ -112,7 +121,7 @@ enum Units {
 
 #[repr(u8)]
 #[allow(dead_code)]
-enum Variability {
+pub enum Variability {
     VConstant = 1,
     VMonotonic = 2,
     VVariable = 3,
@@ -121,6 +130,7 @@ enum Variability {
 pub(super) struct PerfFile {
     mmap: Option<MmapMut>,
     path: PathBuf,
+    names: HashSet<String>,
 }
 
 impl Drop for PerfFile {
@@ -150,7 +160,7 @@ impl PerfFile {
             .create(true)
             .truncate(true)
             .open(&file_path)?;
-        file.set_len(PERFDATA_CAPACITY as u64)?;
+        file.set_len(*PERFDATA_CAPACITY as u64)?;
 
         // SAFETY: We just created this file and hold the only file descriptor.
         // No other process should be mapping it yet.
@@ -163,6 +173,7 @@ impl PerfFile {
         Ok(Self {
             mmap: Some(mmap),
             path: file_path,
+            names: HashSet::new(),
         })
     }
 
@@ -212,11 +223,11 @@ impl PerfFile {
         let data_offset = data_offset + used;
         let data_end = data_end + used;
 
-        if new_used > PERFDATA_CAPACITY {
+        if new_used > *PERFDATA_CAPACITY {
             // OpenJDK sets overflow to 1 if the file is full and continue working,
             // we just fall here for the sake of simplicity.
             mmap[12..16]
-                .copy_from_slice(&(new_used as i32 - PERFDATA_CAPACITY as i32).to_ne_bytes()); // set overflow
+                .copy_from_slice(&(new_used as i32 - *PERFDATA_CAPACITY as i32).to_ne_bytes()); // set overflow
             return Err(Error::new_execution(
                 "Not enough space in perf data file for new entry",
             ));
@@ -228,10 +239,15 @@ impl PerfFile {
         mmap[28..32].copy_from_slice(&(new_num_entries).to_ne_bytes());
         let _ = mmap.flush()?;
 
+        self.names.insert(entry.name);
         Ok((
             mmap[data_offset..data_offset].as_ptr(),
             data_end - data_offset,
         ))
+    }
+
+    pub(crate) fn contains_name(&self, name: &str) -> bool {
+        self.names.contains(name)
     }
 }
 

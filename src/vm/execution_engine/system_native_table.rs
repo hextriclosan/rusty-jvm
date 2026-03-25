@@ -527,11 +527,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/perf/Perf:createLong:(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
-        Basic(perf_create_long_wrp),
+        WithMutStackFrames(perf_create_long_wrp),
     );
     table.insert(
         "jdk/internal/perf/Perf:createByteArray:(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
-        Basic(perf_create_byte_array_wrp),
+        WithMutStackFrames(perf_create_byte_array_wrp),
     );
     table.insert(
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",

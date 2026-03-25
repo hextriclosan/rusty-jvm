@@ -8,7 +8,6 @@ mod utils;
 const ENTRY_POINT_ARG: &str = "samples.nio.niofileexample.NioFileExample";
 
 #[test]
-#[ignore]
 fn should_support_nio_file() {
     let temp_dir = TempDir::new_in(TEST_PATH.deref()).expect("failed to create temp dir");
     let dir_name = temp_dir
