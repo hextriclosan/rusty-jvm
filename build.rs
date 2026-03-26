@@ -95,7 +95,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         run(&javac, &args)?;
     }
 
-    let (jar_path_long, jar_path_short) = download_jar_to_temp(dest_dir)?;
+    let (jar_path_long, jar_path_short) = download_jar_to_test_dir(dest_dir)?;
     println!("cargo:rustc-env=TEST_JAR_PATH={}", jar_path_short);
     let special_cmds: &[(&[&str], &str)] = &[
         (&["-XDstringConcat=inline", "-d"], "StringConcatInline.java"),
@@ -202,7 +202,7 @@ fn run(javac: &PathBuf, args: &[&str]) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn download_jar_to_temp(path: &Path) -> anyhow::Result<(String, String)> {
+fn download_jar_to_test_dir(path: &Path) -> anyhow::Result<(String, String)> {
     let short_path = PathBuf::from("lib_jar").join("algorithm.jar");
     let file_path = path.join(&short_path);
     if file_path.exists() {
