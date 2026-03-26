@@ -1,7 +1,8 @@
 use fs_extra::dir::{copy, CopyOptions};
+use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::{env, fs};
+use std::{env, fs, io};
 
 fn main() -> anyhow::Result<()> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
@@ -24,7 +25,7 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rerun-if-changed=tests/test_data");
     let dest_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or(String::from("target")))
         .join("java_classes_for_tests");
-    fs::create_dir_all(&dest_dir)?;
+    create_dir_all(&dest_dir)?;
 
     copy_generated_files(&dest_dir)?;
 
@@ -73,6 +74,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeObjectFieldOffset.java",
         "UnsafePutReferenceVolatileExample.java",
         "UserPerfCounterExample.java",
+        "ClasspathDemo.java",
     ];
 
     let mut normal_files = Vec::new();
@@ -93,6 +95,8 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         run(&javac, &args)?;
     }
 
+    let (jar_path_long, jar_path_short) = download_jar_to_test_dir(dest_dir)?;
+    println!("cargo:rustc-env=TEST_JAR_PATH={}", jar_path_short);
     let special_cmds: &[(&[&str], &str)] = &[
         (&["-XDstringConcat=inline", "-d"], "StringConcatInline.java"),
         (
@@ -171,6 +175,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
             ],
             "UserPerfCounterExample.java",
         ),
+        (&["-cp", jar_path_long.as_str(), "-d"], "ClasspathDemo.java"),
     ];
 
     for (args_prefix, file) in special_cmds {
@@ -195,4 +200,27 @@ fn run(javac: &PathBuf, args: &[&str]) -> anyhow::Result<()> {
         anyhow::bail!("javac failed with args: {:?}", args);
     }
     Ok(())
+}
+
+fn download_jar_to_test_dir(path: &Path) -> anyhow::Result<(String, String)> {
+    let short_path = PathBuf::from("lib_jar").join("algorithm.jar");
+    let file_path = path.join(&short_path);
+    if file_path.exists() {
+        return Ok((
+            file_path.display().to_string(),
+            short_path.display().to_string(),
+        ));
+    }
+
+    create_dir_all(file_path.parent().unwrap())?;
+    let url = "https://repo1.maven.org/maven2/io/github/hextriclosan/algorithm/0.0.5/algorithm-0.0.5.jar";
+    let response = ureq::get(url).call()?;
+    let mut reader = response.into_body();
+    let mut file = File::create(&file_path)?;
+    io::copy(&mut reader.as_reader(), &mut file)?;
+
+    Ok((
+        file_path.display().to_string(),
+        short_path.display().to_string(),
+    ))
 }

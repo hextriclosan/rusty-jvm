@@ -70,3 +70,4 @@ ctor = "0.6.3"
 [build-dependencies]
 anyhow = "1.0.100"
 fs_extra = "1.3.0"
+ureq = "3.3.0"
