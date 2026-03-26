@@ -1,4 +1,6 @@
+use downloader::{Download, Downloader};
 use fs_extra::dir::{copy, CopyOptions};
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::{env, fs};
@@ -73,6 +75,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeObjectFieldOffset.java",
         "UnsafePutReferenceVolatileExample.java",
         "UserPerfCounterExample.java",
+        "ClasspathDemo.java",
     ];
 
     let mut normal_files = Vec::new();
@@ -93,6 +96,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         run(&javac, &args)?;
     }
 
+    let jar_path = download_jar_to_temp(dest_dir)?;
     let special_cmds: &[(&[&str], &str)] = &[
         (&["-XDstringConcat=inline", "-d"], "StringConcatInline.java"),
         (
@@ -171,6 +175,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
             ],
             "UserPerfCounterExample.java",
         ),
+        (&["-cp", jar_path.as_str(), "-d"], "ClasspathDemo.java"),
     ];
 
     for (args_prefix, file) in special_cmds {
@@ -195,4 +200,21 @@ fn run(javac: &PathBuf, args: &[&str]) -> anyhow::Result<()> {
         anyhow::bail!("javac failed with args: {:?}", args);
     }
     Ok(())
+}
+
+fn download_jar_to_temp(path: &Path) -> anyhow::Result<String> {
+    let url = "https://repo1.maven.org/maven2/io/github/hextriclosan/algorithm/0.0.5/algorithm-0.0.5.jar";
+
+    println!(
+        "cargo:rustc-env=TEST_JAR_PATH={}",
+        PathBuf::from("lib_jar").join("algorithm.jar").display()
+    );
+    let file_path = path.join("lib_jar").join("algorithm.jar");
+    create_dir_all(file_path.parent().unwrap())?;
+
+    let mut downloader = Downloader::builder().build()?;
+    let download = Download::new(url).file_name(&file_path);
+    let _summary = downloader.download(&[download])?;
+
+    Ok(file_path.display().to_string())
 }
