@@ -177,12 +177,6 @@ impl From<GetTimezoneError> for Error {
     }
 }
 
-impl From<whoami::Error> for Error {
-    fn from(error: whoami::Error) -> Self {
-        Error::new_execution(&format!("whoami::Error: {error}"))
-    }
-}
-
 impl From<VarError> for Error {
     fn from(error: VarError) -> Self {
         Error::new_execution(&format!("VarError: {error}"))
