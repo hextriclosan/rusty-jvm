@@ -75,6 +75,9 @@ jobs:
         with:
           tool: cross
 
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
+
       - name: Build jni_test_lib on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER
@@ -83,7 +86,7 @@ jobs:
       - name: Run tests on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+          cargo nextest run --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
 
   build-and-test-with-coverage:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
