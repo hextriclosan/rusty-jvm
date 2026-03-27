@@ -73,10 +73,7 @@ jobs:
       - name: Install cross
         uses: taiki-e/install-action@v2
         with:
-          tool: cross
-
-      - name: Install cargo-nextest
-        run: cargo install cargo-nextest --locked
+          tool: cross, nextest
 
       - name: Build jni_test_lib on s390x (Big Endian)
         run: |
@@ -86,7 +83,7 @@ jobs:
       - name: Run tests on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER
-          cargo nextest run --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+          cargo nextest run --workspace --target s390x-unknown-linux-gnu
 
   build-and-test-with-coverage:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
