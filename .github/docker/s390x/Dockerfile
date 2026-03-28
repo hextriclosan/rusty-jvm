@@ -3,9 +3,9 @@ FROM ghcr.io/cross-rs/s390x-unknown-linux-gnu:main
 
 # Use arguments to easily update Java version and checksum
 # Find releases and checksums at: https://adoptium.net/temurin/releases/
-ARG JAVA_VERSION="25+36"
+ARG JAVA_VERSION="25.0.2+10"
 # The checksum is found in the .sha256.txt file next to the release download
-ARG JAVA_CHECKSUM="3e476e40f920ccfb1915d200bc7a1fba9d68c4adcc0358c5968d15613690b915"
+ARG JAVA_CHECKSUM="15e5cbcadcf3d43623c31b825063cdc2817b9f1ba840b51dc6ef70e5d33c84e3"
 ARG JAVA_MAJOR="25"
 
 # Set environment variables that will persist in the final image
