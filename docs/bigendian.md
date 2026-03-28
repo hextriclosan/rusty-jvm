@@ -10,8 +10,8 @@ docker run -it --platform=linux/s390x -v <PROJECT_DIR>:/mnt/rusty-jvm --entrypoi
 apt-get update
 apt-get install -y --no-install-recommends curl
 export JAVA_HOME="/opt/java"
-JAVA_VERSION="25+36"
-JAVA_CHECKSUM="3e476e40f920ccfb1915d200bc7a1fba9d68c4adcc0358c5968d15613690b915"
+JAVA_VERSION="25.0.2+10"
+JAVA_CHECKSUM="15e5cbcadcf3d43623c31b825063cdc2817b9f1ba840b51dc6ef70e5d33c84e3"
 JAVA_MAJOR="25"
 ARCH="s390x"
 URL="https://github.com/adoptium/temurin${JAVA_MAJOR}-binaries/releases/download/jdk-${JAVA_VERSION}/OpenJDK${JAVA_MAJOR}U-jdk_${ARCH}_linux_hotspot_$(echo ${JAVA_VERSION} | sed 's/+/_/g').tar.gz"
