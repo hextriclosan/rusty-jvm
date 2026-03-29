@@ -549,17 +549,6 @@ impl MethodArea {
         )))
     }
 
-    pub fn create_instance_with_default_fields_jc(
-        &self,
-        java_class: &Arc<JavaClass>,
-    ) -> Result<JavaInstance> {
-        let id = java_class.mirror_clazz_ref()? as usize;
-        Ok(JavaInstance::Base(JavaInstanceBase::new(
-            id,
-            java_class.instance_fields_hierarchy()?.clone(),
-        )))
-    }
-
     pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
         &self,
         class_name: &str,
