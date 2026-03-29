@@ -108,7 +108,7 @@ impl MethodArea {
         fully_qualified_class_name: &str,
     ) -> Result<Arc<JavaClass>> {
         let class_file_path = format!("{fully_qualified_class_name}.class");
-        if let Some(module) = self.modules_mapping.get(&class_file_path) {
+        let module = if let Some(module) = self.modules_mapping.get(&class_file_path) {
             let resource_path = format!("/{module}/{class_file_path}");
             if let Some(res) = self
                 .jimage
@@ -120,10 +120,19 @@ impl MethodArea {
                     Ok(None) => {}
                     Err(e) => return Err(e),
                 };
-            }
-        }
+            };
 
-        if class_file_path.starts_with("java/") {
+            Some(module.to_string())
+        } else {
+            None
+        };
+
+        if module
+            .filter(|m| {
+                m == "java.base" || m == "jdk.internal.loader" || m == "jdk.internal.module"
+            })
+            .is_some()
+        {
             self.try_open_and_parse(&PathBuf::from(&class_file_path))?
                 .ok_or_else(|| {
                     Error::new_execution(&format!("error opening class file {class_file_path}"))
@@ -546,6 +555,17 @@ impl MethodArea {
         Ok(JavaInstance::Base(JavaInstanceBase::new(
             id,
             klass.instance_fields_hierarchy()?.clone(),
+        )))
+    }
+
+    pub fn create_instance_with_default_fields_jc(
+        &self,
+        java_class: &Arc<JavaClass>,
+    ) -> Result<JavaInstance> {
+        let id = java_class.mirror_clazz_ref()? as usize;
+        Ok(JavaInstance::Base(JavaInstanceBase::new(
+            id,
+            java_class.instance_fields_hierarchy()?.clone(),
         )))
     }
 

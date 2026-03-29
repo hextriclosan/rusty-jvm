@@ -1,9 +1,12 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
+use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::helper::create_array_of_strings;
+use crate::vm::helper::{create_array_of_strings, klass};
+use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::JAVA_CORE_INIT;
+use std::sync::Arc;
 
 // refer: sun.launcher.LauncherHelper
 const CLASS: i32 = 1;
@@ -20,7 +23,7 @@ pub fn resolve_and_execute_main_method(class_name: &str, args: &[String]) -> Res
 
 fn resolve_and_execute_main_method_ordinary(class_name: &str, args: &[String]) -> Result<()> {
     let class_name_ref = StringPoolHelper::get_string(class_name)?;
-    let _app_class = Executor::invoke_static_method(
+    let app_clazz_ref = Executor::invoke_static_method(
         "sun/launcher/LauncherHelper",
         "checkAndLoadMain:(ZILjava/lang/String;)Ljava/lang/Class;",
         &[
@@ -30,6 +33,8 @@ fn resolve_and_execute_main_method_ordinary(class_name: &str, args: &[String]) -
         ],
     )?[0];
 
+    let jc = klass(app_clazz_ref)?;
+    StaticInit::initialize_java_class(&jc)?;
     let launcher_helper = CLASSES.get("sun/launcher/LauncherHelper")?;
     let static_main = launcher_helper
         .static_field("isStaticMain")
@@ -46,23 +51,23 @@ fn resolve_and_execute_main_method_ordinary(class_name: &str, args: &[String]) -
 
     if static_main {
         if no_arg_main {
-            Executor::invoke_static_method(class_name, "main:()V", &[])?;
+            Executor::invoke_static_method_jc(&jc, "main:()V", &[])?;
         } else {
             let args_array_ref = create_array_of_strings(args)?;
-            Executor::invoke_static_method(
-                class_name,
+            Executor::invoke_static_method_jc(
+                &jc,
                 "main:([Ljava/lang/String;)V",
                 &[args_array_ref.into()],
             )?;
         }
     } else {
-        let main_instance_ref = construct_main_class(class_name)?;
+        let main_instance_ref = construct_main_class(&jc)?;
         if no_arg_main {
-            Executor::invoke_non_static_method(class_name, "main:()V", main_instance_ref, &[])?;
+            Executor::invoke_non_static_method_jc(&jc, "main:()V", main_instance_ref, &[])?;
         } else {
             let args_array_ref = create_array_of_strings(args)?;
-            Executor::invoke_non_static_method(
-                class_name,
+            Executor::invoke_non_static_method_jc(
+                &jc,
                 "main:([Ljava/lang/String;)V",
                 main_instance_ref,
                 &[args_array_ref.into()],
@@ -92,6 +97,6 @@ fn resolve_and_execute_main_method_no_init(class_name: &str, args: &[String]) ->
     }
 }
 
-fn construct_main_class(class_name: &str) -> Result<i32> {
-    Executor::invoke_default_constructor(class_name)
+fn construct_main_class(java_class: &Arc<JavaClass>) -> Result<i32> {
+    Executor::invoke_default_constructor_jc(java_class)
 }

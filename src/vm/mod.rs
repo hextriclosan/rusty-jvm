@@ -55,8 +55,8 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     JAVA_HOME
         .set(java_home.to_path_buf())
         .map_err(|e| Error::new_execution(&format!("JAVA_HOME already set: {e:?}")))?;
-    let main_class_name = arguments.entry_point();
-    validate_class_name(main_class_name)?;
+    let entry_point = arguments.entry_point();
+    validate_class_name(entry_point)?;
 
     init_system_properties(arguments.system_properties().clone())?;
 
@@ -64,10 +64,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 
     prelude()?;
 
-    let internal_name = &main_class_name.replace('.', "/");
-    StaticInit::initialize(internal_name)?; // before invoking static main method, static fields should be initialized (JVMS requirement)
-
-    match resolve_and_execute_main_method(internal_name, arguments.program_args()) {
+    match resolve_and_execute_main_method(entry_point, arguments.program_args()) {
         Ok(_) => {
             invoke_shutdown_hooks()?;
             Ok(())
