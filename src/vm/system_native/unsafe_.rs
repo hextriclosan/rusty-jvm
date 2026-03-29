@@ -616,20 +616,112 @@ fn copy_memory0(
             .take(bytes as usize)
             .map(|v| *v)
             .collect::<Vec<_>>();
-        unsafe {
-            let src = to_copy.as_ptr();
-            let dst = ptr.add(dest_offset as usize);
-            let len = to_copy.len();
-            ptr::copy(src, dst, len);
+
+        if dest_base_ref == 0 {
+            // dest_offset is absolute address
+            unsafe {
+                let src = to_copy.as_ptr();
+                let dst = ptr.add(dest_offset as usize);
+                let len = to_copy.len();
+                ptr::copy(src, dst, len);
+            }
+        } else {
+            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
+            let input = &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+            input.copy_from_slice(to_copy.as_slice());
         }
     } else {
-        let ptr_copy_from = src_offset as usize as *const u8;
-        let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
-        unsafe {
-            let output = &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+        if dest_base_ref == 0 {
+            unimplemented!("dest_base_ref == null not supported yet");
+        } else {
+            let ptr_copy_from = src_offset as usize as *const u8;
+            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
+            unsafe {
+                let output =
+                    &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
 
-            ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
+                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
+            }
         }
+    }
+
+    Ok(())
+}
+
+pub(crate) fn copy_swap_memory0_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let src_base_ref = args[1];
+    let src_offset = i32toi64(args[3], args[2]);
+    let dest_base_ref = args[4];
+    let dest_offset = i32toi64(args[6], args[5]);
+    let bytes = i32toi64(args[8], args[7]);
+    let elem_size = i32toi64(args[10], args[9]);
+
+    copy_swap_memory0(
+        src_base_ref,
+        src_offset,
+        dest_base_ref,
+        dest_offset,
+        bytes,
+        elem_size,
+    )?;
+    Ok(vec![])
+}
+fn copy_swap_memory0(
+    src_base_ref: i32,
+    src_offset: i64,
+    dest_base_ref: i32,
+    dest_offset: i64,
+    bytes: i64,
+    elem_size: i64,
+) -> Result<()> {
+    let total_bytes = bytes as usize;
+    let elem_size = elem_size as usize;
+
+    if elem_size == 0 || total_bytes % elem_size != 0 {
+        return Err(Error::new_execution("Invalid elem_size or bytes"));
+    }
+
+    // ---------------------------
+    // Resolve source
+    // ---------------------------
+    if src_base_ref == 0 {
+        unimplemented!("src_base_ref == 0 not supported yet");
+    }
+
+    let src_array = HEAP.get_entire_array(src_base_ref)?;
+    let src_raw = src_array.raw_data();
+    let src_start = src_offset as usize;
+
+    // ---------------------------
+    // Resolve destination
+    // ---------------------------
+    if dest_base_ref == 0 {
+        unimplemented!("dest_base_ref == 0 not supported yet");
+    }
+
+    let mut dest_raw = HEAP.get_entire_raw_data_mut(dest_base_ref)?;
+    let dest_start = dest_offset as usize;
+
+    // ---------------------------
+    // Copy + swap
+    // ---------------------------
+    let mut byte_index = 0;
+
+    while byte_index < total_bytes {
+        let src_chunk_start = src_start + byte_index;
+        let src_chunk_end = src_chunk_start + elem_size;
+
+        let src_chunk = &src_raw[src_chunk_start..src_chunk_end];
+
+        for j in 0..elem_size {
+            let value = src_chunk[elem_size - 1 - j]; // swap
+            let dst_index = dest_start + byte_index + j;
+
+            dest_raw[dst_index] = value;
+        }
+
+        byte_index += elem_size;
     }
 
     Ok(())

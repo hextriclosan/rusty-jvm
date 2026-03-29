@@ -77,7 +77,7 @@ use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
 use crate::vm::system_native::unsafe_::{
     allocate_memory0_wrp, array_index_scale0_wrp, compare_and_exchange_long_wrp,
-    compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp,
+    compare_and_set_int_wrp, compare_and_set_long_wrp, copy_memory0_wrp, copy_swap_memory0_wrp,
     ensure_class_initialized0_wrp, get_boolean_volatile_wrp, get_byte_wrp, get_char_wrp,
     get_int_volatile_wrp, get_int_wrp, get_long_volatile_wrp, get_long_wrp,
     get_reference_volatile_wrp, get_short_wrp, object_field_offset_0_wrp,
@@ -373,6 +373,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:copyMemory0:(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
         Basic(copy_memory0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:copySwapMemory0:(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
+        Basic(copy_swap_memory0_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:setMemory0:(Ljava/lang/Object;JJB)V",

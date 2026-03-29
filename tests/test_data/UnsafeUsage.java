@@ -32,6 +32,7 @@ public class UnsafeUsage {
         setGetIntToByteArray();
         setGetLongArray();
         setGetLongToByteArray();
+        copySwapMemory();
     }
 
     private static void isBigEndian() {
@@ -290,6 +291,18 @@ public class UnsafeUsage {
         int arrayShift = 31 - Integer.numberOfLeadingZeros(scale);
         long offset = ((long) index << arrayShift) + arrayBaseOffset;
         return offset;
+    }
+
+    private static void copySwapMemory() {
+        byte[] src = new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        byte[] dst = new byte[src.length];
+        long srcOffset = getArrayOffset(byte[].class, 0);
+        long dstOffset = getArrayOffset(byte[].class, 0);
+        U.copyMemory(src, srcOffset, dst, dstOffset, src.length);
+        System.out.println("After copyMemory: " + Arrays.toString(dst));
+
+         U.copySwapMemory(src, srcOffset, dst, dstOffset, src.length, 4);
+         System.out.println("After copySwapMemory: " + Arrays.toString(dst));
     }
 }
 
