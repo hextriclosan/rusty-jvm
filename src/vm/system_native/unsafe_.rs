@@ -607,8 +607,7 @@ fn copy_memory0(
     let ptr = dest_base_ref as usize as *mut u8;
 
     if src_base_ref != 0 {
-        let arr = HEAP.get_entire_array(src_base_ref)?; // todo: only arrays are supported so far (add check isArray)
-        let raw = arr.raw_data();
+        let raw = HEAP.get_entire_raw_data(src_base_ref)?; // todo: only arrays are supported so far (add check isArray)
 
         let to_copy = raw
             .iter()
@@ -621,7 +620,7 @@ fn copy_memory0(
             // dest_offset is absolute address
             unsafe {
                 let src = to_copy.as_ptr();
-                let dst = ptr.add(dest_offset as usize);
+                let dst = dest_offset as usize as *mut u8;
                 let len = to_copy.len();
                 ptr::copy(src, dst, len);
             }
@@ -689,8 +688,7 @@ fn copy_swap_memory0(
         unimplemented!("src_base_ref == 0 not supported yet");
     }
 
-    let src_array = HEAP.get_entire_array(src_base_ref)?;
-    let src_raw = src_array.raw_data();
+    let src_raw = HEAP.get_entire_raw_data(src_base_ref)?;
     let src_start = src_offset as usize;
 
     // ---------------------------

@@ -301,8 +301,8 @@ public class UnsafeUsage {
         U.copyMemory(src, srcOffset, dst, dstOffset, src.length);
         System.out.println("After copyMemory: " + Arrays.toString(dst));
 
-         U.copySwapMemory(src, srcOffset, dst, dstOffset, src.length, 4);
-         System.out.println("After copySwapMemory: " + Arrays.toString(dst));
+        U.copySwapMemory(src, srcOffset, dst, dstOffset, src.length, 4);
+        System.out.println("After copySwapMemory: " + Arrays.toString(dst));
     }
 }
 
