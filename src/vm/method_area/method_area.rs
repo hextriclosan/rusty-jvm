@@ -108,7 +108,7 @@ impl MethodArea {
         fully_qualified_class_name: &str,
     ) -> Result<Arc<JavaClass>> {
         let class_file_path = format!("{fully_qualified_class_name}.class");
-        let module = if let Some(module) = self.modules_mapping.get(&class_file_path) {
+        if let Some(module) = self.modules_mapping.get(&class_file_path) {
             let resource_path = format!("/{module}/{class_file_path}");
             if let Some(res) = self
                 .jimage
@@ -120,19 +120,10 @@ impl MethodArea {
                     Ok(None) => {}
                     Err(e) => return Err(e),
                 };
-            };
+            }
+        }
 
-            Some(module.to_string())
-        } else {
-            None
-        };
-
-        if module
-            .filter(|m| {
-                m == "java.base" || m == "jdk.internal.loader" || m == "jdk.internal.module"
-            })
-            .is_some()
-        {
+        if class_file_path.starts_with("java/") {
             self.try_open_and_parse(&PathBuf::from(&class_file_path))?
                 .ok_or_else(|| {
                     Error::new_execution(&format!("error opening class file {class_file_path}"))

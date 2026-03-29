@@ -5,6 +5,7 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::atomic::{AtomicU32, Ordering};
+use tracing::trace;
 
 pub(crate) const SYNTH_CLASS_DELIM: char = '#';
 static COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -182,6 +183,19 @@ fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
         let class_file_path = format!("{internal_name}.class");
         if a.modules_mapping().contains_key(&class_file_path) {
             Some(a.load_class_file(internal_name))
+        } else if class_file_path.starts_with("java/") {
+            // Try file-based loading for patched java.* classes (e.g. compiled with --patch-module java.base=.)
+            // This is needed for hacky tests should_support_bootstrap_method_invoker, should_support_string_concat_helper, should_support_system_get_constant_pool
+            // which operates with Test classes from java.lang.* package
+            match a.load_class_file(internal_name) {
+                Ok(klass) => Some(Ok(klass)),
+                Err(e) => {
+                    trace!(
+                        "find_bootstrap_class: could not load patched class {internal_name}: {e}"
+                    );
+                    None
+                }
+            }
         } else {
             None
         }
