@@ -604,8 +604,6 @@ fn copy_memory0(
     dest_offset: i64,
     bytes: i64,
 ) -> Result<()> {
-    let ptr = dest_base_ref as usize as *mut u8;
-
     if src_base_ref != 0 {
         let raw = HEAP.get_entire_raw_data(src_base_ref)?; // todo: only arrays are supported so far (add check isArray)
 
