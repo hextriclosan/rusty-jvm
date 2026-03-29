@@ -818,6 +818,8 @@ int at index 1 is: 1611079230
 long at index 5 is: 1000000000000
 [0, {long_bytes}, 0]
 long at index 1 is: 6919532605457772126
+After copyMemory: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+After copySwapMemory: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8]
 "#,
         ),
     );
