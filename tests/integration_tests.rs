@@ -3443,14 +3443,10 @@ fn should_use_jar_from_classpath() {
         env::var("TEST_JAR_PATH").expect("TEST_JAR_PATH environment variable is not set");
     let current_dir = ".";
 
-    let class_path_arg = format!(
-        "-Djava.class.path={}{}{}",
-        current_dir,
-        get_path_separator(),
-        test_jar_path
-    );
+    let class_path_value = format!("{}{}{}", current_dir, get_path_separator(), test_jar_path);
+
     utils::assert_with_all_args(
-        &[&class_path_arg],
+        &["-cp", &class_path_value],
         "samples.javacore.classpath.classpathdemo.ClasspathDemo",
         &[],
         r#"[A, B, B]

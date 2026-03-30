@@ -52,6 +52,10 @@ pub struct Arguments {
     jvm_options: Vec<String>,
     /// Advanced JVM options (e.g., `-XX:+UseG1GC`).
     advanced_jvm_options: Vec<String>,
+    /// Classpath for the Java program (e.g., `-cp /path/to/classes`).
+    classpath: Option<String>,
+    /// Whether execute the main class of a JAR archive.
+    jar_mode: bool,
 }
 
 impl Arguments {

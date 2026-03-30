@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::properties::classpath::classpath;
 use crate::vm::system_native::properties_provider::properties::{
     endianness, file_separator, java_home, line_separator, os_name, os_version, path_separator,
     sun_boot_library_path, tmp_dir, user_dir,
@@ -56,6 +57,7 @@ static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| 
     IndexMap::from([
         ("java.home", java_home()),
         ("sun.boot.library.path", sun_boot_library_path()),
+        ("java.class.path", classpath()),
     ])
 });
 
@@ -100,12 +102,14 @@ fn deep_clone(to_clone: &IndexMap<&str, &str>) -> IndexMap<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vm::properties::resolve_classpath;
     use crate::vm::JAVA_HOME;
     use std::path::PathBuf;
 
     #[test]
     fn test_init_system_properties() {
         JAVA_HOME.set(PathBuf::from("default_java_home")).unwrap();
+        resolve_classpath(&crate::Arguments::default()).unwrap();
         let system_properties = IndexMap::from([
             ("os.name".to_string(), "new_os_name".to_string()),
             ("java.home".to_string(), "new_java_home".to_string()),
@@ -137,6 +141,7 @@ mod tests {
                     }
                     .to_string()
                 ),
+                ("java.class.path".to_string(), ".".to_string()),
                 ("other.property".to_string(), "other_value".to_string())
             ])
         );
