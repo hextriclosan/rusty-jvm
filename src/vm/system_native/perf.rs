@@ -143,12 +143,15 @@ fn perf_create_byte_array(
         ))
     }
 
-    let byte_array = unwrap_or_return_err!(HEAP.get_entire_raw_data(byte_arr_ref));
+    let byte_array_data: Vec<u8> = {
+        let guard = unwrap_or_return_err!(HEAP.get_entire_raw_data(byte_arr_ref));
+        guard.to_vec()
+    };
     let (ptr, len) = unwrap_or_return_err!(create_byte_array(
         &name,
         variability as u8,
         units as u8,
-        &byte_array,
+        &byte_array_data,
         max_len as usize,
     ));
 
