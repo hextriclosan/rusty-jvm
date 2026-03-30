@@ -605,14 +605,17 @@ fn copy_memory0(
     bytes: i64,
 ) -> Result<()> {
     if src_base_ref != 0 {
-        let raw = HEAP.get_entire_raw_data(src_base_ref)?; // todo: only arrays are supported so far (add check isArray)
-
-        let to_copy = raw
-            .iter()
-            .skip(src_offset as usize)
-            .take(bytes as usize)
-            .map(|v| *v)
-            .collect::<Vec<_>>();
+        // Collect source bytes into a local Vec before acquiring the dest guard to avoid
+        // deadlock when src and dest are in the same DashMap shard.
+        // todo: only arrays are supported so far (add check isArray)
+        let to_copy = {
+            let raw = HEAP.get_entire_raw_data(src_base_ref)?;
+            raw.iter()
+                .skip(src_offset as usize)
+                .take(bytes as usize)
+                .copied()
+                .collect::<Vec<_>>()
+        };
 
         if dest_base_ref == 0 {
             // dest_offset is absolute address
@@ -686,8 +689,13 @@ fn copy_swap_memory0(
         unimplemented!("src_base_ref == 0 not supported yet");
     }
 
-    let src_raw = HEAP.get_entire_raw_data(src_base_ref)?;
-    let src_start = src_offset as usize;
+    // Collect source bytes into a local Vec before acquiring the dest guard to avoid
+    // deadlock when src and dest are in the same DashMap shard.
+    let src_data: Vec<u8> = {
+        let src_raw = HEAP.get_entire_raw_data(src_base_ref)?;
+        let src_start = src_offset as usize;
+        src_raw[src_start..src_start + total_bytes].to_vec()
+    };
 
     // ---------------------------
     // Resolve destination
@@ -705,10 +713,10 @@ fn copy_swap_memory0(
     let mut byte_index = 0;
 
     while byte_index < total_bytes {
-        let src_chunk_start = src_start + byte_index;
+        let src_chunk_start = byte_index;
         let src_chunk_end = src_chunk_start + elem_size;
 
-        let src_chunk = &src_raw[src_chunk_start..src_chunk_end];
+        let src_chunk = &src_data[src_chunk_start..src_chunk_end];
 
         for j in 0..elem_size {
             let value = src_chunk[elem_size - 1 - j]; // swap
