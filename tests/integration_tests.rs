@@ -3458,3 +3458,29 @@ fn should_use_jar_from_classpath() {
         HashMap::default(),
     );
 }
+
+#[test]
+fn should_run_jar() {
+    utils::assert_with_all_args(
+        &["-jar"],
+        "app.jar",
+        &[],
+        r#"[A, B, B, C]
+[A, B, C, B]
+[A, C, B, B]
+[B, A, B, C]
+[B, A, C, B]
+[B, B, A, C]
+[B, B, C, A]
+[B, C, A, B]
+[B, C, B, A]
+[C, A, B, B]
+[C, B, A, B]
+[C, B, B, A]
+"#,
+        "",
+        Success,
+        0,
+        HashMap::default(),
+    );
+}

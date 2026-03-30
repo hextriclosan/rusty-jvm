@@ -278,7 +278,6 @@ mod tests {
 
     #[test]
     #[cfg(not(windows))] // Windows does not support `*` in file names
-    fn wildcard_in_filename_is_ignored() {}
     fn existing_path_with_star_is_not_expanded() {
         let dir = tmp();
         let path = dir.path().join("real*file");
