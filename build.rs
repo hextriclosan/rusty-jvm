@@ -106,7 +106,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
     let jar_path = download_jar_to_test_dir(dest_dir)?;
 
     // build jar
-    let _output = Command::new(&javac)
+    let output = Command::new(&javac)
         .arg("-cp")
         .arg(&jar_path)
         .arg("-d")
@@ -115,7 +115,10 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
         .output()?;
-    let _output = Command::new(&jar)
+    if !output.status.success() {
+        anyhow::bail!("javac failed: {:?}", output.status);
+    }
+    let output = Command::new(&jar)
         .arg("cfm")
         .arg(&format!("{}/app.jar", dest_dir.display().to_string()))
         .arg("tests/test_data/jar/MANIFEST.MF")
@@ -125,6 +128,9 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
         .output()?;
+    if !output.status.success() {
+        anyhow::bail!("jar failed: {:?}", output.status);
+    }
 
     let special_cmds: &[(&[&str], &str)] = &[
         (&["-XDstringConcat=inline", "-d"], "StringConcatInline.java"),

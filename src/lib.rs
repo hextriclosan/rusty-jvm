@@ -54,7 +54,7 @@ pub struct Arguments {
     advanced_jvm_options: Vec<String>,
     /// Classpath for the Java program (e.g., `-cp /path/to/classes`).
     classpath: Option<String>,
-    /// Whether execute the main class of a JAR archive.
+    /// Whether to execute the main class of a JAR archive.
     jar_mode: bool,
 }
 

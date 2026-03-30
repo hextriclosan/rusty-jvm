@@ -33,6 +33,8 @@ pub fn into_args(raw_args: Vec<String>) -> Result<Arguments, String> {
                 classpath = Some(iter.next().ok_or_else(|| "Missing classpath value")?);
             } else if arg == "-jar" {
                 jar_mode = true;
+                entry_point = iter.next().ok_or_else(|| "Missing JAR file name")?;
+                break;
             } else {
                 java_standard_options.push(arg);
             }
