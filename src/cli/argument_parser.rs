@@ -13,7 +13,7 @@ pub fn into_args(raw_args: Vec<String>) -> Result<Arguments, String> {
     let mut classpath = None;
     let mut jar_mode = false;
 
-    let mut iter = raw_args.clone().into_iter().peekable();
+    let mut iter = raw_args.into_iter().peekable();
     while let Some(arg) = iter.next() {
         if arg.starts_with('-') {
             if arg.starts_with("-XX:") {
@@ -78,7 +78,7 @@ mod tests {
             "arg2".to_string(),
         ];
 
-        let parsed: Arguments = into_args(raw_args.to_vec()).unwrap();
+        let parsed: Arguments = into_args(raw_args).unwrap();
         let expected = Arguments::new(
             "MainClass".to_string(),
             vec!["arg1".to_string(), "arg2".to_string()],
@@ -107,7 +107,7 @@ mod tests {
             "-XX:+UseG1GC".to_string(),
         ];
 
-        let parsed: Arguments = into_args(raw_args.clone()).unwrap();
+        let parsed: Arguments = into_args(raw_args).unwrap();
         let expected = Arguments::new(
             "".to_string(),
             vec![],
