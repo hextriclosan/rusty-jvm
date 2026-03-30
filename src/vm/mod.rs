@@ -18,10 +18,12 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::launcher::resolve_and_execute_main_method;
+use crate::vm::launcher::LaunchMode::{LmClass, LmJar};
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::perf_data::init_perf_file;
+use crate::vm::properties::resolve_classpath;
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
@@ -58,13 +60,20 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     let entry_point = arguments.entry_point();
     validate_class_name(entry_point)?;
 
+    resolve_classpath(arguments)?;
+
     init_system_properties(arguments.system_properties().clone())?;
 
     init_perf_file(arguments)?;
 
     prelude()?;
 
-    match resolve_and_execute_main_method(entry_point, arguments.program_args()) {
+    let launch_mode = if *arguments.jar_mode() {
+        LmJar
+    } else {
+        LmClass
+    };
+    match resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args()) {
         Ok(_) => {
             invoke_shutdown_hooks()?;
             Ok(())

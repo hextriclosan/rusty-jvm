@@ -50,6 +50,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         anyhow::bail!("javac not found at {}", javac.display());
     }
 
+    let mut jar = PathBuf::from(&java_home).join("bin").join("jar");
+    if cfg!(windows) {
+        jar.set_extension("exe");
+    }
+    if !jar.exists() {
+        anyhow::bail!("jar not found at {}", jar.display());
+    }
+
     let output = Command::new(&javac)
         .arg("-version")
         .stderr(Stdio::piped())
@@ -95,8 +103,35 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         run(&javac, &args)?;
     }
 
-    let (jar_path_long, jar_path_short) = download_jar_to_test_dir(dest_dir)?;
-    println!("cargo:rustc-env=TEST_JAR_PATH={}", jar_path_short);
+    let jar_path = download_jar_to_test_dir(dest_dir)?;
+
+    // build jar
+    let output = Command::new(&javac)
+        .arg("-cp")
+        .arg(&jar_path)
+        .arg("-d")
+        .arg(&format!("{}/out", dest_dir.display().to_string()))
+        .arg("tests/test_data/jar/src/samples/jarfiles/simplejar/Main.java")
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .output()?;
+    if !output.status.success() {
+        anyhow::bail!("javac failed: {:?}", output.status);
+    }
+    let output = Command::new(&jar)
+        .arg("cfm")
+        .arg(&format!("{}/app.jar", dest_dir.display().to_string()))
+        .arg("tests/test_data/jar/MANIFEST.MF")
+        .arg("-C")
+        .arg(&format!("{}/out", dest_dir.display().to_string()))
+        .arg(".")
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .output()?;
+    if !output.status.success() {
+        anyhow::bail!("jar failed: {:?}", output.status);
+    }
+
     let special_cmds: &[(&[&str], &str)] = &[
         (&["-XDstringConcat=inline", "-d"], "StringConcatInline.java"),
         (
@@ -175,7 +210,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
             ],
             "UserPerfCounterExample.java",
         ),
-        (&["-cp", jar_path_long.as_str(), "-d"], "ClasspathDemo.java"),
+        (&["-cp", jar_path.as_str(), "-d"], "ClasspathDemo.java"),
     ];
 
     for (args_prefix, file) in special_cmds {
@@ -202,14 +237,11 @@ fn run(javac: &PathBuf, args: &[&str]) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn download_jar_to_test_dir(path: &Path) -> anyhow::Result<(String, String)> {
+fn download_jar_to_test_dir(path: &Path) -> anyhow::Result<String> {
     let short_path = PathBuf::from("lib_jar").join("algorithm.jar");
     let file_path = path.join(&short_path);
     if file_path.exists() {
-        return Ok((
-            file_path.display().to_string(),
-            short_path.display().to_string(),
-        ));
+        return Ok(file_path.display().to_string());
     }
 
     create_dir_all(file_path.parent().unwrap())?;
@@ -219,8 +251,5 @@ fn download_jar_to_test_dir(path: &Path) -> anyhow::Result<(String, String)> {
     let mut file = File::create(&file_path)?;
     io::copy(&mut reader.as_reader(), &mut file)?;
 
-    Ok((
-        file_path.display().to_string(),
-        short_path.display().to_string(),
-    ))
+    Ok(file_path.display().to_string())
 }

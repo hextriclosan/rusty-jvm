@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 use rusty_jvm::Arguments;
 
 /// Converts a vector of raw command-line arguments into an `Arguments`.
-pub fn into_args(raw_args: Vec<String>) -> Arguments {
+pub fn into_args(raw_args: Vec<String>) -> Result<Arguments, String> {
     let mut java_standard_options = Vec::new();
     let mut java_launcher_options = Vec::new();
     let mut system_properties = IndexMap::new();
@@ -10,6 +10,8 @@ pub fn into_args(raw_args: Vec<String>) -> Arguments {
     let mut advanced_jvm_options = Vec::new();
     let mut entry_point = String::new();
     let mut program_args = Vec::new();
+    let mut classpath = None;
+    let mut jar_mode = false;
 
     let mut iter = raw_args.into_iter().peekable();
     while let Some(arg) = iter.next() {
@@ -27,6 +29,12 @@ pub fn into_args(raw_args: Vec<String>) -> Arguments {
                 system_properties.insert(key.to_string(), value.to_string());
             } else if arg.starts_with("--") {
                 java_launcher_options.push(arg);
+            } else if arg == "-cp" || arg == "-classpath" {
+                classpath = Some(iter.next().ok_or_else(|| "Missing classpath value")?);
+            } else if arg == "-jar" {
+                jar_mode = true;
+                entry_point = iter.next().ok_or_else(|| "Missing JAR file name")?;
+                break;
             } else {
                 java_standard_options.push(arg);
             }
@@ -38,7 +46,7 @@ pub fn into_args(raw_args: Vec<String>) -> Arguments {
 
     program_args.extend(iter);
 
-    Arguments::new(
+    Ok(Arguments::new(
         entry_point,
         program_args,
         java_standard_options,
@@ -46,7 +54,9 @@ pub fn into_args(raw_args: Vec<String>) -> Arguments {
         system_properties,
         jvm_options,
         advanced_jvm_options,
-    )
+        classpath,
+        jar_mode,
+    ))
 }
 
 #[cfg(test)]
@@ -62,12 +72,15 @@ mod tests {
             "-Dproperty2=value2".to_string(),
             "-Xmx1024m".to_string(),
             "-XX:+UseG1GC".to_string(),
+            "-cp".to_string(),
+            "some_classpath".to_string(),
+            "-jar".to_string(),
             "MainClass".to_string(),
             "arg1".to_string(),
             "arg2".to_string(),
         ];
 
-        let parsed: Arguments = into_args(raw_args);
+        let parsed: Arguments = into_args(raw_args).unwrap();
         let expected = Arguments::new(
             "MainClass".to_string(),
             vec!["arg1".to_string(), "arg2".to_string()],
@@ -79,6 +92,8 @@ mod tests {
             ]),
             vec!["-Xmx1024m".to_string()],
             vec!["-XX:+UseG1GC".to_string()],
+            Some("some_classpath".to_string()),
+            true,
         );
 
         assert_eq!(parsed, expected);
@@ -94,7 +109,7 @@ mod tests {
             "-XX:+UseG1GC".to_string(),
         ];
 
-        let parsed: Arguments = into_args(raw_args);
+        let parsed: Arguments = into_args(raw_args).unwrap();
         let expected = Arguments::new(
             "".to_string(),
             vec![],
@@ -103,13 +118,15 @@ mod tests {
             IndexMap::from([("property".to_string(), "value".to_string())]),
             vec!["-Xmx1024m".to_string()],
             vec!["-XX:+UseG1GC".to_string()],
+            None,
+            false,
         );
         assert_eq!(parsed, expected);
     }
 
     #[test]
     fn test_empty_args() {
-        let parsed: Arguments = into_args(vec![]);
+        let parsed: Arguments = into_args(vec![]).unwrap();
         let expected = Arguments::new(
             "".to_string(),
             vec![],
@@ -118,6 +135,8 @@ mod tests {
             IndexMap::new(),
             vec![],
             vec![],
+            None,
+            false,
         );
         assert_eq!(parsed, expected);
     }

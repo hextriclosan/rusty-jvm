@@ -26,7 +26,15 @@ fn main() -> ExitCode {
         .cloned()
         .collect::<Vec<_>>();
 
-    if let Err(msg) = handle_execution(into_args(raw_args)) {
+    let args = match into_args(raw_args) {
+        Ok(args) => args,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    if let Err(msg) = handle_execution(args) {
         eprintln!("{msg}");
         return ExitCode::FAILURE;
     }

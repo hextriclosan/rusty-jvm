@@ -1,0 +1,2 @@
+Main-Class: samples.jarfiles.simplejar.Main
+Class-Path: lib_jar/algorithm.jar

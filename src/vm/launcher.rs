@@ -9,26 +9,39 @@ use crate::vm::JAVA_CORE_INIT;
 use std::sync::Arc;
 
 // refer: sun.launcher.LauncherHelper
-const CLASS: i32 = 1;
+#[repr(i32)]
+#[derive(Debug)]
+pub(crate) enum LaunchMode {
+    LmClass = 1,
+    LmJar = 2,
+}
 
 const PRINT_TO_STDERR: bool = true;
 
-pub fn resolve_and_execute_main_method(class_name: &str, args: &[String]) -> Result<()> {
+pub fn resolve_and_execute_main_method(
+    class_name: &str,
+    launch_mode: LaunchMode,
+    args: &[String],
+) -> Result<()> {
     if *JAVA_CORE_INIT {
-        resolve_and_execute_main_method_ordinary(class_name, args)
+        resolve_and_execute_main_method_ordinary(class_name, launch_mode, args)
     } else {
         resolve_and_execute_main_method_no_init(class_name, args)
     }
 }
 
-fn resolve_and_execute_main_method_ordinary(class_name: &str, args: &[String]) -> Result<()> {
+fn resolve_and_execute_main_method_ordinary(
+    class_name: &str,
+    launch_mode: LaunchMode,
+    args: &[String],
+) -> Result<()> {
     let class_name_ref = StringPoolHelper::get_string(class_name)?;
     let app_clazz_ref = Executor::invoke_static_method(
         "sun/launcher/LauncherHelper",
         "checkAndLoadMain:(ZILjava/lang/String;)Ljava/lang/Class;",
         &[
             (PRINT_TO_STDERR as i32).into(),
-            CLASS.into(),
+            (launch_mode as i32).into(),
             class_name_ref.into(),
         ],
     )?[0];
