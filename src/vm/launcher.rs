@@ -5,7 +5,6 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{create_array_of_strings, klass};
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::JAVA_CORE_INIT;
 use std::sync::Arc;
 
 // refer: sun.launcher.LauncherHelper
@@ -19,18 +18,6 @@ pub(crate) enum LaunchMode {
 const PRINT_TO_STDERR: bool = true;
 
 pub fn resolve_and_execute_main_method(
-    class_name: &str,
-    launch_mode: LaunchMode,
-    args: &[String],
-) -> Result<()> {
-    if *JAVA_CORE_INIT {
-        resolve_and_execute_main_method_ordinary(class_name, launch_mode, args)
-    } else {
-        resolve_and_execute_main_method_no_init(class_name, args)
-    }
-}
-
-fn resolve_and_execute_main_method_ordinary(
     class_name: &str,
     launch_mode: LaunchMode,
     args: &[String],
@@ -89,25 +76,6 @@ fn resolve_and_execute_main_method_ordinary(
     }
 
     Ok(())
-}
-
-fn resolve_and_execute_main_method_no_init(class_name: &str, args: &[String]) -> Result<()> {
-    let klass = CLASSES.get(class_name)?;
-    if let Some((_index, _method)) = klass.get_method_full("main:([Ljava/lang/String;)V") {
-        let args_array_ref = create_array_of_strings(args)?;
-        let _ = Executor::invoke_static_method(
-            class_name,
-            "main:([Ljava/lang/String;)V",
-            &[args_array_ref.into()],
-        )?;
-
-        Ok(())
-    } else {
-        Err(Error::new_execution(&format!(
-            "Failed to find main method, JAVA_CORE_INIT={}",
-            *JAVA_CORE_INIT
-        )))
-    }
 }
 
 fn construct_main_class(java_class: &Arc<JavaClass>) -> Result<i32> {

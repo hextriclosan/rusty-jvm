@@ -3316,22 +3316,6 @@ fn should_exit_with_given_code_impl(
 }
 
 #[test]
-#[ignore] // doesn't work with ClassLoader (not a big issue since this test is synthetic)
-fn should_run_without_core_classes() {
-    let env_vars = HashMap::from([("SKIP_JAVA_CORE_INIT".to_string(), "".to_string())]);
-    utils::assert_with_all_args(
-        &[],
-        "samples.system.loadwithoutcoreclasses.SystemLoadWithoutCoreClasses",
-        &[],
-        "",
-        "",
-        Success,
-        0,
-        env_vars,
-    );
-}
-
-#[test]
 fn should_handle_non_valid_cesu8() {
     assert_success(
         "samples.javacore.strings.nonvalidcesu8.NonValidCESU8",
