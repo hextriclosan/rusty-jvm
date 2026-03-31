@@ -95,7 +95,7 @@ fn prelude() -> Result<()> {
     for java_class in MethodArea::generate_synthetic_classes() {
         CLASSES.insert_klass(Arc::clone(&java_class), None)?;
     }
-    
+
     init()?;
 
     Ok(())
