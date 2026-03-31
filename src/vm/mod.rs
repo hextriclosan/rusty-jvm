@@ -28,19 +28,11 @@ use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
 use crate::Arguments;
-use once_cell::sync::Lazy;
-use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, EnvFilter};
-
-pub(crate) static JAVA_CORE_INIT: Lazy<bool> = Lazy::new(|| {
-    env::var("SKIP_JAVA_CORE_INIT")
-        .map(|_| false)
-        .unwrap_or(true)
-});
 
 pub(crate) static PLATFORM_CLASSLOADER_REF: OnceLock<i32> = OnceLock::new();
 pub(crate) static SYSTEM_CLASSLOADER_REF: OnceLock<i32> = OnceLock::new();
@@ -87,9 +79,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 }
 
 fn invoke_shutdown_hooks() -> Result<()> {
-    if *JAVA_CORE_INIT {
-        Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])?;
-    }
+    Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])?;
     Ok(())
 }
 
@@ -105,10 +95,8 @@ fn prelude() -> Result<()> {
     for java_class in MethodArea::generate_synthetic_classes() {
         CLASSES.insert_klass(Arc::clone(&java_class), None)?;
     }
-
-    if *JAVA_CORE_INIT {
-        init()?;
-    }
+    
+    init()?;
 
     Ok(())
 }
