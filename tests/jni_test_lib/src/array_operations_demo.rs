@@ -19,3 +19,13 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_ArrayOperations
 ) -> jobject {
     unsafe { ((*(*env)).v24.NewObjectArray)(env, length, element_class, initial_element) }
 }
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetObjectArrayElement(
+    env: *mut JNIEnv,
+    _class: jclass,
+    array: jobject,
+    index: jint,
+) -> jobject {
+    unsafe { ((*(*env)).v24.GetObjectArrayElement)(env, array, index) }
+}

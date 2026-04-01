@@ -1,4 +1,6 @@
-use crate::vm::jni::array_operations_impl::{get_array_length, new_object_array};
+use crate::vm::jni::array_operations_impl::{
+    get_array_length, get_object_array_element, new_object_array,
+};
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::get_string_length;
 use jni_sys::{
@@ -253,7 +255,6 @@ jni_stub!(NewStringUTF(*const c_char) -> jstring);
 jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
-jni_stub!(GetObjectArrayElement(jobjectArray, jsize) -> jobject);
 jni_stub!(SetObjectArrayElement(jobjectArray, jsize, jobject) -> ());
 jni_stub!(NewBooleanArray(jsize) -> jbooleanArray);
 jni_stub!(NewByteArray(jsize) -> jbyteArray);
@@ -499,7 +500,7 @@ static VTABLE: Wrapper = {
     ni.v24.ReleaseStringUTFChars = ReleaseStringUTFChars;
     ni.v24.GetArrayLength = get_array_length;
     ni.v24.NewObjectArray = new_object_array;
-    ni.v24.GetObjectArrayElement = GetObjectArrayElement;
+    ni.v24.GetObjectArrayElement = get_object_array_element;
     ni.v24.SetObjectArrayElement = SetObjectArrayElement;
     ni.v24.NewBooleanArray = NewBooleanArray;
     ni.v24.NewByteArray = NewByteArray;

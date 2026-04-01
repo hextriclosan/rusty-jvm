@@ -104,10 +104,12 @@ class StringOperationsDemo {
 class ArrayOperationsDemo {
     private static native int GetArrayLength(Object input);
     private static native Object NewObjectArray(int length, Object elementClass, Object initialElement);
+    private static native Object GetObjectArrayElement(Object array, int index);
 
     public static void runDemo() {
         GetArrayLengthDemo();
         NewObjectArrayDemo();
+        GetObjectArrayElementDemo();
     }
 
     private static void GetArrayLengthDemo() {
@@ -142,5 +144,18 @@ class ArrayOperationsDemo {
 
         Object int2DArray = NewObjectArray(3, int[].class, new int[] { 10, 20, 30 });
         System.out.printf("Created int 2D array: %s%n", Arrays.deepToString((int[][])int2DArray));
+    }
+
+    private static void GetObjectArrayElementDemo() {
+        System.out.println();
+        System.out.println("=== GetObjectArrayElement ===");
+
+        String[] stringArr = {"one", "two", "three"};
+        Object element1 = GetObjectArrayElement(stringArr, 1);
+        System.out.printf("Element at index 1 of %s is '%s'%n", Arrays.toString(stringArr), element1);
+
+        String[][] string2DArray = {{"a", "b"}, {"c", "d"}};
+        Object element2 = GetObjectArrayElement(string2DArray, 0);
+        System.out.printf("Element at index 0 of %s is '%s'%n", Arrays.deepToString(string2DArray), Arrays.toString((String[])element2));
     }
 }

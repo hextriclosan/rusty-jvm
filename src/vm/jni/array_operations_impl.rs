@@ -48,3 +48,24 @@ pub(super) extern "system" fn new_object_array(
 
     arr_ref as jobjectArray
 }
+
+pub(super) extern "system" fn get_object_array_element(
+    env: *mut JNIEnv,
+    array: jobject,
+    index: jsize,
+) -> jobject {
+    let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let len = get_array_length(env, array);
+    if index >= len || index < 0 {
+        panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
+    }
+
+    let raw = HEAP
+        .get_array_value(array_ref, index as i32)
+        .expect("Failed to get array element");
+    raw[0] as jobject
+}
