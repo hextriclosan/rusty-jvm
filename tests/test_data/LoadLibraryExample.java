@@ -72,5 +72,17 @@ class LoadLibraryExample {
 
         int jniVersion = getJniVersion();
         System.out.printf("JNI version: 0x%08x%n", jniVersion);
+
+        StringOperationsDemo.runDemo();
+    }
+}
+
+class StringOperationsDemo {
+    private static native int getStringLength(String s);
+
+    public static void runDemo() {
+        String testString = "Hello, JNI 💅☕️!";
+        int length = getStringLength(testString);
+        System.out.printf("Length of '%s' is %d%n", testString, length);
     }
 }
