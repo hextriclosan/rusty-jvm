@@ -1,3 +1,5 @@
+mod string_operations_demo;
+
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JObject};
 use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong};
