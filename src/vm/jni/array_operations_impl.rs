@@ -48,3 +48,14 @@ pub(super) extern "system" fn new_object_array(
 
     arr_ref as jobjectArray
 }
+
+pub(super) extern "system" fn get_object_array_element(
+    _env: *mut JNIEnv,
+    array: jobject,
+    index: jsize,
+) -> jobject {
+    let raw = HEAP
+        .get_array_value(array as i32, index as i32)
+        .expect("Failed to get array element");
+    raw[0] as jobject
+}
