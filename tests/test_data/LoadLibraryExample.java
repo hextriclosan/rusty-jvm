@@ -103,9 +103,11 @@ class StringOperationsDemo {
 
 class ArrayOperationsDemo {
     private static native int GetArrayLength(Object input);
+    private static native Object NewObjectArray(int length, Object elementClass, Object initialElement);
 
     public static void runDemo() {
         GetArrayLengthDemo();
+        NewObjectArrayDemo();
     }
 
     private static void GetArrayLengthDemo() {
@@ -123,5 +125,22 @@ class ArrayOperationsDemo {
         String notAnArray = "Not an array";
         int notAnArrayLength = GetArrayLength(notAnArray);
         System.out.printf("Length of '%s' is %d%n", notAnArray, notAnArrayLength);
+    }
+
+    private static void NewObjectArrayDemo() {
+        System.out.println();
+        System.out.println("=== NewObjectArray ===");
+
+        Object stringArray = NewObjectArray(5, String.class, "Hi");
+        System.out.printf("Created String array: %s%n", Arrays.toString((String[])stringArray));
+
+        Object nullStringArray = NewObjectArray(5, String.class, null);
+        System.out.printf("Created null String array: %s%n", Arrays.toString((String[])nullStringArray));
+
+        Object string2DArray = NewObjectArray(5, String[].class, new String[] { "Hi" });
+        System.out.printf("Created String 2D array: %s%n", Arrays.deepToString((String[][])string2DArray));
+
+        Object int2DArray = NewObjectArray(3, int[].class, new int[] { 10, 20, 30 });
+        System.out.printf("Created int 2D array: %s%n", Arrays.deepToString((int[][])int2DArray));
     }
 }
