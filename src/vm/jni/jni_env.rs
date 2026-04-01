@@ -1,3 +1,4 @@
+use crate::vm::jni::array_operations_impl::get_array_length;
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::get_string_length;
 use jni_sys::{
@@ -252,7 +253,6 @@ jni_stub!(NewStringUTF(*const c_char) -> jstring);
 jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
-jni_stub!(GetArrayLength(jarray) -> jsize);
 jni_stub!(NewObjectArray(jsize, jclass, jobject) -> jobjectArray);
 jni_stub!(GetObjectArrayElement(jobjectArray, jsize) -> jobject);
 jni_stub!(SetObjectArrayElement(jobjectArray, jsize, jobject) -> ());
@@ -498,7 +498,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetStringUTFLength = GetStringUTFLength;
     ni.v24.GetStringUTFChars = GetStringUTFChars;
     ni.v24.ReleaseStringUTFChars = ReleaseStringUTFChars;
-    ni.v24.GetArrayLength = GetArrayLength;
+    ni.v24.GetArrayLength = get_array_length;
     ni.v24.NewObjectArray = NewObjectArray;
     ni.v24.GetObjectArrayElement = GetObjectArrayElement;
     ni.v24.SetObjectArrayElement = SetObjectArrayElement;

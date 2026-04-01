@@ -1,5 +1,8 @@
 package samples.javacore.loadlibrary.example;
 
+import java.util.Arrays;
+import java.util.List;
+
 class LoadLibraryExample {
 
     // Primitive operations
@@ -74,15 +77,51 @@ class LoadLibraryExample {
         System.out.printf("JNI version: 0x%08x%n", jniVersion);
 
         StringOperationsDemo.runDemo();
+        ArrayOperationsDemo.runDemo();
     }
 }
 
 class StringOperationsDemo {
-    private static native int getStringLength(String s);
+    private static native int getStringLength(Object input);
 
     public static void runDemo() {
+        GetStringLengthDemo();
+    }
+
+    private static void GetStringLengthDemo() {
+        System.out.println();
+        System.out.println("=== GetStringLength ===");
         String testString = "Hello, JNI 💅☕️!";
         int length = getStringLength(testString);
         System.out.printf("Length of '%s' is %d%n", testString, length);
+
+        Object notAString = List.of(1, 2, 3);
+        int notAStringLength = getStringLength(notAString);
+        System.out.printf("Length of '%s' is %d%n", notAString, notAStringLength);
+    }
+}
+
+class ArrayOperationsDemo {
+    private static native int GetArrayLength(Object input);
+
+    public static void runDemo() {
+        GetArrayLengthDemo();
+    }
+
+    private static void GetArrayLengthDemo() {
+        System.out.println();
+        System.out.println("=== GetArrayLength ===");
+
+        byte[] byteArr = {1, 2, 3, 4, 5};
+        int byteArrLength = GetArrayLength(byteArr);
+        System.out.printf("Length of array %s is %d%n", Arrays.toString(byteArr), byteArrLength);
+
+        String[] stringArr = {"one", "two", "three"};
+        int stringArrLength = GetArrayLength(stringArr);
+        System.out.printf("Length of array %s is %d%n", Arrays.toString(stringArr), stringArrLength);
+
+        String notAnArray = "Not an array";
+        int notAnArrayLength = GetArrayLength(notAnArray);
+        System.out.printf("Length of '%s' is %d%n", notAnArray, notAnArrayLength);
     }
 }
