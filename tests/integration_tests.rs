@@ -3384,9 +3384,15 @@ isPositive(-5) = false
 Float value is: 3.1415
 int sumInstance(40, 2) = 42
 JNI version: 0x00180000
+
+=== GetStringLength ===
 Length of 'Hello, JNI 💅☕️!' is 16
+Length of '[1, 2, 3]' is 0
+
+=== GetArrayLength ===
 Length of array [1, 2, 3, 4, 5] is 5
 Length of array [one, two, three] is 3
+Length of 'Not an array' is 0
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module

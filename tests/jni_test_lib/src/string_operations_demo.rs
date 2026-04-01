@@ -1,10 +1,10 @@
-use jni::sys::{jclass, jint, jstring, JNIEnv};
+use jni::sys::{jclass, jint, jobject, JNIEnv};
 
 #[no_mangle]
-pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_getStringLength__Ljava_lang_String_2(
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_getStringLength(
     env: *mut JNIEnv,
     _class: jclass,
-    input: jstring,
+    input: jobject,
 ) -> jint {
     unsafe { ((*(*env)).v24.GetStringLength)(env, input) }
 }

@@ -5,12 +5,12 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
     let string_ref = input as i32;
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // todo return 0 and and set NullPointerException as pending here
+        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
     }
 
     let raw =
         Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
-            .expect("Failed to invoke String.length()"); // todo handle exception here
+            .unwrap_or(vec![0]); // OpenJDK returns 0 for non-strings
 
     raw[0] as jint
 }
