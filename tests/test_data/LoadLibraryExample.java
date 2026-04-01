@@ -1,5 +1,7 @@
 package samples.javacore.loadlibrary.example;
 
+import java.util.Arrays;
+
 class LoadLibraryExample {
 
     // Primitive operations
@@ -74,6 +76,7 @@ class LoadLibraryExample {
         System.out.printf("JNI version: 0x%08x%n", jniVersion);
 
         StringOperationsDemo.runDemo();
+        ArrayOperationsDemo.runDemo();
     }
 }
 
@@ -84,5 +87,19 @@ class StringOperationsDemo {
         String testString = "Hello, JNI 💅☕️!";
         int length = getStringLength(testString);
         System.out.printf("Length of '%s' is %d%n", testString, length);
+    }
+}
+
+class ArrayOperationsDemo {
+    private static native int GetArrayLength(Object arr);
+
+    public static void runDemo() {
+        byte[] byteArr = {1, 2, 3, 4, 5};
+        int byteArrLength = GetArrayLength(byteArr);
+        System.out.printf("Length of array %s is %d%n", Arrays.toString(byteArr), byteArrLength);
+
+        String[] stringArr = {"one", "two", "three"};
+        int stringArrLength = GetArrayLength(stringArr);
+        System.out.printf("Length of array %s is %d%n", Arrays.toString(stringArr), stringArrLength);
     }
 }

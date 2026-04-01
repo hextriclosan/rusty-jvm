@@ -1,3 +1,4 @@
+mod array_operations_demo;
 mod string_operations_demo;
 
 use jni::errors::ThrowRuntimeExAndDefault;
