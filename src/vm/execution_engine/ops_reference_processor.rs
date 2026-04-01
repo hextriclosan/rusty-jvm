@@ -369,7 +369,11 @@ pub(crate) fn process(
                         "Error getting class name by index {class_constpool_index}"
                     ))
                 })?;
-            let class_of_array = format!("[L{class_of_array};");
+            let class_of_array = if class_of_array.starts_with("[") {
+                format!("[{class_of_array}")
+            } else {
+                format!("[L{class_of_array};")
+            };
             let arrayref = HEAP.create_array(&class_of_array, length);
             stack_frame.push(arrayref)?;
 

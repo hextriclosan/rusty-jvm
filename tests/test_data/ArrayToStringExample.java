@@ -30,5 +30,9 @@ public class ArrayToStringExample {
 
         String[] strings = {"Hello", "Array", "to", "String", "Example"};
         System.out.println(Arrays.toString(strings));
+
+        String[][] strings2D = {{"Hello", "Array"}, {"to", "String"}, {"Example", "2D"}};
+        System.out.println(Arrays.deepToString(strings2D));
+        System.out.println(Arrays.toString(strings2D[1]));
     }
 }
