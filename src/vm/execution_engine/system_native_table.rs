@@ -463,6 +463,14 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
     table.insert("jdk/internal/jimage/NativeImageBuffer:getNativeMap:(Ljava/lang/String;)Ljava/nio/ByteBuffer;", Basic(get_native_map_wrp));
     table.insert(
+        "java/lang/ProcessHandleImpl:initNative:()V",
+        Basic(void_stub),
+    );
+    table.insert(
+        "java/lang/ProcessHandleImpl:current0:()J",
+        Basic(|_args: &[i32]| Ok(i64_to_vec(std::process::id() as i64))),
+    );
+    table.insert(
         "java/lang/Runtime:maxMemory:()J",
         Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))),
     );
