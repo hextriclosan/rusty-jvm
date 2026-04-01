@@ -73,7 +73,7 @@ fn native_libraries_load(
         .strip_prefix(sun_boot_library_path())
         .and_then(|s| s.strip_prefix(file_separator()))
         .and_then(|s| extract_lib_name(s))
-        .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
+        .is_some_and(|lib_name| ["nio", "jimage", "zip", "net", "management"].contains(&lib_name))
     {
         return ThrowingResult::ok(true);
     }
