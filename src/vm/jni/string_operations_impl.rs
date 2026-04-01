@@ -5,7 +5,7 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
     let string_ref = input as i32;
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // throw NPE here
+        panic!("Invalid string reference"); // todo return 0 and and set NullPointerException as pending here
     }
 
     let raw =
