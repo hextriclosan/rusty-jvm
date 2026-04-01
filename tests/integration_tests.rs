@@ -3393,6 +3393,12 @@ Length of '[1, 2, 3]' is 0
 Length of array [1, 2, 3, 4, 5] is 5
 Length of array [one, two, three] is 3
 Length of 'Not an array' is 0
+
+=== NewObjectArray ===
+Created String array: [Hi, Hi, Hi, Hi, Hi]
+Created null String array: [null, null, null, null, null]
+Created String 2D array: [[Hi], [Hi], [Hi], [Hi], [Hi]]
+Created int 2D array: [[10, 20, 30], [10, 20, 30], [10, 20, 30]]
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module
