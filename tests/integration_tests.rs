@@ -3437,6 +3437,24 @@ Created string: hello-perf
 }
 
 #[test]
+fn should_support_jmx_management_beans() {
+    assert_success(
+        "samples.management.jmxexample.JmxExample",
+        r#"vm.name=Rusty JVM
+vm.vendor=rusty-jvm
+uptime.positive=true
+pid.positive=true
+heap.max.positive=true
+thread.count.positive=true
+daemon.count.nonneg=true
+class.loaded.nonneg=true
+class.total.nonneg=true
+avail.procs.positive=true
+"#,
+    );
+}
+
+#[test]
 fn should_use_jar_from_classpath() {
     let test_jar_dir = "lib_jar/*";
     let current_dir = ".";

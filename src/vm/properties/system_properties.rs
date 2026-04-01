@@ -58,6 +58,22 @@ static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| 
         ("java.home", java_home()),
         ("sun.boot.library.path", sun_boot_library_path()),
         ("java.class.path", classpath()),
+        // VM identification properties used by JMX / VisualVM
+        ("java.vm.name", "Rusty JVM"),
+        ("java.vm.vendor", "rusty-jvm"),
+        ("java.vm.version", env!("CARGO_PKG_VERSION")),
+        ("java.vm.info", "interpreted mode"),
+        // Java specification properties required by java.lang.management APIs
+        ("java.version", "25"),
+        (
+            "java.vm.specification.name",
+            "Java Virtual Machine Specification",
+        ),
+        ("java.vm.specification.vendor", "Oracle Corporation"),
+        ("java.vm.specification.version", "25"),
+        ("java.specification.name", "Java Platform API Specification"),
+        ("java.specification.vendor", "Oracle Corporation"),
+        ("java.specification.version", "25"),
     ])
 });
 
@@ -142,6 +158,35 @@ mod tests {
                     .to_string()
                 ),
                 ("java.class.path".to_string(), ".".to_string()),
+                ("java.vm.name".to_string(), "Rusty JVM".to_string()),
+                ("java.vm.vendor".to_string(), "rusty-jvm".to_string()),
+                (
+                    "java.vm.version".to_string(),
+                    env!("CARGO_PKG_VERSION").to_string()
+                ),
+                ("java.vm.info".to_string(), "interpreted mode".to_string()),
+                ("java.version".to_string(), "25".to_string()),
+                (
+                    "java.vm.specification.name".to_string(),
+                    "Java Virtual Machine Specification".to_string()
+                ),
+                (
+                    "java.vm.specification.vendor".to_string(),
+                    "Oracle Corporation".to_string()
+                ),
+                (
+                    "java.vm.specification.version".to_string(),
+                    "25".to_string()
+                ),
+                (
+                    "java.specification.name".to_string(),
+                    "Java Platform API Specification".to_string()
+                ),
+                (
+                    "java.specification.vendor".to_string(),
+                    "Oracle Corporation".to_string()
+                ),
+                ("java.specification.version".to_string(), "25".to_string()),
                 ("other.property".to_string(), "other_value".to_string())
             ])
         );

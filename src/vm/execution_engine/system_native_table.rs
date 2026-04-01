@@ -33,6 +33,44 @@ use crate::vm::system_native::io_file_system::{
     get_boolean_attributes0_wrp, get_length0_wrp,
 };
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
+use crate::vm::system_native::management::{
+    class_loading_impl_set_verbose_class_wrp, gc_impl_get_collection_count_wrp,
+    gc_impl_get_collection_time_wrp, memory_impl_get_memory_managers0_wrp,
+    memory_impl_get_memory_pools0_wrp, memory_impl_get_memory_usage0_wrp,
+    memory_impl_set_verbose_gc_wrp, memory_manager_impl_get_memory_pools0_wrp,
+    os_impl_get_committed_virtual_memory_size0_wrp, os_impl_get_cpu_load0_wrp,
+    os_impl_get_free_memory_size0_wrp, os_impl_get_free_swap_space_size0_wrp,
+    os_impl_get_host_configured_cpu_count0_wrp, os_impl_get_host_online_cpu_count0_wrp,
+    os_impl_get_host_total_cpu_ticks0_wrp, os_impl_get_max_fd_count0_wrp,
+    os_impl_get_open_fd_count0_wrp, os_impl_get_process_cpu_load0_wrp,
+    os_impl_get_process_cpu_time0_wrp, os_impl_get_single_cpu_load0_wrp,
+    os_impl_get_total_memory_size0_wrp, os_impl_get_total_swap_space_size0_wrp,
+    os_impl_initialize0_wrp, thread_impl_dump_threads0_wrp,
+    thread_impl_find_deadlocked_threads0_wrp, thread_impl_find_monitor_deadlocked_threads0_wrp,
+    thread_impl_get_thread_allocated_memory0_wrp, thread_impl_get_thread_allocated_memory1_wrp,
+    thread_impl_get_thread_info1_wrp, thread_impl_get_thread_total_cpu_time0_wrp,
+    thread_impl_get_thread_total_cpu_time1_wrp, thread_impl_get_thread_user_cpu_time0_wrp,
+    thread_impl_get_thread_user_cpu_time1_wrp, thread_impl_get_threads_wrp,
+    thread_impl_get_total_thread_allocated_memory_wrp, thread_impl_reset_contention_times0_wrp,
+    thread_impl_reset_peak_thread_count0_wrp,
+    thread_impl_set_thread_allocated_memory_enabled0_wrp,
+    thread_impl_set_thread_contention_monitoring_enabled0_wrp,
+    thread_impl_set_thread_cpu_time_enabled0_wrp, vm_mgmt_get_class_initialization_time_wrp,
+    vm_mgmt_get_class_loading_time_wrp, vm_mgmt_get_class_verification_time_wrp,
+    vm_mgmt_get_daemon_thread_count_wrp, vm_mgmt_get_initialized_class_count_wrp,
+    vm_mgmt_get_live_thread_count_wrp, vm_mgmt_get_loaded_class_count_wrp,
+    vm_mgmt_get_loaded_class_size_wrp, vm_mgmt_get_method_data_size_wrp,
+    vm_mgmt_get_peak_thread_count_wrp, vm_mgmt_get_process_id_wrp,
+    vm_mgmt_get_safepoint_count_wrp, vm_mgmt_get_safepoint_sync_time_wrp,
+    vm_mgmt_get_startup_time_wrp, vm_mgmt_get_total_app_non_stopped_time_wrp,
+    vm_mgmt_get_total_class_count_wrp, vm_mgmt_get_total_compile_time_wrp,
+    vm_mgmt_get_total_safepoint_time_wrp, vm_mgmt_get_total_thread_count_wrp,
+    vm_mgmt_get_unloaded_class_count_wrp, vm_mgmt_get_unloaded_class_size_wrp,
+    vm_mgmt_get_uptime0_wrp, vm_mgmt_get_verbose_class_wrp, vm_mgmt_get_verbose_gc_wrp,
+    vm_mgmt_get_version0_wrp, vm_mgmt_get_vm_arguments0_wrp,
+    vm_mgmt_init_optional_support_fields_wrp, vm_mgmt_is_thread_allocated_memory_enabled_wrp,
+    vm_mgmt_is_thread_contention_monitoring_enabled_wrp, vm_mgmt_is_thread_cpu_time_enabled_wrp,
+};
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
     method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
@@ -536,6 +574,287 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/perf/Perf:createByteArray:(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
         WithMutStackFrames(perf_create_byte_array_wrp),
+    );
+    // ── JMX / management native methods ───────────────────────────────────────
+    table.insert(
+        "sun/management/VMManagementImpl:getVersion0:()Ljava/lang/String;",
+        Basic(vm_mgmt_get_version0_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:initOptionalSupportFields:()V",
+        Basic(vm_mgmt_init_optional_support_fields_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getStartupTime:()J",
+        Basic(vm_mgmt_get_startup_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getUptime0:()J",
+        Basic(vm_mgmt_get_uptime0_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getProcessId:()I",
+        Basic(vm_mgmt_get_process_id_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getVmArguments0:()[Ljava/lang/String;",
+        Basic(vm_mgmt_get_vm_arguments0_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getVerboseClass:()Z",
+        Basic(vm_mgmt_get_verbose_class_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getVerboseGC:()Z",
+        Basic(vm_mgmt_get_verbose_gc_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getLoadedClassCount:()I",
+        Basic(vm_mgmt_get_loaded_class_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getTotalClassCount:()J",
+        Basic(vm_mgmt_get_total_class_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getUnloadedClassCount:()J",
+        Basic(vm_mgmt_get_unloaded_class_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getLiveThreadCount:()I",
+        Basic(vm_mgmt_get_live_thread_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getPeakThreadCount:()I",
+        Basic(vm_mgmt_get_peak_thread_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getDaemonThreadCount:()I",
+        Basic(vm_mgmt_get_daemon_thread_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getTotalThreadCount:()J",
+        Basic(vm_mgmt_get_total_thread_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getTotalCompileTime:()J",
+        Basic(vm_mgmt_get_total_compile_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getSafepointCount:()J",
+        Basic(vm_mgmt_get_safepoint_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getTotalSafepointTime:()J",
+        Basic(vm_mgmt_get_total_safepoint_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getSafepointSyncTime:()J",
+        Basic(vm_mgmt_get_safepoint_sync_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getTotalApplicationNonStoppedTime:()J",
+        Basic(vm_mgmt_get_total_app_non_stopped_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getLoadedClassSize:()J",
+        Basic(vm_mgmt_get_loaded_class_size_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getUnloadedClassSize:()J",
+        Basic(vm_mgmt_get_unloaded_class_size_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getClassLoadingTime:()J",
+        Basic(vm_mgmt_get_class_loading_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getMethodDataSize:()J",
+        Basic(vm_mgmt_get_method_data_size_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getInitializedClassCount:()J",
+        Basic(vm_mgmt_get_initialized_class_count_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getClassInitializationTime:()J",
+        Basic(vm_mgmt_get_class_initialization_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:getClassVerificationTime:()J",
+        Basic(vm_mgmt_get_class_verification_time_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:isThreadContentionMonitoringEnabled:()Z",
+        Basic(vm_mgmt_is_thread_contention_monitoring_enabled_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:isThreadCpuTimeEnabled:()Z",
+        Basic(vm_mgmt_is_thread_cpu_time_enabled_wrp),
+    );
+    table.insert(
+        "sun/management/VMManagementImpl:isThreadAllocatedMemoryEnabled:()Z",
+        Basic(vm_mgmt_is_thread_allocated_memory_enabled_wrp),
+    );
+    table.insert(
+        "sun/management/MemoryImpl:getMemoryUsage0:(Z)Ljava/lang/management/MemoryUsage;",
+        Basic(memory_impl_get_memory_usage0_wrp),
+    );
+    table.insert(
+        "sun/management/MemoryImpl:getMemoryPools0:()[Ljava/lang/management/MemoryPoolMXBean;",
+        Basic(memory_impl_get_memory_pools0_wrp),
+    );
+    table.insert(
+        "sun/management/MemoryImpl:getMemoryManagers0:()[Ljava/lang/management/MemoryManagerMXBean;",
+        Basic(memory_impl_get_memory_managers0_wrp),
+    );
+    table.insert(
+        "sun/management/MemoryImpl:setVerboseGC:(Z)V",
+        Basic(memory_impl_set_verbose_gc_wrp),
+    );
+    table.insert(
+        "sun/management/MemoryManagerImpl:getMemoryPools0:()[Ljava/lang/management/MemoryPoolMXBean;",
+        Basic(memory_manager_impl_get_memory_pools0_wrp),
+    );
+    table.insert(
+        "sun/management/ClassLoadingImpl:setVerboseClass:(Z)V",
+        Basic(class_loading_impl_set_verbose_class_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreads:()[Ljava/lang/Thread;",
+        Basic(thread_impl_get_threads_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadInfo1:([JI[Ljava/lang/management/ThreadInfo;)V",
+        Basic(thread_impl_get_thread_info1_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:resetContentionTimes0:(J)V",
+        Basic(thread_impl_reset_contention_times0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:setThreadContentionMonitoringEnabled0:(Z)V",
+        Basic(thread_impl_set_thread_contention_monitoring_enabled0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadTotalCpuTime0:(J)J",
+        Basic(thread_impl_get_thread_total_cpu_time0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadTotalCpuTime1:([J[J)V",
+        Basic(thread_impl_get_thread_total_cpu_time1_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadUserCpuTime0:(J)J",
+        Basic(thread_impl_get_thread_user_cpu_time0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadUserCpuTime1:([J[J)V",
+        Basic(thread_impl_get_thread_user_cpu_time1_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:setThreadCpuTimeEnabled0:(Z)V",
+        Basic(thread_impl_set_thread_cpu_time_enabled0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getTotalThreadAllocatedMemory:()J",
+        Basic(thread_impl_get_total_thread_allocated_memory_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadAllocatedMemory0:(J)J",
+        Basic(thread_impl_get_thread_allocated_memory0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:getThreadAllocatedMemory1:([J[J)V",
+        Basic(thread_impl_get_thread_allocated_memory1_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:setThreadAllocatedMemoryEnabled0:(Z)V",
+        Basic(thread_impl_set_thread_allocated_memory_enabled0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:findMonitorDeadlockedThreads0:()[Ljava/lang/Thread;",
+        Basic(thread_impl_find_monitor_deadlocked_threads0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:findDeadlockedThreads0:()[Ljava/lang/Thread;",
+        Basic(thread_impl_find_deadlocked_threads0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:resetPeakThreadCount0:()V",
+        Basic(thread_impl_reset_peak_thread_count0_wrp),
+    );
+    table.insert(
+        "sun/management/ThreadImpl:dumpThreads0:([JZZI)[Ljava/lang/management/ThreadInfo;",
+        Basic(thread_impl_dump_threads0_wrp),
+    );
+    table.insert(
+        "sun/management/GarbageCollectorImpl:getCollectionCount:()J",
+        Basic(gc_impl_get_collection_count_wrp),
+    );
+    table.insert(
+        "sun/management/GarbageCollectorImpl:getCollectionTime:()J",
+        Basic(gc_impl_get_collection_time_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:initialize0:()V",
+        Basic(os_impl_initialize0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getCommittedVirtualMemorySize0:()J",
+        Basic(os_impl_get_committed_virtual_memory_size0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getTotalSwapSpaceSize0:()J",
+        Basic(os_impl_get_total_swap_space_size0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getFreeSwapSpaceSize0:()J",
+        Basic(os_impl_get_free_swap_space_size0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getProcessCpuTime0:()J",
+        Basic(os_impl_get_process_cpu_time0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getFreeMemorySize0:()J",
+        Basic(os_impl_get_free_memory_size0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getTotalMemorySize0:()J",
+        Basic(os_impl_get_total_memory_size0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getOpenFileDescriptorCount0:()J",
+        Basic(os_impl_get_open_fd_count0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getMaxFileDescriptorCount0:()J",
+        Basic(os_impl_get_max_fd_count0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getCpuLoad0:()D",
+        Basic(os_impl_get_cpu_load0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getProcessCpuLoad0:()D",
+        Basic(os_impl_get_process_cpu_load0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getHostOnlineCpuCount0:()I",
+        Basic(os_impl_get_host_online_cpu_count0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getSingleCpuLoad0:(I)D",
+        Basic(os_impl_get_single_cpu_load0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getHostConfiguredCpuCount0:()I",
+        Basic(os_impl_get_host_configured_cpu_count0_wrp),
+    );
+    table.insert(
+        "com/sun/management/internal/OperatingSystemImpl:getHostTotalCpuTicks0:()J",
+        Basic(os_impl_get_host_total_cpu_ticks0_wrp),
     );
     table.insert(
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
