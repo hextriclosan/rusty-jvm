@@ -17,6 +17,16 @@ static STARTUP_TIME_MS: Lazy<u64> = Lazy::new(|| {
         .unwrap_or(0)
 });
 
+/// Stub CPU count returned by all processor-count native methods.
+/// Matches the value already returned by `java/lang/Runtime:availableProcessors`.
+const STUB_CPU_COUNT: i32 = 14;
+
+/// Two-element `Vec<i32>` encoding the IEEE 754 double `0.0`.
+/// Used as the return value for all stub CPU-load native methods.
+fn zero_double() -> Vec<i32> {
+    0.0f64.to_vec()
+}
+
 // ─── VMManagementImpl ────────────────────────────────────────────────────────
 
 /// Returns the JMM (Java Management Monitor) version string.
@@ -370,24 +380,23 @@ pub(crate) fn os_impl_get_max_fd_count0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
 }
 
 pub(crate) fn os_impl_get_cpu_load0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    // double 0.0
-    Ok(0.0f64.to_vec())
+    Ok(zero_double())
 }
 
 pub(crate) fn os_impl_get_process_cpu_load0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(0.0f64.to_vec())
+    Ok(zero_double())
 }
 
 pub(crate) fn os_impl_get_host_online_cpu_count0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(vec![14])
+    Ok(vec![STUB_CPU_COUNT])
 }
 
 pub(crate) fn os_impl_get_single_cpu_load0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(0.0f64.to_vec())
+    Ok(zero_double())
 }
 
 pub(crate) fn os_impl_get_host_configured_cpu_count0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(vec![14])
+    Ok(vec![STUB_CPU_COUNT])
 }
 
 pub(crate) fn os_impl_get_host_total_cpu_ticks0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
