@@ -3168,6 +3168,8 @@ fn should_support_arrays_to_string() {
 [3.14, 2.71, 1.41, 1.73]
 [3.141592653589793, 2.71, 1.41, 1.73]
 [Hello, Array, to, String, Example]
+[[Hello, Array], [to, String], [Example, 2D]]
+[to, String]
 "#,
     );
 }
