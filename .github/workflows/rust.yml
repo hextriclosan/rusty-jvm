@@ -47,7 +47,7 @@ jobs:
         run: cargo build -p jni_test_lib
 
       - name: Run tests
-        run: cargo nextest run --workspace --locked
+        run: cargo nextest run --workspace --locked --no-fail-fast --jobs 8
 
 
   test-on-s390x:
