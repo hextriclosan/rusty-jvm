@@ -47,7 +47,7 @@ jobs:
         run: cargo build -p jni_test_lib
 
       - name: Run tests
-        run: cargo nextest run --workspace --locked
+        run: cargo nextest run --workspace --locked --no-fail-fast --jobs 8
 
 
   test-on-s390x:
@@ -111,16 +111,16 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
-      - name: Install cargo-llvm-cov
+      - name: Install cargo-llvm-cov and nextest
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov
+          tool: cargo-llvm-cov, nextest
 
       - name: Build jni_test_lib
         run: cargo build -p jni_test_lib
 
       - name: Run tests with coverage
-        run: cargo llvm-cov --locked --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov nextest --locked --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
