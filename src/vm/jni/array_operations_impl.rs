@@ -5,8 +5,6 @@ use jni_sys::{
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
     jshort, jshortArray, jsize, JNIEnv, JNI_ABORT, JNI_COMMIT, JNI_TRUE,
 };
-use std::mem::ManuallyDrop;
-use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
     let array_ref = input as i32;
@@ -170,9 +168,9 @@ fn get_primitive_type_array_elements<T: Copy>(array_ref: i32, is_copy: *mut jboo
         .value()
         .clone();
     let boxed_slice = raw_data.into_boxed_slice();
-    let raw_ptr = ManuallyDrop::new(boxed_slice).as_mut_ptr() as *mut T;
+    let raw_ptr = Box::into_raw(boxed_slice) as *mut u8 as *mut T;
 
-    if is_copy != null_mut() {
+    if !is_copy.is_null() {
         unsafe {
             *is_copy = JNI_TRUE; // we always return a copy
         }
