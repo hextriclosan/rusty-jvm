@@ -1,9 +1,12 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use jni_sys::{
-    jarray, jbooleanArray, jbyteArray, jcharArray, jclass, jdoubleArray, jfloatArray, jint,
-    jintArray, jlongArray, jobject, jobjectArray, jshortArray, jsize, JNIEnv,
+    jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
+    jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
+    jshort, jshortArray, jsize, JNIEnv, JNI_ABORT, JNI_COMMIT, JNI_TRUE,
 };
+use std::mem::ManuallyDrop;
+use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
     let array_ref = input as i32;
@@ -135,4 +138,108 @@ fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
     }
 
     HEAP.create_array(&type_name, len) as jarray
+}
+
+macro_rules! impl_get_array {
+    ($name:ident, $jni_ty:ty, $array_ty:ty) => {
+        pub(super) extern "system" fn $name(
+            _env: *mut JNIEnv,
+            array: $array_ty,
+            is_copy: *mut jboolean,
+        ) -> *mut $jni_ty {
+            get_primitive_type_array_elements::<$jni_ty>(array as i32, is_copy)
+        }
+    };
+}
+impl_get_array!(get_boolean_array_elements, jboolean, jbooleanArray);
+impl_get_array!(get_byte_array_elements, jbyte, jbyteArray);
+impl_get_array!(get_char_array_elements, jchar, jcharArray);
+impl_get_array!(get_short_array_elements, jshort, jshortArray);
+impl_get_array!(get_int_array_elements, jint, jintArray);
+impl_get_array!(get_long_array_elements, jlong, jlongArray);
+impl_get_array!(get_float_array_elements, jfloat, jfloatArray);
+impl_get_array!(get_double_array_elements, jdouble, jdoubleArray);
+fn get_primitive_type_array_elements<T: Copy>(array_ref: i32, is_copy: *mut jboolean) -> *mut T {
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let raw_data = HEAP
+        .get_entire_raw_data(array_ref)
+        .expect("Failed to get array elements")
+        .value()
+        .clone();
+    let boxed_slice = raw_data.into_boxed_slice();
+    let raw_ptr = ManuallyDrop::new(boxed_slice).as_mut_ptr() as *mut T;
+
+    if is_copy != null_mut() {
+        unsafe {
+            *is_copy = JNI_TRUE; // we always return a copy
+        }
+    }
+
+    raw_ptr
+}
+
+macro_rules! impl_release_array {
+    ($name:ident, $jni_ty:ty, $array_ty:ty) => {
+        pub(super) extern "system" fn $name(
+            env: *mut JNIEnv,
+            array: $array_ty,
+            elems: *mut $jni_ty,
+            mode: jint,
+        ) {
+            release_primitive_type_array_elements::<$jni_ty>(env, array as jarray, elems, mode)
+        }
+    };
+}
+impl_release_array!(release_boolean_array_elements, jboolean, jbooleanArray);
+impl_release_array!(release_byte_array_elements, jbyte, jbyteArray);
+impl_release_array!(release_char_array_elements, jchar, jcharArray);
+impl_release_array!(release_short_array_elements, jshort, jshortArray);
+impl_release_array!(release_int_array_elements, jint, jintArray);
+impl_release_array!(release_long_array_elements, jlong, jlongArray);
+impl_release_array!(release_float_array_elements, jfloat, jfloatArray);
+impl_release_array!(release_double_array_elements, jdouble, jdoubleArray);
+fn release_primitive_type_array_elements<T>(
+    env: *mut JNIEnv,
+    array: jarray,
+    elems: *mut T,
+    mode: jint,
+) {
+    let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let elems = elems as *mut u8;
+    let len_in_bytes = get_array_length(env, array) as usize * size_of::<T>();
+
+    match mode {
+        0 => {
+            write_to_array(array_ref, elems, len_in_bytes);
+            free_buffer(elems, len_in_bytes);
+        }
+        JNI_COMMIT => {
+            write_to_array(array_ref, elems, len_in_bytes);
+        }
+        JNI_ABORT => {
+            free_buffer(elems, len_in_bytes);
+        }
+        _ => panic!("Invalid mode: {mode}"),
+    };
+}
+
+fn free_buffer(elems: *mut u8, len: usize) {
+    unsafe {
+        let _boxed: Box<_> = Box::from_raw(std::slice::from_raw_parts_mut(elems, len));
+    }
+}
+
+fn write_to_array(array_ref: i32, elems: *mut u8, len: usize) {
+    let slice = unsafe { std::slice::from_raw_parts(elems, len) };
+    let mut guard = HEAP
+        .get_entire_raw_data_mut(array_ref)
+        .expect("Failed to commit array elements");
+    guard.copy_from_slice(slice);
 }
