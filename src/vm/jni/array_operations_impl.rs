@@ -98,38 +98,38 @@ pub(super) extern "system" fn set_object_array_element(
 }
 
 pub(super) extern "system" fn new_boolean_array(_env: *mut JNIEnv, len: jsize) -> jbooleanArray {
-    new_array_impl(len, "[Z") as jbooleanArray
+    new_primitive_type_array_impl(len, "[Z") as jbooleanArray
 }
 
 pub(super) extern "system" fn new_byte_array(_env: *mut JNIEnv, len: jsize) -> jbyteArray {
-    new_array_impl(len, "[B") as jbyteArray
+    new_primitive_type_array_impl(len, "[B") as jbyteArray
 }
 
 pub(super) extern "system" fn new_char_array(_env: *mut JNIEnv, len: jsize) -> jcharArray {
-    new_array_impl(len, "[C") as jcharArray
+    new_primitive_type_array_impl(len, "[C") as jcharArray
 }
 
 pub(super) extern "system" fn new_short_array(_env: *mut JNIEnv, len: jsize) -> jshortArray {
-    new_array_impl(len, "[S") as jshortArray
+    new_primitive_type_array_impl(len, "[S") as jshortArray
 }
 
 pub(super) extern "system" fn new_int_array(_env: *mut JNIEnv, len: jsize) -> jintArray {
-    new_array_impl(len, "[I") as jintArray
+    new_primitive_type_array_impl(len, "[I") as jintArray
 }
 
 pub(super) extern "system" fn new_long_array(_env: *mut JNIEnv, len: jsize) -> jlongArray {
-    new_array_impl(len, "[J") as jlongArray
+    new_primitive_type_array_impl(len, "[J") as jlongArray
 }
 
 pub(super) extern "system" fn new_float_array(_env: *mut JNIEnv, len: jsize) -> jfloatArray {
-    new_array_impl(len, "[F") as jfloatArray
+    new_primitive_type_array_impl(len, "[F") as jfloatArray
 }
 
 pub(super) extern "system" fn new_double_array(_env: *mut JNIEnv, len: jsize) -> jdoubleArray {
-    new_array_impl(len, "[D") as jdoubleArray
+    new_primitive_type_array_impl(len, "[D") as jdoubleArray
 }
 
-fn new_array_impl(len: jsize, type_name: &str) -> jobjectArray {
+fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
     if len < 0 {
         panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
     }
