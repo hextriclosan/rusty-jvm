@@ -55,7 +55,7 @@ pub(super) extern "system" fn new_object_array(
 
 pub(super) extern "system" fn get_object_array_element(
     env: *mut JNIEnv,
-    array: jobject,
+    array: jobjectArray,
     index: jsize,
 ) -> jobject {
     let array_ref = array as i32;
@@ -72,4 +72,24 @@ pub(super) extern "system" fn get_object_array_element(
         .get_array_value(array_ref, index as i32)
         .expect("Failed to get array element");
     raw[0] as jobject
+}
+
+pub(super) extern "system" fn set_object_array_element(
+    env: *mut JNIEnv,
+    array: jobjectArray,
+    index: jsize,
+    value: jobject,
+) {
+    let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let len = get_array_length(env, array);
+    if index >= len || index < 0 {
+        panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
+    }
+
+    HEAP.set_array_value(array_ref, index as i32, vec![value as i32])
+        .expect("Failed to set array element");
 }

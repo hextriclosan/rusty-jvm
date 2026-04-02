@@ -3405,6 +3405,11 @@ Created int 2D array: [[10, 20, 30], [10, 20, 30], [10, 20, 30]]
 === GetObjectArrayElement ===
 Element at index 1 of [one, two, three] is 'two'
 Element at index 0 of [[a, b], [c, d]] is '[a, b]'
+
+=== SetObjectArrayElement ===
+Array after modification '[one, twenty, three]'
+Array after setting null '[null, twenty, three]'
+2D Array after modification '[[x, y], [c, d]]'
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module
