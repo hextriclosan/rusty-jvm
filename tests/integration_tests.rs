@@ -3410,6 +3410,16 @@ Element at index 0 of [[a, b], [c, d]] is '[a, b]'
 Array after modification '[one, twenty, three]'
 Array after setting null '[null, twenty, three]'
 2D Array after modification '[[x, y], [c, d]]'
+
+=== New<PrimitiveType>Array ===
+Created boolean array: [false, false, false]
+Created byte array: [0, 0, 0]
+Created char array: [ ,  ,  ]
+Created short array: [0, 0, 0]
+Created int array: [0, 0, 0]
+Created long array: [0, 0, 0]
+Created float array: [0.0, 0.0, 0.0]
+Created double array: [0.0, 0.0, 0.0]
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module

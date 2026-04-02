@@ -1,5 +1,7 @@
 use crate::vm::jni::array_operations_impl::{
-    get_array_length, get_object_array_element, new_object_array, set_object_array_element,
+    get_array_length, get_object_array_element, new_boolean_array, new_byte_array, new_char_array,
+    new_double_array, new_float_array, new_int_array, new_long_array, new_object_array,
+    new_short_array, set_object_array_element,
 };
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::get_string_length;
@@ -254,14 +256,6 @@ jni_stub!(NewStringUTF(*const c_char) -> jstring);
 jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
-jni_stub!(NewBooleanArray(jsize) -> jbooleanArray);
-jni_stub!(NewByteArray(jsize) -> jbyteArray);
-jni_stub!(NewCharArray(jsize) -> jcharArray);
-jni_stub!(NewShortArray(jsize) -> jshortArray);
-jni_stub!(NewIntArray(jsize) -> jintArray);
-jni_stub!(NewLongArray(jsize) -> jlongArray);
-jni_stub!(NewFloatArray(jsize) -> jfloatArray);
-jni_stub!(NewDoubleArray(jsize) -> jdoubleArray);
 jni_stub!(GetBooleanArrayElements(jbooleanArray, *mut jboolean) -> *mut jboolean);
 jni_stub!(GetByteArrayElements(jbyteArray, *mut jboolean) -> *mut jbyte);
 jni_stub!(GetCharArrayElements(jcharArray, *mut jboolean) -> *mut jchar);
@@ -500,14 +494,14 @@ static VTABLE: Wrapper = {
     ni.v24.NewObjectArray = new_object_array;
     ni.v24.GetObjectArrayElement = get_object_array_element;
     ni.v24.SetObjectArrayElement = set_object_array_element;
-    ni.v24.NewBooleanArray = NewBooleanArray;
-    ni.v24.NewByteArray = NewByteArray;
-    ni.v24.NewCharArray = NewCharArray;
-    ni.v24.NewShortArray = NewShortArray;
-    ni.v24.NewIntArray = NewIntArray;
-    ni.v24.NewLongArray = NewLongArray;
-    ni.v24.NewFloatArray = NewFloatArray;
-    ni.v24.NewDoubleArray = NewDoubleArray;
+    ni.v24.NewBooleanArray = new_boolean_array;
+    ni.v24.NewByteArray = new_byte_array;
+    ni.v24.NewCharArray = new_char_array;
+    ni.v24.NewShortArray = new_short_array;
+    ni.v24.NewIntArray = new_int_array;
+    ni.v24.NewLongArray = new_long_array;
+    ni.v24.NewFloatArray = new_float_array;
+    ni.v24.NewDoubleArray = new_double_array;
     ni.v24.GetBooleanArrayElements = GetBooleanArrayElements;
     ni.v24.GetByteArrayElements = GetByteArrayElements;
     ni.v24.GetCharArrayElements = GetCharArrayElements;

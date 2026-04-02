@@ -106,12 +106,21 @@ class ArrayOperationsDemo {
     private static native Object NewObjectArray(int length, Object elementClass, Object initialElement);
     private static native Object GetObjectArrayElement(Object array, int index);
     private static native void SetObjectArrayElement(Object array, int index, Object value);
+    private static native boolean[] NewBooleanArray(int length);
+    private static native byte[] NewByteArray(int length);
+    private static native char[] NewCharArray(int length);
+    private static native short[] NewShortArray(int length);
+    private static native int[] NewIntArray(int length);
+    private static native long[] NewLongArray(int length);
+    private static native float[] NewFloatArray(int length);
+    private static native double[] NewDoubleArray(int length);
 
     public static void runDemo() {
         GetArrayLengthDemo();
         NewObjectArrayDemo();
         GetObjectArrayElementDemo();
         SetObjectArrayElementDemo();
+        NewPrimitiveArrayDemo();
     }
 
     private static void GetArrayLengthDemo() {
@@ -175,5 +184,34 @@ class ArrayOperationsDemo {
         String[][] string2DArray = {{"a", "b"}, {"c", "d"}};
         SetObjectArrayElement(string2DArray, 0, new String[]{ "x", "y" });
         System.out.printf("2D Array after modification '%s'%n", Arrays.deepToString(string2DArray));
+    }
+
+    private static void NewPrimitiveArrayDemo() {
+        System.out.println();
+        System.out.println("=== New<PrimitiveType>Array ===");
+
+        boolean[] boolArr = NewBooleanArray(3);
+        System.out.printf("Created boolean array: %s%n", Arrays.toString(boolArr));
+
+        byte[] byteArr = NewByteArray(3);
+        System.out.printf("Created byte array: %s%n", Arrays.toString(byteArr));
+
+        char[] charArr = NewCharArray(3);
+        System.out.printf("Created char array: %s%n", Arrays.toString(charArr));
+
+        short[] shortArr = NewShortArray(3);
+        System.out.printf("Created short array: %s%n", Arrays.toString(shortArr));
+
+        int[] intArr = NewIntArray(3);
+        System.out.printf("Created int array: %s%n", Arrays.toString(intArr));
+
+        long[] longArr = NewLongArray(3);
+        System.out.printf("Created long array: %s%n", Arrays.toString(longArr));
+
+        float[] floatArr = NewFloatArray(3);
+        System.out.printf("Created float array: %s%n", Arrays.toString(floatArr));
+
+        double[] doubleArr = NewDoubleArray(3);
+        System.out.printf("Created double array: %s%n", Arrays.toString(doubleArr));
     }
 }
