@@ -106,6 +106,7 @@ class ArrayOperationsDemo {
     private static native Object NewObjectArray(int length, Object elementClass, Object initialElement);
     private static native Object GetObjectArrayElement(Object array, int index);
     private static native void SetObjectArrayElement(Object array, int index, Object value);
+
     private static native boolean[] NewBooleanArray(int length);
     private static native byte[] NewByteArray(int length);
     private static native char[] NewCharArray(int length);
@@ -115,12 +116,22 @@ class ArrayOperationsDemo {
     private static native float[] NewFloatArray(int length);
     private static native double[] NewDoubleArray(int length);
 
+    private static native void GetAndReleaseBooleanArrayDemo(boolean[] array);
+    private static native void GetAndReleaseByteArrayDemo(byte[] array);
+    private static native void GetAndReleaseCharArrayDemo(char[] array);
+    private static native void GetAndReleaseShortArrayDemo(short[] array);
+    private static native void GetAndReleaseIntArrayDemo(int[] array);
+    private static native void GetAndReleaseLongArrayDemo(long[] array);
+    private static native void GetAndReleaseFloatArrayDemo(float[] array);
+    private static native void GetAndReleaseDoubleArrayDemo(double[] array);
+
     public static void runDemo() {
         GetArrayLengthDemo();
         NewObjectArrayDemo();
         GetObjectArrayElementDemo();
         SetObjectArrayElementDemo();
         NewPrimitiveArrayDemo();
+        GetAndReleasePrimitiveArrayElementsDemo();
     }
 
     private static void GetArrayLengthDemo() {
@@ -213,5 +224,50 @@ class ArrayOperationsDemo {
 
         double[] doubleArr = NewDoubleArray(3);
         System.out.printf("Created double array: %s%n", Arrays.toString(doubleArr));
+    }
+
+    private static void GetAndReleasePrimitiveArrayElementsDemo() {
+        System.out.println();
+        System.out.println("=== Get<PrimitiveType>ArrayElements and Release<PrimitiveType>ArrayElements ===");
+
+        boolean[] boolArr = {true, false, false};
+        System.out.printf("Boolean array before modification: %s%n", Arrays.toString(boolArr));
+        GetAndReleaseBooleanArrayDemo(boolArr);
+        System.out.printf("Boolean array after modification: %s%n", Arrays.toString(boolArr));
+
+        byte[] byteArr = {-128, 1, 127};
+        System.out.printf("Byte array before modification: %s%n", Arrays.toString(byteArr));
+        GetAndReleaseByteArrayDemo(byteArr);
+        System.out.printf("Byte array after modification: %s%n", Arrays.toString(byteArr));
+
+        char[] charArr = {'Ї', 'A', '\u2620'};
+        System.out.printf("Char array before modification: %s%n", Arrays.toString(charArr));
+        GetAndReleaseCharArrayDemo(charArr);
+        System.out.printf("Char array after modification: %s%n", Arrays.toString(charArr));
+
+        short[] shortArr = {-32768, 1337, 32767};
+        System.out.printf("Short array before modification: %s%n", Arrays.toString(shortArr));
+        GetAndReleaseShortArrayDemo(shortArr);
+        System.out.printf("Short array after modification: %s%n", Arrays.toString(shortArr));
+
+        int[] intArr = {-2_000_000_000, 1337, 2_000_000_000};
+        System.out.printf("Int array before modification: %s%n", Arrays.toString(intArr));
+        GetAndReleaseIntArrayDemo(intArr);
+        System.out.printf("Int array after modification: %s%n", Arrays.toString(intArr));
+
+        long[] longArr = {-9_000_000_000_000_000_000L, 1337L, 9_000_000_000_000_000_000L};
+        System.out.printf("Long array before modification: %s%n", Arrays.toString(longArr));
+        GetAndReleaseLongArrayDemo(longArr);
+        System.out.printf("Long array after modification: %s%n", Arrays.toString(longArr));
+
+        float[] floatArr = {3.14f, 2.71f, 1.41f};
+        System.out.printf("Float array before modification: %s%n", Arrays.toString(floatArr));
+        GetAndReleaseFloatArrayDemo(floatArr);
+        System.out.printf("Float array after modification: %s%n", Arrays.toString(floatArr));
+
+        double[] doubleArr = {Math.PI, 2.71, 1.41};
+        System.out.printf("Double array before modification: %s%n", Arrays.toString(doubleArr));
+        GetAndReleaseDoubleArrayDemo(doubleArr);
+        System.out.printf("Double array after modification: %s%n", Arrays.toString(doubleArr));
     }
 }

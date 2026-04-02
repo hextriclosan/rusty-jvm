@@ -1,7 +1,12 @@
 use crate::vm::jni::array_operations_impl::{
-    get_array_length, get_object_array_element, new_boolean_array, new_byte_array, new_char_array,
-    new_double_array, new_float_array, new_int_array, new_long_array, new_object_array,
-    new_short_array, set_object_array_element,
+    get_array_length, get_boolean_array_elements, get_byte_array_elements,
+    get_char_array_elements, get_double_array_elements, get_float_array_elements,
+    get_int_array_elements, get_long_array_elements, get_object_array_element,
+    get_short_array_elements, new_boolean_array, new_byte_array, new_char_array, new_double_array,
+    new_float_array, new_int_array, new_long_array, new_object_array, new_short_array,
+    release_boolean_array_elements, release_byte_array_elements, release_char_array_elements,
+    release_double_array_elements, release_float_array_elements, release_int_array_elements,
+    release_long_array_elements, release_short_array_elements, set_object_array_element,
 };
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::get_string_length;
@@ -256,22 +261,6 @@ jni_stub!(NewStringUTF(*const c_char) -> jstring);
 jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
-jni_stub!(GetBooleanArrayElements(jbooleanArray, *mut jboolean) -> *mut jboolean);
-jni_stub!(GetByteArrayElements(jbyteArray, *mut jboolean) -> *mut jbyte);
-jni_stub!(GetCharArrayElements(jcharArray, *mut jboolean) -> *mut jchar);
-jni_stub!(GetShortArrayElements(jshortArray, *mut jboolean) -> *mut jshort);
-jni_stub!(GetIntArrayElements(jintArray, *mut jboolean) -> *mut jint);
-jni_stub!(GetLongArrayElements(jlongArray, *mut jboolean) -> *mut jlong);
-jni_stub!(GetFloatArrayElements(jfloatArray, *mut jboolean) -> *mut jfloat);
-jni_stub!(GetDoubleArrayElements(jdoubleArray, *mut jboolean) -> *mut jdouble);
-jni_stub!(ReleaseBooleanArrayElements(jbooleanArray, *mut jboolean, jint) -> ());
-jni_stub!(ReleaseByteArrayElements(jbyteArray, *mut jbyte, jint) -> ());
-jni_stub!(ReleaseCharArrayElements(jcharArray, *mut jchar, jint) -> ());
-jni_stub!(ReleaseShortArrayElements(jshortArray, *mut jshort, jint) -> ());
-jni_stub!(ReleaseIntArrayElements(jintArray, *mut jint, jint) -> ());
-jni_stub!(ReleaseLongArrayElements(jlongArray, *mut jlong, jint) -> ());
-jni_stub!(ReleaseFloatArrayElements(jfloatArray, *mut jfloat, jint) -> ());
-jni_stub!(ReleaseDoubleArrayElements(jdoubleArray, *mut jdouble, jint) -> ());
 jni_stub!(GetBooleanArrayRegion(jbooleanArray, jsize, jsize, *mut jboolean) -> ());
 jni_stub!(GetByteArrayRegion(jbyteArray, jsize, jsize, *mut jbyte) -> ());
 jni_stub!(GetCharArrayRegion(jcharArray, jsize, jsize, *mut jchar) -> ());
@@ -502,22 +491,22 @@ static VTABLE: Wrapper = {
     ni.v24.NewLongArray = new_long_array;
     ni.v24.NewFloatArray = new_float_array;
     ni.v24.NewDoubleArray = new_double_array;
-    ni.v24.GetBooleanArrayElements = GetBooleanArrayElements;
-    ni.v24.GetByteArrayElements = GetByteArrayElements;
-    ni.v24.GetCharArrayElements = GetCharArrayElements;
-    ni.v24.GetShortArrayElements = GetShortArrayElements;
-    ni.v24.GetIntArrayElements = GetIntArrayElements;
-    ni.v24.GetLongArrayElements = GetLongArrayElements;
-    ni.v24.GetFloatArrayElements = GetFloatArrayElements;
-    ni.v24.GetDoubleArrayElements = GetDoubleArrayElements;
-    ni.v24.ReleaseBooleanArrayElements = ReleaseBooleanArrayElements;
-    ni.v24.ReleaseByteArrayElements = ReleaseByteArrayElements;
-    ni.v24.ReleaseCharArrayElements = ReleaseCharArrayElements;
-    ni.v24.ReleaseShortArrayElements = ReleaseShortArrayElements;
-    ni.v24.ReleaseIntArrayElements = ReleaseIntArrayElements;
-    ni.v24.ReleaseLongArrayElements = ReleaseLongArrayElements;
-    ni.v24.ReleaseFloatArrayElements = ReleaseFloatArrayElements;
-    ni.v24.ReleaseDoubleArrayElements = ReleaseDoubleArrayElements;
+    ni.v24.GetBooleanArrayElements = get_boolean_array_elements;
+    ni.v24.GetByteArrayElements = get_byte_array_elements;
+    ni.v24.GetCharArrayElements = get_char_array_elements;
+    ni.v24.GetShortArrayElements = get_short_array_elements;
+    ni.v24.GetIntArrayElements = get_int_array_elements;
+    ni.v24.GetLongArrayElements = get_long_array_elements;
+    ni.v24.GetFloatArrayElements = get_float_array_elements;
+    ni.v24.GetDoubleArrayElements = get_double_array_elements;
+    ni.v24.ReleaseBooleanArrayElements = release_boolean_array_elements;
+    ni.v24.ReleaseByteArrayElements = release_byte_array_elements;
+    ni.v24.ReleaseCharArrayElements = release_char_array_elements;
+    ni.v24.ReleaseShortArrayElements = release_short_array_elements;
+    ni.v24.ReleaseIntArrayElements = release_int_array_elements;
+    ni.v24.ReleaseLongArrayElements = release_long_array_elements;
+    ni.v24.ReleaseFloatArrayElements = release_float_array_elements;
+    ni.v24.ReleaseDoubleArrayElements = release_double_array_elements;
     ni.v24.GetBooleanArrayRegion = GetBooleanArrayRegion;
     ni.v24.GetByteArrayRegion = GetByteArrayRegion;
     ni.v24.GetCharArrayRegion = GetCharArrayRegion;

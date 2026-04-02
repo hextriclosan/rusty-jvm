@@ -3420,6 +3420,32 @@ Created int array: [0, 0, 0]
 Created long array: [0, 0, 0]
 Created float array: [0.0, 0.0, 0.0]
 Created double array: [0.0, 0.0, 0.0]
+
+=== Get<PrimitiveType>ArrayElements and Release<PrimitiveType>ArrayElements ===
+Boolean array before modification: [true, false, false]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseBooleanArrayDemo: value=[true, false, false], is_copy=true
+Boolean array after modification: [false, false, true]
+Byte array before modification: [-128, 1, 127]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseByteArrayDemo: value=[-128, 1, 127], is_copy=true
+Byte array after modification: [127, 1, -128]
+Char array before modification: [Ї, A, ☠]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseCharArrayDemo: value=[1031, 65, 9760], is_copy=true
+Char array after modification: [☠, A, Ї]
+Short array before modification: [-32768, 1337, 32767]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseShortArrayDemo: value=[-32768, 1337, 32767], is_copy=true
+Short array after modification: [32767, 1337, -32768]
+Int array before modification: [-2000000000, 1337, 2000000000]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseIntArrayDemo: value=[-2000000000, 1337, 2000000000], is_copy=true
+Int array after modification: [2000000000, 1337, -2000000000]
+Long array before modification: [-9000000000000000000, 1337, 9000000000000000000]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseLongArrayDemo: value=[-9000000000000000000, 1337, 9000000000000000000], is_copy=true
+Long array after modification: [9000000000000000000, 1337, -9000000000000000000]
+Float array before modification: [3.14, 2.71, 1.41]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseFloatArrayDemo: value=[3.14, 2.71, 1.41], is_copy=true
+Float array after modification: [1.41, 2.71, 3.14]
+Double array before modification: [3.141592653589793, 2.71, 1.41]
+JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseDoubleArrayDemo: value=[3.141592653589793, 2.71, 1.41], is_copy=true
+Double array after modification: [1.41, 2.71, 3.141592653589793]
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module
