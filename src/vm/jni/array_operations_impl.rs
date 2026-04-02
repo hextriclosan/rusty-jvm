@@ -24,6 +24,10 @@ pub(super) extern "system" fn new_object_array(
         panic!("Class reference is null"); // OpenJDK crashes here, why we shouldn't
     }
 
+    if len < 0 {
+        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+    }
+
     if HEAP
         .get_instance_name(clazz_ref)
         .expect("Invalid class reference")
