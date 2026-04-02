@@ -83,9 +83,11 @@ class LoadLibraryExample {
 
 class StringOperationsDemo {
     private static native int getStringLength(Object input);
+    private static native String newString(char[] input);
 
     public static void runDemo() {
         GetStringLengthDemo();
+        NewStringDemo();
     }
 
     private static void GetStringLengthDemo() {
@@ -98,6 +100,15 @@ class StringOperationsDemo {
         Object notAString = List.of(1, 2, 3);
         int notAStringLength = getStringLength(notAString);
         System.out.printf("Length of '%s' is %d%n", notAString, notAStringLength);
+    }
+
+    private static void NewStringDemo() {
+        System.out.println();
+        System.out.println("=== NewString ===");
+        char[] input = {'H', 'e', 'l', 'l', 'o', ',', ' ', 'J', 'N', 'I', ' ', '\uD83D', '\uDC85', '!'};
+
+        String result = newString(input);
+        System.out.printf("Result of newString with input %s: %s%n", Arrays.toString(input), result);
     }
 }
 

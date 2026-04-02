@@ -3391,6 +3391,9 @@ JNI version: 0x00180000
 Length of 'Hello, JNI 💅☕️!' is 16
 Length of '[1, 2, 3]' is 0
 
+=== NewString ===
+Result of newString with input [H, e, l, l, o, ,,  , J, N, I,  , ?, ?, !]: Hello, JNI 💅!
+
 === GetArrayLength ===
 Length of array [1, 2, 3, 4, 5] is 5
 Length of array [one, two, three] is 3
