@@ -105,11 +105,13 @@ class ArrayOperationsDemo {
     private static native int GetArrayLength(Object input);
     private static native Object NewObjectArray(int length, Object elementClass, Object initialElement);
     private static native Object GetObjectArrayElement(Object array, int index);
+    private static native void SetObjectArrayElement(Object array, int index, Object value);
 
     public static void runDemo() {
         GetArrayLengthDemo();
         NewObjectArrayDemo();
         GetObjectArrayElementDemo();
+        SetObjectArrayElementDemo();
     }
 
     private static void GetArrayLengthDemo() {
@@ -157,5 +159,21 @@ class ArrayOperationsDemo {
         String[][] string2DArray = {{"a", "b"}, {"c", "d"}};
         Object element2 = GetObjectArrayElement(string2DArray, 0);
         System.out.printf("Element at index 0 of %s is '%s'%n", Arrays.deepToString(string2DArray), Arrays.toString((String[])element2));
+    }
+
+    private static void SetObjectArrayElementDemo() {
+        System.out.println();
+        System.out.println("=== SetObjectArrayElement ===");
+
+        String[] stringArr = {"one", "two", "three"};
+        SetObjectArrayElement(stringArr, 1, "twenty");
+        System.out.printf("Array after modification '%s'%n", Arrays.toString(stringArr));
+
+        SetObjectArrayElement(stringArr, 0, null);
+        System.out.printf("Array after setting null '%s'%n", Arrays.toString(stringArr));
+
+        String[][] string2DArray = {{"a", "b"}, {"c", "d"}};
+        SetObjectArrayElement(string2DArray, 0, new String[]{ "x", "y" });
+        System.out.printf("2D Array after modification '%s'%n", Arrays.deepToString(string2DArray));
     }
 }
