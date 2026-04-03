@@ -83,7 +83,7 @@ jobs:
       - name: Run tests on s390x (Big Endian)
         run: |
           unset RUSTC_WRAPPER
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=16
+          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
 
   build-and-test-with-coverage:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
