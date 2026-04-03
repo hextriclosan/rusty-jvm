@@ -21,13 +21,18 @@ pub(super) extern "system" fn new_string(
     unicode: *const jchar,
     len: jsize,
 ) -> jstring {
-    let arr_ref = HEAP.create_array("[C", len as i32);
-    for i in 0..len {
-        let char_value = unsafe { *unicode.add(i as usize) } as jchar;
-        HEAP.set_array_value(arr_ref, i as i32, vec![char_value as i32])
-            .expect("Failed to set array value"); // todo handle exception here
+    if len < 0 {
+        panic!("negative array size"); // todo throw NegativeArraySizeException here
     }
-
+    let arr_ref = HEAP.create_array("[C", len as i32);
+    {
+        let mut guard = HEAP
+            .get_entire_raw_data_mut(arr_ref)
+            .expect("Failed to get array data");
+        guard.copy_from_slice(unsafe {
+            std::slice::from_raw_parts(unicode as *const u8, len as usize * size_of::<jchar>())
+        });
+    }
     let string_instance_ref = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([C)V",
