@@ -24,8 +24,11 @@ pub(super) extern "system" fn new_string(
     if len < 0 {
         panic!("negative array size"); // todo throw NegativeArraySizeException here
     }
+    if unicode.is_null() && len > 0 {
+        panic!("unicode array is null but length is {len}");
+    }
     let arr_ref = HEAP.create_array("[C", len as i32);
-    {
+    if len > 0 {
         let mut guard = HEAP
             .get_entire_raw_data_mut(arr_ref)
             .expect("Failed to get array data");
