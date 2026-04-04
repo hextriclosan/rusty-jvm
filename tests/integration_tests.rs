@@ -3449,6 +3449,24 @@ Float array after modification: [1.41, 2.71, 3.14]
 Double array before modification: [3.141592653589793, 2.71, 1.41]
 JNI: Java_samples_javacore_loadlibrary_example_ArrayOperationsDemo_GetAndReleaseDoubleArrayDemo: value=[3.141592653589793, 2.71, 1.41], is_copy=true
 Double array after modification: [1.41, 2.71, 3.141592653589793]
+
+=== Get<PrimitiveType>ArrayRegion and Set<PrimitiveType>ArrayRegion ===
+Boolean array after setting: [false, false, true, true, true, false]
+Got boolean array region: [false, true, true, true]
+Byte array after setting: [0, 0, -128, 1, 127, 0]
+Got byte array region: [0, -128, 1, 127]
+Char array after setting: [A, B, Ї, X, ☠, F]
+Got char array region: [B, Ї, X, ☠]
+Short array after setting: [0, 0, -32768, 1337, 32767, 0]
+Got short array region: [0, -32768, 1337, 32767]
+Int array after setting: [0, 0, -2000000000, 1337, 2000000000, 0]
+Got int array region: [0, -2000000000, 1337, 2000000000]
+Long array after setting: [0, 0, -9000000000000000000, 1337, 9000000000000000000, 0]
+Got long array region: [0, -9000000000000000000, 1337, 9000000000000000000]
+Float array after setting: [0.0, 0.0, 3.14, 2.71, 1.41, 0.0]
+Got float array region: [0.0, 3.14, 2.71, 1.41]
+Double array after setting: [0.0, 0.0, 3.141592653589793, 2.71, 1.41, 0.0]
+Got double array region: [0.0, 3.141592653589793, 2.71, 1.41]
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module

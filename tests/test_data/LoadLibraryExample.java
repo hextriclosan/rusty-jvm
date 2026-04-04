@@ -136,6 +136,24 @@ class ArrayOperationsDemo {
     private static native void GetAndReleaseFloatArrayDemo(float[] array);
     private static native void GetAndReleaseDoubleArrayDemo(double[] array);
 
+    private static native void SetBooleanArrayRegionDemo(boolean[] dest, int start, int length, boolean[] source);
+    private static native void SetByteArrayRegionDemo(byte[] dest, int start, int length, byte[] source);
+    private static native void SetCharArrayRegionDemo(char[] dest, int start, int length, char[] source);
+    private static native void SetShortArrayRegionDemo(short[] dest, int start, int length, short[] source);
+    private static native void SetIntArrayRegionDemo(int[] dest, int start, int length, int[] source);
+    private static native void SetLongArrayRegionDemo(long[] dest, int start, int length, long[] source);
+    private static native void SetFloatArrayRegionDemo(float[] dest, int start, int length, float[] source);
+    private static native void SetDoubleArrayRegionDemo(double[] dest, int start, int length, double[] source);
+
+    private static native boolean[] GetBooleanArrayRegionDemo(boolean[] from, int start, int length);
+    private static native byte[] GetByteArrayRegionDemo(byte[] from, int start, int length);
+    private static native char[] GetCharArrayRegionDemo(char[] from, int start, int length);
+    private static native short[] GetShortArrayRegionDemo(short[] from, int start, int length);
+    private static native int[] GetIntArrayRegionDemo(int[] from, int start, int length);
+    private static native long[] GetLongArrayRegionDemo(long[] from, int start, int length);
+    private static native float[] GetFloatArrayRegionDemo(float[] from, int start, int length);
+    private static native double[] GetDoubleArrayRegionDemo(double[] from, int start, int length);
+
     public static void runDemo() {
         GetArrayLengthDemo();
         NewObjectArrayDemo();
@@ -143,6 +161,7 @@ class ArrayOperationsDemo {
         SetObjectArrayElementDemo();
         NewPrimitiveArrayDemo();
         GetAndReleasePrimitiveArrayElementsDemo();
+        GetAndSetPrimitiveArrayRegionDemo();
     }
 
     private static void GetArrayLengthDemo() {
@@ -280,5 +299,58 @@ class ArrayOperationsDemo {
         System.out.printf("Double array before modification: %s%n", Arrays.toString(doubleArr));
         GetAndReleaseDoubleArrayDemo(doubleArr);
         System.out.printf("Double array after modification: %s%n", Arrays.toString(doubleArr));
+    }
+
+    private static void GetAndSetPrimitiveArrayRegionDemo() {
+        System.out.println();
+        System.out.println("=== Get<PrimitiveType>ArrayRegion and Set<PrimitiveType>ArrayRegion ===");
+
+        boolean[] boolArr = new boolean[6];
+        SetBooleanArrayRegionDemo(boolArr, 2, 3, new boolean[] { true, true, true });
+        System.out.printf("Boolean array after setting: %s%n", Arrays.toString(boolArr));
+        boolean[] gotBoolArr = GetBooleanArrayRegionDemo(boolArr, 1, 4);
+        System.out.printf("Got boolean array region: %s%n", Arrays.toString(gotBoolArr));
+
+        byte[] byteArr = new byte[6];
+        SetByteArrayRegionDemo(byteArr, 2, 3, new byte[] { -128, 1, 127 });
+        System.out.printf("Byte array after setting: %s%n", Arrays.toString(byteArr));
+        byte[] gotByteArr = GetByteArrayRegionDemo(byteArr, 1, 4);
+        System.out.printf("Got byte array region: %s%n", Arrays.toString(gotByteArr));
+
+        char[] charArr = new char[] {'A', 'B', 'C', 'D', 'E', 'F'};
+        SetCharArrayRegionDemo(charArr, 2, 3, new char[] { 'Ї', 'X', '\u2620'});
+        System.out.printf("Char array after setting: %s%n", Arrays.toString(charArr));
+        char[] gotCharArr = GetCharArrayRegionDemo(charArr, 1, 4);
+        System.out.printf("Got char array region: %s%n", Arrays.toString(gotCharArr));
+
+        short[] shortArr = new short[6];
+        SetShortArrayRegionDemo(shortArr, 2, 3, new short[] { -32768, 1337, 32767 });
+        System.out.printf("Short array after setting: %s%n", Arrays.toString(shortArr));
+        short[] gotShortArr = GetShortArrayRegionDemo(shortArr, 1, 4);
+        System.out.printf("Got short array region: %s%n", Arrays.toString(gotShortArr));
+
+        int[] intArr = new int[6];
+        SetIntArrayRegionDemo(intArr, 2, 3, new int[] { -2_000_000_000, 1337, 2_000_000_000 });
+        System.out.printf("Int array after setting: %s%n", Arrays.toString(intArr));
+        int[] gotIntArr = GetIntArrayRegionDemo(intArr, 1, 4);
+        System.out.printf("Got int array region: %s%n", Arrays.toString(gotIntArr));
+
+        long[] longArr = new long[6];
+        SetLongArrayRegionDemo(longArr, 2, 3, new long[] { -9_000_000_000_000_000_000L, 1337L, 9_000_000_000_000_000_000L });
+        System.out.printf("Long array after setting: %s%n", Arrays.toString(longArr));
+        long[] gotLongArr = GetLongArrayRegionDemo(longArr, 1, 4);
+        System.out.printf("Got long array region: %s%n", Arrays.toString(gotLongArr));
+
+        float[] floatArr = new float[6];
+        SetFloatArrayRegionDemo(floatArr, 2, 3, new float[] { 3.14f, 2.71f, 1.41f });
+        System.out.printf("Float array after setting: %s%n", Arrays.toString(floatArr));
+        float[] gotFloatArr = GetFloatArrayRegionDemo(floatArr, 1, 4);
+        System.out.printf("Got float array region: %s%n", Arrays.toString(gotFloatArr));
+
+        double[] doubleArr = new double[6];
+        SetDoubleArrayRegionDemo(doubleArr, 2, 3, new double[] { Math.PI, 2.71, 1.41 });
+        System.out.printf("Double array after setting: %s%n", Arrays.toString(doubleArr));
+        double[] gotDoubleArr = GetDoubleArrayRegionDemo(doubleArr, 1, 4);
+        System.out.printf("Got double array region: %s%n", Arrays.toString(gotDoubleArr));
     }
 }

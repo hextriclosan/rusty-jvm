@@ -215,11 +215,11 @@ fn release_primitive_type_array_elements<T>(
 
     match mode {
         0 => {
-            write_to_array(array_ref, elems, len_in_bytes);
+            write_to_array(array_ref, elems, 0, len_in_bytes);
             free_buffer(elems, len_in_bytes);
         }
         JNI_COMMIT => {
-            write_to_array(array_ref, elems, len_in_bytes);
+            write_to_array(array_ref, elems, 0, len_in_bytes);
         }
         JNI_ABORT => {
             free_buffer(elems, len_in_bytes);
@@ -228,16 +228,150 @@ fn release_primitive_type_array_elements<T>(
     };
 }
 
+macro_rules! impl_set_array_region {
+    ($name:ident, $jni_ty:ty, $array_ty:ty) => {
+        pub(super) extern "system" fn $name(
+            env: *mut JNIEnv,
+            array: $array_ty,
+            start: jsize,
+            len: jsize,
+            buf: *const $jni_ty,
+        ) {
+            set_primitive_type_array_region::<$jni_ty>(env, array as jarray, start, len, buf)
+        }
+    };
+}
+impl_set_array_region!(set_boolean_array_region, jboolean, jbooleanArray);
+impl_set_array_region!(set_byte_array_region, jbyte, jbyteArray);
+impl_set_array_region!(set_char_array_region, jchar, jcharArray);
+impl_set_array_region!(set_short_array_region, jshort, jshortArray);
+impl_set_array_region!(set_int_array_region, jint, jintArray);
+impl_set_array_region!(set_long_array_region, jlong, jlongArray);
+impl_set_array_region!(set_float_array_region, jfloat, jfloatArray);
+impl_set_array_region!(set_double_array_region, jdouble, jdoubleArray);
+fn set_primitive_type_array_region<T>(
+    _env: *mut JNIEnv,
+    array: jarray,
+    start: jsize,
+    len: jsize,
+    buf: *const T,
+) {
+    let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let array_len = get_array_length(_env, array) as usize;
+    if start < 0 {
+        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if len < 0 {
+        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if start as usize > array_len {
+        panic!("Start index out of bounds: start={start}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if (start + len) as usize > array_len {
+        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if len == 0 {
+        return;
+    }
+    let byte_buf = buf as *const u8;
+    if byte_buf.is_null() {
+        panic!("Invalid buffer: null pointer with non-zero length");
+    }
+    let start_in_bytes = start as usize * size_of::<T>();
+    let len_in_bytes = len as usize * size_of::<T>();
+    write_to_array(array_ref, byte_buf, start_in_bytes, len_in_bytes);
+}
+
+macro_rules! impl_get_array_region {
+    ($name:ident, $jni_ty:ty, $array_ty:ty) => {
+        pub(super) extern "system" fn $name(
+            env: *mut JNIEnv,
+            array: $array_ty,
+            start: jsize,
+            len: jsize,
+            buf: *mut $jni_ty,
+        ) {
+            get_primitive_type_array_region::<$jni_ty>(env, array as jarray, start, len, buf)
+        }
+    };
+}
+impl_get_array_region!(get_boolean_array_region, jboolean, jbooleanArray);
+impl_get_array_region!(get_byte_array_region, jbyte, jbyteArray);
+impl_get_array_region!(get_char_array_region, jchar, jcharArray);
+impl_get_array_region!(get_short_array_region, jshort, jshortArray);
+impl_get_array_region!(get_int_array_region, jint, jintArray);
+impl_get_array_region!(get_long_array_region, jlong, jlongArray);
+impl_get_array_region!(get_float_array_region, jfloat, jfloatArray);
+impl_get_array_region!(get_double_array_region, jdouble, jdoubleArray);
+pub(super) extern "system" fn get_primitive_type_array_region<T>(
+    _env: *mut JNIEnv,
+    array: jarray,
+    start: jsize,
+    len: jsize,
+    buf: *mut T,
+) {
+    let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let array_len = get_array_length(_env, array) as usize;
+    if start < 0 {
+        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if len < 0 {
+        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if start as usize > array_len {
+        panic!("Start index out of bounds: start={start}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if (start + len) as usize > array_len {
+        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if len == 0 {
+        return;
+    }
+    let byte_buf = buf as *mut u8;
+    if byte_buf.is_null() {
+        panic!("Invalid buffer: null pointer with non-zero length");
+    }
+    let start_in_bytes = start as usize * size_of::<T>();
+    let len_in_bytes = len as usize * size_of::<T>();
+    read_from_array(array_ref, byte_buf, start_in_bytes, len_in_bytes);
+}
+
 fn free_buffer(elems: *mut u8, len: usize) {
     unsafe {
         let _boxed: Box<_> = Box::from_raw(std::slice::from_raw_parts_mut(elems, len));
     }
 }
 
-fn write_to_array(array_ref: i32, elems: *mut u8, len: usize) {
+fn write_to_array(array_ref: i32, elems: *const u8, start: usize, len: usize) {
     let slice = unsafe { std::slice::from_raw_parts(elems, len) };
     let mut guard = HEAP
         .get_entire_raw_data_mut(array_ref)
         .expect("Failed to commit array elements");
-    guard.copy_from_slice(slice);
+    let _ = &guard[start..(start + len)].copy_from_slice(slice);
+}
+
+fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
+    let guard = HEAP
+        .get_entire_raw_data(array_ref)
+        .expect("Failed to read array elements");
+    let slice = &guard[start..(start + len)];
+    unsafe {
+        std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
+    }
 }
