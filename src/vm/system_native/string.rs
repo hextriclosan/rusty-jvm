@@ -34,20 +34,12 @@ pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> Result<String> {
                 guard
             )));
         }
-
-        let utf16: Result<Vec<u16>> = guard
+        let utf16 = guard
             .chunks_exact(2)
-            .map(|chunk| {
-                let bytes: [u8; 2] = chunk.try_into().map_err(|e| {
-                    Error::new_execution(&format!(
-                        "Failed to convert chunk to UTF-16 code unit: {chunk:?}, error: {e}"
-                    ))
-                })?;
-                Ok(u16::from_ne_bytes(bytes))
-            })
-            .collect();
+            .map(|chunk| u16::from_ne_bytes([chunk[0], chunk[1]]))
+            .collect::<Vec<_>>();
 
-        String::from_utf16(&utf16?)?
+        String::from_utf16(&utf16)?
     };
 
     Ok(result)

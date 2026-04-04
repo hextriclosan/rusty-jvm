@@ -77,10 +77,7 @@ pub(super) extern "system" fn get_string_chars(
         }
         guard
             .chunks_exact(2)
-            .map(|chunk| {
-                let bytes: [u8; 2] = chunk.try_into().expect("Failed to convert chunk to bytes");
-                u16::from_ne_bytes(bytes) as jchar
-            })
+            .map(|chunk| u16::from_ne_bytes([chunk[0], chunk[1]]))
             .collect::<Vec<_>>()
     };
 
@@ -97,7 +94,7 @@ pub(super) extern "system" fn get_string_chars(
 }
 
 pub(super) extern "system" fn release_string_chars(
-    env: *mut JNIEnv,
+    _env: *mut JNIEnv,
     str: jstring,
     chars: *const jchar,
 ) {
@@ -106,7 +103,16 @@ pub(super) extern "system" fn release_string_chars(
         panic!("Invalid string reference: null");
     }
 
-    let len = get_array_length(env, str) as usize;
+    let (is_latin, array_ref) = get_raw_string_info(string_ref).expect(&format!(
+        "Failed to get raw string info for string_ref={string_ref}"
+    ));
+    let byte_len = HEAP
+        .get_entire_raw_data(array_ref)
+        .expect(&format!(
+            "Failed to get string data for array_ref={array_ref}"
+        ))
+        .len();
+    let len = if is_latin { byte_len } else { byte_len / 2 };
     unsafe {
         let _boxed: Box<_> =
             Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut jchar, len));
