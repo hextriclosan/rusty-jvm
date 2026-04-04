@@ -308,7 +308,7 @@ class ArrayOperationsDemo {
         boolean[] boolArr = new boolean[6];
         SetBooleanArrayRegionDemo(boolArr, 2, 3, new boolean[] { true, true, true });
         System.out.printf("Boolean array after setting: %s%n", Arrays.toString(boolArr));
-        boolean gotBoolArr[] = GetBooleanArrayRegionDemo(boolArr, 1, 4);
+        boolean[] gotBoolArr = GetBooleanArrayRegionDemo(boolArr, 1, 4);
         System.out.printf("Got boolean array region: %s%n", Arrays.toString(gotBoolArr));
 
         byte[] byteArr = new byte[6];

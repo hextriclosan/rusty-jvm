@@ -257,7 +257,34 @@ fn set_primitive_type_array_region<T>(
     buf: *const T,
 ) {
     let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let array_len = get_array_length(_env, array) as usize;
+    if start < 0 {
+        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if len < 0 {
+        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if start as usize >= array_len {
+        panic!("Start index out of bounds: start={start}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if (start + len) as usize >= array_len {
+        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if len == 0 {
+        return;
+    }
     let byte_buf = buf as *const u8;
+    if byte_buf.is_null() {
+        panic!("Invalid buffer: null pointer with non-zero length");
+    }
     let start_in_bytes = start as usize * size_of::<T>();
     let len_in_bytes = len as usize * size_of::<T>();
     write_to_array(array_ref, byte_buf, start_in_bytes, len_in_bytes);
@@ -292,7 +319,34 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
     buf: *mut T,
 ) {
     let array_ref = array as i32;
+    if array_ref == 0 {
+        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let array_len = get_array_length(_env, array) as usize;
+    if start < 0 {
+        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if len < 0 {
+        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if start as usize >= array_len {
+        panic!("Start index out of bounds: start={start}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+    if (start + len) as usize >= array_len {
+        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
+        // todo throw ArrayIndexOutOfBoundsException here
+    }
+
+    if len == 0 {
+        return;
+    }
     let byte_buf = buf as *mut u8;
+    if byte_buf.is_null() {
+        panic!("Invalid buffer: null pointer with non-zero length");
+    }
     let start_in_bytes = start as usize * size_of::<T>();
     let len_in_bytes = len as usize * size_of::<T>();
     read_from_array(array_ref, byte_buf, start_in_bytes, len_in_bytes);
