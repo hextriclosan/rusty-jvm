@@ -3,6 +3,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::array_operations_impl::get_array_length;
 use crate::vm::system_native::string::get_raw_string_info;
 use jni_sys::{jboolean, jchar, jint, jsize, jstring, JNIEnv, JNI_TRUE};
+use std::ptr;
 
 pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstring) -> jint {
     let string_ref = input as i32;
@@ -108,6 +109,6 @@ pub(super) extern "system" fn release_string_chars(
     let len = get_array_length(env, str) as usize;
     unsafe {
         let _boxed: Box<_> =
-            Box::from_raw(std::slice::from_raw_parts_mut(chars as *mut jchar, len));
+            Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut jchar, len));
     }
 }

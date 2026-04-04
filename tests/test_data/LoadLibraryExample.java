@@ -120,14 +120,14 @@ class StringOperationsDemo {
 
         String utf16Input = "Hello, JNI 💅☕️!";
         char[] utf16Chars = GetStringChars(utf16Input);
-        System.out.printf("Result of GetStringChars with input '%s': %s%n", utf16Input, Arrays.toString(toCodePoints(utf16Chars)));
+        System.out.printf("Result of GetStringChars with input '%s': %s%n", utf16Input, Arrays.toString(toUtf16CodeUnits(utf16Chars)));
 
         String latinInput = "abc";
         char[] latinChars = GetStringChars(latinInput);
-        System.out.printf("Result of GetStringChars with input '%s': %s%n", latinInput, Arrays.toString(toCodePoints(latinChars)));
+        System.out.printf("Result of GetStringChars with input '%s': %s%n", latinInput, Arrays.toString(toUtf16CodeUnits(latinChars)));
     }
 
-    private static int[] toCodePoints(char[] chars) {
+    private static int[] toUtf16CodeUnits(char[] chars) {
         return IntStream.range(0, chars.length)
             .map(i -> chars[i])
             .toArray();

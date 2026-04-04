@@ -2,13 +2,13 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::loaded_classes::CLASSES;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 const STRING_CLASS_NAME: &str = "java/lang/String";
 const VALUE_FIELD: &str = "value";
 const CODER_FIELD: &str = "coder";
 
-const COMPACT_STRINGS: Lazy<bool> = Lazy::new(|| {
+static COMPACT_STRINGS: LazyLock<bool> = LazyLock::new(|| {
     let klass = CLASSES
         .get(STRING_CLASS_NAME)
         .expect("Failed to get String class");
