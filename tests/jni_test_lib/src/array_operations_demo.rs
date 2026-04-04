@@ -428,11 +428,11 @@ unsafe fn get_array_region_demo<T: Copy + std::fmt::Debug>(
     from: jarray,
     start: jint,
     length: jint,
-    new_fn: unsafe extern "system" fn(*mut JNIEnv, jsize) -> jbooleanArray,
-    get_fn: unsafe extern "system" fn(*mut JNIEnv, jbooleanArray, *mut jboolean) -> *mut T,
-    get_region_fn: unsafe extern "system" fn(*mut JNIEnv, jbooleanArray, jsize, jsize, *mut T),
-    release_fn: unsafe extern "system" fn(*mut JNIEnv, jbooleanArray, *mut T, jint),
-) -> jbooleanArray {
+    new_fn: unsafe extern "system" fn(*mut JNIEnv, jsize) -> jarray,
+    get_fn: unsafe extern "system" fn(*mut JNIEnv, jarray, *mut jboolean) -> *mut T,
+    get_region_fn: unsafe extern "system" fn(*mut JNIEnv, jarray, jsize, jsize, *mut T),
+    release_fn: unsafe extern "system" fn(*mut JNIEnv, jarray, *mut T, jint),
+) -> jarray {
     let new_array = new_fn(env, length);
     let buffer = get_fn(env, new_array, std::ptr::null_mut());
     get_region_fn(env, from, start, length, buffer);

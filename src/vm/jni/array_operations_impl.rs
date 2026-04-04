@@ -269,11 +269,11 @@ fn set_primitive_type_array_region<T>(
         panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
     }
 
-    if start as usize >= array_len {
+    if start as usize > array_len {
         panic!("Start index out of bounds: start={start}, array length={array_len}");
         // todo throw ArrayIndexOutOfBoundsException here
     }
-    if (start + len) as usize >= array_len {
+    if (start + len) as usize > array_len {
         panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
         // todo throw ArrayIndexOutOfBoundsException here
     }
@@ -313,7 +313,7 @@ impl_get_array_region!(get_float_array_region, jfloat, jfloatArray);
 impl_get_array_region!(get_double_array_region, jdouble, jdoubleArray);
 pub(super) extern "system" fn get_primitive_type_array_region<T>(
     _env: *mut JNIEnv,
-    array: jbooleanArray,
+    array: jarray,
     start: jsize,
     len: jsize,
     buf: *mut T,
@@ -331,11 +331,11 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
         panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
     }
 
-    if start as usize >= array_len {
+    if start as usize > array_len {
         panic!("Start index out of bounds: start={start}, array length={array_len}");
         // todo throw ArrayIndexOutOfBoundsException here
     }
-    if (start + len) as usize >= array_len {
+    if (start + len) as usize > array_len {
         panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
         // todo throw ArrayIndexOutOfBoundsException here
     }

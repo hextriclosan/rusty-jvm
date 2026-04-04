@@ -149,7 +149,7 @@ class ArrayOperationsDemo {
     private static native byte[] GetByteArrayRegionDemo(byte[] from, int start, int length);
     private static native char[] GetCharArrayRegionDemo(char[] from, int start, int length);
     private static native short[] GetShortArrayRegionDemo(short[] from, int start, int length);
-    private static native int[] GetIntArrayRegionDemo(int[] from, int start , int length);
+    private static native int[] GetIntArrayRegionDemo(int[] from, int start, int length);
     private static native long[] GetLongArrayRegionDemo(long[] from, int start, int length);
     private static native float[] GetFloatArrayRegionDemo(float[] from, int start, int length);
     private static native double[] GetDoubleArrayRegionDemo(double[] from, int start, int length);
