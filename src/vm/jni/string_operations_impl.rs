@@ -1,6 +1,5 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::jni::array_operations_impl::get_array_length;
 use crate::vm::system_native::string::get_raw_string_info;
 use jni_sys::{jboolean, jchar, jint, jsize, jstring, JNIEnv, JNI_TRUE};
 use std::ptr;
@@ -101,6 +100,10 @@ pub(super) extern "system" fn release_string_chars(
     let string_ref = str as i32;
     if string_ref == 0 {
         panic!("Invalid string reference: null");
+    }
+
+    if chars.is_null() {
+        return;
     }
 
     let (is_latin, array_ref) = get_raw_string_info(string_ref).expect(&format!(
