@@ -2,6 +2,7 @@ package samples.javacore.loadlibrary.example;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
 
 class LoadLibraryExample {
 
@@ -82,23 +83,25 @@ class LoadLibraryExample {
 }
 
 class StringOperationsDemo {
-    private static native int getStringLength(Object input);
-    private static native String newString(char[] input);
+    private static native int GetStringLength(Object input);
+    private static native String NewString(char[] input);
+    private static native char[] GetStringChars(String input);
 
     public static void runDemo() {
         GetStringLengthDemo();
         NewStringDemo();
+        GetStringCharsDemo();
     }
 
     private static void GetStringLengthDemo() {
         System.out.println();
         System.out.println("=== GetStringLength ===");
         String testString = "Hello, JNI 💅☕️!";
-        int length = getStringLength(testString);
+        int length = GetStringLength(testString);
         System.out.printf("Length of '%s' is %d%n", testString, length);
 
         Object notAString = List.of(1, 2, 3);
-        int notAStringLength = getStringLength(notAString);
+        int notAStringLength = GetStringLength(notAString);
         System.out.printf("Length of '%s' is %d%n", notAString, notAStringLength);
     }
 
@@ -107,8 +110,27 @@ class StringOperationsDemo {
         System.out.println("=== NewString ===");
         char[] input = {'H', 'e', 'l', 'l', 'o', ',', ' ', 'J', 'N', 'I', ' ', '\uD83D', '\uDC85', '!'};
 
-        String result = newString(input);
+        String result = NewString(input);
         System.out.printf("Result of newString with input %s: %s%n", Arrays.toString(input), result);
+    }
+
+    private static void GetStringCharsDemo() {
+        System.out.println();
+        System.out.println("=== GetStringChars ===");
+
+        String utf16Input = "Hello, JNI 💅☕️!";
+        char[] utf16Chars = GetStringChars(utf16Input);
+        System.out.printf("Result of GetStringChars with input '%s': %s%n", utf16Input, Arrays.toString(toCodePoints(utf16Chars)));
+
+        String latinInput = "abc";
+        char[] latinChars = GetStringChars(latinInput);
+        System.out.printf("Result of GetStringChars with input '%s': %s%n", latinInput, Arrays.toString(toCodePoints(latinChars)));
+    }
+
+    private static int[] toCodePoints(char[] chars) {
+        return IntStream.range(0, chars.length)
+            .map(i -> chars[i])
+            .toArray();
     }
 }
 
