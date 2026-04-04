@@ -1,20 +1,24 @@
 use crate::vm::jni::array_operations_impl::{
-    get_array_length, get_boolean_array_elements, get_byte_array_elements,
-    get_char_array_elements, get_double_array_elements, get_float_array_elements,
-    get_int_array_elements, get_long_array_elements, get_object_array_element,
-    get_short_array_elements, new_boolean_array, new_byte_array, new_char_array, new_double_array,
-    new_float_array, new_int_array, new_long_array, new_object_array, new_short_array,
-    release_boolean_array_elements, release_byte_array_elements, release_char_array_elements,
-    release_double_array_elements, release_float_array_elements, release_int_array_elements,
-    release_long_array_elements, release_short_array_elements, set_object_array_element,
+    get_array_length, get_boolean_array_elements, get_boolean_array_region,
+    get_byte_array_elements, get_byte_array_region, get_char_array_elements,
+    get_char_array_region, get_double_array_elements, get_double_array_region,
+    get_float_array_elements, get_float_array_region, get_int_array_elements,
+    get_int_array_region, get_long_array_elements, get_long_array_region,
+    get_object_array_element, get_short_array_elements, get_short_array_region, new_boolean_array,
+    new_byte_array, new_char_array, new_double_array, new_float_array, new_int_array,
+    new_long_array, new_object_array, new_short_array, release_boolean_array_elements,
+    release_byte_array_elements, release_char_array_elements, release_double_array_elements,
+    release_float_array_elements, release_int_array_elements, release_long_array_elements,
+    release_short_array_elements, set_boolean_array_region, set_byte_array_region,
+    set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
+    set_long_array_region, set_object_array_element, set_short_array_region,
 };
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::{get_string_length, new_string};
 use jni_sys::{
-    jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
-    jdoubleArray, jfieldID, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jmethodID,
-    jobject, jobjectRefType, jshort, jshortArray, jsize, jstring, jthrowable, jvalue, jweak,
-    va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod, JavaVM,
+    jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
+    jobject, jobjectRefType, jshort, jsize, jstring, jthrowable, jvalue, jweak, va_list, JNIEnv,
+    JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
 
@@ -260,22 +264,6 @@ jni_stub!(NewStringUTF(*const c_char) -> jstring);
 jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
-jni_stub!(GetBooleanArrayRegion(jbooleanArray, jsize, jsize, *mut jboolean) -> ());
-jni_stub!(GetByteArrayRegion(jbyteArray, jsize, jsize, *mut jbyte) -> ());
-jni_stub!(GetCharArrayRegion(jcharArray, jsize, jsize, *mut jchar) -> ());
-jni_stub!(GetShortArrayRegion(jshortArray, jsize, jsize, *mut jshort) -> ());
-jni_stub!(GetIntArrayRegion(jintArray, jsize, jsize, *mut jint) -> ());
-jni_stub!(GetLongArrayRegion(jlongArray, jsize, jsize, *mut jlong) -> ());
-jni_stub!(GetFloatArrayRegion(jfloatArray, jsize, jsize, *mut jfloat) -> ());
-jni_stub!(GetDoubleArrayRegion(jdoubleArray, jsize, jsize, *mut jdouble) -> ());
-jni_stub!(SetBooleanArrayRegion(jbooleanArray, jsize, jsize, *const jboolean) -> ());
-jni_stub!(SetByteArrayRegion(jbyteArray, jsize, jsize, *const jbyte) -> ());
-jni_stub!(SetCharArrayRegion(jcharArray, jsize, jsize, *const jchar) -> ());
-jni_stub!(SetShortArrayRegion(jshortArray, jsize, jsize, *const jshort) -> ());
-jni_stub!(SetIntArrayRegion(jintArray, jsize, jsize, *const jint) -> ());
-jni_stub!(SetLongArrayRegion(jlongArray, jsize, jsize, *const jlong) -> ());
-jni_stub!(SetFloatArrayRegion(jfloatArray, jsize, jsize, *const jfloat) -> ());
-jni_stub!(SetDoubleArrayRegion(jdoubleArray, jsize, jsize, *const jdouble) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
@@ -506,22 +494,22 @@ static VTABLE: Wrapper = {
     ni.v24.ReleaseLongArrayElements = release_long_array_elements;
     ni.v24.ReleaseFloatArrayElements = release_float_array_elements;
     ni.v24.ReleaseDoubleArrayElements = release_double_array_elements;
-    ni.v24.GetBooleanArrayRegion = GetBooleanArrayRegion;
-    ni.v24.GetByteArrayRegion = GetByteArrayRegion;
-    ni.v24.GetCharArrayRegion = GetCharArrayRegion;
-    ni.v24.GetShortArrayRegion = GetShortArrayRegion;
-    ni.v24.GetIntArrayRegion = GetIntArrayRegion;
-    ni.v24.GetLongArrayRegion = GetLongArrayRegion;
-    ni.v24.GetFloatArrayRegion = GetFloatArrayRegion;
-    ni.v24.GetDoubleArrayRegion = GetDoubleArrayRegion;
-    ni.v24.SetBooleanArrayRegion = SetBooleanArrayRegion;
-    ni.v24.SetByteArrayRegion = SetByteArrayRegion;
-    ni.v24.SetCharArrayRegion = SetCharArrayRegion;
-    ni.v24.SetShortArrayRegion = SetShortArrayRegion;
-    ni.v24.SetIntArrayRegion = SetIntArrayRegion;
-    ni.v24.SetLongArrayRegion = SetLongArrayRegion;
-    ni.v24.SetFloatArrayRegion = SetFloatArrayRegion;
-    ni.v24.SetDoubleArrayRegion = SetDoubleArrayRegion;
+    ni.v24.GetBooleanArrayRegion = get_boolean_array_region;
+    ni.v24.GetByteArrayRegion = get_byte_array_region;
+    ni.v24.GetCharArrayRegion = get_char_array_region;
+    ni.v24.GetShortArrayRegion = get_short_array_region;
+    ni.v24.GetIntArrayRegion = get_int_array_region;
+    ni.v24.GetLongArrayRegion = get_long_array_region;
+    ni.v24.GetFloatArrayRegion = get_float_array_region;
+    ni.v24.GetDoubleArrayRegion = get_double_array_region;
+    ni.v24.SetBooleanArrayRegion = set_boolean_array_region;
+    ni.v24.SetByteArrayRegion = set_byte_array_region;
+    ni.v24.SetCharArrayRegion = set_char_array_region;
+    ni.v24.SetShortArrayRegion = set_short_array_region;
+    ni.v24.SetIntArrayRegion = set_int_array_region;
+    ni.v24.SetLongArrayRegion = set_long_array_region;
+    ni.v24.SetFloatArrayRegion = set_float_array_region;
+    ni.v24.SetDoubleArrayRegion = set_double_array_region;
     ni.v24.RegisterNatives = RegisterNatives;
     ni.v24.UnregisterNatives = UnregisterNatives;
     ni.v24.MonitorEnter = MonitorEnter;
