@@ -3406,6 +3406,7 @@ Result of newStringUTF: Hello from Rust! 💅☕️
 
 === GetStringUTFLengthAsLong ===
 Length of 'A 𝄞': utfLengthLong=9, utfLengthInt=9 charsLength=4
+Length of 'abc': utfLengthLong=3, utfLengthInt=3 charsLength=3
 
 === GetArrayLength ===
 Length of array [1, 2, 3, 4, 5] is 5

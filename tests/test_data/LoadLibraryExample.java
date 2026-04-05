@@ -152,7 +152,12 @@ class StringOperationsDemo {
         long utfLengthLong = GetStringUTFLengthAsLong(testString);
         int utfLengthInt = GetStringUTFLength(testString);
         int charsLength = GetStringLength(testString);
+        System.out.printf("Length of '%s': utfLengthLong=%d, utfLengthInt=%d charsLength=%d%n", testString, utfLengthLong, utfLengthInt, charsLength);
 
+        testString = "abc";
+        utfLengthLong = GetStringUTFLengthAsLong(testString);
+        utfLengthInt = GetStringUTFLength(testString);
+        charsLength = GetStringLength(testString);
         System.out.printf("Length of '%s': utfLengthLong=%d, utfLengthInt=%d charsLength=%d%n", testString, utfLengthLong, utfLengthInt, charsLength);
     }
 }
