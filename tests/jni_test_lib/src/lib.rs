@@ -1,10 +1,12 @@
 mod array_operations_demo;
 mod string_operations_demo;
 
+use jni::elements::ReleaseMode::NoCopyBack;
 use jni::errors::ThrowRuntimeExAndDefault;
-use jni::objects::{JClass, JObject};
-use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jlong};
+use jni::objects::{JClass, JIntArray, JObject};
+use jni::sys::{jboolean, jbyte, jdouble, jfloat, jint, jintArray, jlong, jsize, jstring, JNIEnv};
 use jni::EnvUnowned;
+use std::ptr::null_mut;
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_sum__BB(
@@ -87,4 +89,85 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
         .resolve::<ThrowRuntimeExAndDefault>();
 
     version
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_arraySum(
+    mut unowned_env: EnvUnowned,
+    _class: JClass,
+    arr: jintArray,
+) -> jint {
+    unowned_env
+        .with_env(|env| {
+            let arr = unsafe { JIntArray::from_raw(env, arr) };
+            let length = env
+                .get_array_length(&arr)
+                .expect("Failed to get array length");
+
+            let elements = unsafe {
+                env.get_array_elements(&arr, NoCopyBack)
+                    .expect("Failed to get array elements")
+            };
+
+            // SAFETY: JNI guarantees pointer is valid for `length` elements
+            let slice = unsafe { std::slice::from_raw_parts(elements.as_ptr(), length as usize) };
+
+            let sum: jint = slice.iter().copied().sum();
+
+            Ok::<jint, jni::errors::Error>(sum)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_hello(
+    env: *mut JNIEnv,
+    _class: JClass,
+    input: jstring,
+) -> jstring {
+    let len = unsafe { ((*(*env)).v24.GetStringLength)(env, input) } as usize;
+    let chars = unsafe { ((*(*env)).v24.GetStringChars)(env, input, null_mut()) };
+    let slice = unsafe { std::slice::from_raw_parts(chars, len) };
+    let input_string = String::from_utf16(slice).expect("Failed to convert to Rust String");
+    unsafe {
+        ((*(*env)).v24.ReleaseStringChars)(env, input, chars);
+    };
+
+    let output_string = format!("Hello, {}!", input_string);
+    let output_utf16: Vec<u16> = output_string.encode_utf16().collect();
+    unsafe { ((*(*env)).v24.NewString)(env, output_utf16.as_ptr(), output_utf16.len() as jsize) }
+
+    // todo implement jthrowable ExceptionOccurred(JNIEnv *env);
+    // unowned_env
+    //     .with_env(|env| {
+    //         // wrap raw pointer
+    //         let input = unsafe { JString::from_raw(env, input) };
+    //
+    //         let input_str = input.to_string();
+    //
+    //         let output_str = format!("Hello, {input_str}!");
+    //
+    //         let output_jstring = env
+    //             .new_string(output_str)
+    //             .expect("Failed to create output string");
+    //
+    //         Ok::<jstring, jni::errors::Error>(output_jstring.into_raw())
+    //     })
+    //     .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExample_printMessage(
+    env: *mut JNIEnv,
+    _class: JClass,
+    to_print: jstring,
+) {
+    let len = unsafe { ((*(*env)).v24.GetStringLength)(env, to_print) } as usize;
+    let chars = unsafe { ((*(*env)).v24.GetStringChars)(env, to_print, null_mut()) };
+    let slice = unsafe { std::slice::from_raw_parts(chars, len) };
+    let constructed = String::from_utf16(slice).expect("Failed to convert to Rust String");
+    println!("Message from Java: {constructed}");
+    unsafe {
+        ((*(*env)).v24.ReleaseStringChars)(env, to_print, chars);
+    };
 }

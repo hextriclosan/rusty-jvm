@@ -3383,6 +3383,9 @@ int sum(40, 2) = 42
 long sum(-999999999999999, 1000000000) = -999998999999999
 double multiply(3.500000, 2.000000) = 7.000000
 isPositive(-5) = false
+arraySum = 10
+Hello, JNI!
+Message from Java: Hello from Java
 Float value is: 3.1415
 int sumInstance(40, 2) = 42
 JNI version: 0x00180000

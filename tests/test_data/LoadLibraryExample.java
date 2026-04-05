@@ -59,14 +59,14 @@ class LoadLibraryExample {
         boolean positive = isPositive(checkValue);
         System.out.printf("isPositive(%d) = %b%n", checkValue, positive);
 
-//         int[] values = {1, 2, 3, 4};
-//         int arrSum = arraySum(values);
-//         System.out.println("arraySum = " + arrSum);
+        int[] values = {1, 2, 3, 4};
+        int arrSum = arraySum(values);
+        System.out.println("arraySum = " + arrSum);
 
-//         String greeting = hello("JNI");
-//         System.out.println(greeting);
+        String greeting = hello("JNI");
+        System.out.println(greeting);
 
-//         printMessage("Message from Java");
+        printMessage("Hello from Java");
 
         printFloat(3.1415f);
 
