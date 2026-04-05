@@ -3405,8 +3405,8 @@ Result of GetStringChars with input 'abc': [97, 98, 99]
 Result of newStringUTF: Hello from Rust! 💅☕️
 
 === GetStringUTFLengthAsLong ===
-Length of 'A 𝄞': utfLengthLong=9, utfLengthInt=9 charsLength=4
-Length of 'abc': utfLengthLong=3, utfLengthInt=3 charsLength=3
+Length of 'éA 𝄞': utfLengthLong=11, utfLengthInt=11 charsLength=5
+Length of 'éabc': utfLengthLong=5, utfLengthInt=5 charsLength=4
 
 === GetStringUTFChars ===
 Result of GetStringUTFChars with input 'A 𝄞': 'A 𝄞'

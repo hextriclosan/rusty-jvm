@@ -150,13 +150,13 @@ class StringOperationsDemo {
     private static void GetStringUTFLengthAsLongDemo() {
         System.out.println();
         System.out.println("=== GetStringUTFLengthAsLong ===");
-        String testString = "A\u0000𝄞";
+        String testString = "éA\u0000𝄞";
         long utfLengthLong = GetStringUTFLengthAsLong(testString);
         int utfLengthInt = GetStringUTFLength(testString);
         int charsLength = GetStringLength(testString);
         System.out.printf("Length of '%s': utfLengthLong=%d, utfLengthInt=%d charsLength=%d%n", testString, utfLengthLong, utfLengthInt, charsLength);
 
-        testString = "abc";
+        testString = "éabc";
         utfLengthLong = GetStringUTFLengthAsLong(testString);
         utfLengthInt = GetStringUTFLength(testString);
         charsLength = GetStringLength(testString);

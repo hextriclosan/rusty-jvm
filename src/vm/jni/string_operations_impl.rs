@@ -4,7 +4,7 @@ use crate::vm::jni::array_operations_impl::{
     new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
 };
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::system_native::string::{get_raw_string_info, get_utf8_string_by_ref};
+use crate::vm::system_native::string::get_raw_string_info;
 use cesu8::{from_java_cesu8, to_java_cesu8};
 use jni_sys::{jboolean, jbyte, jchar, jint, jlong, jsize, jstring, JNIEnv, JNI_TRUE};
 use std::ffi::{c_char, CStr};
@@ -175,7 +175,8 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
         panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
     }
 
-    let data = get_utf8_string_by_ref(string_ref).expect("Failed to get UTF-8 string");
+    let raw_data = get_string_raw_data(string_ref);
+    let data = String::from_utf16(&raw_data).expect("Failed to build string from UTF-16 data");
     to_java_cesu8(&data).len() as jlong
 }
 
@@ -193,7 +194,8 @@ pub(super) extern "system" fn get_string_utf_chars(
         panic!("Invalid string reference: null");
     }
 
-    let data = get_utf8_string_by_ref(string_ref).expect("Failed to get UTF-8 string");
+    let raw_data = get_string_raw_data(string_ref);
+    let data = String::from_utf16(&raw_data).expect("Failed to build string from UTF-16 data");
     let mut mutf8_data = to_java_cesu8(&data).to_vec();
     mutf8_data.push(0); // null terminator
     let boxed_slice = mutf8_data.into_boxed_slice();
