@@ -86,11 +86,13 @@ class StringOperationsDemo {
     private static native int GetStringLength(Object input);
     private static native String NewString(char[] input);
     private static native char[] GetStringChars(String input);
+    private static native String NewStringUTF();
 
     public static void runDemo() {
         GetStringLengthDemo();
         NewStringDemo();
         GetStringCharsDemo();
+        NewStringUTFDemo();
     }
 
     private static void GetStringLengthDemo() {
@@ -131,6 +133,13 @@ class StringOperationsDemo {
         return IntStream.range(0, chars.length)
             .map(i -> chars[i])
             .toArray();
+    }
+
+    private static void NewStringUTFDemo() {
+        System.out.println();
+        System.out.println("=== NewStringUTF ===");
+        String result = NewStringUTF();
+        System.out.printf("Result of newStringUTF: %s%n", result);
     }
 }
 

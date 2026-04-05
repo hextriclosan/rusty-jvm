@@ -3398,6 +3398,9 @@ Result of newString with input [H, e, l, l, o, ,,  , J, N, I,  , ?, ?, !]: Hello
 Result of GetStringChars with input 'Hello, JNI 💅☕️!': [72, 101, 108, 108, 111, 44, 32, 74, 78, 73, 32, 55357, 56453, 9749, 65039, 33]
 Result of GetStringChars with input 'abc': [97, 98, 99]
 
+=== NewStringUTF ===
+Result of newStringUTF: Hello from Rust! 💅☕️
+
 === GetArrayLength ===
 Length of array [1, 2, 3, 4, 5] is 5
 Length of array [one, two, three] is 3
