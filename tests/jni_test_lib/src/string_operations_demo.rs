@@ -1,5 +1,7 @@
 use cesu8::to_java_cesu8;
-use jni::sys::{jchar, jcharArray, jclass, jint, jobject, jsize, jstring, JNIEnv, JNI_ABORT};
+use jni::sys::{
+    jchar, jcharArray, jclass, jint, jlong, jobject, jsize, jstring, JNIEnv, JNI_ABORT,
+};
 use std::ffi::CString;
 use std::ptr::null_mut;
 
@@ -53,4 +55,22 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     let cesu8 = to_java_cesu8(text);
     let cstr = CString::new(cesu8).unwrap();
     unsafe { ((*(*env)).v24.NewStringUTF)(env, cstr.as_ptr()) }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringUTFLength(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jobject,
+) -> jint {
+    unsafe { ((*(*env)).v24.GetStringUTFLength)(env, input) }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringUTFLengthAsLong(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jobject,
+) -> jlong {
+    unsafe { ((*(*env)).v24.GetStringUTFLengthAsLong)(env, input) }
 }

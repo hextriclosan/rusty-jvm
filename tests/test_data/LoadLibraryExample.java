@@ -87,12 +87,15 @@ class StringOperationsDemo {
     private static native String NewString(char[] input);
     private static native char[] GetStringChars(String input);
     private static native String NewStringUTF();
+    private static native int GetStringUTFLength(String input);
+    private static native long GetStringUTFLengthAsLong(String input);
 
     public static void runDemo() {
         GetStringLengthDemo();
         NewStringDemo();
         GetStringCharsDemo();
         NewStringUTFDemo();
+        GetStringUTFLengthAsLongDemo();
     }
 
     private static void GetStringLengthDemo() {
@@ -140,6 +143,22 @@ class StringOperationsDemo {
         System.out.println("=== NewStringUTF ===");
         String result = NewStringUTF();
         System.out.printf("Result of newStringUTF: %s%n", result);
+    }
+
+    private static void GetStringUTFLengthAsLongDemo() {
+        System.out.println();
+        System.out.println("=== GetStringUTFLengthAsLong ===");
+        String testString = "A\u0000𝄞";
+        long utfLengthLong = GetStringUTFLengthAsLong(testString);
+        int utfLengthInt = GetStringUTFLength(testString);
+        int charsLength = GetStringLength(testString);
+        System.out.printf("Length of '%s': utfLengthLong=%d, utfLengthInt=%d charsLength=%d%n", testString, utfLengthLong, utfLengthInt, charsLength);
+
+        testString = "abc";
+        utfLengthLong = GetStringUTFLengthAsLong(testString);
+        utfLengthInt = GetStringUTFLength(testString);
+        charsLength = GetStringLength(testString);
+        System.out.printf("Length of '%s': utfLengthLong=%d, utfLengthInt=%d charsLength=%d%n", testString, utfLengthLong, utfLengthInt, charsLength);
     }
 }
 
