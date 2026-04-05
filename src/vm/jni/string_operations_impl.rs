@@ -194,7 +194,8 @@ pub(super) extern "system" fn get_string_utf_chars(
     }
 
     let data = get_utf8_string_by_ref(string_ref).expect("Failed to get UTF-8 string");
-    let mutf8_data = to_java_cesu8(&data).to_vec();
+    let mut mutf8_data = to_java_cesu8(&data).to_vec();
+    mutf8_data.push(0); // null terminator
     let boxed_slice = mutf8_data.into_boxed_slice();
     let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const c_char;
 
@@ -221,7 +222,7 @@ pub(super) extern "system" fn release_string_utf_chars(
         return;
     }
 
-    let len = get_string_utf_length_as_long(env, str) as usize;
+    let len = get_string_utf_length_as_long(env, str) as usize + 1/*null terminator*/;
     unsafe {
         let _boxed: Box<_> = Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut u8, len));
     }
