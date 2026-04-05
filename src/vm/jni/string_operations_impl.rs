@@ -4,7 +4,7 @@ use crate::vm::jni::array_operations_impl::{
     new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
 };
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::system_native::string::get_raw_string_info;
+use crate::vm::system_native::string::{get_raw_string_info, get_utf8_string_by_ref};
 use cesu8::{from_java_cesu8, to_java_cesu8};
 use jni_sys::{jboolean, jbyte, jchar, jint, jlong, jsize, jstring, JNIEnv, JNI_TRUE};
 use std::ffi::{c_char, CStr};
@@ -175,12 +175,54 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
         panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
     }
 
-    let raw_data = get_string_raw_data(string_ref);
-    let data = String::from_utf16(&raw_data).expect("Failed to build string from UTF-16 data");
-
+    let data = get_utf8_string_by_ref(string_ref).expect("Failed to get UTF-8 string");
     to_java_cesu8(&data).len() as jlong
 }
 
 pub(super) extern "system" fn get_string_utf_length(_env: *mut JNIEnv, input: jstring) -> jint {
     get_string_utf_length_as_long(_env, input) as jint
+}
+
+pub(super) extern "system" fn get_string_utf_chars(
+    _env: *mut JNIEnv,
+    from: jstring,
+    is_copy: *mut jboolean,
+) -> *const c_char {
+    let string_ref = from as i32;
+    if string_ref == 0 {
+        panic!("Invalid string reference: null");
+    }
+
+    let data = get_utf8_string_by_ref(string_ref).expect("Failed to get UTF-8 string");
+    let mutf8_data = to_java_cesu8(&data).to_vec();
+    let boxed_slice = mutf8_data.into_boxed_slice();
+    let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const c_char;
+
+    if !is_copy.is_null() {
+        unsafe {
+            *is_copy = JNI_TRUE; // we always return a copy
+        }
+    }
+
+    raw_ptr
+}
+
+pub(super) extern "system" fn release_string_utf_chars(
+    env: *mut JNIEnv,
+    str: jstring,
+    chars: *const c_char,
+) {
+    let string_ref = str as i32;
+    if string_ref == 0 {
+        panic!("Invalid string reference: null");
+    }
+
+    if chars.is_null() {
+        return;
+    }
+
+    let len = get_string_utf_length_as_long(env, str) as usize;
+    unsafe {
+        let _boxed: Box<_> = Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut u8, len));
+    }
 }
