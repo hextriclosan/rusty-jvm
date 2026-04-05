@@ -5,8 +5,8 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::string::get_raw_string_info;
-use cesu8::from_java_cesu8;
-use jni_sys::{jboolean, jbyte, jchar, jint, jsize, jstring, JNIEnv, JNI_TRUE};
+use cesu8::{from_java_cesu8, to_java_cesu8};
+use jni_sys::{jboolean, jbyte, jchar, jint, jlong, jsize, jstring, JNIEnv, JNI_TRUE};
 use std::ffi::{c_char, CStr};
 use std::ptr;
 
@@ -58,9 +58,22 @@ pub(super) extern "system" fn get_string_chars(
         panic!("Invalid string reference: null");
     }
 
+    let raw_data = get_string_raw_data(string_ref);
+    let boxed_slice = raw_data.into_boxed_slice();
+    let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const jchar;
+
+    if !is_copy.is_null() {
+        unsafe {
+            *is_copy = JNI_TRUE; // we always return a copy
+        }
+    }
+
+    raw_ptr
+}
+
+fn get_string_raw_data(string_ref: i32) -> Vec<jchar> {
     let (is_latin, array_ref) =
         get_raw_string_info(string_ref).expect("Failed to get raw string info");
-
     let raw_data = if is_latin {
         let guard = HEAP
             .get_entire_raw_data(array_ref)
@@ -78,17 +91,7 @@ pub(super) extern "system" fn get_string_chars(
             .map(|chunk| u16::from_ne_bytes([chunk[0], chunk[1]]))
             .collect::<Vec<_>>()
     };
-
-    let boxed_slice = raw_data.into_boxed_slice();
-    let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const jchar;
-
-    if !is_copy.is_null() {
-        unsafe {
-            *is_copy = JNI_TRUE; // we always return a copy
-        }
-    }
-
-    raw_ptr
+    raw_data
 }
 
 pub(super) extern "system" fn release_string_chars(
@@ -160,4 +163,24 @@ pub(super) extern "system" fn new_string_utf8(
     .expect("Failed to invoke String constructor"); // todo handle exception here
 
     string_instance_ref as jstring
+}
+
+pub(super) extern "system" fn get_string_utf_length_as_long(
+    _env: *mut JNIEnv,
+    input: jstring,
+) -> jlong {
+    let string_ref = input as i32;
+
+    if string_ref == 0 {
+        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+    }
+
+    let raw_data = get_string_raw_data(string_ref);
+    let data = String::from_utf16(&raw_data).expect("Failed to build string from UTF-16 data");
+
+    to_java_cesu8(&data).len() as jlong
+}
+
+pub(super) extern "system" fn get_string_utf_length(_env: *mut JNIEnv, input: jstring) -> jint {
+    get_string_utf_length_as_long(_env, input) as jint
 }

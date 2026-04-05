@@ -15,7 +15,8 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::{
-    get_string_chars, get_string_length, new_string, new_string_utf8, release_string_chars,
+    get_string_chars, get_string_length, get_string_utf_length, get_string_utf_length_as_long,
+    new_string, new_string_utf8, release_string_chars,
 };
 use jni_sys::{
     jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
@@ -260,7 +261,6 @@ jni_stub!(SetStaticIntField(jclass, jfieldID, jint) -> ());
 jni_stub!(SetStaticLongField(jclass, jfieldID, jlong) -> ());
 jni_stub!(SetStaticFloatField(jclass, jfieldID, jfloat) -> ());
 jni_stub!(SetStaticDoubleField(jclass, jfieldID, jdouble) -> ());
-jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
@@ -281,7 +281,6 @@ jni_stub!(GetDirectBufferCapacity(jobject) -> jlong);
 jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
 jni_stub!(GetModule(jclass) -> jobject);
 jni_stub!(IsVirtualThread(jobject) -> jboolean);
-jni_stub!(GetStringUTFLengthAsLong(jstring) -> jlong);
 
 jni_vm_stub!(DestroyJavaVM() -> jint);
 jni_vm_stub!(AttachCurrentThread(*mut *mut c_void, *mut c_void) -> jint);
@@ -462,7 +461,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetStringChars = get_string_chars;
     ni.v24.ReleaseStringChars = release_string_chars;
     ni.v24.NewStringUTF = new_string_utf8;
-    ni.v24.GetStringUTFLength = GetStringUTFLength;
+    ni.v24.GetStringUTFLength = get_string_utf_length;
     ni.v24.GetStringUTFChars = GetStringUTFChars;
     ni.v24.ReleaseStringUTFChars = ReleaseStringUTFChars;
     ni.v24.GetArrayLength = get_array_length;
@@ -527,7 +526,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetObjectRefType = GetObjectRefType;
     ni.v24.GetModule = GetModule;
     ni.v24.IsVirtualThread = IsVirtualThread;
-    ni.v24.GetStringUTFLengthAsLong = GetStringUTFLengthAsLong;
+    ni.v24.GetStringUTFLengthAsLong = get_string_utf_length_as_long;
 
     let mut ii: JNIInvokeInterface_ = unsafe { std::mem::zeroed() };
     ii.v1_4.DestroyJavaVM = DestroyJavaVM;
