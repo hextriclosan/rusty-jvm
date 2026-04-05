@@ -1,7 +1,13 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::jni::array_operations_impl::{
+    new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
+};
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::string::get_raw_string_info;
-use jni_sys::{jboolean, jchar, jint, jsize, jstring, JNIEnv, JNI_TRUE};
+use cesu8::from_java_cesu8;
+use jni_sys::{jboolean, jbyte, jchar, jint, jsize, jstring, JNIEnv, JNI_TRUE};
+use std::ffi::{c_char, CStr};
 use std::ptr;
 
 pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstring) -> jint {
@@ -19,7 +25,7 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
 }
 
 pub(super) extern "system" fn new_string(
-    _env: *mut JNIEnv,
+    env: *mut JNIEnv,
     unicode: *const jchar,
     len: jsize,
 ) -> jstring {
@@ -29,19 +35,12 @@ pub(super) extern "system" fn new_string(
     if unicode.is_null() && len > 0 {
         panic!("unicode array is null but length is {len}");
     }
-    let arr_ref = HEAP.create_array("[C", len as i32);
-    if len > 0 {
-        let mut guard = HEAP
-            .get_entire_raw_data_mut(arr_ref)
-            .expect("Failed to get array data");
-        guard.copy_from_slice(unsafe {
-            std::slice::from_raw_parts(unicode as *const u8, len as usize * size_of::<jchar>())
-        });
-    }
+    let arr_ref = new_char_array(env, len);
+    set_char_array_region(env, arr_ref, 0, len, unicode);
     let string_instance_ref = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([C)V",
-        &[arr_ref.into()],
+        &[(arr_ref as i32).into()],
         Some(""),
     )
     .expect("Failed to invoke String constructor"); // todo handle exception here
@@ -120,4 +119,45 @@ pub(super) extern "system" fn release_string_chars(
         let _boxed: Box<_> =
             Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut jchar, len));
     }
+}
+
+pub(super) extern "system" fn new_string_utf8(
+    env: *mut JNIEnv,
+    mutf8_bytes: *const c_char,
+) -> jstring {
+    if mutf8_bytes.is_null() {
+        panic!("modified utf-8 array is null");
+    }
+
+    let bytes = unsafe { CStr::from_ptr(mutf8_bytes) }.to_bytes();
+    let decoded = from_java_cesu8(bytes).expect("Failed to decode modified UTF-8 bytes");
+    let decoded_bytes = decoded.as_bytes();
+
+    let len = decoded_bytes.len() as jsize;
+    let byte_array = new_byte_array(env, len);
+    set_byte_array_region(
+        env,
+        byte_array,
+        0,
+        len,
+        decoded_bytes.as_ptr() as *const jbyte,
+    );
+
+    let utf8_charset_ref = CLASSES
+        .get("java/nio/charset/StandardCharsets")
+        .expect("Failed to get StandardCharsets class")
+        .static_field("UTF_8")
+        .expect("Failed to get UTF_8 field")
+        .raw_value()
+        .expect("Failed to get UTF_8 value")[0];
+
+    let string_instance_ref = Executor::invoke_args_constructor(
+        "java/lang/String",
+        "<init>:([BLjava/nio/charset/Charset;)V",
+        &[(byte_array as i32).into(), utf8_charset_ref.into()],
+        Some(""),
+    )
+    .expect("Failed to invoke String constructor"); // todo handle exception here
+
+    string_instance_ref as jstring
 }

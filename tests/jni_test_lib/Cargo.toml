@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.22.3"
+cesu8 = "1.1.0"

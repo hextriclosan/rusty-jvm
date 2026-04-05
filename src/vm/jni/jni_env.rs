@@ -15,7 +15,7 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::{
-    get_string_chars, get_string_length, new_string, release_string_chars,
+    get_string_chars, get_string_length, new_string, new_string_utf8, release_string_chars,
 };
 use jni_sys::{
     jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
@@ -260,7 +260,6 @@ jni_stub!(SetStaticIntField(jclass, jfieldID, jint) -> ());
 jni_stub!(SetStaticLongField(jclass, jfieldID, jlong) -> ());
 jni_stub!(SetStaticFloatField(jclass, jfieldID, jfloat) -> ());
 jni_stub!(SetStaticDoubleField(jclass, jfieldID, jdouble) -> ());
-jni_stub!(NewStringUTF(*const c_char) -> jstring);
 jni_stub!(GetStringUTFLength(jstring) -> jsize);
 jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
 jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
@@ -462,7 +461,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetStringLength = get_string_length;
     ni.v24.GetStringChars = get_string_chars;
     ni.v24.ReleaseStringChars = release_string_chars;
-    ni.v24.NewStringUTF = NewStringUTF;
+    ni.v24.NewStringUTF = new_string_utf8;
     ni.v24.GetStringUTFLength = GetStringUTFLength;
     ni.v24.GetStringUTFChars = GetStringUTFChars;
     ni.v24.ReleaseStringUTFChars = ReleaseStringUTFChars;

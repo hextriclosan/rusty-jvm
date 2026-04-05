@@ -1,4 +1,6 @@
+use cesu8::to_java_cesu8;
 use jni::sys::{jchar, jcharArray, jclass, jint, jobject, jsize, jstring, JNIEnv, JNI_ABORT};
+use std::ffi::CString;
 use std::ptr::null_mut;
 
 #[no_mangle]
@@ -40,4 +42,15 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     }
 
     char_array
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_NewStringUTF(
+    env: *mut JNIEnv,
+    _class: jclass,
+) -> jstring {
+    let text = "Hello from Rust! 💅☕️";
+    let cesu8 = to_java_cesu8(text);
+    let cstr = CString::new(cesu8).unwrap();
+    unsafe { ((*(*env)).v24.NewStringUTF)(env, cstr.as_ptr()) }
 }
