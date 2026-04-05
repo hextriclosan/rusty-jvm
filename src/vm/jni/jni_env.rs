@@ -15,8 +15,9 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
 use crate::vm::jni::string_operations_impl::{
-    get_string_chars, get_string_length, get_string_utf_length, get_string_utf_length_as_long,
-    new_string, new_string_utf8, release_string_chars,
+    get_string_chars, get_string_length, get_string_utf_chars, get_string_utf_length,
+    get_string_utf_length_as_long, new_string, new_string_utf8, release_string_chars,
+    release_string_utf_chars,
 };
 use jni_sys::{
     jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
@@ -261,8 +262,6 @@ jni_stub!(SetStaticIntField(jclass, jfieldID, jint) -> ());
 jni_stub!(SetStaticLongField(jclass, jfieldID, jlong) -> ());
 jni_stub!(SetStaticFloatField(jclass, jfieldID, jfloat) -> ());
 jni_stub!(SetStaticDoubleField(jclass, jfieldID, jdouble) -> ());
-jni_stub!(GetStringUTFChars(jstring, *mut jboolean) -> *const c_char);
-jni_stub!(ReleaseStringUTFChars(jstring, *const c_char) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
@@ -462,8 +461,8 @@ static VTABLE: Wrapper = {
     ni.v24.ReleaseStringChars = release_string_chars;
     ni.v24.NewStringUTF = new_string_utf8;
     ni.v24.GetStringUTFLength = get_string_utf_length;
-    ni.v24.GetStringUTFChars = GetStringUTFChars;
-    ni.v24.ReleaseStringUTFChars = ReleaseStringUTFChars;
+    ni.v24.GetStringUTFChars = get_string_utf_chars;
+    ni.v24.ReleaseStringUTFChars = release_string_utf_chars;
     ni.v24.GetArrayLength = get_array_length;
     ni.v24.NewObjectArray = new_object_array;
     ni.v24.GetObjectArrayElement = get_object_array_element;

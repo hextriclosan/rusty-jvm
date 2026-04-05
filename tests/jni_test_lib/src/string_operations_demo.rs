@@ -74,3 +74,18 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
 ) -> jlong {
     unsafe { ((*(*env)).v24.GetStringUTFLengthAsLong)(env, input) }
 }
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringUTFChars(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jstring,
+) -> jstring {
+    let chars = unsafe { ((*(*env)).v24.GetStringUTFChars)(env, input, null_mut()) };
+    let string_ref = unsafe { ((*(*env)).v24.NewStringUTF)(env, chars) };
+    unsafe {
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, input, chars);
+    }
+
+    string_ref
+}
