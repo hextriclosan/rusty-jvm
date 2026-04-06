@@ -13,7 +13,8 @@ use crate::vm::jni::array_operations_impl::{
     set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
     set_long_array_region, set_object_array_element, set_short_array_region,
 };
-use crate::vm::jni::jni_impl::{exception_check, get_java_vm, get_version};
+use crate::vm::jni::exception_impl::{exception_check, exception_occurred};
+use crate::vm::jni::global_and_local_references_impl::{pop_local_frame, push_local_frame};
 use crate::vm::jni::string_operations_impl::{
     get_string_chars, get_string_length, get_string_utf_chars, get_string_utf_length,
     get_string_utf_length_as_long, new_string, new_string_utf8, release_string_chars,
@@ -25,6 +26,8 @@ use jni_sys::{
     JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
+use crate::vm::jni::java_vm_interface_impl::get_java_vm;
+use crate::vm::jni::version_information_impl::get_version;
 
 pub(crate) fn get_jni_env() -> *mut JNIEnv {
     static mut ENV: *const JNINativeInterface_ = &VTABLE.0;
@@ -114,12 +117,9 @@ jni_stub!(IsAssignableFrom(jclass, jclass) -> jboolean);
 jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
 jni_stub!(Throw(jthrowable) -> jint);
 jni_stub!(ThrowNew(jclass, *const c_char) -> jint);
-jni_stub!(ExceptionOccurred() -> jthrowable);
 jni_stub!(ExceptionDescribe() -> ());
 jni_stub!(ExceptionClear() -> ());
 jni_stub!(FatalError(*const c_char) -> !);
-jni_stub!(PushLocalFrame(jint) -> jint);
-jni_stub!(PopLocalFrame(jobject) -> jobject);
 jni_stub!(NewGlobalRef(jobject) -> jobject);
 jni_stub!(DeleteGlobalRef(jobject) -> ());
 jni_stub!(DeleteLocalRef(jobject) -> ());
@@ -291,12 +291,7 @@ struct Wrapper(JNINativeInterface_, JNIInvokeInterface_);
 unsafe impl Sync for Wrapper {}
 static VTABLE: Wrapper = {
     let mut ni: JNINativeInterface_ = unsafe { std::mem::zeroed() };
-
     ni.v24.GetVersion = get_version;
-    ni.v24.ExceptionCheck = exception_check;
-    ni.v24.GetJavaVM = get_java_vm;
-
-    ///////////////// STUBS /////////////////////////
     ni.v24.DefineClass = DefineClass;
     ni.v24.FindClass = FindClass;
     ni.v24.FromReflectedMethod = FromReflectedMethod;
@@ -307,12 +302,12 @@ static VTABLE: Wrapper = {
     ni.v24.ToReflectedField = ToReflectedField;
     ni.v24.Throw = Throw;
     ni.v24.ThrowNew = ThrowNew;
-    ni.v24.ExceptionOccurred = ExceptionOccurred;
+    ni.v24.ExceptionOccurred = exception_occurred;
     ni.v24.ExceptionDescribe = ExceptionDescribe;
     ni.v24.ExceptionClear = ExceptionClear;
     ni.v24.FatalError = FatalError;
-    ni.v24.PushLocalFrame = PushLocalFrame;
-    ni.v24.PopLocalFrame = PopLocalFrame;
+    ni.v24.PushLocalFrame = push_local_frame;
+    ni.v24.PopLocalFrame = pop_local_frame;
     ni.v24.NewGlobalRef = NewGlobalRef;
     ni.v24.DeleteGlobalRef = DeleteGlobalRef;
     ni.v24.DeleteLocalRef = DeleteLocalRef;
@@ -511,6 +506,7 @@ static VTABLE: Wrapper = {
     ni.v24.UnregisterNatives = UnregisterNatives;
     ni.v24.MonitorEnter = MonitorEnter;
     ni.v24.MonitorExit = MonitorExit;
+    ni.v24.GetJavaVM = get_java_vm;
     ni.v24.GetStringRegion = GetStringRegion;
     ni.v24.GetStringUTFRegion = GetStringUTFRegion;
     ni.v24.GetPrimitiveArrayCritical = GetPrimitiveArrayCritical;
@@ -519,6 +515,7 @@ static VTABLE: Wrapper = {
     ni.v24.ReleaseStringCritical = ReleaseStringCritical;
     ni.v24.NewWeakGlobalRef = NewWeakGlobalRef;
     ni.v24.DeleteWeakGlobalRef = DeleteWeakGlobalRef;
+    ni.v24.ExceptionCheck = exception_check;
     ni.v24.NewDirectByteBuffer = NewDirectByteBuffer;
     ni.v24.GetDirectBufferAddress = GetDirectBufferAddress;
     ni.v24.GetDirectBufferCapacity = GetDirectBufferCapacity;
