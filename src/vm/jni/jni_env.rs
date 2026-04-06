@@ -16,6 +16,14 @@ use crate::vm::jni::array_operations_impl::{
 use crate::vm::jni::exception_impl::{exception_check, exception_occurred};
 use crate::vm::jni::global_and_local_references_impl::{pop_local_frame, push_local_frame};
 use crate::vm::jni::java_vm_interface_impl::get_java_vm;
+use crate::vm::jni::static_fields_impl::{
+    get_static_boolean_field, get_static_byte_field, get_static_char_field,
+    get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
+    get_static_long_field, get_static_object_field, get_static_short_field,
+    set_static_boolean_field, set_static_byte_field, set_static_char_field,
+    set_static_double_field, set_static_float_field, set_static_int_field, set_static_long_field,
+    set_static_object_field, set_static_short_field,
+};
 use crate::vm::jni::string_operations_impl::{
     get_string_chars, get_string_length, get_string_utf_chars, get_string_utf_length,
     get_string_utf_length_as_long, new_string, new_string_utf8, release_string_chars,
@@ -243,25 +251,6 @@ jni_stub!(CallStaticDoubleMethodA(jclass, jmethodID, *const jvalue) -> jdouble);
 jni_variadic_stub!(CallStaticVoidMethod, CallStaticVoidMethod_ptr, (jclass, jmethodID) -> ());
 jni_stub!(CallStaticVoidMethodV(jclass, jmethodID, va_list) -> ());
 jni_stub!(CallStaticVoidMethodA(jclass, jmethodID, *const jvalue) -> ());
-jni_stub!(GetStaticFieldID(jclass, *const c_char, *const c_char) -> jfieldID);
-jni_stub!(GetStaticObjectField(jclass, jfieldID) -> jobject);
-jni_stub!(GetStaticBooleanField(jclass, jfieldID) -> jboolean);
-jni_stub!(GetStaticByteField(jclass, jfieldID) -> jbyte);
-jni_stub!(GetStaticCharField(jclass, jfieldID) -> jchar);
-jni_stub!(GetStaticShortField(jclass, jfieldID) -> jshort);
-jni_stub!(GetStaticIntField(jclass, jfieldID) -> jint);
-jni_stub!(GetStaticLongField(jclass, jfieldID) -> jlong);
-jni_stub!(GetStaticFloatField(jclass, jfieldID) -> jfloat);
-jni_stub!(GetStaticDoubleField(jclass, jfieldID) -> jdouble);
-jni_stub!(SetStaticObjectField(jclass, jfieldID, jobject) -> ());
-jni_stub!(SetStaticBooleanField(jclass, jfieldID, jboolean) -> ());
-jni_stub!(SetStaticByteField(jclass, jfieldID, jbyte) -> ());
-jni_stub!(SetStaticCharField(jclass, jfieldID, jchar) -> ());
-jni_stub!(SetStaticShortField(jclass, jfieldID, jshort) -> ());
-jni_stub!(SetStaticIntField(jclass, jfieldID, jint) -> ());
-jni_stub!(SetStaticLongField(jclass, jfieldID, jlong) -> ());
-jni_stub!(SetStaticFloatField(jclass, jfieldID, jfloat) -> ());
-jni_stub!(SetStaticDoubleField(jclass, jfieldID, jdouble) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
@@ -431,25 +420,25 @@ static VTABLE: Wrapper = {
     ni.v24.CallStaticVoidMethod = CallStaticVoidMethod_ptr;
     ni.v24.CallStaticVoidMethodV = CallStaticVoidMethodV;
     ni.v24.CallStaticVoidMethodA = CallStaticVoidMethodA;
-    ni.v24.GetStaticFieldID = GetStaticFieldID;
-    ni.v24.GetStaticObjectField = GetStaticObjectField;
-    ni.v24.GetStaticBooleanField = GetStaticBooleanField;
-    ni.v24.GetStaticByteField = GetStaticByteField;
-    ni.v24.GetStaticCharField = GetStaticCharField;
-    ni.v24.GetStaticShortField = GetStaticShortField;
-    ni.v24.GetStaticIntField = GetStaticIntField;
-    ni.v24.GetStaticLongField = GetStaticLongField;
-    ni.v24.GetStaticFloatField = GetStaticFloatField;
-    ni.v24.GetStaticDoubleField = GetStaticDoubleField;
-    ni.v24.SetStaticObjectField = SetStaticObjectField;
-    ni.v24.SetStaticBooleanField = SetStaticBooleanField;
-    ni.v24.SetStaticByteField = SetStaticByteField;
-    ni.v24.SetStaticCharField = SetStaticCharField;
-    ni.v24.SetStaticShortField = SetStaticShortField;
-    ni.v24.SetStaticIntField = SetStaticIntField;
-    ni.v24.SetStaticLongField = SetStaticLongField;
-    ni.v24.SetStaticFloatField = SetStaticFloatField;
-    ni.v24.SetStaticDoubleField = SetStaticDoubleField;
+    ni.v24.GetStaticFieldID = get_static_field_id;
+    ni.v24.GetStaticObjectField = get_static_object_field;
+    ni.v24.GetStaticBooleanField = get_static_boolean_field;
+    ni.v24.GetStaticByteField = get_static_byte_field;
+    ni.v24.GetStaticCharField = get_static_char_field;
+    ni.v24.GetStaticShortField = get_static_short_field;
+    ni.v24.GetStaticIntField = get_static_int_field;
+    ni.v24.GetStaticLongField = get_static_long_field;
+    ni.v24.GetStaticFloatField = get_static_float_field;
+    ni.v24.GetStaticDoubleField = get_static_double_field;
+    ni.v24.SetStaticObjectField = set_static_object_field;
+    ni.v24.SetStaticBooleanField = set_static_boolean_field;
+    ni.v24.SetStaticByteField = set_static_byte_field;
+    ni.v24.SetStaticCharField = set_static_char_field;
+    ni.v24.SetStaticShortField = set_static_short_field;
+    ni.v24.SetStaticIntField = set_static_int_field;
+    ni.v24.SetStaticLongField = set_static_long_field;
+    ni.v24.SetStaticFloatField = set_static_float_field;
+    ni.v24.SetStaticDoubleField = set_static_double_field;
     ni.v24.NewString = new_string;
     ni.v24.GetStringLength = get_string_length;
     ni.v24.GetStringChars = get_string_chars;

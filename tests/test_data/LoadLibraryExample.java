@@ -79,6 +79,7 @@ class LoadLibraryExample {
 
         StringOperationsDemo.runDemo();
         ArrayOperationsDemo.runDemo();
+        StaticFieldDemo.runDemo();
     }
 }
 
@@ -417,5 +418,68 @@ class ArrayOperationsDemo {
         System.out.printf("Double array after setting: %s%n", Arrays.toString(doubleArr));
         double[] gotDoubleArr = GetDoubleArrayRegionDemo(doubleArr, 1, 4);
         System.out.printf("Got double array region: %s%n", Arrays.toString(gotDoubleArr));
+    }
+}
+
+class StaticFieldDemo {
+    private static String staticObjectField = "Initial static string";
+    public static boolean staticBooleanField = false;
+    private static byte staticByteField = 127;
+    private static char staticCharField = 'A';
+    private static short staticShortField = 1337;
+    private static int staticIntField = 42;
+    private static long staticLongField = 9_000_000_000_000_000_000L;
+    private static float staticFloatField = 3.14f;
+    private static double staticDoubleField = Math.PI;
+
+    private static native void processStaticObjectField(String fieldName, String sig, Object newValue);
+    private static native void processStaticBooleanField(String fieldName, String sig, boolean newValue);
+    private static native void processStaticByteField(String fieldName, String sig, byte newValue);
+    private static native void processStaticCharField(String fieldName, String sig, char newValue);
+    private static native void processStaticShortField(String fieldName, String sig, short newValue);
+    private static native void processStaticIntField(String fieldName, String sig, int newValue);
+    private static native void processStaticLongField(String fieldName, String sig, long newValue);
+    private static native void processStaticFloatField(String fieldName, String sig, float newValue);
+    private static native void processStaticDoubleField(String fieldName, String sig, double newValue);
+
+    public static void runDemo() {
+        System.out.println();
+        System.out.println("=== Static Field Demo ===");
+
+        System.out.print("staticObjectField: ");
+        processStaticObjectField("staticObjectField", "Ljava/lang/String;", "I'm a brand new");
+        System.out.printf("staticObjectField: new value=%s%n", staticObjectField);
+
+        System.out.print("staticBooleanField: ");
+        processStaticBooleanField("staticBooleanField", "Z", true);
+        System.out.printf("staticBooleanField: new value=%b%n", staticBooleanField);
+
+        System.out.print("staticByteField: ");
+        processStaticByteField("staticByteField", "B", (byte)-128);
+        System.out.printf("staticByteField: new value=%d%n", staticByteField);
+
+        System.out.print("staticCharField: ");
+        processStaticCharField("staticCharField", "C", 'Ї');
+        System.out.printf("staticCharField: new value=%c%n", staticCharField);
+
+        System.out.print("staticShortField: ");
+        processStaticShortField("staticShortField", "S", (short) -32768);
+        System.out.printf("staticShortField: new value=%d%n", staticShortField);
+
+        System.out.print("staticIntField: ");
+        processStaticIntField("staticIntField", "I", -2_000_000_000);
+        System.out.printf("staticIntField: new value=%d%n", staticIntField);
+
+        System.out.print("staticLongField: ");
+        processStaticLongField("staticLongField", "J", -9_000_000_000_000_000_000L);
+        System.out.printf("staticLongField: new value=%d%n", staticLongField);
+
+        System.out.print("staticFloatField: ");
+        processStaticFloatField("staticFloatField", "F", 2.71f);
+        System.out.printf("staticFloatField: new value=%f%n", staticFloatField);
+
+        System.out.print("staticDoubleField: ");
+        processStaticDoubleField("staticDoubleField", "D", Math.E);
+        System.out.printf("staticDoubleField: new value=%.16f%n", staticDoubleField);
     }
 }

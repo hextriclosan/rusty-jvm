@@ -3487,6 +3487,26 @@ Float array after setting: [0.0, 0.0, 3.14, 2.71, 1.41, 0.0]
 Got float array region: [0.0, 3.14, 2.71, 1.41]
 Double array after setting: [0.0, 0.0, 3.141592653589793, 2.71, 1.41, 0.0]
 Got double array region: [0.0, 3.141592653589793, 2.71, 1.41]
+
+=== Static Field Demo ===
+staticObjectField: current value=unknown
+staticObjectField: new value=I'm a brand new
+staticBooleanField: current value=false
+staticBooleanField: new value=true
+staticByteField: current value=127
+staticByteField: new value=-128
+staticCharField: current value=65
+staticCharField: new value=Ї
+staticShortField: current value=1337
+staticShortField: new value=-32768
+staticIntField: current value=42
+staticIntField: new value=-2000000000
+staticLongField: current value=9000000000000000000
+staticLongField: new value=-9000000000000000000
+staticFloatField: current value=3.14
+staticFloatField: new value=2.710000
+staticDoubleField: current value=3.141592653589793
+staticDoubleField: new value=2.7182818284590450
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called
