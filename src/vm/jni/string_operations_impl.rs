@@ -1,3 +1,4 @@
+use crate::from_mutf8_ptr;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::array_operations_impl::{
@@ -5,9 +6,9 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::string::get_raw_string_info;
-use cesu8::{from_java_cesu8, to_java_cesu8};
+use cesu8::to_java_cesu8;
 use jni_sys::{jboolean, jbyte, jchar, jint, jlong, jsize, jstring, JNIEnv, JNI_TRUE};
-use std::ffi::{c_char, CStr};
+use std::ffi::c_char;
 use std::ptr;
 
 pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstring) -> jint {
@@ -132,8 +133,7 @@ pub(super) extern "system" fn new_string_utf8(
         panic!("modified utf-8 array is null");
     }
 
-    let bytes = unsafe { CStr::from_ptr(mutf8_bytes) }.to_bytes();
-    let decoded = from_java_cesu8(bytes).expect("Failed to decode modified UTF-8 bytes");
+    let decoded = from_mutf8_ptr!(mutf8_bytes).expect("Failed to decode modified UTF-8 bytes");
     let decoded_bytes = decoded.as_bytes();
 
     let len = decoded_bytes.len() as jsize;
