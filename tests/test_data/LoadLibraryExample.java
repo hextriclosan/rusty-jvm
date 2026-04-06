@@ -63,7 +63,7 @@ class LoadLibraryExample {
         int arrSum = arraySum(values);
         System.out.println("arraySum = " + arrSum);
 
-        String greeting = hello("JNI");
+        String greeting = hello("Hi éA\u0000𝄞💅☕️");
         System.out.println(greeting);
 
         printMessage("Hello from Java");

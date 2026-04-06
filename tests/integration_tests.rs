@@ -3370,6 +3370,7 @@ fn ensure_jni_test_lib_is_built() {
 
 #[test]
 fn should_load_native_library_and_call_native_method() {
+    let null = "\0";
     let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
     utils::assert_with_all_args(
         &[
@@ -3378,13 +3379,14 @@ fn should_load_native_library_and_call_native_method() {
         ],
         "samples.javacore.loadlibrary.example.LoadLibraryExample",
         &[],
-        r#"byte sum(-128, 28) = -100
+        &format!(
+            r#"byte sum(-128, 28) = -100
 int sum(40, 2) = 42
 long sum(-999999999999999, 1000000000) = -999998999999999
 double multiply(3.500000, 2.000000) = 7.000000
 isPositive(-5) = false
 arraySum = 10
-Hello, JNI!
+Hello, Hi éA{null}𝄞💅☕️!
 Message from Java: Hello from Java
 Float value is: 3.1415
 int sumInstance(40, 2) = 42
@@ -3405,11 +3407,11 @@ Result of GetStringChars with input 'abc': [97, 98, 99]
 Result of newStringUTF: Hello from Rust! 💅☕️
 
 === GetStringUTFLengthAsLong ===
-Length of 'éA 𝄞': utfLengthLong=11, utfLengthInt=11 charsLength=5
+Length of 'éA{null}𝄞': utfLengthLong=11, utfLengthInt=11 charsLength=5
 Length of 'éabc': utfLengthLong=5, utfLengthInt=5 charsLength=4
 
 === GetStringUTFChars ===
-Result of GetStringUTFChars with input 'A 𝄞': 'A 𝄞'
+Result of GetStringUTFChars with input 'A{null}𝄞': 'A{null}𝄞'
 Result of GetStringUTFChars with input 'abc': 'abc'
 
 === GetArrayLength ===
@@ -3435,7 +3437,7 @@ Array after setting null '[null, twenty, three]'
 === New<PrimitiveType>Array ===
 Created boolean array: [false, false, false]
 Created byte array: [0, 0, 0]
-Created char array: [ ,  ,  ]
+Created char array: [{null}, {null}, {null}]
 Created short array: [0, 0, 0]
 Created int array: [0, 0, 0]
 Created long array: [0, 0, 0]
@@ -3485,7 +3487,8 @@ Float array after setting: [0.0, 0.0, 3.14, 2.71, 1.41, 0.0]
 Got float array region: [0.0, 3.14, 2.71, 1.41]
 Double array after setting: [0.0, 0.0, 3.141592653589793, 2.71, 1.41, 0.0]
 Got double array region: [0.0, 3.141592653589793, 2.71, 1.41]
-"#,
+"#
+        ),
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.LoadLibraryExample in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
