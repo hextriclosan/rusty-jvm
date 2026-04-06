@@ -55,6 +55,7 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
 
     let env = get_jni_env();
     let mut ffi_args = vec![Arg::new(&env)];
+    let clazz_ref = clazz_ref as usize as *mut c_void;
     if is_static {
         ffi_args.push(Arg::new(&clazz_ref));
     }

@@ -1,4 +1,5 @@
 use crate::from_mutf8_ptr;
+use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
 use jni_sys::{
@@ -47,6 +48,8 @@ pub(super) extern "system" fn get_static_field<T: JNIValue>(
     field_id: jfieldID,
 ) -> T {
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
+    StaticInit::initialize_java_class(&klass)
+        .expect("Failed to initialize class before getting static field");
 
     let raw = klass
         .get_static_field_by_offset(field_id as i64)
@@ -85,6 +88,9 @@ pub(super) extern "system" fn set_static_field<T: JNIValue>(
     value: T,
 ) {
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
+    StaticInit::initialize_java_class(&klass)
+        .expect("Failed to initialize class before setting static field");
+
     let field = klass
         .get_static_field_by_offset(field_id as i64)
         .expect("Failed to get static field by offset");

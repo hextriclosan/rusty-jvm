@@ -105,6 +105,6 @@ unsafe fn process_static_field<T: Copy + std::fmt::Debug + 'static>(
     }
     set_fn(env, class, field_id, new_value);
 
-    ((*(*env)).v24.ReleaseStringUTFChars)(env, field_name, sig);
-    ((*(*env)).v24.ReleaseStringUTFChars)(env, signature, field);
+    ((*(*env)).v24.ReleaseStringUTFChars)(env, signature, sig);
+    ((*(*env)).v24.ReleaseStringUTFChars)(env, field_name, field);
 }
