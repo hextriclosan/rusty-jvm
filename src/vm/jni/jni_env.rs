@@ -15,19 +15,19 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::jni::exception_impl::{exception_check, exception_occurred};
 use crate::vm::jni::global_and_local_references_impl::{pop_local_frame, push_local_frame};
+use crate::vm::jni::java_vm_interface_impl::get_java_vm;
 use crate::vm::jni::string_operations_impl::{
     get_string_chars, get_string_length, get_string_utf_chars, get_string_utf_length,
     get_string_utf_length_as_long, new_string, new_string_utf8, release_string_chars,
     release_string_utf_chars,
 };
+use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
     jobject, jobjectRefType, jshort, jsize, jstring, jthrowable, jvalue, jweak, va_list, JNIEnv,
     JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
-use crate::vm::jni::java_vm_interface_impl::get_java_vm;
-use crate::vm::jni::version_information_impl::get_version;
 
 pub(crate) fn get_jni_env() -> *mut JNIEnv {
     static mut ENV: *const JNINativeInterface_ = &VTABLE.0;

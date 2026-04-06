@@ -100,8 +100,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
     unowned_env
         .with_env(|env| {
             let arr = unsafe { JIntArray::from_raw(env, arr) };
-            let length = arr.len(env)
-                .expect("Failed to get array length");
+            let length = arr.len(env).expect("Failed to get array length");
 
             let elements = unsafe {
                 arr.get_elements(env, NoCopyBack)
@@ -129,9 +128,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_LoadLibraryExam
             let input = unsafe { JString::from_raw(env, input) };
             let input_str = input.to_string();
             let output_str = format!("Hello, {input_str}!");
-            let output_jstring = env
-                .new_string(output_str)
-                .expect("Failed to create output string");
+            let output_jstring = env.new_string(output_str)?;
 
             Ok::<jstring, jni::errors::Error>(output_jstring.into_raw())
         })
