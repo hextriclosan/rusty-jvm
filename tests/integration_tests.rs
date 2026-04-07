@@ -2014,6 +2014,17 @@ medium == anotherMedium: true
 }
 
 #[test]
+fn should_work_with_tricky_enums() {
+    assert_success(
+        "samples.javacore.enums.tricky.TrickyEnumsExample",
+        r#"ONE = I'm the ONE!
+TWO = I'm the Second!
+THREE = I'm a Loser
+"#,
+    );
+}
+
+#[test]
 fn should_support_class_get_nest_host() {
     assert_success(
         "samples.reflection.trivial.classgetnesthostexample.ClassGetNestHostExample",
