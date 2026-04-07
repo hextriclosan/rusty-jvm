@@ -28,7 +28,7 @@ enum TrickyEnum {
     }, THREE {
         @Override
         String getLongName() {
-            return "I'm a Looser";
+            return "I'm a Loser";
         }
     };
 
