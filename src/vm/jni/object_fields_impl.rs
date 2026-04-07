@@ -21,10 +21,10 @@ pub(super) extern "system" fn get_field_id(
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
     let class_name = klass.this_class_name();
     StaticInit::initialize_java_class(&klass)
-        .expect("Failed to initialize class before getting static field ID");
+        .expect("Failed to initialize class before getting field ID");
     let field_offset = klass
         .get_field_offset(&format!("{class_name}.{field_name}"))
-        .expect("Failed to get static field offset by name");
+        .expect("Failed to get field offset by name");
     field_offset as jfieldID
 }
 
