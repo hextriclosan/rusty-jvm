@@ -3513,6 +3513,26 @@ Class of object 'Hello, JNI 💅☕️!' is java.lang.String
 Class of object '42' is java.lang.Integer
 Class of object '[one, two, three]' is java.util.ImmutableCollections$ListN
 Class of array object '[1, 2, 3]' is [I
+
+=== Object Field Demo ===
+objectStringField: current value=unknown
+objectStringField: new value=I'm a brand new
+objectBooleanField: current value=false
+objectBooleanField: new value=true
+objectByteField: current value=127
+objectByteField: new value=-128
+objectCharField: current value=65
+objectCharField: new value=Ї
+objectShortField: current value=1337
+objectShortField: new value=-32768
+objectIntField: current value=42
+objectIntField: new value=-2000000000
+objectLongField: current value=9000000000000000000
+objectLongField: new value=-9000000000000000000
+objectFloatField: current value=3.14
+objectFloatField: new value=2.710000
+objectDoubleField: current value=3.141592653589793
+objectDoubleField: new value=2.7182818284590450
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called

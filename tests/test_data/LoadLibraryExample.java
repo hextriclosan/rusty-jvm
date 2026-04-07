@@ -81,6 +81,8 @@ class LoadLibraryExample {
         ArrayOperationsDemo.runDemo();
         StaticFieldDemo.runDemo();
         ObjectOperationsDemo.runDemo();
+        ObjectFieldDemo objectFieldDemo = new ObjectFieldDemo();
+        objectFieldDemo.runDemo();
     }
 }
 
@@ -509,5 +511,68 @@ class ObjectOperationsDemo {
         } else {
             System.out.printf("Class of object '%s' is %s%n", obj, clazz.getName());
         }
+    }
+}
+
+class ObjectFieldDemo {
+    private String objectStringField = "Initial object string";
+    public boolean objectBooleanField = false;
+    private byte objectByteField = 127;
+    private char objectCharField = 'A';
+    private short objectShortField = 1337;
+    private int objectIntField = 42;
+    private long objectLongField = 9_000_000_000_000_000_000L;
+    private float objectFloatField = 3.14f;
+    private double objectDoubleField = Math.PI;
+
+    private native void processObjectStringField(String fieldName, String sig, Object newValue);
+    private native void processObjectBooleanField(String fieldName, String sig, boolean newValue);
+    private native void processObjectByteField(String fieldName, String sig, byte newValue);
+    private native void processObjectCharField(String fieldName, String sig, char newValue);
+    private native void processObjectShortField(String fieldName, String sig, short newValue);
+    private native void processObjectIntField(String fieldName, String sig, int newValue);
+    private native void processObjectLongField(String fieldName, String sig, long newValue);
+    private native void processObjectFloatField(String fieldName, String sig, float newValue);
+    private native void processObjectDoubleField(String fieldName, String sig, double newValue);
+
+    public void runDemo() {
+        System.out.println();
+        System.out.println("=== Object Field Demo ===");
+
+        System.out.print("objectStringField: ");
+        processObjectStringField("objectStringField", "Ljava/lang/String;", "I'm a brand new");
+        System.out.printf("objectStringField: new value=%s%n", objectStringField);
+
+        System.out.print("objectBooleanField: ");
+        processObjectBooleanField("objectBooleanField", "Z", true);
+        System.out.printf("objectBooleanField: new value=%b%n", objectBooleanField);
+
+        System.out.print("objectByteField: ");
+        processObjectByteField("objectByteField", "B", (byte)-128);
+        System.out.printf("objectByteField: new value=%d%n", objectByteField);
+
+        System.out.print("objectCharField: ");
+        processObjectCharField("objectCharField", "C", 'Ї');
+        System.out.printf("objectCharField: new value=%c%n", objectCharField);
+
+        System.out.print("objectShortField: ");
+        processObjectShortField("objectShortField", "S", (short) -32768);
+        System.out.printf("objectShortField: new value=%d%n", objectShortField);
+
+        System.out.print("objectIntField: ");
+        processObjectIntField("objectIntField", "I", -2_000_000_000);
+        System.out.printf("objectIntField: new value=%d%n", objectIntField);
+
+        System.out.print("objectLongField: ");
+        processObjectLongField("objectLongField", "J", -9_000_000_000_000_000_000L);
+        System.out.printf("objectLongField: new value=%d%n", objectLongField);
+
+        System.out.print("objectFloatField: ");
+        processObjectFloatField("objectFloatField", "F", 2.71f);
+        System.out.printf("objectFloatField: new value=%f%n", objectFloatField);
+
+        System.out.print("objectDoubleField: ");
+        processObjectDoubleField("objectDoubleField", "D", Math.E);
+        System.out.printf("objectDoubleField: new value=%.16f%n", objectDoubleField);
     }
 }
