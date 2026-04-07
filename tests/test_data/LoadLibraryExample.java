@@ -80,6 +80,7 @@ class LoadLibraryExample {
         StringOperationsDemo.runDemo();
         ArrayOperationsDemo.runDemo();
         StaticFieldDemo.runDemo();
+        ObjectOperationsDemo.runDemo();
     }
 }
 
@@ -481,5 +482,32 @@ class StaticFieldDemo {
         System.out.print("staticDoubleField: ");
         processStaticDoubleField("staticDoubleField", "D", Math.E);
         System.out.printf("staticDoubleField: new value=%.16f%n", staticDoubleField);
+    }
+}
+
+class ObjectOperationsDemo {
+    private static native Class<?> GetObjectClass(Object obj);
+
+    public static void runDemo() {
+        System.out.println();
+        System.out.println("=== Object Operations Demo ===");
+
+        GetObjectClassDemo();
+    }
+
+    private static void GetObjectClassDemo() {
+        printGetObjectClass("Hello, JNI 💅☕️!");
+        printGetObjectClass(42);
+        printGetObjectClass(List.of("one", "two", "three"));
+        printGetObjectClass(new int[] {1, 2, 3});
+    }
+
+    private static void printGetObjectClass(Object obj) {
+        Class<?> clazz = GetObjectClass(obj);
+        if (obj instanceof int[] ints) {
+            System.out.printf("Class of array object '%s' is %s%n", Arrays.toString(ints), clazz.getName());
+        } else {
+            System.out.printf("Class of object '%s' is %s%n", obj, clazz.getName());
+        }
     }
 }

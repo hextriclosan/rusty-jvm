@@ -3507,6 +3507,12 @@ staticFloatField: current value=3.14
 staticFloatField: new value=2.710000
 staticDoubleField: current value=3.141592653589793
 staticDoubleField: new value=2.7182818284590450
+
+=== Object Operations Demo ===
+Class of object 'Hello, JNI 💅☕️!' is java.lang.String
+Class of object '42' is java.lang.Integer
+Class of object '[one, two, three]' is java.util.ImmutableCollections$ListN
+Class of array object '[1, 2, 3]' is [I
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called
