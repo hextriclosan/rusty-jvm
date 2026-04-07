@@ -16,6 +16,7 @@ use crate::vm::jni::array_operations_impl::{
 use crate::vm::jni::exception_impl::{exception_check, exception_occurred};
 use crate::vm::jni::global_and_local_references_impl::{pop_local_frame, push_local_frame};
 use crate::vm::jni::java_vm_interface_impl::get_java_vm;
+use crate::vm::jni::object_operations_impl::get_object_class;
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -138,7 +139,6 @@ jni_stub!(AllocObject(jclass) -> jobject);
 jni_variadic_stub!(NewObject, NewObject_ptr, (jclass, jmethodID) -> jobject);
 jni_stub!(NewObjectV(jclass, jmethodID, va_list) -> jobject);
 jni_stub!(NewObjectA(jclass, jmethodID, *const jvalue) -> jobject);
-jni_stub!(GetObjectClass(jobject) -> jclass);
 jni_stub!(IsInstanceOf(jobject, jclass) -> jboolean);
 jni_stub!(GetMethodID(jclass, *const c_char, *const c_char) -> jmethodID);
 jni_variadic_stub!(CallObjectMethod, CallObjectMethod_ptr, (jobject, jmethodID) -> jobject);
@@ -307,7 +307,7 @@ static VTABLE: Wrapper = {
     ni.v24.NewObject = NewObject_ptr;
     ni.v24.NewObjectV = NewObjectV;
     ni.v24.NewObjectA = NewObjectA;
-    ni.v24.GetObjectClass = GetObjectClass;
+    ni.v24.GetObjectClass = get_object_class;
     ni.v24.IsInstanceOf = IsInstanceOf;
     ni.v24.GetMethodID = GetMethodID;
     ni.v24.CallObjectMethod = CallObjectMethod_ptr;

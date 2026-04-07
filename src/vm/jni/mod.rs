@@ -4,6 +4,7 @@ mod global_and_local_references_impl;
 mod java_vm_interface_impl;
 pub(crate) mod jni_env;
 mod jni_value;
+mod object_operations_impl;
 mod static_fields_impl;
 mod string_operations_impl;
 mod utils;

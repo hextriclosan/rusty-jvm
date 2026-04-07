@@ -1,4 +1,5 @@
 mod array_operations_demo;
+mod object_operations_demo;
 mod static_fields_demo;
 mod string_operations_demo;
 
