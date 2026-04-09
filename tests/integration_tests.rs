@@ -3544,6 +3544,27 @@ objectFloatField: current value=3.14
 objectFloatField: new value=2.710000
 objectDoubleField: current value=3.141592653589793
 objectDoubleField: new value=2.7182818284590450
+
+=== Static Methods Demo ===
+objectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticObjectMethodDemo -> I'm a result from Java!
+booleanMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticBooleanMethodDemo -> true
+byteMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticByteMethodDemo -> -128
+charMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticCharMethodDemo -> Ї
+shortMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticShortMethodDemo -> -32768
+intMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticIntMethodDemo -> -2000000000
+longMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticLongMethodDemo -> -9000000000000000000
+floatMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticFloatMethodDemo -> 2.710000
+doubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticDoubleMethodDemo -> 2.718282
+voidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called

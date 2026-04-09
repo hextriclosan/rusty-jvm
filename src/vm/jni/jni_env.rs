@@ -31,6 +31,12 @@ use crate::vm::jni::static_fields_impl::{
     set_static_double_field, set_static_float_field, set_static_int_field, set_static_long_field,
     set_static_object_field, set_static_short_field,
 };
+use crate::vm::jni::static_methods_impl::{
+    call_static_boolean_method_a, call_static_byte_method_a, call_static_char_method_a,
+    call_static_double_method_a, call_static_float_method_a, call_static_int_method_a,
+    call_static_long_method_a, call_static_object_method_a, call_static_short_method_a,
+    call_static_void_method_a, get_static_method_id,
+};
 use crate::vm::jni::string_operations_impl::{
     get_string_chars, get_string_length, get_string_utf_chars, get_string_utf_length,
     get_string_utf_length_as_long, new_string, new_string_utf8, release_string_chars,
@@ -207,37 +213,26 @@ jni_stub!(CallNonvirtualDoubleMethodA(jobject, jclass, jmethodID, *const jvalue)
 jni_variadic_stub!(CallNonvirtualVoidMethod, CallNonvirtualVoidMethod_ptr, (jobject, jclass, jmethodID) -> ());
 jni_stub!(CallNonvirtualVoidMethodV(jobject, jclass, jmethodID, va_list) -> ());
 jni_stub!(CallNonvirtualVoidMethodA(jobject, jclass, jmethodID, *const jvalue) -> ());
-jni_stub!(GetStaticMethodID(jclass, *const c_char, *const c_char) -> jmethodID);
 jni_variadic_stub!(CallStaticObjectMethod, CallStaticObjectMethod_ptr, (jclass, jmethodID) -> jobject);
 jni_stub!(CallStaticObjectMethodV(jclass, jmethodID, va_list) -> jobject);
-jni_stub!(CallStaticObjectMethodA(jclass, jmethodID, *const jvalue) -> jobject);
 jni_variadic_stub!(CallStaticBooleanMethod, CallStaticBooleanMethod_ptr, (jclass, jmethodID) -> jboolean);
 jni_stub!(CallStaticBooleanMethodV(jclass, jmethodID, va_list) -> jboolean);
-jni_stub!(CallStaticBooleanMethodA(jclass, jmethodID, *const jvalue) -> jboolean);
 jni_variadic_stub!(CallStaticByteMethod, CallStaticByteMethod_ptr, (jclass, jmethodID) -> jbyte);
 jni_stub!(CallStaticByteMethodV(jclass, jmethodID, va_list) -> jbyte);
-jni_stub!(CallStaticByteMethodA(jclass, jmethodID, *const jvalue) -> jbyte);
 jni_variadic_stub!(CallStaticCharMethod, CallStaticCharMethod_ptr, (jclass, jmethodID) -> jchar);
 jni_stub!(CallStaticCharMethodV(jclass, jmethodID, va_list) -> jchar);
-jni_stub!(CallStaticCharMethodA(jclass, jmethodID, *const jvalue) -> jchar);
 jni_variadic_stub!(CallStaticShortMethod, CallStaticShortMethod_ptr, (jclass, jmethodID) -> jshort);
 jni_stub!(CallStaticShortMethodV(jclass, jmethodID, va_list) -> jshort);
-jni_stub!(CallStaticShortMethodA(jclass, jmethodID, *const jvalue) -> jshort);
 jni_variadic_stub!(CallStaticIntMethod, CallStaticIntMethod_ptr, (jclass, jmethodID) -> jint);
 jni_stub!(CallStaticIntMethodV(jclass, jmethodID, va_list) -> jint);
-jni_stub!(CallStaticIntMethodA(jclass, jmethodID, *const jvalue) -> jint);
 jni_variadic_stub!(CallStaticLongMethod, CallStaticLongMethod_ptr, (jclass, jmethodID) -> jlong);
 jni_stub!(CallStaticLongMethodV(jclass, jmethodID, va_list) -> jlong);
-jni_stub!(CallStaticLongMethodA(jclass, jmethodID, *const jvalue) -> jlong);
 jni_variadic_stub!(CallStaticFloatMethod, CallStaticFloatMethod_ptr, (jclass, jmethodID) -> jfloat);
 jni_stub!(CallStaticFloatMethodV(jclass, jmethodID, va_list) -> jfloat);
-jni_stub!(CallStaticFloatMethodA(jclass, jmethodID, *const jvalue) -> jfloat);
 jni_variadic_stub!(CallStaticDoubleMethod, CallStaticDoubleMethod_ptr, (jclass, jmethodID) -> jdouble);
 jni_stub!(CallStaticDoubleMethodV(jclass, jmethodID, va_list) -> jdouble);
-jni_stub!(CallStaticDoubleMethodA(jclass, jmethodID, *const jvalue) -> jdouble);
 jni_variadic_stub!(CallStaticVoidMethod, CallStaticVoidMethod_ptr, (jclass, jmethodID) -> ());
 jni_stub!(CallStaticVoidMethodV(jclass, jmethodID, va_list) -> ());
-jni_stub!(CallStaticVoidMethodA(jclass, jmethodID, *const jvalue) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
@@ -376,37 +371,37 @@ static VTABLE: Wrapper = {
     ni.v24.SetLongField = set_long_field;
     ni.v24.SetFloatField = set_float_field;
     ni.v24.SetDoubleField = set_double_field;
-    ni.v24.GetStaticMethodID = GetStaticMethodID;
+    ni.v24.GetStaticMethodID = get_static_method_id;
     ni.v24.CallStaticObjectMethod = CallStaticObjectMethod_ptr;
     ni.v24.CallStaticObjectMethodV = CallStaticObjectMethodV;
-    ni.v24.CallStaticObjectMethodA = CallStaticObjectMethodA;
+    ni.v24.CallStaticObjectMethodA = call_static_object_method_a;
     ni.v24.CallStaticBooleanMethod = CallStaticBooleanMethod_ptr;
     ni.v24.CallStaticBooleanMethodV = CallStaticBooleanMethodV;
-    ni.v24.CallStaticBooleanMethodA = CallStaticBooleanMethodA;
+    ni.v24.CallStaticBooleanMethodA = call_static_boolean_method_a;
     ni.v24.CallStaticByteMethod = CallStaticByteMethod_ptr;
     ni.v24.CallStaticByteMethodV = CallStaticByteMethodV;
-    ni.v24.CallStaticByteMethodA = CallStaticByteMethodA;
+    ni.v24.CallStaticByteMethodA = call_static_byte_method_a;
     ni.v24.CallStaticCharMethod = CallStaticCharMethod_ptr;
     ni.v24.CallStaticCharMethodV = CallStaticCharMethodV;
-    ni.v24.CallStaticCharMethodA = CallStaticCharMethodA;
+    ni.v24.CallStaticCharMethodA = call_static_char_method_a;
     ni.v24.CallStaticShortMethod = CallStaticShortMethod_ptr;
     ni.v24.CallStaticShortMethodV = CallStaticShortMethodV;
-    ni.v24.CallStaticShortMethodA = CallStaticShortMethodA;
+    ni.v24.CallStaticShortMethodA = call_static_short_method_a;
     ni.v24.CallStaticIntMethod = CallStaticIntMethod_ptr;
     ni.v24.CallStaticIntMethodV = CallStaticIntMethodV;
-    ni.v24.CallStaticIntMethodA = CallStaticIntMethodA;
+    ni.v24.CallStaticIntMethodA = call_static_int_method_a;
     ni.v24.CallStaticLongMethod = CallStaticLongMethod_ptr;
     ni.v24.CallStaticLongMethodV = CallStaticLongMethodV;
-    ni.v24.CallStaticLongMethodA = CallStaticLongMethodA;
+    ni.v24.CallStaticLongMethodA = call_static_long_method_a;
     ni.v24.CallStaticFloatMethod = CallStaticFloatMethod_ptr;
     ni.v24.CallStaticFloatMethodV = CallStaticFloatMethodV;
-    ni.v24.CallStaticFloatMethodA = CallStaticFloatMethodA;
+    ni.v24.CallStaticFloatMethodA = call_static_float_method_a;
     ni.v24.CallStaticDoubleMethod = CallStaticDoubleMethod_ptr;
     ni.v24.CallStaticDoubleMethodV = CallStaticDoubleMethodV;
-    ni.v24.CallStaticDoubleMethodA = CallStaticDoubleMethodA;
+    ni.v24.CallStaticDoubleMethodA = call_static_double_method_a;
     ni.v24.CallStaticVoidMethod = CallStaticVoidMethod_ptr;
     ni.v24.CallStaticVoidMethodV = CallStaticVoidMethodV;
-    ni.v24.CallStaticVoidMethodA = CallStaticVoidMethodA;
+    ni.v24.CallStaticVoidMethodA = call_static_void_method_a;
     ni.v24.GetStaticFieldID = get_static_field_id;
     ni.v24.GetStaticObjectField = get_static_object_field;
     ni.v24.GetStaticBooleanField = get_static_boolean_field;
