@@ -39,7 +39,7 @@ pub(super) fn get_method_id_impl(
     let sig_str = from_mutf8_ptr!(sig).expect("Failed to convert method signature from CESU-8");
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
     StaticInit::initialize_java_class(&klass)
-        .expect("Failed to initialize class before getting static method ID"); // todo: throw ExceptionInInitializerError here
+        .expect("Failed to initialize class before getting method ID"); // todo: throw ExceptionInInitializerError here
     let full_signature = format!("{}:{}", name_str, sig_str);
 
     klass
