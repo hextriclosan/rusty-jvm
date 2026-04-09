@@ -813,7 +813,7 @@ class BaseAnimal {
 }
 
 abstract class AbstractSpeaker extends BaseAnimal implements Speakable {
-    public abstract String speak(); // explicit abstract declaration so GetMethodID can find it
+    // no explicit redeclaration of speak() — inherited from Speakable interface
 }
 
 class Puppy extends AbstractSpeaker {

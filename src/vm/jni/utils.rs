@@ -1,6 +1,8 @@
 use crate::vm::execution_engine::static_init::StaticInit;
-use crate::vm::helper::klass;
+use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
 use jni_sys::{jclass, jmethodID, jvalue};
@@ -42,16 +44,38 @@ pub(super) fn get_method_id_impl(
         .expect("Failed to initialize class before getting method ID"); // todo: throw ExceptionInInitializerError here
     let full_signature = format!("{}:{}", name_str, sig_str);
 
-    klass
+    // First try to find the method directly in the specified class's own methods map.
+    // If not found (e.g. abstract class that inherits an interface method without re-declaring it),
+    // fall back to the class hierarchy (parent classes and interfaces).
+    let found = klass
         .get_method_full(&full_signature)
-        .and_then(|(method_id, _method)| {
-            // Encode both the declaring class reference and the method index into the jmethodID.
-            // High 32 bits: class object reference (clazz as i32)
-            // Low 32 bits:  method index within that class's methods map
-            let encoded: i64 = ((clazz as i32 as i64) << 32) | (method_id as i64);
+        .map(|(method_index, method)| {
+            // Method lives in the class we were given – encode that class's ref.
+            let encoded: i64 = ((clazz as i32 as i64) << 32) | (method_index as i64);
+            let _ = method; // suppress unused warning
+            encoded as jmethodID
+        })
+        .or_else(|| {
+            // Look up the class hierarchy to find which ancestor/interface owns the method.
+            let class_name = klass.this_class_name();
+            let owner = with_method_area(|method_area| {
+                method_area
+                    .lookup_for_implementation(class_name, &full_signature)
+                    .or_else(|| {
+                        method_area.lookup_for_implementation_interface(class_name, &full_signature)
+                    })
+            })?;
+            // Get the owner class's mirror ref and method index.
+            let owner_class_name = owner.class_name();
+            let owner_clazz_ref = clazz_ref(owner_class_name).ok()?;
+            let owner_klass = CLASSES.get(owner_class_name).ok()?;
+            let (method_index, _) = owner_klass.get_method_full(&full_signature)?;
+            let encoded: i64 = ((owner_clazz_ref as i64) << 32) | (method_index as i64);
             Some(encoded as jmethodID)
         })
-        .unwrap_or(null_mut()) // todo: throw NoSuchMethodError here
+        .unwrap_or(null_mut()); // todo: throw NoSuchMethodError here
+
+    found
 }
 
 pub(super) fn transform_args_to_vec(
