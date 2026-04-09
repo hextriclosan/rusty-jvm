@@ -4,6 +4,7 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_value::StackValueKind;
+use jclassfile::methods::MethodFlags;
 use jdescriptor::TypeDescriptor;
 use jni_sys::{jclass, jmethodID, jvalue};
 use std::ffi::c_char;
@@ -36,12 +37,15 @@ pub(super) fn get_method_id_impl(
     clazz: jclass,
     name: *const c_char,
     sig: *const c_char,
+    expect_static: bool,
 ) -> jmethodID {
     let name_str = from_mutf8_ptr!(name).expect("Failed to convert method name from CESU-8");
     let sig_str = from_mutf8_ptr!(sig).expect("Failed to convert method signature from CESU-8");
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
-    StaticInit::initialize_java_class(&klass)
-        .expect("Failed to initialize class before getting method ID"); // todo: throw ExceptionInInitializerError here
+    let method_kind = if expect_static { "static" } else { "instance" };
+    StaticInit::initialize_java_class(&klass).unwrap_or_else(|_| {
+        panic!("Failed to initialize class before getting {method_kind} method ID")
+    }); // todo: throw ExceptionInInitializerError here
     let full_signature = format!("{}:{}", name_str, sig_str);
 
     // First try to find the method directly in the specified class's own methods map.
@@ -49,6 +53,11 @@ pub(super) fn get_method_id_impl(
     // fall back to the class hierarchy (parent classes and interfaces).
     let found = klass
         .get_method_full(&full_signature)
+        .filter(|(_, method)| {
+            MethodFlags::from_bits_truncate(method.access_flags() as u16)
+                .contains(MethodFlags::ACC_STATIC)
+                == expect_static
+        })
         .map(|(method_index, method)| {
             // Method lives in the class we were given – encode that class's ref.
             let encoded: i64 = ((clazz as i32 as i64) << 32) | (method_index as i64);
@@ -65,6 +74,11 @@ pub(super) fn get_method_id_impl(
                         method_area.lookup_for_implementation_interface(class_name, &full_signature)
                     })
             })?;
+            // Verify the found method has the expected static/instance kind.
+            let owner_flags = MethodFlags::from_bits_truncate(owner.access_flags() as u16);
+            if owner_flags.contains(MethodFlags::ACC_STATIC) != expect_static {
+                return None;
+            }
             // Get the owner class's mirror ref and method index.
             let owner_class_name = owner.class_name();
             let owner_clazz_ref = clazz_ref(owner_class_name).ok()?;
@@ -103,7 +117,7 @@ pub(super) fn transform_args_to_vec(
 
 fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> StackValueKind {
     match type_descriptor {
-        TypeDescriptor::Boolean => (if unsafe { value.z } { 1 } else { 0 }).into(),
+        TypeDescriptor::Boolean => (if unsafe { value.z } != 0 { 1 } else { 0 }).into(),
         TypeDescriptor::Byte => (unsafe { value.b } as i32).into(),
         TypeDescriptor::Char => (unsafe { value.c } as i32).into(),
         TypeDescriptor::Short => (unsafe { value.s } as i32).into(),

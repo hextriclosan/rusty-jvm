@@ -17,7 +17,7 @@ pub(super) extern "system" fn get_static_method_id(
     name: *const c_char,
     sig: *const c_char,
 ) -> jmethodID {
-    get_method_id_impl(clazz, name, sig)
+    get_method_id_impl(clazz, name, sig, true)
 }
 
 macro_rules! get_static_method_a_impl {
@@ -44,16 +44,19 @@ get_static_method_a_impl!(call_static_double_method_a, jdouble);
 get_static_method_a_impl!(call_static_void_method_a, ());
 fn call_static_method_a<T: JNIValue>(
     _env: *mut JNIEnv,
-    cls: jclass,
+    _cls: jclass,
     method_id: jmethodID,
     args: *const jvalue,
 ) -> T {
-    // Decode the method index from the low 32 bits of the encoded jmethodID.
+    // Decode the declaring class reference and method index from the encoded jmethodID.
+    // High 32 bits: declaring class object reference
+    // Low 32 bits:  method index within that class's methods map
+    let declaring_class_ref = (method_id as i64 >> 32) as i32;
     let method_index = (method_id as i64) & 0xFFFF_FFFF;
-    let klass = klass(cls as i32).expect("Failed to get class from reference");
+    let klass = klass(declaring_class_ref).expect("Failed to get declaring class from jmethodID");
     let method = klass
         .get_method_by_index(method_index)
-        .expect("Failed to get method by ID for static void method call");
+        .expect("Failed to get method by ID for static method call");
 
     let raw = invoke_static_method(&klass, &method, args);
     JNIValue::from_vec(&raw)

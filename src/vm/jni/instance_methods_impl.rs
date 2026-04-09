@@ -16,7 +16,7 @@ pub(super) extern "system" fn get_method_id(
     name: *const c_char,
     sig: *const c_char,
 ) -> jmethodID {
-    get_method_id_impl(clazz, name, sig)
+    get_method_id_impl(clazz, name, sig, false)
 }
 
 macro_rules! call_method_a_impl {
