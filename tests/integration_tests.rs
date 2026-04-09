@@ -3565,6 +3565,27 @@ StaticFloatMethodDemo -> 2.710000
 doubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 StaticDoubleMethodDemo -> 2.718282
 voidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+
+=== Instance Methods Demo ===
+instanceObjectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceObjectMethodDemo -> I'm a result from Java!
+instanceBooleanMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceBooleanMethodDemo -> true
+instanceByteMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceByteMethodDemo -> -128
+instanceCharMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceCharMethodDemo -> Ї
+instanceShortMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceShortMethodDemo -> -32768
+instanceIntMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceIntMethodDemo -> -2000000000
+instanceLongMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceLongMethodDemo -> -9000000000000000000
+instanceFloatMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceFloatMethodDemo -> 2.710000
+instanceDoubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceDoubleMethodDemo -> 2.718282
+instanceVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called

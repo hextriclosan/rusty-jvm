@@ -84,6 +84,9 @@ class LoadLibraryExample {
         ObjectFieldDemo objectFieldDemo = new ObjectFieldDemo();
         objectFieldDemo.runDemo();
         StaticMethodsDemo.runDemo();
+
+        InstanceMethodsDemo instanceMethodDemo = new InstanceMethodsDemo();
+        instanceMethodDemo.runDemo();
     }
 }
 
@@ -683,5 +686,113 @@ class StaticMethodsDemo {
 
     private static void voidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
         System.out.printf(MSG_TMPL, "voidMethodToCall", z, b, c, s, i, j, f, d, l);
+    }
+}
+
+class InstanceMethodsDemo {
+    private native Object InstanceObjectMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native boolean InstanceBooleanMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native byte InstanceByteMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native char InstanceCharMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native short InstanceShortMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native int InstanceIntMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native long InstanceLongMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native float InstanceFloatMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native double InstanceDoubleMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native void InstanceVoidMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+
+    private static final String SIG_TMPL = "(ZBCSIJFDLjava/lang/Object;)%s";
+    private static final String MSG_TMPL = "%s called with %b, %d, %c, %d, %d, %d, %.12f, %.12f, %s%n";
+    private static final boolean Z = true;
+    private static final byte B = -128;
+    private static final char C = 'Ї';
+    private static final short S = -32768;
+    private static final int I = -2_000_000_000;
+    private static final long J = -9_000_000_000_000_000_000L;
+    private static final float F = 3.14f;
+    private static final double D = Math.PI;
+    private static final Object L = "Hi";
+
+    public void runDemo() {
+        System.out.println();
+        System.out.println("=== Instance Methods Demo ===");
+
+        Object objectResult = InstanceObjectMethodDemo("instanceObjectMethodToCall", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceObjectMethodDemo -> %s%n", objectResult);
+
+        boolean boolResult = InstanceBooleanMethodDemo("instanceBooleanMethodToCall", SIG_TMPL.formatted("Z"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceBooleanMethodDemo -> %b%n", boolResult);
+
+        byte byteResult = InstanceByteMethodDemo("instanceByteMethodToCall", SIG_TMPL.formatted("B"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceByteMethodDemo -> %d%n", byteResult);
+
+        char charResult = InstanceCharMethodDemo("instanceCharMethodToCall", SIG_TMPL.formatted("C"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceCharMethodDemo -> %c%n", charResult);
+
+        short shortResult = InstanceShortMethodDemo("instanceShortMethodToCall", SIG_TMPL.formatted("S"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceShortMethodDemo -> %d%n", shortResult);
+
+        int intResult = InstanceIntMethodDemo("instanceIntMethodToCall", SIG_TMPL.formatted("I"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceIntMethodDemo -> %d%n", intResult);
+
+        long longResult = InstanceLongMethodDemo("instanceLongMethodToCall", SIG_TMPL.formatted("J"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceLongMethodDemo -> %d%n", longResult);
+
+        float floatResult = InstanceFloatMethodDemo("instanceFloatMethodToCall", SIG_TMPL.formatted("F"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceFloatMethodDemo -> %f%n", floatResult);
+
+        double doubleResult = InstanceDoubleMethodDemo("instanceDoubleMethodToCall", SIG_TMPL.formatted("D"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceDoubleMethodDemo -> %f%n", doubleResult);
+
+        InstanceVoidMethodDemo("instanceVoidMethodToCall", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+    }
+
+    private Object instanceObjectMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceObjectMethodToCall", z, b, c, s, i, j, f, d, l);
+        return "I'm a result from Java!";
+    }
+
+    private boolean instanceBooleanMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceBooleanMethodToCall", z, b, c, s, i, j, f, d, l);
+        return true;
+    }
+
+    private byte instanceByteMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceByteMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -128;
+    }
+
+    private char instanceCharMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceCharMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 'Ї';
+    }
+
+    private short instanceShortMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceShortMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -32768;
+    }
+
+    private int instanceIntMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceIntMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -2_000_000_000;
+    }
+
+    private long instanceLongMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceLongMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -9_000_000_000_000_000_000L;
+    }
+
+    private float instanceFloatMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceFloatMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 2.71f;
+    }
+
+    private double instanceDoubleMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceDoubleMethodToCall", z, b, c, s, i, j, f, d, l);
+        return Math.E;
+    }
+
+    private void instanceVoidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceVoidMethodToCall", z, b, c, s, i, j, f, d, l);
     }
 }
