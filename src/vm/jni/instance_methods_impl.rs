@@ -1,8 +1,9 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::{get_method_id_impl, transform_args_to_vec};
+use crate::vm::method_area::method_area::with_method_area;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
     jvalue, JNIEnv,
@@ -50,22 +51,43 @@ fn call_method_a<T: JNIValue>(
     JNIValue::from_vec(&raw)
 }
 
-fn invoke_method(this: i32, method_index: i64, args: *const jvalue) -> Vec<i32> {
+fn invoke_method(this: i32, method_id: i64, args: *const jvalue) -> Vec<i32> {
+    // Decode the declaring class reference and method index from the encoded jmethodID.
+    // High 32 bits: declaring class object reference
+    // Low 32 bits:  method index within that class's methods map
+    let declaring_class_ref = (method_id >> 32) as i32;
+    let method_index = method_id & 0xFFFF_FFFF;
+
+    let declaring_klass =
+        klass(declaring_class_ref).expect("Failed to get declaring class from jmethodID");
+    let method = declaring_klass
+        .get_method_by_index(method_index)
+        .expect("Failed to get method from declaring class by index");
+
+    let name_signature = method.name_signature().to_owned();
+    let args_values = transform_args_to_vec(&method, args);
+
+    // Perform virtual dispatch: find the concrete implementation in the actual instance's
+    // class hierarchy (handles interface methods, abstract methods, and overridden methods).
     let instance_name = HEAP
         .get_instance_name(this)
         .expect("Failed to get instance name from reference");
-    let clazz_ref =
-        clazz_ref(&instance_name).expect("Failed to get class reference from instance name");
-    let klass = klass(clazz_ref).expect("Failed to get class from reference");
-    let method = klass
-        .get_method_by_index(method_index)
-        .expect("Failed to get method from class by index");
-    let implementation_klass_name = method.class_name();
-    let args_values = transform_args_to_vec(&method, args);
+    let implementation = with_method_area(|method_area| {
+        method_area
+            .lookup_for_implementation(&instance_name, &name_signature)
+            .or_else(|| {
+                method_area.lookup_for_implementation_interface(&instance_name, &name_signature)
+            })
+    })
+    .unwrap_or_else(|| {
+        panic!("Failed to find implementation of {name_signature} for {instance_name}")
+    });
+
+    let implementation_klass_name = implementation.class_name().to_owned();
 
     Executor::invoke_non_static_method(
-        implementation_klass_name,
-        method.name_signature(),
+        &implementation_klass_name,
+        &name_signature,
         this,
         &args_values,
     )

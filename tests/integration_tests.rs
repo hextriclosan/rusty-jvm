@@ -3586,6 +3586,11 @@ InstanceFloatMethodDemo -> 2.710000
 instanceDoubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 InstanceDoubleMethodDemo -> 2.718282
 instanceVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+
+=== Virtual Dispatch Demo ===
+CallViaInterface: woof!
+CallViaAbstractClass: woof!
+CallViaParentClass: bark!
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called
