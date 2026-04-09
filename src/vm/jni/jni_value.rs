@@ -98,3 +98,13 @@ impl JNIValue for jdouble {
         StackValue::to_vec(&(self.to_bits() as i64))
     }
 }
+
+impl JNIValue for () {
+    fn from_vec(_v: &[i32]) -> Self {
+        ()
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        vec![]
+    }
+}

@@ -7,6 +7,7 @@ mod jni_value;
 mod object_fields_impl;
 mod object_operations_impl;
 mod static_fields_impl;
+mod static_methods_impl;
 mod string_operations_impl;
 mod utils;
 mod version_information_impl;
