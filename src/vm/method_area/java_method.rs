@@ -103,6 +103,11 @@ impl JavaMethod {
         self.native
     }
 
+    pub fn is_abstract(&self) -> bool {
+        jclassfile::methods::MethodFlags::from_bits_truncate(self.access_flags as u16)
+            .contains(jclassfile::methods::MethodFlags::ACC_ABSTRACT)
+    }
+
     pub fn class_name(&self) -> &str {
         &self.class_name
     }

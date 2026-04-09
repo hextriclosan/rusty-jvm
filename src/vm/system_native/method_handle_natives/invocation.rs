@@ -233,13 +233,7 @@ fn invoke_exact_method(
 
             let java_method = with_method_area(|method_area| {
                 method_area
-                    .lookup_for_implementation(&instance_type_class_name, &full_method_signature) // first looking for method in parent and above classes
-                    .or_else(|| { // if not found, looking for default method implementation in interfaces
-                        method_area.lookup_for_implementation_interface(
-                            &instance_type_class_name,
-                            &full_method_signature,
-                        )
-                    })
+                    .lookup_for_implementation(&instance_type_class_name, &full_method_signature)
             }).ok_or_else(|| Error::new_constant_pool(&format!(
                 "invoke_exact_method: Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_method_signature} getting virtual_method"
             )))?;

@@ -56,6 +56,8 @@ pub(crate) struct JavaClass {
     #[get = "pub"]
     invoke_dynamic_runner: InvokeDynamicRunner,
     mirror_clazz_ref: OnceLock<i32>,
+
+    vtable: OnceCell<IndexMap<String, Arc<JavaMethod>>>,
 }
 
 #[derive(Debug, Default)]
@@ -125,6 +127,7 @@ impl JavaClass {
             source_file,
             invoke_dynamic_runner: InvokeDynamicRunner::default(),
             mirror_clazz_ref: OnceLock::default(),
+            vtable: OnceCell::new(),
         }
     }
 
@@ -283,6 +286,16 @@ impl JavaClass {
             .values()
             .map(|v| Arc::clone(v))
             .collect::<Vec<_>>()
+    }
+
+    pub fn methods_iter(&self) -> impl Iterator<Item = (&String, &Arc<JavaMethod>)> {
+        self.methods.iter()
+    }
+
+    pub fn vtable(&self) -> Result<&IndexMap<String, Arc<JavaMethod>>> {
+        self.vtable.get_or_try_init(|| {
+            with_method_area(|area| area.build_vtable(&self.this_class_name))
+        })
     }
 
     pub fn instance_fields_hierarchy(

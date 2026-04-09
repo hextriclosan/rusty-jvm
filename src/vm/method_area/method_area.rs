@@ -475,13 +475,68 @@ impl MethodArea {
         full_method_signature: &str,
     ) -> Option<Arc<JavaMethod>> {
         let klass = CLASSES.get(class_name).ok()?;
+        let vtable = klass.vtable().ok()?;
 
-        if let Some(java_method) = klass.try_get_method(full_method_signature) {
-            Some(Arc::clone(&java_method))
-        } else {
-            let parent_class_name = klass.parent().as_ref()?;
-            self.lookup_for_implementation(parent_class_name, full_method_signature)
+        // Direct lookup by full signature
+        if let Some(method) = vtable.get(full_method_signature) {
+            return Some(Arc::clone(method));
         }
+
+        // Polymorphic signature fallback: try just the method name (for MethodHandle.invoke* etc.)
+        let method_name = full_method_signature.split(':').next()?;
+        if method_name != full_method_signature {
+            vtable.get(method_name).map(Arc::clone)
+        } else {
+            None
+        }
+    }
+
+    /// Builds the vtable for a class or interface.
+    ///
+    /// For a class, the vtable contains all concrete (non-abstract) methods visible from that
+    /// class, including inherited methods from the superclass hierarchy and default methods from
+    /// implemented interfaces.  More-derived class methods override less-derived ones.
+    ///
+    /// For an interface, the vtable contains only the default (non-abstract) methods declared by
+    /// the interface and its super-interfaces.
+    pub(crate) fn build_vtable(
+        &self,
+        class_name: &str,
+    ) -> Result<IndexMap<String, Arc<JavaMethod>>> {
+        let klass = CLASSES.get(class_name)?;
+
+        let mut vtable = if klass.is_interface() {
+            // Interfaces have no superclass to inherit from; start empty.
+            IndexMap::new()
+        } else {
+            // Start with the superclass vtable so inherited methods are available.
+            match klass.parent() {
+                Some(parent_name) => {
+                    let parent_klass = CLASSES.get(parent_name)?;
+                    parent_klass.vtable()?.clone()
+                }
+                None => IndexMap::new(),
+            }
+        };
+
+        // Merge in default methods from directly implemented/extended interfaces.
+        // An interface default method only wins if no class in the hierarchy already
+        // provides a concrete implementation (vtable entry not yet present).
+        for interface_name in klass.interfaces() {
+            let iface_klass = CLASSES.get(interface_name.as_str())?;
+            for (sig, method) in iface_klass.vtable()? {
+                vtable.entry(sig.clone()).or_insert_with(|| Arc::clone(method));
+            }
+        }
+
+        // Add or override with this class's own concrete methods.
+        for (map_key, method) in klass.methods_iter() {
+            if !method.is_abstract() {
+                vtable.insert(map_key.clone(), Arc::clone(method));
+            }
+        }
+
+        Ok(vtable)
     }
 
     pub fn lookup_for_implementation_interface(
