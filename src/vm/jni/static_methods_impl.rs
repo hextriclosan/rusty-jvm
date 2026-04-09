@@ -79,7 +79,13 @@ fn invoke_static_method(
 ) -> Vec<i32> {
     let args_values = transform_args_to_vec(&method, args);
     Executor::invoke_static_method_jc(&klass, method.name_signature(), &args_values)
-        .expect("Failed to invoke static void method")
+        .unwrap_or_else(|e| {
+            panic!(
+                "Failed to invoke static method {}.{} ({e})",
+                klass.this_class_name(),
+                method.name_signature()
+            )
+        })
 }
 
 fn transform_args_to_vec(method: &Arc<JavaMethod>, args: *const jvalue) -> Vec<StackValueKind> {
