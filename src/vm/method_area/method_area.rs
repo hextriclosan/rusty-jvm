@@ -482,7 +482,10 @@ impl MethodArea {
             return Some(Arc::clone(method));
         }
 
-        // Polymorphic signature fallback: try just the method name (for MethodHandle.invoke* etc.)
+        // Polymorphic signature fallback: try just the method name portion (the part before ':').
+        // This handles PolymorphicSignature methods such as MethodHandle.invoke* whose vtable key
+        // is stored as just the method name (e.g. "invoke") while callers dispatch with a
+        // site-specific descriptor (e.g. "invoke:(I)V").
         let method_name = full_method_signature.split(':').next()?;
         if method_name != full_method_signature {
             vtable.get(method_name).map(Arc::clone)
@@ -520,8 +523,8 @@ impl MethodArea {
         };
 
         // Merge in default methods from directly implemented/extended interfaces.
-        // An interface default method only wins if no class in the hierarchy already
-        // provides a concrete implementation (vtable entry not yet present).
+        // `or_insert_with` ensures that a class-level implementation from the superclass hierarchy
+        // (already present in the vtable) always takes precedence over an interface default method.
         for interface_name in klass.interfaces() {
             let iface_klass = CLASSES.get(interface_name.as_str())?;
             for (sig, method) in iface_klass.vtable()? {
