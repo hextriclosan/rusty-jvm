@@ -175,7 +175,9 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
         panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
     }
 
-    to_mutf8_data!(string_ref).len() as jlong - 1
+    let raw_data = get_string_raw_data(string_ref);
+    let data = String::from_utf16(&raw_data).expect("Failed to build string from UTF-16 data");
+    to_java_cesu8(&data).len() as jlong
 }
 
 pub(super) extern "system" fn get_string_utf_length(_env: *mut JNIEnv, input: jstring) -> jint {
