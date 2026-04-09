@@ -64,7 +64,7 @@ fn invoke_method(this: i32, method_id: i64, args: *const jvalue) -> Vec<i32> {
         .get_method_by_index(method_index)
         .expect("Failed to get method from declaring class by index");
 
-    let name_signature = method.name_signature().to_owned();
+    let name_signature = method.name_signature();
     let args_values = transform_args_to_vec(&method, args);
 
     // Perform virtual dispatch: find the concrete implementation in the actual instance's
@@ -74,20 +74,18 @@ fn invoke_method(this: i32, method_id: i64, args: *const jvalue) -> Vec<i32> {
         .expect("Failed to get instance name from reference");
     let implementation = with_method_area(|method_area| {
         method_area
-            .lookup_for_implementation(&instance_name, &name_signature)
+            .lookup_for_implementation(&instance_name, name_signature)
             .or_else(|| {
-                method_area.lookup_for_implementation_interface(&instance_name, &name_signature)
+                method_area.lookup_for_implementation_interface(&instance_name, name_signature)
             })
     })
     .unwrap_or_else(|| {
         panic!("Failed to find implementation of {name_signature} for {instance_name}")
     });
 
-    let implementation_klass_name = implementation.class_name().to_owned();
-
     Executor::invoke_non_static_method(
-        &implementation_klass_name,
-        &name_signature,
+        implementation.class_name(),
+        name_signature,
         this,
         &args_values,
     )

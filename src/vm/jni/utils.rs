@@ -58,10 +58,9 @@ pub(super) fn get_method_id_impl(
                 .contains(MethodFlags::ACC_STATIC)
                 == expect_static
         })
-        .map(|(method_index, method)| {
+        .map(|(method_index, _method)| {
             // Method lives in the class we were given – encode that class's ref.
             let encoded: i64 = ((clazz as i32 as i64) << 32) | (method_index as i64);
-            let _ = method; // suppress unused warning
             encoded as jmethodID
         })
         .or_else(|| {
@@ -71,7 +70,8 @@ pub(super) fn get_method_id_impl(
                 method_area
                     .lookup_for_implementation(class_name, &full_signature)
                     .or_else(|| {
-                        method_area.lookup_for_implementation_interface(class_name, &full_signature)
+                        method_area
+                            .lookup_for_implementation_interface(class_name, &full_signature)
                     })
             })?;
             // Verify the found method has the expected static/instance kind.
