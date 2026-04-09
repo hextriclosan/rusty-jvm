@@ -87,6 +87,14 @@ fn transform_args_to_vec(method: &Arc<JavaMethod>, args: *const jvalue) -> Vec<S
     let pt = md.parameter_types();
     let args_count = pt.len();
 
+    if args_count == 0 {
+        return vec![];
+    }
+
+    if args.is_null() {
+        panic!("Null pointer passed as arguments for method that expects {args_count} arguments");
+    }
+
     let args = unsafe { std::slice::from_raw_parts(args, args_count) };
     args.iter()
         .zip(pt.iter())
