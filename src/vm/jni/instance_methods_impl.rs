@@ -2,7 +2,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
-use crate::vm::jni::utils::{get_method_id_impl, transform_args_to_vec};
+use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
 use crate::vm::method_area::method_area::with_method_area;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
@@ -47,16 +47,12 @@ fn call_method_a<T: JNIValue>(
     method_id: jmethodID,
     args: *const jvalue,
 ) -> T {
-    let raw = invoke_method(this as i32, method_id as i64, args);
+    let raw = invoke_method(this as i32, method_id as usize, args);
     JNIValue::from_vec(&raw)
 }
 
-fn invoke_method(this: i32, method_id: i64, args: *const jvalue) -> Vec<i32> {
-    // Decode the declaring class reference and method index from the encoded jmethodID.
-    // High 32 bits: declaring class object reference
-    // Low 32 bits: method index within that class's methods map
-    let declaring_class_ref = (method_id >> 32) as i32;
-    let method_index = method_id & 0xFFFF_FFFF;
+fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
+    let (declaring_class_ref, method_index) = decode_method_id(method_id);
 
     let declaring_klass =
         klass(declaring_class_ref).expect("Failed to get declaring class from jmethodID");
