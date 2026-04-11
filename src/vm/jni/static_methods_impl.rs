@@ -48,7 +48,8 @@ fn call_static_method_a<T: JNIValue>(
     method_id: jmethodID,
     args: *const jvalue,
 ) -> T {
-    let method_index = method_id as i64;
+    // Decode the method index from the low 32 bits of the encoded jmethodID.
+    let method_index = (method_id as i64) & 0xFFFF_FFFF;
     let klass = klass(cls as i32).expect("Failed to get class from reference");
     let method = klass
         .get_method_by_index(method_index)

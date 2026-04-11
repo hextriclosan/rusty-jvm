@@ -44,7 +44,13 @@ pub(super) fn get_method_id_impl(
 
     klass
         .get_method_full(&full_signature)
-        .and_then(|(method_id, _method)| Some(method_id as jmethodID))
+        .and_then(|(method_id, _method)| {
+            // Encode both the declaring class reference and the method index into the jmethodID.
+            // High 32 bits: class object reference (clazz as i32)
+            // Low 32 bits: method index within that class's methods map
+            let encoded: i64 = ((clazz as i32 as i64) << 32) | (method_id as i64);
+            Some(encoded as jmethodID)
+        })
         .unwrap_or(null_mut()) // todo: throw NoSuchMethodError here
 }
 

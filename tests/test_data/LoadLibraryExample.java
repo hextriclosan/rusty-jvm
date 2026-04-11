@@ -87,6 +87,9 @@ class LoadLibraryExample {
 
         InstanceMethodsDemo instanceMethodDemo = new InstanceMethodsDemo();
         instanceMethodDemo.runDemo();
+
+        VirtualDispatchDemo virtualDispatchDemo = new VirtualDispatchDemo();
+        virtualDispatchDemo.runDemo();
     }
 }
 
@@ -794,5 +797,53 @@ class InstanceMethodsDemo {
 
     private void instanceVoidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
         System.out.printf(MSG_TMPL, "instanceVoidMethodToCall", z, b, c, s, i, j, f, d, l);
+    }
+}
+
+// ---- VirtualDispatchDemo: tests for Call<type>MethodA with interface/abstract/overridden methods ----
+interface Speakable {
+    String speak();
+}
+class BaseAnimal {
+    public String sound() {
+        return "generic sound";
+    }
+}
+abstract class AbstractSpeaker extends BaseAnimal implements Speakable {
+}
+class Puppy extends AbstractSpeaker {
+    @Override
+    public String speak() {
+        return "woof!";
+    }
+
+    @Override
+    public String sound() {
+        return "bark!";
+    }
+}
+class VirtualDispatchDemo {
+    // Calls GetMethodID with the supplied declaring class (interface / abstract / parent),
+    // then uses CallObjectMethodA on the concrete instance – exercising virtual dispatch.
+    private native Object CallViaDeclaringClass(Object instance, Class<?> declaringClass, String methodName, String signature);
+
+    public void runDemo() {
+        System.out.println();
+        System.out.println("=== Virtual Dispatch Demo ===");
+
+        Puppy puppy = new Puppy();
+        String stringSig = "()Ljava/lang/String;";
+
+        // Test 1: method obtained via interface, invoked on concrete instance
+        Object r1 = CallViaDeclaringClass(puppy, Speakable.class, "speak", stringSig);
+        System.out.println("CallViaInterface: " + r1);
+
+        // Test 2: method obtained via abstract class, invoked on concrete instance
+        Object r2 = CallViaDeclaringClass(puppy, AbstractSpeaker.class, "speak", stringSig);
+        System.out.println("CallViaAbstractClass: " + r2);
+
+        // Test 3: method obtained via parent class, invoked on overriding child instance
+        Object r3 = CallViaDeclaringClass(puppy, BaseAnimal.class, "sound", stringSig);
+        System.out.println("CallViaParentClass: " + r3);
     }
 }
