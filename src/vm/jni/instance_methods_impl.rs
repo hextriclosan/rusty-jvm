@@ -1,6 +1,6 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::{get_method_id_impl, transform_args_to_vec};
 use crate::vm::method_area::method_area::with_method_area;
