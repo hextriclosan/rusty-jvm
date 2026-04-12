@@ -10,10 +10,7 @@ use utils::assert_success;
 
 #[ctor::ctor]
 fn before_tests() {
-    let in_ci = env::var("GITHUB_ACTIONS").is_ok();
-    if !in_ci {
-        ensure_jni_test_lib_is_built();
-    }
+    ensure_jni_test_lib_is_built();
 }
 
 #[test]

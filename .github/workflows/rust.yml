@@ -43,9 +43,6 @@ jobs:
         with:
           tool: nextest
 
-      - name: Build jni_test_lib
-        run: cargo build -p jni_test_lib
-
       - name: Run tests
         run: cargo nextest run --workspace --locked --no-fail-fast --jobs 16
 
@@ -75,14 +72,6 @@ jobs:
           tags: s390x-test-env:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Build jni_test_lib on s390x (Big Endian)
-        run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            s390x-test-env:latest \
-            cargo build --locked -p jni_test_lib --target s390x-unknown-linux-gnu
 
       - name: Run tests on s390x (Big Endian)
         run: |
@@ -122,9 +111,6 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov, nextest
-
-      - name: Build jni_test_lib
-        run: cargo build -p jni_test_lib
 
       - name: Run tests with coverage
         run: cargo llvm-cov nextest --jobs 16 --locked --workspace --lcov --output-path lcov.info
