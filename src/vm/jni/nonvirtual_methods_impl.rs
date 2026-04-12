@@ -73,7 +73,7 @@ fn call_nonvirtual_method_v<T: JNIValue>(
     method_id: jmethodID,
     args: va_list,
 ) -> T {
-    // va_list is defined as *mut c_void in jni_sys; treat it as a pointer to a
+    // `va_list` is defined as `*mut c_void` in jni_sys.  Treat it as a pointer to a
     // packed jvalue array, which is the convention used by most JNI callers that
     // forward variadic arguments via va_list.
     let args_as_jvalues = args as *const jvalue;
@@ -93,7 +93,7 @@ fn invoke_nonvirtual_method(this: i32, method_id: usize, args: *const jvalue) ->
     let args_values = transform_args_to_vec(&method, args);
 
     // Non-virtual dispatch: invoke the method directly on the declaring class,
-    // bypassing the vtable.  This is the correct behaviour for CallNonvirtualXxxMethodA/V.
+    // bypassing the vtable.  This is the correct behavior for CallNonvirtualXxxMethodA/V.
     Executor::invoke_non_static_method_jc(&declaring_klass, method.name_signature(), this, &args_values)
         .unwrap_or_else(|e| {
             panic!(
