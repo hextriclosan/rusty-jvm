@@ -4,8 +4,8 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
-use jni_sys::{jclass, jmethodID, jvalue};
-use std::ffi::c_char;
+use jni_sys::{jclass, jmethodID, jobject, jvalue, va_list};
+use std::ffi::{c_char, c_void};
 use std::ptr::null_mut;
 use std::sync::Arc;
 
@@ -126,4 +126,142 @@ fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> 
         }
         TypeDescriptor::Void => panic!("Void type cannot be used as argument"),
     }
+}
+
+/// Extract method arguments from a `va_list` into a `Vec<jvalue>`.
+///
+/// This is the platform-specific counterpart to `transform_args_to_vec`. Callers should
+/// then pass `extracted.as_ptr()` to functions that accept `*const jvalue`.
+///
+/// # Safety
+/// `va` must be a valid, initialized `va_list` pointer whose remaining items match the
+/// parameter types of `method`.
+pub(super) unsafe fn transform_args_from_va_list(
+    method: &Arc<JavaMethod>,
+    va: va_list,
+) -> Vec<jvalue> {
+    let md = method.get_method_descriptor();
+    let pt = md.parameter_types();
+
+    if pt.is_empty() {
+        return vec![];
+    }
+
+    if va.is_null() {
+        panic!(
+            "Null va_list pointer passed for method that expects {} arguments",
+            pt.len()
+        );
+    }
+
+    extract_jvalues_from_va_list(pt, va as *mut c_void)
+}
+
+// ── x86-64 System V AMD64 ABI implementation ────────────────────────────────
+//
+// Layout of the register-save area (pointed to by reg_save_area):
+//   Offsets   0-47  : 6 integer argument registers (rdi, rsi, rdx, rcx, r8, r9)
+//   Offsets 48-175  : 8 XMM argument registers (xmm0-xmm7), 16 bytes each
+//
+// gp_offset : byte offset into reg_save_area for the next GP vararg
+// fp_offset : byte offset into reg_save_area for the next XMM vararg
+//             starts at 48, upper bound is 176 (48 + 8*16)
+// When gp_offset >= 48 (or fp_offset >= 176), args spill to overflow_arg_area.
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+struct X86_64VaListTag {
+    gp_offset: u32,
+    fp_offset: u32,
+    overflow_arg_area: *mut u8,
+    reg_save_area: *mut u8,
+}
+
+/// Read the next integer/pointer-class vararg (8 bytes) from the va_list.
+#[cfg(target_arch = "x86_64")]
+unsafe fn va_arg_i64(va: *mut X86_64VaListTag) -> i64 {
+    let tag = &mut *va;
+    if tag.gp_offset < 48 {
+        let ptr = tag.reg_save_area.add(tag.gp_offset as usize).cast::<i64>();
+        tag.gp_offset += 8;
+        *ptr
+    } else {
+        let ptr = tag.overflow_arg_area.cast::<i64>();
+        tag.overflow_arg_area = tag.overflow_arg_area.add(8);
+        *ptr
+    }
+}
+
+/// Read the next floating-point vararg (promoted to f64) from the va_list.
+///
+/// C default argument promotions promote `float` to `double`, so all FP varargs
+/// arrive as doubles and are stored in XMM registers (16 bytes each in the save
+/// area, but only the low 8 bytes hold the double value).
+#[cfg(target_arch = "x86_64")]
+unsafe fn va_arg_f64(va: *mut X86_64VaListTag) -> f64 {
+    let tag = &mut *va;
+    if tag.fp_offset < 176 {
+        // Only the low 8 bytes of each 16-byte XMM slot hold the double.
+        let ptr = tag.reg_save_area.add(tag.fp_offset as usize).cast::<f64>();
+        tag.fp_offset += 16;
+        *ptr
+    } else {
+        let ptr = tag.overflow_arg_area.cast::<f64>();
+        tag.overflow_arg_area = tag.overflow_arg_area.add(8);
+        *ptr
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+unsafe fn extract_jvalues_from_va_list(
+    param_types: &[TypeDescriptor],
+    va: *mut c_void,
+) -> Vec<jvalue> {
+    let va = va.cast::<X86_64VaListTag>();
+    param_types
+        .iter()
+        .map(|pt| match pt {
+            // Integer/bool types: C promotes narrow types to int (32-bit), which
+            // arrives zero- or sign-extended to 64-bits in the register save area.
+            TypeDescriptor::Boolean => jvalue {
+                z: va_arg_i64(va) != 0,
+            },
+            TypeDescriptor::Byte => jvalue {
+                b: va_arg_i64(va) as i8,
+            },
+            TypeDescriptor::Char => jvalue {
+                c: va_arg_i64(va) as u16,
+            },
+            TypeDescriptor::Short => jvalue {
+                s: va_arg_i64(va) as i16,
+            },
+            TypeDescriptor::Integer => jvalue {
+                i: va_arg_i64(va) as i32,
+            },
+            TypeDescriptor::Long => jvalue {
+                j: va_arg_i64(va),
+            },
+            // FP types: float is promoted to double by C variadic rules.
+            TypeDescriptor::Float => jvalue {
+                f: va_arg_f64(va) as f32,
+            },
+            TypeDescriptor::Double => jvalue {
+                d: va_arg_f64(va),
+            },
+            // Object/array references are passed as heap-ref-sized integers cast
+            // to pointers (see dispatcher/args.rs).
+            TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => jvalue {
+                l: va_arg_i64(va) as usize as jobject,
+            },
+            TypeDescriptor::Void => panic!("Void type cannot be used as argument"),
+        })
+        .collect()
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+unsafe fn extract_jvalues_from_va_list(
+    _param_types: &[TypeDescriptor],
+    _va: *mut c_void,
+) -> Vec<jvalue> {
+    unimplemented!("Call<type>MethodV is not yet implemented for non-x86_64 platforms")
 }

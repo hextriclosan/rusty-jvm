@@ -161,6 +161,73 @@ unsafe fn process_method_call<T>(
     call_fn(env, this, method_id, args.as_ptr())
 }
 
+/// Calls a zero-arg instance method via `CallObjectMethodV` with a null va_list.
+///
+/// Tests the V-variant dispatch path: since the method takes no arguments,
+/// the va_list is never dereferenced and null is safe.
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_InstanceMethodsDemo_InstanceObjectMethodVDemo(
+    env: *mut JNIEnv,
+    this: jobject,
+    method_name_ref: jstring,
+    sig_ref: jstring,
+) -> jobject {
+    unsafe {
+        let method_name = ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, null_mut());
+        let sig = ((*(*env)).v24.GetStringUTFChars)(env, sig_ref, null_mut());
+        let class = ((*(*env)).v24.GetObjectClass)(env, this);
+        let method_id = ((*(*env)).v24.GetMethodID)(env, class, method_name, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, sig_ref, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
+        // Null va_list is safe because the target method takes no arguments.
+        ((*(*env)).v24.CallObjectMethodV)(env, this, method_id, null_mut())
+    }
+}
+
+/// Calls an instance method via the variadic `CallObjectMethod` entry point.
+///
+/// Routes through the C shim → `CallObjectMethodV` → method dispatch,
+/// exercising the full non-A / non-V variant path.
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_InstanceMethodsDemo_InstanceObjectMethodNonVDemo(
+    env: *mut JNIEnv,
+    this: jobject,
+    method_name_ref: jstring,
+    sig_ref: jstring,
+    z: jboolean,
+    b: jbyte,
+    c: jchar,
+    s: jshort,
+    i: jint,
+    j: jlong,
+    f: jfloat,
+    d: jdouble,
+    l: jobject,
+) -> jobject {
+    unsafe {
+        let method_name = ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, null_mut());
+        let sig = ((*(*env)).v24.GetStringUTFChars)(env, sig_ref, null_mut());
+        let class = ((*(*env)).v24.GetObjectClass)(env, this);
+        let method_id = ((*(*env)).v24.GetMethodID)(env, class, method_name, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, sig_ref, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
+        // Rust applies C default-argument promotions for variadic extern "C"
+        // calls: smaller integer types → i32/u32, f32 → f64.
+        ((*(*env)).v24.CallObjectMethod)(
+            env, this, method_id,
+            z as i32,  // jboolean → i32
+            b as i32,  // jbyte    → i32
+            c as u32,  // jchar    → u32
+            s as i32,  // jshort   → i32
+            i,         // jint     (i32)
+            j,         // jlong    (i64)
+            f as f64,  // jfloat   → f64
+            d,         // jdouble  (f64)
+            l,         // jobject
+        )
+    }
+}
+
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_NonVirtualDispatchDemo_CallNonVirtualViaDeclaringClass(
     env: *mut JNIEnv,

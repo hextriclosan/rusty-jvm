@@ -149,3 +149,74 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StaticMethodsDe
         ((*(*env)).v24.CallStaticVoidMethodA)(env, target, method_id, std::ptr::null());
     }
 }
+
+/// Calls a static zero-arg method via `CallStaticObjectMethodV` with a null va_list.
+///
+/// This exercises the V-variant dispatch path end-to-end: the JNI vtable
+/// entry for `CallStaticObjectMethodV` is our Rust implementation which reads
+/// parameter types, and since the method takes no arguments the va_list is
+/// never dereferenced (null is safe).
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StaticMethodsDemo_StaticObjectMethodVDemo(
+    env: *mut JNIEnv,
+    class: jclass,
+    method_name_ref: jstring,
+    sig_ref: jstring,
+) -> jobject {
+    unsafe {
+        let method_name =
+            ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, std::ptr::null_mut());
+        let sig = ((*(*env)).v24.GetStringUTFChars)(env, sig_ref, std::ptr::null_mut());
+        let method_id = ((*(*env)).v24.GetStaticMethodID)(env, class, method_name, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, sig_ref, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
+        // Null va_list is safe here because the target method takes no arguments.
+        ((*(*env)).v24.CallStaticObjectMethodV)(env, class, method_id, std::ptr::null_mut())
+    }
+}
+
+/// Calls a static method via the variadic `CallStaticObjectMethod` entry point.
+///
+/// The variadic entry point routes through a C shim that calls `va_start` and
+/// delegates to `CallStaticObjectMethodV`, exercising the full
+/// non-A / non-V variant path.
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StaticMethodsDemo_StaticObjectMethodNonVDemo(
+    env: *mut JNIEnv,
+    class: jclass,
+    method_name_ref: jstring,
+    sig_ref: jstring,
+    z: jboolean,
+    b: jbyte,
+    c: jchar,
+    s: jshort,
+    i: jint,
+    j: jlong,
+    f: jfloat,
+    d: jdouble,
+    l: jobject,
+) -> jobject {
+    unsafe {
+        let method_name =
+            ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, std::ptr::null_mut());
+        let sig = ((*(*env)).v24.GetStringUTFChars)(env, sig_ref, std::ptr::null_mut());
+        let method_id = ((*(*env)).v24.GetStaticMethodID)(env, class, method_name, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, sig_ref, sig);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
+        // Rust applies C default-argument promotions when calling a variadic
+        // extern "C" function, so smaller integer types become i32/u32 and
+        // f32 becomes f64 – exactly as the x86-64 System V ABI requires.
+        ((*(*env)).v24.CallStaticObjectMethod)(
+            env, class, method_id,
+            z as i32,  // jboolean → i32
+            b as i32,  // jbyte    → i32
+            c as u32,  // jchar    → u32
+            s as i32,  // jshort   → i32
+            i,         // jint     (i32)
+            j,         // jlong    (i64)
+            f as f64,  // jfloat   → f64
+            d,         // jdouble  (f64)
+            l,         // jobject
+        )
+    }
+}

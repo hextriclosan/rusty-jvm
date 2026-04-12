@@ -3566,6 +3566,9 @@ doubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -90000000000
 StaticDoubleMethodDemo -> 2.718282
 voidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 BaseStatic.method called
+StaticObjectMethodVDemo -> I'm a result from Java V static!
+objectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticObjectMethodNonVDemo -> I'm a result from Java!
 
 === Instance Methods Demo ===
 instanceObjectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
@@ -3587,6 +3590,9 @@ InstanceFloatMethodDemo -> 2.710000
 instanceDoubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 InstanceDoubleMethodDemo -> 2.718282
 instanceVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceObjectMethodVDemo -> I'm a result from Java V instance!
+instanceObjectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceObjectMethodNonVDemo -> I'm a result from Java!
 
 === Virtual Dispatch Demo ===
 CallViaInterface: woof!

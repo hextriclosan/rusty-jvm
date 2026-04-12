@@ -598,6 +598,10 @@ class StaticMethodsDemo {
     private static native Object StaticObjectMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native boolean StaticBooleanMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native byte StaticByteMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    // V-variant (CallStatic<Type>MethodV): zero-arg methods, null va_list
+    private static native Object StaticObjectMethodVDemo(String methodName, String signature);
+    // Non-V non-A variant (CallStatic<Type>Method): variadic, full arg list
+    private static native Object StaticObjectMethodNonVDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native char StaticCharMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native short StaticShortMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native int StaticIntMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
@@ -654,6 +658,16 @@ class StaticMethodsDemo {
         StaticVoidMethodDemo("voidMethodToCall", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
 
         BaseStaticMethodDemo(DerivedStatic.class, "method", "()V");
+
+        Object objectVResult = StaticObjectMethodVDemo("objectMethodToCallNoArgs", "()Ljava/lang/Object;");
+        System.out.printf("StaticObjectMethodVDemo -> %s%n", objectVResult);
+
+        Object objectNonVResult = StaticObjectMethodNonVDemo("objectMethodToCall", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("StaticObjectMethodNonVDemo -> %s%n", objectNonVResult);
+    }
+
+    private static Object objectMethodToCallNoArgs() {
+        return "I'm a result from Java V static!";
     }
 
     private static Object objectMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
@@ -717,6 +731,10 @@ class InstanceMethodsDemo {
     private native float InstanceFloatMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private native double InstanceDoubleMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private native void InstanceVoidMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    // V-variant (Call<Type>MethodV): zero-arg method, null va_list
+    private native Object InstanceObjectMethodVDemo(String methodName, String signature);
+    // Non-V non-A variant (Call<Type>Method): variadic, full arg list
+    private native Object InstanceObjectMethodNonVDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
 
     private static final String SIG_TMPL = "(ZBCSIJFDLjava/lang/Object;)%s";
     private static final String MSG_TMPL = "%s called with %b, %d, %c, %d, %d, %d, %.12f, %.12f, %s%n";
@@ -762,6 +780,16 @@ class InstanceMethodsDemo {
         System.out.printf("InstanceDoubleMethodDemo -> %f%n", doubleResult);
 
         InstanceVoidMethodDemo("instanceVoidMethodToCall", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+
+        Object objectVResult = InstanceObjectMethodVDemo("instanceObjectMethodToCallNoArgs", "()Ljava/lang/Object;");
+        System.out.printf("InstanceObjectMethodVDemo -> %s%n", objectVResult);
+
+        Object objectNonVResult = InstanceObjectMethodNonVDemo("instanceObjectMethodToCall", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("InstanceObjectMethodNonVDemo -> %s%n", objectNonVResult);
+    }
+
+    private Object instanceObjectMethodToCallNoArgs() {
+        return "I'm a result from Java V instance!";
     }
 
     private Object instanceObjectMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
