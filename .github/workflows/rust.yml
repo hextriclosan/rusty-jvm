@@ -87,7 +87,7 @@ jobs:
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             s390x-test-env:latest \
-            cargo nextest run should_load_native_library_and_call_native_method --workspace --locked --target s390x-unknown-linux-gnu --no-fail-fast --jobs 8
+            cargo nextest run --workspace --locked --target s390x-unknown-linux-gnu --no-fail-fast --jobs 8
 
   build-and-test-with-coverage:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
