@@ -129,21 +129,21 @@ fn invoke_non_virtual_method(
     method_id: usize,
     args: *const jvalue,
 ) -> Vec<i32> {
-    let (_declaring_class_ref, method_index) = decode_method_id(method_id);
+    let (declaring_class_ref, method_index) = decode_method_id(method_id);
 
-    let target_klass = klass(target).expect("Failed to get declaring class from jmethodID");
-    let method = target_klass
+    let target_klass_name = klass(target)
+        .expect("Failed to get target class")
+        .this_class_name()
+        .to_owned();
+
+    let declaring_klass =
+        klass(declaring_class_ref).expect("Failed to get declaring class from jmethodID");
+    let method = declaring_klass
         .get_method_by_index(method_index)
         .expect("Failed to get method from declaring class by index");
-
     let name_signature = method.name_signature().to_owned();
     let args_values = transform_args_to_vec(&method, args);
 
-    Executor::invoke_non_static_method(
-        target_klass.this_class_name(),
-        &name_signature,
-        this,
-        &args_values,
-    )
-    .expect("Failed to invoke non-static method") // todo: throw java.lang.AbstractMethodError
+    Executor::invoke_non_static_method(&target_klass_name, &name_signature, this, &args_values)
+        .expect("Failed to invoke non-static method") // todo: throw java.lang.AbstractMethodError
 }
