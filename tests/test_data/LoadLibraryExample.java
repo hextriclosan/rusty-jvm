@@ -867,6 +867,28 @@ class NonVirtualDispatchDemo {
     // then uses CallNonvirtualObjectMethodA on the concrete instance – bypassing virtual dispatch.
     private native Object CallNonVirtualViaDeclaringClass(Object instance, Class<?> declaringClass, String methodName, String signature);
 
+    private native Object NonVirtualObjectMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native boolean NonVirtualBooleanMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native byte NonVirtualByteMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native char NonVirtualCharMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native short NonVirtualShortMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native int NonVirtualIntMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native long NonVirtualLongMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native float NonVirtualFloatMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native double NonVirtualDoubleMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+    private native void NonVirtualVoidMethodDemo(Object instance, Class<?> targetClass, String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+
+    private static final String SIG_TMPL = "(ZBCSIJFDLjava/lang/Object;)%s";
+    private static final boolean Z = true;
+    private static final byte B = -128;
+    private static final char C = 'Ї';
+    private static final short S = -32768;
+    private static final int I = -2_000_000_000;
+    private static final long J = -9_000_000_000_000_000_000L;
+    private static final float F = 3.14f;
+    private static final double D = Math.PI;
+    private static final Object L = "Hi";
+
     public void runDemo() {
         System.out.println();
         System.out.println("=== Non-Virtual Dispatch Demo ===");
@@ -883,5 +905,150 @@ class NonVirtualDispatchDemo {
         // Test 3: method obtained via parent class, invoked on overriding child instance
         Object r3 = CallNonVirtualViaDeclaringClass(puppy, BaseAnimal.class, "sound", stringSig);
         System.out.println("CallNonVirtualViaParentClass: " + r3);
+
+        NonVirtualChild child = new NonVirtualChild();
+
+        Object objectResult = NonVirtualObjectMethodDemo(child, NonVirtualBase.class, "nonVirtualObjectMethodToCall", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualObjectMethodDemo -> %s%n", objectResult);
+
+        boolean boolResult = NonVirtualBooleanMethodDemo(child, NonVirtualBase.class, "nonVirtualBooleanMethodToCall", SIG_TMPL.formatted("Z"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualBooleanMethodDemo -> %b%n", boolResult);
+
+        byte byteResult = NonVirtualByteMethodDemo(child, NonVirtualBase.class, "nonVirtualByteMethodToCall", SIG_TMPL.formatted("B"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualByteMethodDemo -> %d%n", byteResult);
+
+        char charResult = NonVirtualCharMethodDemo(child, NonVirtualBase.class, "nonVirtualCharMethodToCall", SIG_TMPL.formatted("C"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualCharMethodDemo -> %c%n", charResult);
+
+        short shortResult = NonVirtualShortMethodDemo(child, NonVirtualBase.class, "nonVirtualShortMethodToCall", SIG_TMPL.formatted("S"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualShortMethodDemo -> %d%n", shortResult);
+
+        int intResult = NonVirtualIntMethodDemo(child, NonVirtualBase.class, "nonVirtualIntMethodToCall", SIG_TMPL.formatted("I"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualIntMethodDemo -> %d%n", intResult);
+
+        long longResult = NonVirtualLongMethodDemo(child, NonVirtualBase.class, "nonVirtualLongMethodToCall", SIG_TMPL.formatted("J"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualLongMethodDemo -> %d%n", longResult);
+
+        float floatResult = NonVirtualFloatMethodDemo(child, NonVirtualBase.class, "nonVirtualFloatMethodToCall", SIG_TMPL.formatted("F"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualFloatMethodDemo -> %.12f%n", floatResult);
+
+        double doubleResult = NonVirtualDoubleMethodDemo(child, NonVirtualBase.class, "nonVirtualDoubleMethodToCall", SIG_TMPL.formatted("D"), Z, B, C, S, I, J, F, D, L);
+        System.out.printf("NonVirtualDoubleMethodDemo -> %.12f%n", doubleResult);
+
+        NonVirtualVoidMethodDemo(child, NonVirtualBase.class, "nonVirtualVoidMethodToCall", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+    }
+}
+
+class NonVirtualBase {
+    static final String MSG_TMPL = "%s called with %b, %d, %c, %d, %d, %d, %.12f, %.12f, %s%n";
+
+    public Object nonVirtualObjectMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualObjectMethodToCall", z, b, c, s, i, j, f, d, l);
+        return "Hello";
+    }
+
+    public boolean nonVirtualBooleanMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualBooleanMethodToCall", z, b, c, s, i, j, f, d, l);
+        return true;
+    }
+
+    public byte nonVirtualByteMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualByteMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -128;
+    }
+
+    public char nonVirtualCharMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualCharMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 'Ї';
+    }
+
+    public short nonVirtualShortMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualShortMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -32768;
+    }
+
+    public int nonVirtualIntMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualIntMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -2_000_000_000;
+    }
+
+    public long nonVirtualLongMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualLongMethodToCall", z, b, c, s, i, j, f, d, l);
+        return -9_000_000_000_000_000_000L;
+    }
+
+    public float nonVirtualFloatMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualFloatMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 3.14f;
+    }
+
+    public double nonVirtualDoubleMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualDoubleMethodToCall", z, b, c, s, i, j, f, d, l);
+        return Math.PI;
+    }
+
+    public void nonVirtualVoidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualVoidMethodToCall", z, b, c, s, i, j, f, d, l);
+    }
+}
+
+class NonVirtualChild extends NonVirtualBase {
+    @Override
+    public Object nonVirtualObjectMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualObjectMethodToCall", z, b, c, s, i, j, f, d, l);
+        return null;
+    }
+
+    @Override
+    public boolean nonVirtualBooleanMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualBooleanMethodToCall", z, b, c, s, i, j, f, d, l);
+        return false;
+    }
+
+    @Override
+    public byte nonVirtualByteMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualByteMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 0;
+    }
+
+    @Override
+    public char nonVirtualCharMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualCharMethodToCall", z, b, c, s, i, j, f, d, l);
+        return '\0';
+    }
+
+    @Override
+    public short nonVirtualShortMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualShortMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 0;
+    }
+
+    @Override
+    public int nonVirtualIntMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualIntMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 0;
+    }
+
+    @Override
+    public long nonVirtualLongMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualLongMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 0L;
+    }
+
+    @Override
+    public float nonVirtualFloatMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualFloatMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 0f;
+    }
+
+    @Override
+    public double nonVirtualDoubleMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualDoubleMethodToCall", z, b, c, s, i, j, f, d, l);
+        return 0;
+    }
+
+    @Override
+    public void nonVirtualVoidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualVoidMethodToCall", z, b, c, s, i, j, f, d, l);
     }
 }
