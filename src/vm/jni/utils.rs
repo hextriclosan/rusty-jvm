@@ -134,8 +134,13 @@ fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> 
 /// then pass `extracted.as_ptr()` to functions that accept `*const jvalue`.
 ///
 /// # Safety
-/// `va` must be a valid, initialized `va_list` pointer whose remaining items match the
-/// parameter types of `method`.
+/// - `va` must be a valid, initialized `va_list` pointer that remains valid for the entire
+///   duration of this call.
+/// - The `va_list` must contain arguments that match `method`'s parameter types in both count
+///   and type order; reading the wrong number or types of arguments is undefined behaviour.
+/// - On x86-64, each integer/pointer-class argument must be at most 8 bytes wide and each
+///   floating-point argument must be a `double` (i.e. C default argument promotions must
+///   already have been applied by the caller, as they are for all variadic C functions).
 pub(super) unsafe fn transform_args_from_va_list(
     method: &Arc<JavaMethod>,
     va: va_list,
@@ -251,7 +256,7 @@ unsafe fn extract_jvalues_from_va_list(
             // Object/array references are passed as heap-ref-sized integers cast
             // to pointers (see dispatcher/args.rs).
             TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => jvalue {
-                l: va_arg_i64(va) as usize as jobject,
+                l: va_arg_i64(va) as jobject,
             },
             TypeDescriptor::Void => panic!("Void type cannot be used as argument"),
         })
