@@ -89,3 +89,61 @@ fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
     )
     .expect("Failed to invoke non-static method")
 }
+
+macro_rules! call_non_virtual_method_a_impl {
+    ($name:ident, $jni_ty:ty) => {
+        pub(super) extern "system" fn $name(
+            env: *mut JNIEnv,
+            this: jobject,
+            target: jclass,
+            method_id: jmethodID,
+            args: *const jvalue,
+        ) -> $jni_ty {
+            call_non_virtual_method_a::<$jni_ty>(env, this, target, method_id, args)
+        }
+    };
+}
+call_non_virtual_method_a_impl!(call_non_virtual_object_method_a, jobject);
+call_non_virtual_method_a_impl!(call_non_virtual_boolean_method_a, jboolean);
+call_non_virtual_method_a_impl!(call_non_virtual_byte_method_a, jbyte);
+call_non_virtual_method_a_impl!(call_non_virtual_char_method_a, jchar);
+call_non_virtual_method_a_impl!(call_non_virtual_short_method_a, jshort);
+call_non_virtual_method_a_impl!(call_non_virtual_int_method_a, jint);
+call_non_virtual_method_a_impl!(call_non_virtual_long_method_a, jlong);
+call_non_virtual_method_a_impl!(call_non_virtual_float_method_a, jfloat);
+call_non_virtual_method_a_impl!(call_non_virtual_double_method_a, jdouble);
+call_non_virtual_method_a_impl!(call_non_virtual_void_method_a, ());
+fn call_non_virtual_method_a<T: JNIValue>(
+    _env: *mut JNIEnv,
+    this: jobject,
+    target: jclass,
+    method_id: jmethodID,
+    args: *const jvalue,
+) -> T {
+    let raw = invoke_non_virtual_method(this as i32, target as i32, method_id as usize, args);
+    JNIValue::from_vec(&raw)
+}
+fn invoke_non_virtual_method(
+    this: i32,
+    target: i32,
+    method_id: usize,
+    args: *const jvalue,
+) -> Vec<i32> {
+    let (declaring_class_ref, method_index) = decode_method_id(method_id);
+
+    let target_klass_name = klass(target)
+        .expect("Failed to get target class")
+        .this_class_name()
+        .to_owned();
+
+    let declaring_klass =
+        klass(declaring_class_ref).expect("Failed to get declaring class from jmethodID");
+    let method = declaring_klass
+        .get_method_by_index(method_index)
+        .expect("Failed to get method from declaring class by index");
+    let name_signature = method.name_signature().to_owned();
+    let args_values = transform_args_to_vec(&method, args);
+
+    Executor::invoke_non_static_method(&target_klass_name, &name_signature, this, &args_values)
+        .expect("Failed to invoke non-static method") // todo: throw java.lang.AbstractMethodError
+}

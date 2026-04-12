@@ -3592,6 +3592,28 @@ instanceVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -90000
 CallViaInterface: woof!
 CallViaAbstractClass: woof!
 CallViaParentClass: bark!
+
+=== Non-Virtual Dispatch Demo ===
+CallNonVirtualViaParentClass: generic sound
+NonVirtualBase.nonVirtualObjectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualObjectMethodDemo -> Hello
+NonVirtualBase.nonVirtualBooleanMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualBooleanMethodDemo -> true
+NonVirtualBase.nonVirtualByteMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualByteMethodDemo -> -128
+NonVirtualBase.nonVirtualCharMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualCharMethodDemo -> Ї
+NonVirtualBase.nonVirtualShortMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualShortMethodDemo -> -32768
+NonVirtualBase.nonVirtualIntMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualIntMethodDemo -> -2000000000
+NonVirtualBase.nonVirtualLongMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualLongMethodDemo -> -9000000000000000000
+NonVirtualBase.nonVirtualFloatMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualFloatMethodDemo -> 3.140000104904
+NonVirtualBase.nonVirtualDoubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualDoubleMethodDemo -> 3.141592653590
+NonVirtualBase.nonVirtualVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called
