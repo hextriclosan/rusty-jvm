@@ -21,6 +21,16 @@ use crate::vm::jni::instance_methods_impl::{
     call_short_method_a, call_void_method_a, get_method_id,
 };
 use crate::vm::jni::java_vm_interface_impl::get_java_vm;
+use crate::vm::jni::nonvirtual_methods_impl::{
+    call_nonvirtual_boolean_method_a, call_nonvirtual_boolean_method_v,
+    call_nonvirtual_byte_method_a, call_nonvirtual_byte_method_v, call_nonvirtual_char_method_a,
+    call_nonvirtual_char_method_v, call_nonvirtual_double_method_a,
+    call_nonvirtual_double_method_v, call_nonvirtual_float_method_a,
+    call_nonvirtual_float_method_v, call_nonvirtual_int_method_a, call_nonvirtual_int_method_v,
+    call_nonvirtual_long_method_a, call_nonvirtual_long_method_v, call_nonvirtual_object_method_a,
+    call_nonvirtual_object_method_v, call_nonvirtual_short_method_a,
+    call_nonvirtual_short_method_v, call_nonvirtual_void_method_a, call_nonvirtual_void_method_v,
+};
 use crate::vm::jni::object_fields_impl::{
     get_boolean_field, get_byte_field, get_char_field, get_double_field, get_field_id,
     get_float_field, get_int_field, get_long_field, get_object_field, get_short_field,
@@ -178,35 +188,15 @@ jni_stub!(CallDoubleMethodV(jobject, jmethodID, va_list) -> jdouble);
 jni_variadic_stub!(CallVoidMethod, CallVoidMethod_ptr, (jobject, jmethodID) -> ());
 jni_stub!(CallVoidMethodV(jobject, jmethodID, va_list) -> ());
 jni_variadic_stub!(CallNonvirtualObjectMethod, CallNonvirtualObjectMethod_ptr, (jobject, jclass, jmethodID) -> jobject);
-jni_stub!(CallNonvirtualObjectMethodV(jobject, jclass, jmethodID, va_list) -> jobject);
-jni_stub!(CallNonvirtualObjectMethodA(jobject, jclass, jmethodID, *const jvalue) -> jobject);
 jni_variadic_stub!(CallNonvirtualBooleanMethod, CallNonvirtualBooleanMethod_ptr, (jobject, jclass, jmethodID) -> jboolean);
-jni_stub!(CallNonvirtualBooleanMethodV(jobject, jclass, jmethodID, va_list) -> jboolean);
-jni_stub!(CallNonvirtualBooleanMethodA(jobject, jclass, jmethodID, *const jvalue) -> jboolean);
 jni_variadic_stub!(CallNonvirtualByteMethod, CallNonvirtualByteMethod_ptr, (jobject, jclass, jmethodID) -> jbyte);
-jni_stub!(CallNonvirtualByteMethodV(jobject, jclass, jmethodID, va_list) -> jbyte);
-jni_stub!(CallNonvirtualByteMethodA(jobject, jclass, jmethodID, *const jvalue) -> jbyte);
 jni_variadic_stub!(CallNonvirtualCharMethod, CallNonvirtualCharMethod_ptr, (jobject, jclass, jmethodID) -> jchar);
-jni_stub!(CallNonvirtualCharMethodV(jobject, jclass, jmethodID, va_list) -> jchar);
-jni_stub!(CallNonvirtualCharMethodA(jobject, jclass, jmethodID, *const jvalue) -> jchar);
 jni_variadic_stub!(CallNonvirtualShortMethod, CallNonvirtualShortMethod_ptr, (jobject, jclass, jmethodID) -> jshort);
-jni_stub!(CallNonvirtualShortMethodV(jobject, jclass, jmethodID, va_list) -> jshort);
-jni_stub!(CallNonvirtualShortMethodA(jobject, jclass, jmethodID, *const jvalue) -> jshort);
 jni_variadic_stub!(CallNonvirtualIntMethod, CallNonvirtualIntMethod_ptr, (jobject, jclass, jmethodID) -> jint);
-jni_stub!(CallNonvirtualIntMethodV(jobject, jclass, jmethodID, va_list) -> jint);
-jni_stub!(CallNonvirtualIntMethodA(jobject, jclass, jmethodID, *const jvalue) -> jint);
 jni_variadic_stub!(CallNonvirtualLongMethod, CallNonvirtualLongMethod_ptr, (jobject, jclass, jmethodID) -> jlong);
-jni_stub!(CallNonvirtualLongMethodV(jobject, jclass, jmethodID, va_list) -> jlong);
-jni_stub!(CallNonvirtualLongMethodA(jobject, jclass, jmethodID, *const jvalue) -> jlong);
 jni_variadic_stub!(CallNonvirtualFloatMethod, CallNonvirtualFloatMethod_ptr, (jobject, jclass, jmethodID) -> jfloat);
-jni_stub!(CallNonvirtualFloatMethodV(jobject, jclass, jmethodID, va_list) -> jfloat);
-jni_stub!(CallNonvirtualFloatMethodA(jobject, jclass, jmethodID, *const jvalue) -> jfloat);
 jni_variadic_stub!(CallNonvirtualDoubleMethod, CallNonvirtualDoubleMethod_ptr, (jobject, jclass, jmethodID) -> jdouble);
-jni_stub!(CallNonvirtualDoubleMethodV(jobject, jclass, jmethodID, va_list) -> jdouble);
-jni_stub!(CallNonvirtualDoubleMethodA(jobject, jclass, jmethodID, *const jvalue) -> jdouble);
 jni_variadic_stub!(CallNonvirtualVoidMethod, CallNonvirtualVoidMethod_ptr, (jobject, jclass, jmethodID) -> ());
-jni_stub!(CallNonvirtualVoidMethodV(jobject, jclass, jmethodID, va_list) -> ());
-jni_stub!(CallNonvirtualVoidMethodA(jobject, jclass, jmethodID, *const jvalue) -> ());
 jni_variadic_stub!(CallStaticObjectMethod, CallStaticObjectMethod_ptr, (jclass, jmethodID) -> jobject);
 jni_stub!(CallStaticObjectMethodV(jclass, jmethodID, va_list) -> jobject);
 jni_variadic_stub!(CallStaticBooleanMethod, CallStaticBooleanMethod_ptr, (jclass, jmethodID) -> jboolean);
@@ -317,35 +307,35 @@ static VTABLE: Wrapper = {
     ni.v24.CallVoidMethodV = CallVoidMethodV;
     ni.v24.CallVoidMethodA = call_void_method_a;
     ni.v24.CallNonvirtualObjectMethod = CallNonvirtualObjectMethod_ptr;
-    ni.v24.CallNonvirtualObjectMethodV = CallNonvirtualObjectMethodV;
-    ni.v24.CallNonvirtualObjectMethodA = CallNonvirtualObjectMethodA;
+    ni.v24.CallNonvirtualObjectMethodV = call_nonvirtual_object_method_v;
+    ni.v24.CallNonvirtualObjectMethodA = call_nonvirtual_object_method_a;
     ni.v24.CallNonvirtualBooleanMethod = CallNonvirtualBooleanMethod_ptr;
-    ni.v24.CallNonvirtualBooleanMethodV = CallNonvirtualBooleanMethodV;
-    ni.v24.CallNonvirtualBooleanMethodA = CallNonvirtualBooleanMethodA;
+    ni.v24.CallNonvirtualBooleanMethodV = call_nonvirtual_boolean_method_v;
+    ni.v24.CallNonvirtualBooleanMethodA = call_nonvirtual_boolean_method_a;
     ni.v24.CallNonvirtualByteMethod = CallNonvirtualByteMethod_ptr;
-    ni.v24.CallNonvirtualByteMethodV = CallNonvirtualByteMethodV;
-    ni.v24.CallNonvirtualByteMethodA = CallNonvirtualByteMethodA;
+    ni.v24.CallNonvirtualByteMethodV = call_nonvirtual_byte_method_v;
+    ni.v24.CallNonvirtualByteMethodA = call_nonvirtual_byte_method_a;
     ni.v24.CallNonvirtualCharMethod = CallNonvirtualCharMethod_ptr;
-    ni.v24.CallNonvirtualCharMethodV = CallNonvirtualCharMethodV;
-    ni.v24.CallNonvirtualCharMethodA = CallNonvirtualCharMethodA;
+    ni.v24.CallNonvirtualCharMethodV = call_nonvirtual_char_method_v;
+    ni.v24.CallNonvirtualCharMethodA = call_nonvirtual_char_method_a;
     ni.v24.CallNonvirtualShortMethod = CallNonvirtualShortMethod_ptr;
-    ni.v24.CallNonvirtualShortMethodV = CallNonvirtualShortMethodV;
-    ni.v24.CallNonvirtualShortMethodA = CallNonvirtualShortMethodA;
+    ni.v24.CallNonvirtualShortMethodV = call_nonvirtual_short_method_v;
+    ni.v24.CallNonvirtualShortMethodA = call_nonvirtual_short_method_a;
     ni.v24.CallNonvirtualIntMethod = CallNonvirtualIntMethod_ptr;
-    ni.v24.CallNonvirtualIntMethodV = CallNonvirtualIntMethodV;
-    ni.v24.CallNonvirtualIntMethodA = CallNonvirtualIntMethodA;
+    ni.v24.CallNonvirtualIntMethodV = call_nonvirtual_int_method_v;
+    ni.v24.CallNonvirtualIntMethodA = call_nonvirtual_int_method_a;
     ni.v24.CallNonvirtualLongMethod = CallNonvirtualLongMethod_ptr;
-    ni.v24.CallNonvirtualLongMethodV = CallNonvirtualLongMethodV;
-    ni.v24.CallNonvirtualLongMethodA = CallNonvirtualLongMethodA;
+    ni.v24.CallNonvirtualLongMethodV = call_nonvirtual_long_method_v;
+    ni.v24.CallNonvirtualLongMethodA = call_nonvirtual_long_method_a;
     ni.v24.CallNonvirtualFloatMethod = CallNonvirtualFloatMethod_ptr;
-    ni.v24.CallNonvirtualFloatMethodV = CallNonvirtualFloatMethodV;
-    ni.v24.CallNonvirtualFloatMethodA = CallNonvirtualFloatMethodA;
+    ni.v24.CallNonvirtualFloatMethodV = call_nonvirtual_float_method_v;
+    ni.v24.CallNonvirtualFloatMethodA = call_nonvirtual_float_method_a;
     ni.v24.CallNonvirtualDoubleMethod = CallNonvirtualDoubleMethod_ptr;
-    ni.v24.CallNonvirtualDoubleMethodV = CallNonvirtualDoubleMethodV;
-    ni.v24.CallNonvirtualDoubleMethodA = CallNonvirtualDoubleMethodA;
+    ni.v24.CallNonvirtualDoubleMethodV = call_nonvirtual_double_method_v;
+    ni.v24.CallNonvirtualDoubleMethodA = call_nonvirtual_double_method_a;
     ni.v24.CallNonvirtualVoidMethod = CallNonvirtualVoidMethod_ptr;
-    ni.v24.CallNonvirtualVoidMethodV = CallNonvirtualVoidMethodV;
-    ni.v24.CallNonvirtualVoidMethodA = CallNonvirtualVoidMethodA;
+    ni.v24.CallNonvirtualVoidMethodV = call_nonvirtual_void_method_v;
+    ni.v24.CallNonvirtualVoidMethodA = call_nonvirtual_void_method_a;
     ni.v24.GetFieldID = get_field_id;
     ni.v24.GetObjectField = get_object_field;
     ni.v24.GetBooleanField = get_boolean_field;
