@@ -3368,7 +3368,7 @@ Hello from LoadMe4!
 }
 
 fn ensure_jni_test_lib_is_built() {
-    let mut args = vec!["build", "-p", "jni_test_lib"];
+    let mut args = vec!["build", "--locked", "-p", "jni_test_lib"];
     let target = env::var("CARGO_BUILD_TARGET").unwrap_or_default();
     if !target.is_empty() {
         args.extend_from_slice(&["--target", &target]);
