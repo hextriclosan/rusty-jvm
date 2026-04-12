@@ -73,6 +73,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build jni_test_lib for s390x (Big Endian)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            s390x-test-env:latest \
+            cargo build --locked -p jni_test_lib --target s390x-unknown-linux-gnu
+
       - name: Run tests on s390x (Big Endian)
         run: |
           docker run --rm \
