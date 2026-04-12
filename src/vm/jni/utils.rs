@@ -62,6 +62,8 @@ pub(super) fn get_method_id_impl(
     .unwrap_or(null_mut()) // todo: throw NoSuchMethodError here
 }
 
+#[cfg(not(target_pointer_width = "64"))]
+compile_error!("src/vm/jni/utils.rs requires a 64-bit target because jmethodID values are encoded into usize using a 64-bit layout");
 /// Encode a (class_ref, method_index) pair into a single `usize` suitable for use as a
 /// `jmethodID`.
 ///

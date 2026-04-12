@@ -128,3 +128,24 @@ unsafe fn process_static_method_call<T>(
     ];
     call_fn(env, class, method_id, args.as_ptr())
 }
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StaticMethodsDemo_BaseStaticMethodDemo(
+    env: *mut JNIEnv,
+    _class: jclass,
+    target: jclass,
+    method_name_ref: jstring,
+    signature_ref: jstring,
+) {
+    unsafe {
+        let method_name =
+            ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, std::ptr::null_mut());
+        let signature =
+            ((*(*env)).v24.GetStringUTFChars)(env, signature_ref, std::ptr::null_mut());
+        let method_id = ((*(*env)).v24.GetStaticMethodID)(env, target, method_name, signature);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, signature_ref, signature);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
+
+        ((*(*env)).v24.CallStaticVoidMethodA)(env, target, method_id, std::ptr::null());
+    }
+}

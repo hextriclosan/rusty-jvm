@@ -584,6 +584,13 @@ class ObjectFieldDemo {
     }
 }
 
+class BaseStatic {
+    public static void method() {
+        System.out.println("BaseStatic.method called");
+    }
+}
+class DerivedStatic extends BaseStatic {
+}
 class StaticMethodsDemo {
     private static native Object StaticObjectMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native boolean StaticBooleanMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
@@ -595,6 +602,8 @@ class StaticMethodsDemo {
     private static native float StaticFloatMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native double StaticDoubleMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
     private static native void StaticVoidMethodDemo(String methodName, String signature, boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l);
+
+    private static native void BaseStaticMethodDemo(Class<?> clazz, String methodName, String signature);
 
     private static final String SIG_TMPL = "(ZBCSIJFDLjava/lang/Object;)%s";
     private static final String MSG_TMPL = "%s called with %b, %d, %c, %d, %d, %d, %.12f, %.12f, %s%n";
@@ -640,6 +649,8 @@ class StaticMethodsDemo {
         System.out.printf("StaticDoubleMethodDemo -> %f%n", doubleResult);
 
         StaticVoidMethodDemo("voidMethodToCall", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+
+        BaseStaticMethodDemo(DerivedStatic.class, "method", "()V");
     }
 
     private static Object objectMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
