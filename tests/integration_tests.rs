@@ -3592,6 +3592,9 @@ instanceVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -90000
 CallViaInterface: woof!
 CallViaAbstractClass: woof!
 CallViaParentClass: bark!
+
+=== Non-Virtual Dispatch Demo ===
+CallNonVirtualViaParentClass: generic sound
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called

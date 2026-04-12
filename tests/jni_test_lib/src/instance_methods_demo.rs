@@ -1,7 +1,8 @@
 use jni::sys::{
-    jboolean, jbyte, jchar, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort, jstring,
-    jvalue, JNIEnv,
+    jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
+    jstring, jvalue, JNIEnv,
 };
+use std::ptr::{null, null_mut};
 
 /// Native implementation of VirtualDispatchDemo.CallViaDeclaringClass.
 ///
@@ -13,16 +14,13 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_VirtualDispatch
     env: *mut JNIEnv,
     _this: jobject,
     instance: jobject,
-    declaring_class: jobject, // Class<?> – jclass and jobject share the same representation
+    declaring_class: jclass,
     method_name_ref: jstring,
     signature_ref: jstring,
 ) -> jobject {
     unsafe {
-        let method_name =
-            ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, std::ptr::null_mut());
-        let signature =
-            ((*(*env)).v24.GetStringUTFChars)(env, signature_ref, std::ptr::null_mut());
-        // jclass is a type alias for jobject, so the cast is safe
+        let method_name = ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, null_mut());
+        let signature = ((*(*env)).v24.GetStringUTFChars)(env, signature_ref, null_mut());
         let method_id = ((*(*env)).v24.GetMethodID)(env, declaring_class, method_name, signature);
         ((*(*env)).v24.ReleaseStringUTFChars)(env, signature_ref, signature);
         ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
@@ -142,9 +140,8 @@ unsafe fn process_method_call<T>(
         args: *const jvalue,
     ) -> T,
 ) -> T {
-    let method_name =
-        ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, std::ptr::null_mut());
-    let signature = ((*(*env)).v24.GetStringUTFChars)(env, signature_ref, std::ptr::null_mut());
+    let method_name = ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, null_mut());
+    let signature = ((*(*env)).v24.GetStringUTFChars)(env, signature_ref, null_mut());
     let class = ((*(*env)).v24.GetObjectClass)(env, this);
     let method_id = ((*(*env)).v24.GetMethodID)(env, class, method_name, signature);
     ((*(*env)).v24.ReleaseStringUTFChars)(env, signature_ref, signature);
@@ -162,4 +159,24 @@ unsafe fn process_method_call<T>(
         jvalue { l },
     ];
     call_fn(env, this, method_id, args.as_ptr())
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_NonVirtualDispatchDemo_CallNonVirtualViaDeclaringClass(
+    env: *mut JNIEnv,
+    _this: jobject,
+    instance: jobject,
+    target: jclass,
+    method_name_ref: jstring,
+    signature_ref: jstring,
+) -> jobject {
+    unsafe {
+        let method_name = ((*(*env)).v24.GetStringUTFChars)(env, method_name_ref, null_mut());
+        let signature = ((*(*env)).v24.GetStringUTFChars)(env, signature_ref, null_mut());
+        let method_id = ((*(*env)).v24.GetMethodID)(env, target, method_name, signature);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, signature_ref, signature);
+        ((*(*env)).v24.ReleaseStringUTFChars)(env, method_name_ref, method_name);
+
+        ((*(*env)).v24.CallNonvirtualObjectMethodA)(env, instance, target, method_id, null())
+    }
 }

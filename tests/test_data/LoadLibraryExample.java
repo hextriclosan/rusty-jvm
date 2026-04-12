@@ -90,6 +90,9 @@ class LoadLibraryExample {
 
         VirtualDispatchDemo virtualDispatchDemo = new VirtualDispatchDemo();
         virtualDispatchDemo.runDemo();
+
+        NonVirtualDispatchDemo nonVirtualDispatchDemo = new NonVirtualDispatchDemo();
+        nonVirtualDispatchDemo.runDemo();
     }
 }
 
@@ -856,5 +859,29 @@ class VirtualDispatchDemo {
         // Test 3: method obtained via parent class, invoked on overriding child instance
         Object r3 = CallViaDeclaringClass(puppy, BaseAnimal.class, "sound", stringSig);
         System.out.println("CallViaParentClass: " + r3);
+    }
+}
+
+class NonVirtualDispatchDemo {
+    // Calls GetMethodID with the supplied declaring class (interface / abstract / parent),
+    // then uses CallNonvirtualObjectMethodA on the concrete instance – bypassing virtual dispatch.
+    private native Object CallNonVirtualViaDeclaringClass(Object instance, Class<?> declaringClass, String methodName, String signature);
+
+    public void runDemo() {
+        System.out.println();
+        System.out.println("=== Non-Virtual Dispatch Demo ===");
+
+        Puppy puppy = new Puppy();
+        String stringSig = "()Ljava/lang/String;";
+
+        // Test 1
+        // Object r1 = CallNonVirtualViaDeclaringClass(puppy, Speakable.class, "speak", stringSig); // todo: handle java.lang.AbstractMethodError here
+
+        // Test 2
+        // Object r2 = CallNonVirtualViaDeclaringClass(puppy, AbstractSpeaker.class, "speak", stringSig); // todo: handle java.lang.AbstractMethodError here
+
+        // Test 3: method obtained via parent class, invoked on overriding child instance
+        Object r3 = CallNonVirtualViaDeclaringClass(puppy, BaseAnimal.class, "sound", stringSig);
+        System.out.println("CallNonVirtualViaParentClass: " + r3);
     }
 }
