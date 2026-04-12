@@ -1,7 +1,7 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
-use crate::vm::jni::utils::{get_method_id_impl, transform_args_to_vec};
+use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::java_method::JavaMethod;
 use jni_sys::{
@@ -44,12 +44,13 @@ get_static_method_a_impl!(call_static_double_method_a, jdouble);
 get_static_method_a_impl!(call_static_void_method_a, ());
 fn call_static_method_a<T: JNIValue>(
     _env: *mut JNIEnv,
-    cls: jclass,
+    _cls: jclass,
     method_id: jmethodID,
     args: *const jvalue,
 ) -> T {
-    let method_index = method_id as i64;
-    let klass = klass(cls as i32).expect("Failed to get class from reference");
+    let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
+
+    let klass = klass(declaring_class_ref).expect("Failed to get class from reference");
     let method = klass
         .get_method_by_index(method_index)
         .expect("Failed to get method by ID for static void method call");
