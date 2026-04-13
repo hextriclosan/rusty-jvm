@@ -16,17 +16,17 @@ use std::sync::Arc;
 pub(crate) fn lookup_method(
     class_name: &str,
     full_method_signature: &str,
-) -> Option<Arc<JavaMethod>> {
-    let klass = CLASSES.get(class_name).ok()?;
-    let vtable = klass.vtable().ok()?;
+) -> Result<Option<Arc<JavaMethod>>> {
+    let klass = CLASSES.get(class_name)?;
+    let vtable = klass.vtable()?;
 
     if let Some(method) = vtable.get(full_method_signature) {
-        return Some(Arc::clone(method));
+        return Ok(Some(Arc::clone(method)));
     }
 
     // Fall back for polymorphic signature methods whose descriptor varies per call site
-    lookup_for_implementation(class_name, full_method_signature)
-        .or_else(|| lookup_for_implementation_interface(class_name, full_method_signature))
+    Ok(lookup_for_implementation(class_name, full_method_signature)
+        .or_else(|| lookup_for_implementation_interface(class_name, full_method_signature)))
 }
 
 /// Builds the vtable for `class_name` by collecting all method signatures reachable
@@ -232,7 +232,7 @@ fn lookup_for_static_field_in_interface(
                     Ok((interface_class_name, field)) => {
                         return Ok((interface_class_name, field));
                     }
-                    Err(_) => continue,
+                    Err(_) => continue, // todo: 1. add test for this case; 2. refactor this approach
                 }
             }
 

@@ -233,7 +233,7 @@ fn invoke_exact_method(
             let full_method_signature = format!("{method_name}:{ptype_names}{rtype_name}");
 
             let java_method =
-                lookup::lookup_method(&instance_type_class_name, &full_method_signature)
+                lookup::lookup_method(&instance_type_class_name, &full_method_signature)?
                     .ok_or_else(|| {
                         Error::new_constant_pool(&format!(
                     "invoke_exact_method: Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_method_signature} getting virtual_method"

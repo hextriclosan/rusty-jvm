@@ -68,8 +68,11 @@ fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
     let instance_name = HEAP
         .get_instance_name(this)
         .expect("Failed to get instance name from reference");
-    let implementation =
-        lookup::lookup_method(&instance_name, &name_signature).unwrap_or_else(|| {
+    let implementation = lookup::lookup_method(&instance_name, &name_signature)
+        .unwrap_or_else(|e| {
+            panic!("Failed to find implementation of {name_signature} for {instance_name}: {e}")
+        })
+        .unwrap_or_else(|| {
             panic!("Failed to find implementation of {name_signature} for {instance_name}")
         });
 

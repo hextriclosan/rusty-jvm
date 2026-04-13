@@ -144,7 +144,7 @@ pub(crate) fn process(
             let class_name_by_instance = HEAP.get_instance_name(*reference)?;
 
             let exact_implementation =
-                lookup::lookup_method(&class_name_by_instance, &full_signature).ok_or_else(
+                lookup::lookup_method(&class_name_by_instance, &full_signature)?.ok_or_else(
                     || {
                         Error::new_constant_pool(&format!(
                     "Error getting instance type JavaMethod by class name {class_name_by_instance} and full signature {full_signature} getting virtual_method"
@@ -170,7 +170,7 @@ pub(crate) fn process(
                     current_class_name,
                     CPoolHelper::get_full_method_info,
                 )?;
-            let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)
+            let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)?
                 .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokespecial")))?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), true)?;
@@ -194,7 +194,7 @@ pub(crate) fn process(
                 )?;
             let klass = CLASSES.get(&class_name_to_start_lookup_from)?;
             StaticInit::initialize_java_class(&klass)?;
-            let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)
+            let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)?
                 .ok_or_else(|| Error::new_constant_pool(&format!("Error getting static type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokestatic")))?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), false)?;
@@ -237,7 +237,7 @@ pub(crate) fn process(
 
             let instance_name = HEAP.get_instance_name(*reference)?;
             let java_method =
-                lookup::lookup_method(&instance_name, &full_signature).ok_or_else(|| {
+                lookup::lookup_method(&instance_name, &full_signature)?.ok_or_else(|| {
                     Error::new_constant_pool(&format!(
                     "Error getting instance type JavaMethod by class name {instance_name} and full signature {full_signature} getting interface implementation"
                 ))

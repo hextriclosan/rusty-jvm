@@ -46,6 +46,7 @@ pub(super) fn get_method_id_impl(
     // Look up the method implementation in the class/interface hierarchy.
     let klass_name = declaring_klass.this_class_name().clone();
     lookup::lookup_method(&klass_name, &full_signature)
+        .unwrap_or_else(|e| panic!("Failed to find implementation of {full_signature}: {e}"))
         .and_then(|method| {
             let found_class_name = method.class_name();
             let found_clazz_ref = clazz_ref(found_class_name).ok()?;
