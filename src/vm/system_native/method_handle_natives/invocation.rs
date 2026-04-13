@@ -119,15 +119,12 @@ fn bound_method_handle_invocation(
     let full_method_signature = format!("{method_name}:{ptype_names}{rtype_name}");
 
     let klass = CLASSES.get(class_name_to_load)?;
-    let method_to_invoke = Arc::clone(
-        klass
-            .get_methods()
-            .iter()
-            .find(|m| m.name_signature() == full_method_signature)
-            .ok_or(Error::new_execution(&format!(
-                "bound_method_handle_invocation: {full_method_signature} not found"
-            )))?,
-    );
+    let method_to_invoke = klass
+        .get_methods()
+        .find_map(|(_, m)| (m.name_signature() == full_method_signature).then(|| Arc::clone(m)))
+        .ok_or(Error::new_execution(&format!(
+            "bound_method_handle_invocation: {full_method_signature} not found"
+        )))?;
 
     let mut new_args = Vec::new();
     new_args.push(handle_ref);

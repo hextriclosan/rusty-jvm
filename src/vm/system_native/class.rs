@@ -202,11 +202,10 @@ pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 }
 fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
     let klass = klass(class_ref)?;
-    let java_methods = klass.get_methods();
 
-    let method_refs = java_methods
-        .iter()
-        .filter_map(|java_method| {
+    let method_refs = klass
+        .get_methods()
+        .filter_map(|(_, java_method)| {
             if (java_method.name() == "<init>") || (java_method.name() == "<clinit>") {
                 return None; // Skip constructors and static initializers
             }
@@ -230,11 +229,10 @@ pub(crate) fn get_declared_constructors0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 }
 fn get_declared_constructors(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
-    let java_methods = klass.get_methods();
-    let method_refs = java_methods
-        .iter()
-        .filter(|java_method| java_method.name() == "<init>")
-        .map(|java_method| java_method.reflection_ref())
+    let method_refs = klass
+        .get_methods()
+        .filter(|(_, java_method)| java_method.name() == "<init>")
+        .map(|(_, java_method)| java_method.reflection_ref())
         .collect::<Result<Vec<_>>>()?;
 
     let result_ref =

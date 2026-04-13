@@ -280,11 +280,8 @@ impl JavaClass {
             .collect::<Vec<_>>()
     }
 
-    pub fn get_methods(&self) -> Vec<Arc<JavaMethod>> {
-        self.methods
-            .values()
-            .map(|v| Arc::clone(v))
-            .collect::<Vec<_>>()
+    pub fn get_methods(&self) -> impl Iterator<Item = (&String, &Arc<JavaMethod>)> {
+        self.methods.iter()
     }
 
     pub fn instance_fields_hierarchy(

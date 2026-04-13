@@ -170,7 +170,7 @@ fn collect_class_and_interface_method_signatures_inner(
     }
 
     let klass = CLASSES.get(class_name)?;
-    for method in klass.get_methods() {
+    for (_, method) in klass.get_methods() {
         sigs.insert(method.name_signature().to_string());
     }
     if let Some(parent) = klass.parent() {
@@ -193,7 +193,7 @@ fn collect_interface_method_signatures_inner(
     }
 
     let klass = CLASSES.get(interface_name)?;
-    for method in klass.get_methods() {
+    for (_, method) in klass.get_methods() {
         sigs.insert(method.name_signature().to_string());
     }
     for super_iface in klass.interfaces() {
