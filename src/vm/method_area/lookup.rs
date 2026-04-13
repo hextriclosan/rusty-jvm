@@ -177,37 +177,29 @@ fn collect_class_and_interface_method_signatures_inner(
         collect_class_and_interface_method_signatures_inner(parent, sigs, visited)?;
     }
     for iface in klass.interfaces() {
-        collect_interface_method_signatures_inner(iface, sigs, visited);
+        collect_interface_method_signatures_inner(iface, sigs, visited)?;
     }
     Ok(())
-}
-
-fn collect_interface_method_signatures(interface_name: &str, sigs: &mut IndexSet<String>) {
-    let mut visited = IndexSet::new();
-    collect_interface_method_signatures_inner(interface_name, sigs, &mut visited);
 }
 
 fn collect_interface_method_signatures_inner(
     interface_name: &str,
     sigs: &mut IndexSet<String>,
     visited: &mut IndexSet<String>,
-) {
+) -> Result<()> {
     if !visited.insert(interface_name.to_string()) {
         // Interface already visited, so we've already collected all of its methods.
-        return;
+        return Ok(());
     }
-    // Interface classes may not yet be loaded; if unavailable we skip them here.
-    // lookup_method falls back to the recursive lookup for any signature not found in the vtable.
-    let klass = match CLASSES.get(interface_name) {
-        Ok(k) => k,
-        Err(_) => return,
-    };
+
+    let klass = CLASSES.get(interface_name)?;
     for method in klass.get_methods() {
         sigs.insert(method.name_signature().to_string());
     }
     for super_iface in klass.interfaces() {
-        collect_interface_method_signatures_inner(super_iface, sigs, visited);
+        collect_interface_method_signatures_inner(super_iface, sigs, visited)?;
     }
+    Ok(())
 }
 
 fn lookup_for_static_field_in_class(
