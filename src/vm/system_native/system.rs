@@ -8,7 +8,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i64_to_vec, undecorate};
 use crate::vm::method_area::instance_checker::InstanceChecker;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::lookup;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::object::identity_hashcode;
@@ -254,13 +254,7 @@ pub(crate) fn set_out0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![])
 }
 fn set_out0(print_stream_ref: i32) -> Result<()> {
-    let (_, field_ref) = {
-        let field_ref = with_method_area(|method_area| {
-            method_area.lookup_for_static_field("java/lang/System", "out")
-        })?;
-        field_ref
-    };
-
+    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "out")?;
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 
@@ -271,13 +265,7 @@ pub(crate) fn set_err0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![])
 }
 fn set_err0(print_stream_ref: i32) -> Result<()> {
-    let (_, field_ref) = {
-        let field_ref = with_method_area(|method_area| {
-            method_area.lookup_for_static_field("java/lang/System", "err")
-        })?;
-        field_ref
-    };
-
+    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "err")?;
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 

@@ -10,9 +10,9 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{argument_length, get_length};
 use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
-use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jdescriptor::MethodDescriptor;
@@ -29,9 +29,8 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
-            let (fields_class_name, field) = with_method_area(|method_area| {
-                method_area.lookup_for_static_field(&class_name, &field_name)
-            })?;
+            let (fields_class_name, field) =
+                lookup::lookup_for_static_field(&class_name, &field_name)?;
 
             StaticInit::initialize(&fields_class_name)?;
 
@@ -51,18 +50,14 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
-            let (len, fields_class_name, field_value) = with_method_area(|method_area| {
-                let (fields_class_name, field_value) =
-                    method_area.lookup_for_static_field(&class_name, &field_name)?;
+            let (fields_class_name, field_value) =
+                lookup::lookup_for_static_field(&class_name, &field_name)?;
 
-                let klass = CLASSES.get(&fields_class_name)?;
-                let field_info = klass
-                    .field_info(&field_name)
-                    .ok_or(Error::new_execution("Error getting field info"))?;
-                let len = get_length(field_info.type_descriptor())?;
-
-                Ok::<(i32, String, Arc<FieldValue>), Error>((len, fields_class_name, field_value))
-            })?;
+            let klass = CLASSES.get(&fields_class_name)?;
+            let field_info = klass
+                .field_info(&field_name)
+                .ok_or(Error::new_execution("Error getting field info"))?;
+            let len = get_length(field_info.type_descriptor())?;
 
             StaticInit::initialize(&fields_class_name)?;
 
@@ -102,15 +97,12 @@ pub(crate) fn process(
         PUTFIELD => {
             let stack_frame = last_frame_mut(stack_frames)?;
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
-            let type_descriptor = with_method_area(|method_area| {
-                method_area
-                    .lookup_for_field_descriptor(&class_name, &field_name)
-                    .ok_or_else(|| {
-                        Error::new_constant_pool(&format!(
-                            "Error getting type descriptor for {class_name}.{field_name}"
-                        ))
-                    })
-            })?;
+            let type_descriptor = lookup::lookup_for_field_descriptor(&class_name, &field_name)
+                .ok_or_else(|| {
+                    Error::new_constant_pool(&format!(
+                        "Error getting type descriptor for {class_name}.{field_name}"
+                    ))
+                })?;
             let len = get_length(&type_descriptor)?;
 
             let mut value = Vec::with_capacity(len as usize);
@@ -151,18 +143,14 @@ pub(crate) fn process(
 
             let class_name_by_instance = HEAP.get_instance_name(*reference)?;
 
-            let exact_implementation = with_method_area(|method_area| {
-                method_area
-                    .lookup_for_implementation(&class_name_by_instance, &full_signature) // first looking for method in parent and above classes
-                    .or_else(|| { // if not found, looking for default method implementation in interfaces
-                        method_area.lookup_for_implementation_interface(
-                            &class_name_by_instance,
-                            &full_signature,
-                        )
-                    })
-            }).ok_or_else(|| Error::new_constant_pool(&format!(
-                "Error getting instance type JavaMethod by class name {class_name_by_instance} and full signature {full_signature} getting virtual_method"
-            )))?;
+            let exact_implementation =
+                lookup::lookup_method(&class_name_by_instance, &full_signature).ok_or_else(
+                    || {
+                        Error::new_constant_pool(&format!(
+                    "Error getting instance type JavaMethod by class name {class_name_by_instance} and full signature {full_signature} getting virtual_method"
+                ))
+                    },
+                )?;
 
             let class_name = exact_implementation.class_name();
             invoke(
@@ -182,16 +170,8 @@ pub(crate) fn process(
                     current_class_name,
                     CPoolHelper::get_full_method_info,
                 )?;
-            let java_method = with_method_area(|method_area| {
-                method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
-                    .or_else(|| { // if not found, looking for default method implementation in interfaces
-                        method_area.lookup_for_implementation_interface(
-                            &class_name_to_start_lookup_from,
-                            &full_signature,
-                        )
-                    })
-                                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokespecial")))
-            })?;
+            let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)
+                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokespecial")))?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), true)?;
             let class_name = java_method.class_name();
@@ -214,10 +194,8 @@ pub(crate) fn process(
                 )?;
             let klass = CLASSES.get(&class_name_to_start_lookup_from)?;
             StaticInit::initialize_java_class(&klass)?;
-            let java_method = with_method_area(|method_area| {
-                method_area.lookup_for_implementation(&class_name_to_start_lookup_from, &full_signature)
-                    .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokestatic")))
-            })?;
+            let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)
+                .ok_or_else(|| Error::new_constant_pool(&format!("Error getting static type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokestatic")))?;
             let method_args =
                 prepare_invoke_context(stack_frames, java_method.get_method_descriptor(), false)?;
             invoke(
@@ -258,18 +236,12 @@ pub(crate) fn process(
             }
 
             let instance_name = HEAP.get_instance_name(*reference)?;
-            let java_method = with_method_area(|method_area| {
-                method_area
-                    .lookup_for_implementation(&instance_name, &full_signature) // first looking for method in parent and above classes
-                    .or_else(|| { // if not found, looking for default method implementation in interfaces
-                        method_area.lookup_for_implementation_interface(
-                            &instance_name,
-                            &full_signature,
-                        )
-                    })
-            }).ok_or_else(|| Error::new_constant_pool(&format!(
-                "Error getting instance type JavaMethod by class name {instance_name} and full signature {full_signature} getting interface implementation"
-            )))?;
+            let java_method =
+                lookup::lookup_method(&instance_name, &full_signature).ok_or_else(|| {
+                    Error::new_constant_pool(&format!(
+                    "Error getting instance type JavaMethod by class name {instance_name} and full signature {full_signature} getting interface implementation"
+                ))
+                })?;
 
             let exact_class_name = java_method.class_name();
             invoke(

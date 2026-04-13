@@ -6,7 +6,7 @@ use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::cpool_helper::CPoolHelper;
 use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::JavaMethod;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::lookup;
 use getset::{CopyGetters, Getters};
 use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
@@ -45,6 +45,7 @@ pub(crate) struct JavaClass {
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
+    vtable: OnceCell<IndexMap<String, Arc<JavaMethod>>>,
     #[get = "pub"]
     declaring_class: Option<String>,
     #[get = "pub"]
@@ -119,6 +120,7 @@ impl JavaClass {
             static_fields_init_state: Arc::default(),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
+            vtable: OnceCell::new(),
             declaring_class,
             annotations_raw,
             enclosing_method,
@@ -290,13 +292,10 @@ impl JavaClass {
     ) -> Result<&IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>> {
         self.instance_fields_hierarchy.get_or_try_init(|| {
             let mut instance_fields_hierarchy = IndexMap::new();
-            with_method_area(|area| {
-                area.lookup_and_fill_instance_fields_hierarchy(
-                    &self.this_class_name,
-                    &mut instance_fields_hierarchy,
-                )
-            })?;
-
+            lookup::lookup_and_fill_instance_fields_hierarchy(
+                &self.this_class_name,
+                &mut instance_fields_hierarchy,
+            )?;
             Ok(instance_fields_hierarchy)
         })
     }
@@ -314,6 +313,11 @@ impl JavaClass {
 
             Ok(fields_offset_mapping)
         })
+    }
+
+    pub fn vtable(&self) -> Result<&IndexMap<String, Arc<JavaMethod>>> {
+        self.vtable
+            .get_or_try_init(|| lookup::build_vtable(self.this_class_name()))
     }
 
     pub fn inject_mirror_clazz_ref(&self, mirror_class_ref: i32) -> Result<()> {
