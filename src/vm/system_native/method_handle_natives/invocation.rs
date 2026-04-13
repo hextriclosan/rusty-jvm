@@ -8,6 +8,7 @@ use crate::vm::helper::{klass, vec_to_i64};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
@@ -118,15 +119,12 @@ fn bound_method_handle_invocation(
     let full_method_signature = format!("{method_name}:{ptype_names}{rtype_name}");
 
     let klass = CLASSES.get(class_name_to_load)?;
-    let method_to_invoke = Arc::clone(
-        klass
-            .get_methods()
-            .iter()
-            .find(|m| m.name_signature() == full_method_signature)
-            .ok_or(Error::new_execution(&format!(
-                "bound_method_handle_invocation: {full_method_signature} not found"
-            )))?,
-    );
+    let method_to_invoke = klass
+        .get_methods()
+        .find_map(|(_, m)| (m.name_signature() == full_method_signature).then(|| Arc::clone(m)))
+        .ok_or(Error::new_execution(&format!(
+            "bound_method_handle_invocation: {full_method_signature} not found"
+        )))?;
 
     let mut new_args = Vec::new();
     new_args.push(handle_ref);
@@ -231,18 +229,13 @@ fn invoke_exact_method(
             let rtype_name = method_type.rtype_name();
             let full_method_signature = format!("{method_name}:{ptype_names}{rtype_name}");
 
-            let java_method = with_method_area(|method_area| {
-                method_area
-                    .lookup_for_implementation(&instance_type_class_name, &full_method_signature) // first looking for method in parent and above classes
-                    .or_else(|| { // if not found, looking for default method implementation in interfaces
-                        method_area.lookup_for_implementation_interface(
-                            &instance_type_class_name,
-                            &full_method_signature,
-                        )
-                    })
-            }).ok_or_else(|| Error::new_constant_pool(&format!(
-                "invoke_exact_method: Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_method_signature} getting virtual_method"
-            )))?;
+            let java_method =
+                lookup::lookup_method(&instance_type_class_name, &full_method_signature)?
+                    .ok_or_else(|| {
+                        Error::new_constant_pool(&format!(
+                    "invoke_exact_method: Error getting instance type JavaMethod by class name {instance_type_class_name} and full signature {full_method_signature} getting virtual_method"
+                ))
+                    })?;
 
             (Arc::clone(&java_method), method_args.to_owned())
         }
