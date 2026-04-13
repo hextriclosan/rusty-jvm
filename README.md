@@ -11,7 +11,7 @@
 
 This project is a Java Virtual Machine (JVM) implemented in Rust, built to run Java programs independently of existing JVMs.
 Everything related to Java is implemented from scratch.
-The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone. 
+The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone.
 The next major objectives include the integration of garbage collection and support for multithreading.
 
 ## Implemented Key Features
@@ -35,6 +35,52 @@ The next major objectives include the integration of garbage collection and supp
 - [java.lang.System][java.lang.system-api] (most features)
 
 See [integration tests](tests/test_data) for broader examples of supported Java features.
+
+## Architecture
+
+The VM is composed of tightly-scoped modules — class loader, heap, operand-stack interpreter,
+JNI bridge, and native-method dispatch table — each with a narrow, well-typed interface:
+
+```mermaid
+graph TD
+    CLI["CLI / lib.rs"]
+    VM["vm/mod.rs<br/>(bootstrap)"]
+    MA["method_area<br/>(class loading, vtable)"]
+    HEAP["heap<br/>(objects & arrays)"]
+    EE["execution_engine<br/>(bytecode interpreter)"]
+    STACK["stack<br/>(operand stack / frames)"]
+    JNI["jni<br/>(JNI ABI bridge)"]
+    SN["system_native<br/>(native method impls)"]
+
+    CLI --> VM
+    VM --> MA & HEAP & EE
+    EE --> MA & HEAP & STACK & SN
+    SN --> JNI
+    JNI --> HEAP & MA
+```
+
+See [docs/architecture.md](docs/architecture.md) for the full set of diagrams, including the
+class-loading pipeline, heap memory model, execution loop, vtable dispatch, and JNI bridge.
+
+## Sub-crates
+
+The project is organised as a Cargo workspace.
+Components with well-defined, reusable APIs are published as independent crates:
+
+| Crate | Description |
+|---|---|
+| [`jclassfile`](jclassfile/) | `.class` file parser |
+| [`jdescriptor`](jdescriptor/) | JVM type-descriptor and method-signature parser |
+| [`jimage-rs`](jimage-rs/) | Reader for JDK `.jimage` archive files |
+| [`jniname`](jniname/) | JNI name-mangling utilities |
+
+## Roadmap
+
+The following milestones are planned in order:
+
+1. **Garbage Collection** — a tracing GC to reclaim unreachable heap objects.
+2. **Multithreading** — `java.lang.Thread`, `synchronized`, and the Java Memory Model.
+3. **JIT Compilation** — profile-guided native code generation for hot methods.
 
 ## Java Standard Library Classes
 
@@ -85,6 +131,12 @@ public class FruitCount {
 
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
+
+## Contributing
+
+Contributions are welcome!
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build the project, add integration tests,
+and implement new native methods.
 
 [//]: # (links)
 [platforms-image]: https://img.shields.io/badge/platforms-Linux%20%7C%20MacOS%20%7C%20Windows-blue

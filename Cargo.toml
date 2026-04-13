@@ -3,13 +3,13 @@ name = "rusty-jvm"
 version = "0.5.0"
 edition = "2021"
 rust-version = "1.80"
-description = "An implementation of a Java Virtual Machine (JVM)."
+description = "A Java Virtual Machine (JVM) implemented from scratch in Rust — interprets Java bytecode with no dependency on existing JVMs."
 documentation = "https://docs.rs/rusty-jvm"
 homepage = "https://github.com/hextriclosan/rusty-jvm"
 repository = "https://github.com/hextriclosan/rusty-jvm"
 readme = "README.md"
-keywords = ["jvm", "java", "virtual-machine", "interpreter", "jvm-implementation"]
-categories = ["command-line-utilities", "emulators", "virtualization"]
+keywords = ["jvm", "java", "bytecode", "interpreter", "virtual-machine"]
+categories = ["command-line-utilities", "emulators", "compilers"]
 license = "MIT"
 exclude = [".*", "docs/**", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
 
