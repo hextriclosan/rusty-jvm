@@ -3,7 +3,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::lookup;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
     jvalue, JNIEnv,
@@ -68,16 +68,13 @@ fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
     let instance_name = HEAP
         .get_instance_name(this)
         .expect("Failed to get instance name from reference");
-    let implementation = with_method_area(|method_area| {
-        method_area
-            .lookup_for_implementation(&instance_name, &name_signature)
-            .or_else(|| {
-                method_area.lookup_for_implementation_interface(&instance_name, &name_signature)
-            })
-    })
-    .unwrap_or_else(|| {
-        panic!("Failed to find implementation of {name_signature} for {instance_name}")
-    });
+    let implementation = lookup::lookup_method(&instance_name, &name_signature)
+        .unwrap_or_else(|e| {
+            panic!("Failed to find implementation of {name_signature} for {instance_name}: {e}")
+        })
+        .unwrap_or_else(|| {
+            panic!("Failed to find implementation of {name_signature} for {instance_name}")
+        });
 
     let implementation_klass_name = implementation.class_name().to_owned();
 

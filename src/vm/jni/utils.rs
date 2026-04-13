@@ -1,7 +1,7 @@
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::java_method::JavaMethod;
-use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::method_area::lookup;
 use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
 use jni_sys::{jclass, jmethodID, jvalue};
@@ -45,21 +45,16 @@ pub(super) fn get_method_id_impl(
 
     // Look up the method implementation in the class/interface hierarchy.
     let klass_name = declaring_klass.this_class_name().clone();
-    with_method_area(|method_area| {
-        method_area
-            .lookup_for_implementation(&klass_name, &full_signature)
-            .or_else(|| {
-                method_area.lookup_for_implementation_interface(&klass_name, &full_signature)
-            })
-    })
-    .and_then(|method| {
-        let found_class_name = method.class_name();
-        let found_clazz_ref = clazz_ref(found_class_name).ok()?;
-        let found_klass = klass(found_clazz_ref).ok()?;
-        let (idx, _) = found_klass.get_method_full(&full_signature)?;
-        Some(encode_method_id(found_clazz_ref, idx) as jmethodID)
-    })
-    .unwrap_or(null_mut()) // todo: throw NoSuchMethodError here
+    lookup::lookup_method(&klass_name, &full_signature)
+        .unwrap_or_else(|e| panic!("Failed to find implementation of {full_signature}: {e}"))
+        .and_then(|method| {
+            let found_class_name = method.class_name();
+            let found_clazz_ref = clazz_ref(found_class_name).ok()?;
+            let found_klass = klass(found_clazz_ref).ok()?;
+            let (idx, _) = found_klass.get_method_full(&full_signature)?;
+            Some(encode_method_id(found_clazz_ref, idx) as jmethodID)
+        })
+        .unwrap_or(null_mut()) // todo: throw NoSuchMethodError here
 }
 
 #[cfg(not(target_pointer_width = "64"))]

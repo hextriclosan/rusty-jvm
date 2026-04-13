@@ -3,7 +3,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::java_instance::{ClassName, FieldNameType, JavaInstance, JavaInstanceBase};
+use crate::vm::heap::java_instance::{JavaInstance, JavaInstanceBase};
 use crate::vm::helper::klass;
 use crate::vm::method_area::attributes_helper::AttributesHelper;
 use crate::vm::method_area::class_modifiers::ClassModifier;
@@ -410,162 +410,12 @@ impl MethodArea {
         ))
     }
 
-    pub fn lookup_for_static_field(
-        &self,
-        class_name: &str,
-        field_name: &str,
-    ) -> Result<(String, Arc<FieldValue>)> {
-        let klass = CLASSES.get(class_name)?;
-
-        if klass.is_interface() {
-            self.lookup_for_static_field_in_interface(&klass, class_name, field_name)
-        } else {
-            self.lookup_for_static_field_in_class(&klass, class_name, field_name)
-        }
-    }
-
-    fn lookup_for_static_field_in_class(
-        &self,
-        klass: &Arc<JavaClass>,
-        class_name: &str,
-        field_name: &str,
-    ) -> Result<(String, Arc<FieldValue>)> {
-        match klass.static_field(field_name) {
-            Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
-            None => match klass.parent() {
-                Some(parent_class_name) => {
-                    self.lookup_for_static_field(&parent_class_name, field_name)
-                }
-                None => Err(Error::new_execution(&format!(
-                    "No field {class_name}.{field_name} found in class hierarchy"
-                ))),
-            },
-        }
-    }
-
-    fn lookup_for_static_field_in_interface(
-        &self,
-        klass: &Arc<JavaClass>,
-        class_name: &str,
-        field_name: &str,
-    ) -> Result<(String, Arc<FieldValue>)> {
-        match klass.static_field(field_name) {
-            Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
-            None => {
-                let interfaces = klass.interfaces();
-                for interface_name in interfaces.iter() {
-                    match self.lookup_for_static_field(&interface_name, field_name) {
-                        Ok((interface_class_name, field)) => {
-                            return Ok((interface_class_name, field));
-                        }
-                        Err(_) => continue,
-                    }
-                }
-
-                Err(Error::new_execution(&format!(
-                    "No field {class_name}.{field_name} found in class hierarchy"
-                )))
-            }
-        }
-    }
-
-    pub fn lookup_for_implementation(
-        &self,
-        class_name: &str,
-        full_method_signature: &str,
-    ) -> Option<Arc<JavaMethod>> {
-        let klass = CLASSES.get(class_name).ok()?;
-
-        if let Some(java_method) = klass.try_get_method(full_method_signature) {
-            Some(Arc::clone(&java_method))
-        } else {
-            let parent_class_name = klass.parent().as_ref()?;
-            self.lookup_for_implementation(parent_class_name, full_method_signature)
-        }
-    }
-
-    pub fn lookup_for_implementation_interface(
-        &self,
-        class_name: &str,
-        full_method_signature: &str,
-    ) -> Option<Arc<JavaMethod>> {
-        let klass = CLASSES.get(class_name).ok()?;
-        if let Some(java_method) =
-            // lookup in interfaces for default methods
-            self.lookup_in_interface_hierarchy(klass.interfaces(), full_method_signature)
-        {
-            return Some(java_method);
-        }
-
-        // if not found in interfaces of current class, lookup in parent class
-        let parent_class_name = klass.parent().as_ref()?;
-        self.lookup_for_implementation_interface(parent_class_name, full_method_signature)
-    }
-
-    fn lookup_in_interface_hierarchy(
-        &self,
-        interfaces: &IndexSet<String>,
-        full_method_signature: &str,
-    ) -> Option<Arc<JavaMethod>> {
-        for interface_name in interfaces.iter() {
-            if let Some(interface_class) = CLASSES.get(interface_name).ok() {
-                if let Some(java_method) = interface_class.try_get_method(full_method_signature) {
-                    return Some(java_method);
-                }
-
-                if let Some(java_method) = self.lookup_in_interface_hierarchy(
-                    interface_class.interfaces(),
-                    full_method_signature,
-                ) {
-                    return Some(java_method);
-                }
-            }
-        }
-
-        None
-    }
-
-    pub fn lookup_for_field_descriptor(
-        &self,
-        class_name: &str,
-        field_name: &str,
-    ) -> Option<TypeDescriptor> {
-        let klass = CLASSES.get(class_name).ok()?;
-
-        if let Some(type_descriptor) = klass.instance_field_descriptor(field_name) {
-            Some(type_descriptor.clone())
-        } else {
-            let parent_class_name = klass.parent().clone()?;
-
-            self.lookup_for_field_descriptor(&parent_class_name, field_name)
-        }
-    }
-
     pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
         let (id, _key, klass) = CLASSES.get_full(class_name)?;
         Ok(JavaInstance::Base(JavaInstanceBase::new(
             id,
             klass.instance_fields_hierarchy()?.clone(),
         )))
-    }
-
-    pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
-        &self,
-        class_name: &str,
-        instance_fields_hierarchy: &mut IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
-    ) -> Result<()> {
-        let klass = CLASSES.get(class_name)?;
-        if let Some(parent_class_name) = klass.parent().as_ref() {
-            self.lookup_and_fill_instance_fields_hierarchy(
-                parent_class_name,
-                instance_fields_hierarchy,
-            )?;
-        };
-
-        let instance_fields = klass.default_value_instance_fields();
-        instance_fields_hierarchy.insert(class_name.to_string(), instance_fields);
-
-        Ok(())
     }
 
     pub(crate) fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {
