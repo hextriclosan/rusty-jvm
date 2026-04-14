@@ -18,7 +18,7 @@ The next major objectives include the integration of garbage collection and supp
 
 - 100% of actual opcodes ([JVMS §6][jvms-6])
 - Lambda Expressions ([JLS §15.27][jls-15.27])
-- Static initialization ([JVMS §5.5][jvms-5.5])
+- Static initialization ([JVMS §5.5][jvms-5.5], [implementation details](docs/class_static_initialization.md))
 - Polymorphic models ([JLS §8.4.8][jls-8.4.8])
 - Single- and multi-dimensional arrays ([JLS §10][jls-10])
 - Exceptions ([JLS §11][jls-11])
@@ -33,34 +33,36 @@ The next major objectives include the integration of garbage collection and supp
 - [java.nio][java.nio-api] (partially)
 - [java.util.zip][java.util.zip-api] (partially)
 - [java.lang.System][java.lang.system-api] (most features)
+- [JAR-files][jar] loading and execution
+- [Shared libraries loading and execution][jni-lib-load] (partially)
+- [Java Native Interface Functions][jni-funcs] (partially)
 
 See [integration tests](tests/test_data) for broader examples of supported Java features.
 
 ## Architecture
 
-The VM is composed of tightly-scoped modules — class loader, heap, operand-stack interpreter,
-JNI bridge, and native-method dispatch table — each with a narrow, well-typed interface:
+rusty-jvm is structured around five high-level concerns:
 
 ```mermaid
 graph TD
-    CLI["CLI / lib.rs"]
-    VM["vm/mod.rs<br/>(bootstrap)"]
-    MA["method_area<br/>(class loading, vtable)"]
-    HEAP["heap<br/>(objects & arrays)"]
-    EE["execution_engine<br/>(bytecode interpreter)"]
-    STACK["stack<br/>(operand stack / frames)"]
-    JNI["jni<br/>(JNI ABI bridge)"]
-    SN["system_native<br/>(native method impls)"]
+    CLI["CLI / Library API"]
+    VM["JVM Bootstrap"]
+    CL["Class Loader"]
+    HEAP["Heap"]
+    INTERP["Bytecode Interpreter"]
+    JNI["JNI Bridge"]
 
     CLI --> VM
-    VM --> MA & HEAP & EE
-    EE --> MA & HEAP & STACK & SN
-    SN --> JNI
-    JNI --> HEAP & MA
+    VM --> CL & HEAP & INTERP
+    INTERP --> CL & HEAP & JNI
+    JNI --> CL & HEAP
 ```
 
-See [docs/architecture.md](docs/architecture.md) for the full set of diagrams, including the
+See [architecture.md](docs/architecture.md) for detailed diagrams covering the
 class-loading pipeline, heap memory model, execution loop, vtable dispatch, and JNI bridge.
+
+## Design Decisions
+See [design-decisions.md](docs/design-decisions.md) for a detailed description of the design decisions made in this project.
 
 ## Sub-crates
 
@@ -73,6 +75,18 @@ Components with well-defined, reusable APIs are published as independent crates:
 | [`jdescriptor`](jdescriptor/) | JVM type-descriptor and method-signature parser |
 | [`jimage-rs`](jimage-rs/) | Reader for JDK `.jimage` archive files |
 | [`jniname`](jniname/) | JNI name-mangling utilities |
+
+```mermaid
+graph TD
+    JVM["rusty-jvm"]
+    JCF["jclassfile\n- class-file parser"]
+    JD["jdescriptor\n- type-descriptor parser"]
+    JI["jimage-rs\n- jimage-archive reader"]
+    JN["jniname\n- JNI name-mangling"]
+
+    JVM --> JCF & JD & JI & JN
+    JN --> JD
+```
 
 ## Roadmap
 
@@ -169,3 +183,6 @@ and implement new native methods.
 [java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/reflect/package-summary.html
 [java.util.zip-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/zip/package-summary.html
 [java.lang.system-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/System.html
+[jar]: https://docs.oracle.com/en/java/javase/25/docs/specs/jar/jar.html
+[jni-lib-load]: https://docs.oracle.com/en/java/javase/25/docs/specs/jni/design.html#compiling-loading-and-linking-native-methods
+[jni-funcs]: https://docs.oracle.com/en/java/javase/25/docs/specs/jni/functions.html

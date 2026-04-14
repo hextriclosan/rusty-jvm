@@ -103,7 +103,7 @@ name and asserts that stdout equals the expected string.
 ```
 rusty-jvm/
 ├── src/
-│   ├── lib.rs               # Public API: Arguments, run()
+│   ├── lib.rs                # Public API: Arguments, run()
 │   └── vm/
 │       ├── execution_engine/ # Bytecode interpreter & opcode processors
 │       ├── heap/             # Object and array storage

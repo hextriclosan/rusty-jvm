@@ -1,7 +1,6 @@
 # Class Static Initialization
 
-This document describes how `rusty-jvm` implements the class static initialization
-process (JVMS §5.5 - *Initialization*).
+This document describes how `rusty-jvm` implements the class static initialization process ([JVMS §5.5][jvms-5.5]).
 
 ---
 
@@ -12,26 +11,6 @@ the class is first actively used.  The implementation lives in
 `src/vm/execution_engine/static_init.rs` (`StaticInit`) and uses a per-class
 `ReentrantMutex<InitState>` to guarantee at-most-once execution even under
 recursive or re-entrant calls.
-
----
-
-## Trigger Points
-
-`StaticInit::initialize` is called from several places:
-
-| Trigger | Source |
-|---|---|
-| VM bootstrap | `vm/mod.rs` (e.g. `UnsafeConstants`, `java/lang/reflect/Method`) |
-| `getstatic` / `putstatic` opcodes | `ops_reference_processor.rs` |
-| `invokestatic` opcode | `ops_reference_processor.rs` |
-| `new` opcode | `ops_reference_processor.rs` |
-| `ldc` constant resolution | `ldc_resolution_manager.rs` |
-| JNI `GetStaticFieldID` / static field access | `jni/static_fields_impl.rs` |
-| JNI instance field access | `jni/object_fields_impl.rs` |
-| JNI method invocation | `jni/utils.rs` |
-| `Class.forName` native | `system_native/class.rs` |
-| `Unsafe.ensureClassInitialized` native | `system_native/unsafe_.rs` |
-| MethodHandle resolution | `system_native/method_handle_natives/invocation.rs` |
 
 ---
 
@@ -92,11 +71,13 @@ flowchart TD
 * **Re-entrancy safety** - `ReentrantMutex` allows the same OS thread to
   re-acquire the lock.  If `<clinit>` of class `A` references class `A` again
   (directly or transitively), the inner call sees `Initializing` and returns
-  immediately, matching the permissive re-entrancy rule in JVMS §5.5 step 3.
+  immediately, matching the permissive re-entrancy rule in [JVMS §5.5][jvms-5.5] step 3.
 
 * **Parent-first ordering** - the superclass chain is initialized depth-first
-  before the subclass's own `<clinit>` runs, honoring JVMS §5.5 step 7.
+  before the subclass's own `<clinit>` runs, honoring [JVMS §5.5][jvms-5.5] step 7.
 
 * **No `<clinit>` → no overhead** - if a class has no static initializer the
-  state is still advanced to `Initialized` so subsequent checks are O(1) mutex
+  state is still advanced to `Initialized` so further checks are O(1) mutex
   acquires followed by an immediate return.
+
+[jvms-5.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5

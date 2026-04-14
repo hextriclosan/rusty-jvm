@@ -16,7 +16,7 @@ represented as a plain `i32`.
 The JVM Specification ([JVMS §2.6.2][jvms-2.6.2]) defines the operand stack as a sequence of
 *values*, each occupying one or two *slots* of 32 bits.
 Object references are one-slot values, so an `i32` is the natural Rust type - it requires no
-boxing and is copy-able without unsafe code.
+boxing and is copyable without unsafe code.
 
 Keeping references as `i32` also means:
 - The stack, local-variable array, and heap can all be `Vec<i32>`,

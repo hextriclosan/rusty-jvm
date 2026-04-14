@@ -75,6 +75,9 @@ sequenceDiagram
     MA-->>EE: Arc<JavaClass>
 ```
 
+### 2.1 Class Static Initialization
+Refer dedicated [document](class_static_initialization.md)
+
 ---
 
 ## 3. Heap Memory Model
