@@ -43,9 +43,6 @@ jobs:
         with:
           tool: nextest
 
-      - name: Build jni_test_lib
-        run: cargo build -p jni_test_lib
-
       - name: Run tests
         run: cargo nextest run --workspace --locked --no-fail-fast --jobs 16
 
@@ -59,31 +56,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
-      - name: Cache Rust (s390x)
-        uses: Swatinem/rust-cache@v2
         with:
-          cache-targets: s390x-unknown-linux-gnu
+          platforms: s390x
 
-      - name: Install cross
-        uses: taiki-e/install-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build s390x test environment image
+        uses: docker/build-push-action@v6
         with:
-          tool: cross
+          context: .github/docker/s390x
+          load: true
+          tags: s390x-test-env:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build jni_test_lib on s390x (Big Endian)
+      - name: Build jni_test_lib for s390x (Big Endian)
         run: |
-          unset RUSTC_WRAPPER
-          cross build -p jni_test_lib --target s390x-unknown-linux-gnu
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            s390x-test-env:latest \
+            cargo build --locked -p jni_test_lib --target s390x-unknown-linux-gnu
 
       - name: Run tests on s390x (Big Endian)
         run: |
-          unset RUSTC_WRAPPER
-          cross test --workspace --target s390x-unknown-linux-gnu --verbose -- --test-threads=8
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            s390x-test-env:latest \
+            cargo nextest run --workspace --locked --target s390x-unknown-linux-gnu --no-fail-fast --jobs 8
 
   build-and-test-with-coverage:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -115,9 +119,6 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov, nextest
-
-      - name: Build jni_test_lib
-        run: cargo build -p jni_test_lib
 
       - name: Run tests with coverage
         run: cargo llvm-cov nextest --jobs 16 --locked --workspace --lcov --output-path lcov.info
