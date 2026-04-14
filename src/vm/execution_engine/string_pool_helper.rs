@@ -20,7 +20,7 @@ impl StringPoolHelper {
             return Self::create_empty_string();
         }
 
-        let codepoints = Self::string_to_codepoints(&string);
+        let codepoints = Self::string_to_codepoints(string);
         let array_ref = HEAP.create_array_with_values("[I", &codepoints);
 
         let args = vec![array_ref.into(), 0.into(), (codepoints.len() as i32).into()];
@@ -37,7 +37,7 @@ impl StringPoolHelper {
 
     // todo: consider creating all CPool strings like this
     fn create_empty_string() -> Result<i32> {
-        let byte_array_ref = HEAP.create_array_with_values("[B", &vec![]);
+        let byte_array_ref = HEAP.create_array_with_values("[B", &[]);
         let args = vec![byte_array_ref.into(), 0.into() /*coder LATIN1*/];
         let string_instance_ref = Executor::invoke_args_constructor(
             "java/lang/String",

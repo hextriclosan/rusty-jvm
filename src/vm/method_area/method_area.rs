@@ -39,7 +39,7 @@ where
 {
     let method_area = METHOD_AREA.get().expect("error getting method area");
 
-    f(&method_area)
+    f(method_area)
 }
 
 #[derive(Debug)]
@@ -157,7 +157,7 @@ impl MethodArea {
     }
 
     fn try_parse(&self, buff: &[u8]) -> Result<Option<Arc<JavaClass>>> {
-        let class_file = parse(&buff)?;
+        let class_file = parse(buff)?;
 
         // todo: add and use handy wrapper_getter here
         let cpool_helper = CPoolHelper::new(class_file.constant_pool());
@@ -214,9 +214,9 @@ impl MethodArea {
             })
             .collect::<Result<IndexSet<String>>>()?;
 
-        let methods = Self::get_methods(&class_file.methods(), &cpool_helper, &class_name)?;
+        let methods = Self::get_methods(class_file.methods(), &cpool_helper, &class_name)?;
         let (fields_info, static_fields, instance_fields_template) =
-            Self::get_fields(&class_file.fields(), &cpool_helper, &class_name)?;
+            Self::get_fields(class_file.fields(), &cpool_helper, &class_name)?;
 
         let access_flags = class_file.access_flags().bits();
 
@@ -226,7 +226,7 @@ impl MethodArea {
 
         let annotations_raw = attributes_helper
             .get_annotations(&cpool_helper)
-            .and_then(|(_annotations, annotations_raw)| Some(annotations_raw));
+            .map(|(_annotations, annotations_raw)| annotations_raw);
 
         let enclosing_method = Self::get_enclosing_method(&attributes_helper, &cpool_helper);
         let source_file = Self::get_source_file(&attributes_helper, &cpool_helper);
@@ -309,7 +309,7 @@ impl MethodArea {
             let exception_indexes = attributes_helper.get_exception_indexes().unwrap_or(vec![]);
 
             let annotation_default_raw = attributes_helper.get_annotation_default_raw();
-            let result = attributes_helper.get_annotations(&helper);
+            let result = attributes_helper.get_annotations(helper);
 
             let (runtime_visible_annotations, annotations_raw) = match result {
                 Some((annotations, annotations_raw)) => (annotations, Some(annotations_raw)),

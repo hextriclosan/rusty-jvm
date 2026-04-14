@@ -63,7 +63,7 @@ impl JNIValue for jint {
     }
 
     fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
+        vec![(*self)]
     }
 }
 
@@ -100,9 +100,7 @@ impl JNIValue for jdouble {
 }
 
 impl JNIValue for () {
-    fn from_vec(_v: &[i32]) -> Self {
-        ()
-    }
+    fn from_vec(_v: &[i32]) -> Self {}
 
     fn to_vec(&self) -> Vec<i32> {
         vec![]

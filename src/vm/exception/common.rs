@@ -16,7 +16,7 @@ pub fn construct_exception_and_throw(
     let exception_instance_ref = Executor::invoke_args_constructor(
         exception_class_name,
         constructor_signature,
-        &args,
+        args,
         Some(&format!(
             "construction of {exception_class_name}:{constructor_signature}({args:?}) instance"
         )),

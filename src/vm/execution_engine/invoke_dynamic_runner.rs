@@ -116,7 +116,7 @@ impl InvokeDynamicRunner {
         let entry = &self
             .resolved_methods
             .entry(invokedynamic_index)
-            .or_try_insert_with(|| Self::resolve(&current_class_name, invokedynamic_index))?;
+            .or_try_insert_with(|| Self::resolve(current_class_name, invokedynamic_index))?;
         let resolved_method = entry.value();
 
         let method_handle_dynamic_invoked_ref =
@@ -133,7 +133,7 @@ impl InvokeDynamicRunner {
 
     fn resolve(current_class_name: &str, invokedynamic_index: u16) -> Result<ResolvedMethod> {
         let bootstrap_info =
-            Self::extract_bootstrap_info(&current_class_name, invokedynamic_index)?;
+            Self::extract_bootstrap_info(current_class_name, invokedynamic_index)?;
         let args = Self::prepare_args(current_class_name, &bootstrap_info)?;
         let method_handle_dynamic_invoked_ref = Self::build_method_handle_dynamic_invoked(&args)?;
 

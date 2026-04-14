@@ -210,7 +210,7 @@ fn lookup_for_static_field_in_class(
     match klass.static_field(field_name) {
         Some(field) => Ok(Some((class_name.to_string(), Arc::clone(&field)))),
         None => match klass.parent() {
-            Some(parent_class_name) => lookup_for_static_field(&parent_class_name, field_name),
+            Some(parent_class_name) => lookup_for_static_field(parent_class_name, field_name),
             None => Err(Error::new_execution(&format!(
                 "No field {class_name}.{field_name} found in class hierarchy"
             ))),

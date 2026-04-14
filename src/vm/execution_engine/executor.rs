@@ -90,7 +90,7 @@ impl Executor {
         detailed_reason: Option<&str>,
     ) -> Result<i32> {
         let instance_with_default_fields = with_method_area(|method_area| {
-            method_area.create_instance_with_default_fields(&class_name)
+            method_area.create_instance_with_default_fields(class_name)
         })?;
 
         let instance_ref = HEAP.create_instance(instance_with_default_fields);

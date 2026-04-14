@@ -65,7 +65,7 @@ pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn init_class_name(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     let class_name = klass.external_name();
-    let string_ref = StringPoolHelper::get_string(&class_name)?;
+    let string_ref = StringPoolHelper::get_string(class_name)?;
 
     HEAP.set_object_field_value(class_ref, "java/lang/Class", "name", vec![string_ref])?;
 
@@ -158,10 +158,7 @@ fn get_declaring_class0(class_ref: i32) -> Result<i32> {
     let declaring_class_ref = klass
         .declaring_class()
         .as_ref()
-        .map(|declaring_class| {
-            let declaring_class_ref = clazz_ref(declaring_class);
-            declaring_class_ref
-        })
+        .map(|declaring_class| clazz_ref(declaring_class))
         .unwrap_or(Ok(0));
 
     declaring_class_ref
@@ -248,9 +245,9 @@ pub(crate) fn get_enclosing_method0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     if let Some((class_name, name, descriptor)) = klass.enclosing_method() {
-        let class_name_ref = clazz_ref(&class_name)?;
-        let name_ref = StringPoolHelper::get_string(&name)?;
-        let descriptor_ref = StringPoolHelper::get_string(&descriptor)?;
+        let class_name_ref = clazz_ref(class_name)?;
+        let name_ref = StringPoolHelper::get_string(name)?;
+        let descriptor_ref = StringPoolHelper::get_string(descriptor)?;
 
         let array_ref = HEAP.create_array_with_values(
             "[Ljava/lang/reflect/Method;",
@@ -277,8 +274,8 @@ fn get_raw_annotations(class_ref: i32) -> Result<i32> {
                 .iter()
                 .map(|x| *x as i32)
                 .collect::<Vec<_>>();
-            let annotations = HEAP.create_array_with_values("[B", &vec);
-            annotations
+
+            HEAP.create_array_with_values("[B", &vec)
         })
         .unwrap_or(0);
 
@@ -298,7 +295,7 @@ fn get_simple_binary_name0(class_ref: i32) -> Result<i32> {
         .rsplit_once('$')
         .map(|(_, last_token)| last_token)
         .filter(|s| s.parse::<u64>().is_err())
-        .map(|s| StringPoolHelper::get_string(s))
+        .map(StringPoolHelper::get_string)
         .unwrap_or(Ok(0));
     string_ref
 }
@@ -341,7 +338,7 @@ pub(crate) fn get_constant_pool_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![constant_pool_ref])
 }
 fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
-    const NAME: &'static str = "jdk/internal/reflect/ConstantPool";
+    const NAME: &str = "jdk/internal/reflect/ConstantPool";
     let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
     HEAP.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])?;
 
@@ -357,7 +354,7 @@ fn get_nest_host0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
 
     let nest_host_class_ref = strip_nest_host(klass.this_class_name())
-        .map(|name| clazz_ref(name))
+        .map(clazz_ref)
         .unwrap_or(Ok(class_ref));
 
     nest_host_class_ref
@@ -374,6 +371,6 @@ fn is_record0(clazz_ref: i32) -> Result<bool> {
         && klass
             .parent()
             .as_ref()
-            .map_or(false, |p| p == "java/lang/Record");
+            .is_some_and(|p| p == "java/lang/Record");
     Ok(record)
 }

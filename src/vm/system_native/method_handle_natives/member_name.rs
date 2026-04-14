@@ -11,7 +11,7 @@ use crate::vm::system_native::method_handle_natives::types::ReferenceKind::{
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use getset::{CopyGetters, Getters};
 
-const MEMBER_NAME: &'static str = "java/lang/invoke/MemberName";
+const MEMBER_NAME: &str = "java/lang/invoke/MemberName";
 
 #[derive(Debug, Getters, CopyGetters)]
 pub struct MemberName {

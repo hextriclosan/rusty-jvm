@@ -53,7 +53,7 @@ impl ExceptionTable {
         if self.table.is_empty() {
             trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
         }
-        const FINALLY_MARK: &'static str = "any";
+        const FINALLY_MARK: &str = "any";
         for record in self.table.iter() {
             trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
             if pc < record.start_pc || pc >= record.end_pc {

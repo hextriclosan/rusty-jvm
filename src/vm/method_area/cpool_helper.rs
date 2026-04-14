@@ -105,7 +105,7 @@ impl CPoolHelper {
 
         for (index, item) in cpool.iter().enumerate() {
             let ctype = item.into();
-            let entry = data.entry(ctype).or_insert_with(HashMap::new);
+            let entry = data.entry(ctype).or_default();
             entry.insert(index as u16, item.clone());
         }
 

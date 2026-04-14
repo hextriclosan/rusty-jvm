@@ -242,7 +242,7 @@ impl PerfFile {
         mmap[8..12].copy_from_slice(&(new_used as i32).to_ne_bytes());
         mmap[16..24].copy_from_slice(&time_stamp_ns()?.to_ne_bytes());
         mmap[28..32].copy_from_slice(&(new_num_entries).to_ne_bytes());
-        let _ = mmap.flush()?;
+        mmap.flush()?;
 
         self.names.insert(entry.name);
         Ok((mmap[data_offset..data_end].as_ptr(), data_end - data_offset))

@@ -74,17 +74,12 @@ impl InitState {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum InnerState {
+    #[default]
     NotInitialized,
     Initializing,
     Initialized,
-}
-
-impl Default for InnerState {
-    fn default() -> Self {
-        InnerState::NotInitialized
-    }
 }
 
 impl JavaClass {
@@ -135,9 +130,7 @@ impl JavaClass {
     }
 
     pub fn static_field(&self, field_name: &str) -> Option<Arc<FieldValue>> {
-        self.static_fields
-            .get(field_name)
-            .map(|field| Arc::clone(field))
+        self.static_fields.get(field_name).map(Arc::clone)
     }
 
     pub fn field_info(&self, field_name: &str) -> Option<&Arc<FieldInfo>> {
@@ -208,7 +201,7 @@ impl JavaClass {
             .ok_or_else(|| {
                 Error::new_execution(&format!("Failed to get static field by offset {offset}"))
             })?;
-        Ok(Arc::clone(&field_value))
+        Ok(Arc::clone(field_value))
     }
 
     pub fn get_field_name_by_offset(&self, offset: i64) -> Result<(String, String)> {
@@ -250,12 +243,12 @@ impl JavaClass {
 
     pub fn try_get_method(&self, full_signature: &str) -> Option<Arc<JavaMethod>> {
         self.get_method_full(full_signature)
-            .and_then(|(_index, method)| Some(Arc::clone(&method)))
+            .map(|(_index, method)| Arc::clone(&method))
     }
 
     pub fn get_method(&self, full_signature: &str) -> Result<Arc<JavaMethod>> {
         self.get_method_full(full_signature)
-            .and_then(|(_index, method)| Some(Arc::clone(&method)))
+            .map(|(_index, method)| Arc::clone(&method))
             .ok_or_else(|| {
                 Error::new_execution(&format!(
                     "Method {full_signature} not found in {}",
@@ -267,7 +260,7 @@ impl JavaClass {
     pub fn get_method_by_index(&self, method_index: i64) -> Result<Arc<JavaMethod>> {
         self.methods
             .get_index(method_index as usize)
-            .and_then(|(_key, method)| Some(Arc::clone(&method)))
+            .map(|(_key, method)| Arc::clone(method))
             .ok_or_else(|| {
                 Error::new_execution(&format!("Failed to get method by index {method_index}"))
             })
@@ -276,7 +269,7 @@ impl JavaClass {
     pub fn get_fields_info(&self) -> Vec<Arc<FieldInfo>> {
         self.fields_info
             .values()
-            .map(|v| Arc::clone(v))
+            .map(Arc::clone)
             .collect::<Vec<_>>()
     }
 

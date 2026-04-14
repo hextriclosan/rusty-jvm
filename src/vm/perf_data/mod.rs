@@ -60,7 +60,7 @@ pub(crate) fn create_byte_array(
     };
 
     let mut guard = mutex.lock()?;
-    guard.create_byte_array(&name, variability, units, value, max_len)
+    guard.create_byte_array(name, variability, units, value, max_len)
 }
 
 pub(crate) fn contains_name(name: &str) -> Result<bool> {

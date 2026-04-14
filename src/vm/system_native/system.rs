@@ -200,12 +200,12 @@ pub(crate) fn arraycopy(
                 let element_type_name = unwrap_or_return_err!(HEAP.get_instance_name(element_ref));
                 if !unwrap_or_return_err!(InstanceChecker::checkcast(
                     &element_type_name,
-                    &dest_element_type
+                    dest_element_type
                 )) {
                     throw_and_return!(throw_array_store_exception(
                         &format!(
                             "arraycopy: element type mismatch: can not cast one of the elements of {}[] to the type of the destination array, {}",
-                            to_external(&undecorate(&src_name[1..])),
+                            to_external(undecorate(&src_name[1..])),
                             to_external(dest_element_type),
                         ),
                         stack_frames

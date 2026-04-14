@@ -142,7 +142,7 @@ impl LoadedClasses {
             return Ok((id, key.to_string(), Arc::clone(&klass)));
         }
 
-        let klass_id = self.insert_full_impl(fully_qualified_class_name, Arc::clone(&klass));
+        let klass_id = self.insert_full_impl(fully_qualified_class_name, Arc::clone(klass));
         trace!("<CLASS LOADED> -> {}", fully_qualified_class_name);
 
         let (class_klass_id, _name, class_klass) = self.get_full_impl(CLASS).ok_or_else(|| {
@@ -150,7 +150,7 @@ impl LoadedClasses {
         })?;
 
         Self::create_clazz_instance(
-            &klass,
+            klass,
             klass_id,
             &class_klass,
             class_klass_id,
@@ -161,7 +161,7 @@ impl LoadedClasses {
         Ok((
             klass_id,
             fully_qualified_class_name.to_string(),
-            Arc::clone(&klass),
+            Arc::clone(klass),
         ))
     }
 
@@ -211,7 +211,7 @@ impl LoadedClasses {
             }
 
             // Finally, create the full array class
-            self.perform_insertion(&array_klass, Some(component_type_ref), class_loader_ref)
+            self.perform_insertion(array_klass, Some(component_type_ref), class_loader_ref)
         } else {
             Err(Error::new_execution(&format!(
                 "Unexpected descriptor {fully_qualified_class_name}"

@@ -158,15 +158,15 @@ pub fn resolve_method_handle(
         ReferenceKind::REF_invokeStatic
         | ReferenceKind::REF_invokeInterface
         | ReferenceKind::REF_invokeVirtual => {
-            let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
+            let method_type_ref = build_methodtype_ref(method_or_field_descriptor)?;
             vec![refc.into(), method_name_ref.into(), method_type_ref.into()]
         }
         ReferenceKind::REF_newInvokeSpecial => {
-            let method_type_ref = build_methodtype_ref(&method_or_field_descriptor)?;
+            let method_type_ref = build_methodtype_ref(method_or_field_descriptor)?;
             vec![refc.into(), method_type_ref.into()]
         }
         ReferenceKind::REF_getField => {
-            let field_type_ref = clazz_ref(&method_or_field_descriptor)?;
+            let field_type_ref = clazz_ref(method_or_field_descriptor)?;
             vec![refc.into(), method_name_ref.into(), field_type_ref.into()]
         }
         ReferenceKind::REF_getStatic

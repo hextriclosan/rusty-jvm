@@ -227,7 +227,7 @@ impl JavaInstance {
         value: Vec<i32>,
     ) -> Result<()> {
         self.lookup_for_field_mut(class_name, field_name_type)
-            .and_then(|v| Some(v.set_raw_value(value)))
+            .map(|v| v.set_raw_value(value))
             .ok_or_else(|| {
                 Error::new_execution(&format!(
                     "error setting value for instance field {class_name}.{field_name_type}"
@@ -237,7 +237,7 @@ impl JavaInstance {
 
     pub fn get_field_value(&self, class_name: &str, field_name_type: &str) -> Result<Vec<i32>> {
         self.lookup_for_field(class_name, field_name_type)
-            .and_then(|v| Some(v.raw_value()))
+            .map(|v| v.raw_value())
             .ok_or(Error::new_execution(&format!(
                 "error getting instance field value {class_name}.{field_name_type}"
             )))?

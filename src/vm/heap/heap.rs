@@ -349,7 +349,7 @@ impl Heap {
         let cloned_heap_value = {
             self.data
                 .get(objectref)
-                .and_then(|entry| Some(entry.value().clone()))
+                .map(|entry| entry.value().clone())
                 .ok_or_else(|| {
                     Error::new_execution(&format!(
                         "error getting object by ref {objectref} for cloning"

@@ -17,7 +17,7 @@ impl StaticInit {
     }
 
     pub fn initialize_java_class(java_class: &JavaClass) -> Result<()> {
-        Self::initialization_impl(&java_class)
+        Self::initialization_impl(java_class)
     }
 
     fn initialization_impl(java_class: &JavaClass) -> Result<()> {
