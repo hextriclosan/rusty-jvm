@@ -3696,3 +3696,11 @@ fn should_run_jar() {
         HashMap::default(),
     );
 }
+
+#[test]
+fn should_use_proper_interface_static_field() {
+    assert_success(
+        "samples.staticfield.interfacehierarchy.StaticFieldFromSecondParentInterfaceExample",
+        "42\n",
+    );
+}

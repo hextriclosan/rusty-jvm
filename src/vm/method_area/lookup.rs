@@ -51,11 +51,11 @@ pub(crate) fn build_vtable(class_name: &str) -> Result<IndexMap<String, Arc<Java
 }
 
 /// Resolves a static field by walking the class/interface hierarchy.
-/// Returns the declaring class name together with the field value.
+/// Returns the class where the field was found and a reference to the field value, or `None` if not found.
 pub(crate) fn lookup_for_static_field(
     class_name: &str,
     field_name: &str,
-) -> Result<(String, Arc<FieldValue>)> {
+) -> Result<Option<(String, Arc<FieldValue>)>> {
     let klass = CLASSES.get(class_name)?;
 
     if klass.is_interface() {
@@ -206,9 +206,9 @@ fn lookup_for_static_field_in_class(
     klass: &Arc<JavaClass>,
     class_name: &str,
     field_name: &str,
-) -> Result<(String, Arc<FieldValue>)> {
+) -> Result<Option<(String, Arc<FieldValue>)>> {
     match klass.static_field(field_name) {
-        Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
+        Some(field) => Ok(Some((class_name.to_string(), Arc::clone(&field)))),
         None => match klass.parent() {
             Some(parent_class_name) => lookup_for_static_field(&parent_class_name, field_name),
             None => Err(Error::new_execution(&format!(
@@ -222,23 +222,22 @@ fn lookup_for_static_field_in_interface(
     klass: &Arc<JavaClass>,
     class_name: &str,
     field_name: &str,
-) -> Result<(String, Arc<FieldValue>)> {
+) -> Result<Option<(String, Arc<FieldValue>)>> {
     match klass.static_field(field_name) {
-        Some(field) => Ok((class_name.to_string(), Arc::clone(&field))),
+        Some(field) => Ok(Some((class_name.to_string(), Arc::clone(&field)))),
         None => {
             let interfaces = klass.interfaces();
             for interface_name in interfaces.iter() {
                 match lookup_for_static_field(interface_name, field_name) {
-                    Ok((interface_class_name, field)) => {
-                        return Ok((interface_class_name, field));
+                    Ok(Some((interface_class_name, field))) => {
+                        return Ok(Some((interface_class_name, field)));
                     }
-                    Err(_) => continue, // todo: 1. add test for this case; 2. refactor this approach
+                    Ok(None) => continue,
+                    Err(e) => return Err(e),
                 }
             }
 
-            Err(Error::new_execution(&format!(
-                "No field {class_name}.{field_name} found in class hierarchy"
-            )))
+            Ok(None)
         }
     }
 }
