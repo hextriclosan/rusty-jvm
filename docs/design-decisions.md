@@ -19,7 +19,7 @@ Object references are one-slot values, so an `i32` is the natural Rust type - it
 boxing and is copy-able without unsafe code.
 
 Keeping references as `i32` also means:
-- The stack, local-variable array, and heap can all be `Vec<i32>` / `HashMap<i32, …>`,
+- The stack, local-variable array, and heap can all be `Vec<i32>`,
   which are safe, allocation-efficient, and trivially serialisable for debugging.
 - 0 maps cleanly to the JVM `null` reference.
 - No pointer arithmetic or lifetime juggling is needed at this stage of the project.
@@ -35,7 +35,7 @@ anyway, so the abstraction surface is deliberately kept thin.
 
 ## 2. Vtable stored as `OnceCell<IndexMap<String, Arc<JavaMethod>>>`
 
-**Decision:** Each `JavaClass` holds its vtable in an `OnceCell<IndexMap<String, Arc<JavaMethod>>>`,
+**Decision:** Each `JavaClass` holds its vtable in a `OnceCell<IndexMap<String, Arc<JavaMethod>>>`,
 initialised lazily on first virtual dispatch.
 
 **Reasoning:**
@@ -90,8 +90,9 @@ that currently holds an `i32` reference.
 ## 4. Static native method dispatch via a lookup table
 
 **Decision:** JDK native methods are dispatched through a static `HashMap` in
-`system_native_table.rs` that maps `"ClassName.methodName(descriptor)"` to a Rust function
-pointer.
+`system_native_table.rs` that maps a single string key in the format
+`"java/lang/System:nanoTime:()J"` (that is, `internal/class/Name:methodName:descriptor`) to a
+Rust function pointer.
 
 **Reasoning:**
 The alternative - loading the JDK's own native libraries (`.so`/`.dll`) at runtime - is

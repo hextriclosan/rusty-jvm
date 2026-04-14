@@ -11,7 +11,7 @@ readme = "README.md"
 keywords = ["jvm", "java", "bytecode", "interpreter", "virtual-machine"]
 categories = ["command-line-utilities", "emulators", "compilers"]
 license = "MIT"
-exclude = [".*", "docs/**", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
+exclude = [".*", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
 
 [workspace]
 members = ["jclassfile", "jdescriptor", "jimage-rs", "jniname", "tests/jni_test_lib"]

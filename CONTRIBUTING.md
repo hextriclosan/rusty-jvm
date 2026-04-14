@@ -6,13 +6,13 @@ This guide explains how to build the project, run the tests, and extend the VM w
 ---
 
 ## Table of Contents
-
-1. [Building the project](#building-the-project)
-2. [Running the tests](#running-the-tests)
-3. [Adding an integration test](#adding-an-integration-test)
-4. [Adding a new native method](#adding-a-new-native-method)
-5. [Project structure](#project-structure)
-6. [Relevant JVM Specification sections](#relevant-jvm-specification-sections)
+- [Building the project](#building-the-project)
+  - [Prerequisites](#prerequisites)
+- [Running the tests](#running-the-tests)
+- [Adding an integration test](#adding-an-integration-test)
+  - [Step 1 - Write the Java program](#step-1---write-the-java-program)
+  - [Step 2 - Add the test function](#step-2---add-the-test-function)
+- [Project structure](#project-structure)
 
 ---
 
@@ -66,6 +66,7 @@ Each integration test consists of:
 Create `tests/test_data/<YourExample>.java`.
 The file should define a `public class <YourExample>` with a `main` method.
 Place it in the appropriate package under `samples/` if it is more than a trivial snippet.
+No need to compile it manually, the test runner will do that for you.
 
 ```java
 // tests/test_data/samples/javacore/trivial/HelloContributor.java
@@ -78,17 +79,7 @@ public class HelloContributor {
 }
 ```
 
-### Step 2 - Compile it
-
-```sh
-cd tests/test_data
-javac -d . samples/javacore/trivial/HelloContributor.java
-```
-
-The compiled `.class` file must live alongside the source in the repository so that CI can
-run the tests without a separate compilation step.
-
-### Step 3 - Add the test function
+### Step 2 - Add the test function
 
 Open `tests/integration_tests.rs` and add:
 
@@ -104,53 +95,6 @@ fn hello_contributor() {
 
 `assert_success` is defined in `tests/utils.rs`; it invokes `cargo run` with the given class
 name and asserts that stdout equals the expected string.
-
----
-
-## Adding a new native method
-
-JDK classes often declare methods as `native`, meaning the implementation lives in C/C++ inside
-the JDK itself.
-`rusty-jvm` replaces those implementations with Rust code registered in a static lookup table.
-
-### Step 1 - Find the JVM method signature
-
-Look up the method's JVM internal descriptor.
-For example, `System.nanoTime()` has the descriptor `()J` (no args, returns `long`).
-
-### Step 2 - Write the Rust implementation
-
-Add an implementation function in `src/vm/system_native/`.
-Put related methods in an appropriate existing file, or create a new one for a new class.
-
-```rust
-// src/vm/system_native/system.rs  (example)
-pub(crate) fn nano_time(_args: &[i32]) -> crate::vm::error::Result<Option<Vec<i32>>> {
-    let nanos = /* … platform call … */;
-    Ok(Some(vec![(nanos >> 32) as i32, nanos as i32]))
-}
-```
-
-Return `Ok(None)` for `void` methods, or `Ok(Some(vec![…]))` where the `Vec<i32>` encodes the
-return value in JVM stack-slot format (one `i32` per 32-bit slot; `long`/`double` use two slots,
-high word first).
-
-### Step 3 - Register the method
-
-Open `src/vm/execution_engine/system_native_table.rs` and add an entry to the `NATIVE_TABLE`
-static map:
-
-```rust
-("java/lang/System", "nanoTime", "()J") => system::nano_time,
-```
-
-The key is a `(class_name, method_name, descriptor)` triple using JVM internal names
-(slashes, not dots).
-
-### Step 4 - Add an integration test
-
-Follow the [integration test guide](#adding-an-integration-test) to verify the new method works
-end-to-end with a real Java program.
 
 ---
 
@@ -173,27 +117,10 @@ rusty-jvm/
 ├── tests/
 │   ├── test_data/            # Java source and .class files for integration tests
 │   ├── integration_tests.rs  # Main integration test suite
-│   └── utils.rs              # Test helpers (assert_success, …)
+│   └── utils.rs              # Test helpers (assert_success, etc.)
 ├── jclassfile/               # Sub-crate: .class file parser
 ├── jdescriptor/              # Sub-crate: JVM type descriptor parser
 ├── jimage-rs/                # Sub-crate: JDK jimage archive reader
 ├── jniname/                  # Sub-crate: JNI name mangling utilities
-└── docs/
-    ├── architecture.md       # Architecture diagrams (Mermaid)
-    └── design-decisions.md   # Key design decision records
+└── docs/                     # Design docs and architecture diagrams
 ```
-
----
-
-## Relevant JVM Specification sections
-
-| Topic | JVMS section |
-|---|---|
-| Class file format | [§4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html) |
-| Class loading & resolution | [§5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html) |
-| Bytecode instruction set | [§6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html) |
-| Operand stack & frames | [§2.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6) |
-| Static initialisation | [§5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5) |
-| Virtual method dispatch | [§5.4.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5) |
-| `invokedynamic` | [§6.5 invokedynamic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic) |
-| Exceptions | [§2.10](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.10) |
