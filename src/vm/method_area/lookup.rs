@@ -51,7 +51,7 @@ pub(crate) fn build_vtable(class_name: &str) -> Result<IndexMap<String, Arc<Java
 }
 
 /// Resolves a static field by walking the class/interface hierarchy.
-/// Returns the declaring class name together with the field value.
+/// Returns the class where the field was found and a reference to the field value, or `None` if not found.
 pub(crate) fn lookup_for_static_field(
     class_name: &str,
     field_name: &str,
@@ -230,7 +230,7 @@ fn lookup_for_static_field_in_interface(
             for interface_name in interfaces.iter() {
                 match lookup_for_static_field(interface_name, field_name) {
                     Ok(Some((interface_class_name, field))) => {
-                        return Ok(Some((interface_class_name, field)))
+                        return Ok(Some((interface_class_name, field)));
                     }
                     Ok(None) => continue,
                     Err(e) => return Err(e),

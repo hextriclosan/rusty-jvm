@@ -32,7 +32,7 @@ pub(crate) fn process(
             let (fields_class_name, field) =
                 lookup::lookup_for_static_field(&class_name, &field_name)?.ok_or_else(|| {
                     Error::new_constant_pool(&format!(
-                        "Error looking up static field for {class_name}.{field_name}"
+                        "Static field {class_name}.{field_name} not found"
                     ))
                 })?;
 
@@ -57,7 +57,7 @@ pub(crate) fn process(
             let (fields_class_name, field_value) =
                 lookup::lookup_for_static_field(&class_name, &field_name)?.ok_or_else(|| {
                     Error::new_constant_pool(&format!(
-                        "Error looking up static field for {class_name}.{field_name}"
+                        "Static field {class_name}.{field_name} not found"
                     ))
                 })?;
 
