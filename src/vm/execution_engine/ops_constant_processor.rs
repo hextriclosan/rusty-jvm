@@ -44,7 +44,7 @@ pub(crate) fn process(
             |stack_frame| stack_frame.extract_two_bytes() as i32,
             "SIPUSH",
         ),
-        LDC | LDC_W | LDC2_W => handle_ldc_cases(stack_frame, code, &current_class_name),
+        LDC | LDC_W | LDC2_W => handle_ldc_cases(stack_frame, code, current_class_name),
         _ => Err(Error::new_execution(&format!(
             "Unknown constant opcode: {}",
             code

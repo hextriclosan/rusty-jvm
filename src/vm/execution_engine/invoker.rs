@@ -34,12 +34,8 @@ pub(crate) fn invoke(
 
         let method_flags = MethodFlags::from_bits_truncate(java_method.access_flags() as u16);
         let is_static = method_flags.contains(MethodFlags::ACC_STATIC);
-        let result = invoke_native_method(
-            &full_native_signature,
-            &method_args,
-            is_static,
-            stack_frames,
-        )?;
+        let result =
+            invoke_native_method(&full_native_signature, method_args, is_static, stack_frames)?;
         for result_chunk in result.iter().rev() {
             last_frame_mut(stack_frames)?.push(*result_chunk)?;
         }

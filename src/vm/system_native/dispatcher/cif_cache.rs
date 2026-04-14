@@ -29,7 +29,7 @@ pub(super) fn get_cif(method_descriptor: &MethodDescriptor) -> Result<Arc<SafeCi
 
         let from_descriptor = method_descriptor
             .parameter_types()
-            .into_iter()
+            .iter()
             .map(to_ffitype)
             .collect::<Vec<_>>();
 

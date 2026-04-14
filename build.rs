@@ -89,7 +89,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
     for entry in fs::read_dir(&src_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |e| e == "java") {
+        if path.is_file() && path.extension().is_some_and(|e| e == "java") {
             let filename = path.file_name().unwrap().to_string_lossy().to_string();
             if !excludes.contains(&filename.as_str()) {
                 normal_files.push(path);
@@ -110,7 +110,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         .arg("-cp")
         .arg(&jar_path)
         .arg("-d")
-        .arg(&format!("{}/out", dest_dir.display().to_string()))
+        .arg(format!("{}/out", dest_dir.display()))
         .arg("tests/test_data/jar/src/samples/jarfiles/simplejar/Main.java")
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
@@ -120,10 +120,10 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
     }
     let output = Command::new(&jar)
         .arg("cfm")
-        .arg(&format!("{}/app.jar", dest_dir.display().to_string()))
+        .arg(format!("{}/app.jar", dest_dir.display()))
         .arg("tests/test_data/jar/MANIFEST.MF")
         .arg("-C")
-        .arg(&format!("{}/out", dest_dir.display().to_string()))
+        .arg(format!("{}/out", dest_dir.display()))
         .arg(".")
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())

@@ -153,8 +153,8 @@ pub fn get_access0_wrp(args: &[i32]) -> Result<Vec<i32>> {
 fn get_access0(path_ptr: i64, mode: i32) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
 
-    let flags = AccessFlags::from_bits(mode)
-        .ok_or_else(|| Error::new_native(&"Invalid access mode".to_string()))?;
+    let flags =
+        AccessFlags::from_bits(mode).ok_or_else(|| Error::new_native("Invalid access mode"))?;
 
     match access(path.as_c_str(), flags) {
         Ok(_) => Ok(0),
@@ -219,25 +219,10 @@ fn copy_stat_attributes(attr_ref: i32, stat: FileStat) -> Result<()> {
     HEAP.set_object_field_value(attr_ref, name, "st_nlink", vec![stat.st_nlink as i32])?;
     HEAP.set_object_field_value(attr_ref, name, "st_uid", vec![stat.st_uid as i32])?;
     HEAP.set_object_field_value(attr_ref, name, "st_gid", vec![stat.st_gid as i32])?;
-    HEAP.set_object_field_value(attr_ref, name, "st_size", i64_to_vec(stat.st_size as i64))?;
-    HEAP.set_object_field_value(
-        attr_ref,
-        name,
-        "st_atime_sec",
-        i64_to_vec(stat.st_atime as i64),
-    )?;
-    HEAP.set_object_field_value(
-        attr_ref,
-        name,
-        "st_mtime_sec",
-        i64_to_vec(stat.st_mtime as i64),
-    )?;
-    HEAP.set_object_field_value(
-        attr_ref,
-        name,
-        "st_ctime_sec",
-        i64_to_vec(stat.st_ctime as i64),
-    )?;
+    HEAP.set_object_field_value(attr_ref, name, "st_size", i64_to_vec(stat.st_size))?;
+    HEAP.set_object_field_value(attr_ref, name, "st_atime_sec", i64_to_vec(stat.st_atime))?;
+    HEAP.set_object_field_value(attr_ref, name, "st_mtime_sec", i64_to_vec(stat.st_mtime))?;
+    HEAP.set_object_field_value(attr_ref, name, "st_ctime_sec", i64_to_vec(stat.st_ctime))?;
     HEAP.set_object_field_value(
         attr_ref,
         name,

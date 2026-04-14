@@ -66,9 +66,8 @@ fn define_class0(
     let (internal_name, ..) = with_method_area(|method_area| {
         method_area.create_metaclass(&name, &byte_code, class_loader_ref)
     })?;
-    let clazz_ref = clazz_ref(&internal_name);
 
-    clazz_ref
+    clazz_ref(&internal_name)
 }
 
 pub(crate) fn define_class1_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -114,9 +113,8 @@ fn define_class1(
     let (name, ..) = with_method_area(|method_area| {
         method_area.create_metaclass(&internal_name, &byte_code, class_loader_ref)
     })?;
-    let clazz_ref = clazz_ref(&name);
 
-    clazz_ref
+    clazz_ref(&name)
 }
 
 pub(crate) fn define_class2_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -162,11 +160,10 @@ fn define_class2(
     let byte_code = unsafe { std::slice::from_raw_parts(addr.add(off as usize), len as usize) };
 
     let (name, ..) = with_method_area(|method_area| {
-        method_area.create_metaclass(&internal_name, &byte_code, class_loader_ref)
+        method_area.create_metaclass(&internal_name, byte_code, class_loader_ref)
     })?;
-    let clazz_ref = clazz_ref(&name);
 
-    clazz_ref
+    clazz_ref(&name)
 }
 
 pub(crate) fn find_bootstrap_class_wrp(args: &[i32]) -> Result<Vec<i32>> {

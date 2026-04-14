@@ -109,14 +109,11 @@ pub(super) extern "system" fn release_string_chars(
         return;
     }
 
-    let (is_latin, array_ref) = get_raw_string_info(string_ref).expect(&format!(
-        "Failed to get raw string info for string_ref={string_ref}"
-    ));
+    let (is_latin, array_ref) = get_raw_string_info(string_ref)
+        .unwrap_or_else(|_| panic!("Failed to get raw string info for string_ref={string_ref}"));
     let byte_len = HEAP
         .get_entire_raw_data(array_ref)
-        .expect(&format!(
-            "Failed to get string data for array_ref={array_ref}"
-        ))
+        .unwrap_or_else(|_| panic!("Failed to get string data for array_ref={array_ref}"))
         .len();
     let len = if is_latin { byte_len } else { byte_len / 2 };
     unsafe {

@@ -20,8 +20,7 @@ pub fn into_args(raw_args: Vec<String>) -> Result<Arguments, String> {
                 advanced_jvm_options.push(arg);
             } else if arg.starts_with("-X") {
                 jvm_options.push(arg);
-            } else if arg.starts_with("-D") {
-                let trimmed = &arg[2..];
+            } else if let Some(trimmed) = arg.strip_prefix("-D") {
                 let (key, value) = match trimmed.split_once('=') {
                     Some((key, value)) => (key, value),
                     None => (trimmed, ""),
@@ -30,10 +29,10 @@ pub fn into_args(raw_args: Vec<String>) -> Result<Arguments, String> {
             } else if arg.starts_with("--") {
                 java_launcher_options.push(arg);
             } else if arg == "-cp" || arg == "-classpath" {
-                classpath = Some(iter.next().ok_or_else(|| "Missing classpath value")?);
+                classpath = Some(iter.next().ok_or("Missing classpath value")?);
             } else if arg == "-jar" {
                 jar_mode = true;
-                entry_point = iter.next().ok_or_else(|| "Missing JAR file name")?;
+                entry_point = iter.next().ok_or("Missing JAR file name")?;
                 break;
             } else {
                 java_standard_options.push(arg);

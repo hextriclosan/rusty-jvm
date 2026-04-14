@@ -166,7 +166,7 @@ pub(crate) fn process(
                 &full_signature,
                 &method_args,
                 Arc::clone(&exact_implementation),
-                &class_name,
+                class_name,
             )?;
             trace!("INVOKEVIRTUAL -> invoked {class_name}.{full_signature}({method_args:?}) via {class_name_by_ref_type}.{full_signature}");
         }
@@ -188,7 +188,7 @@ pub(crate) fn process(
                 &full_signature,
                 &method_args,
                 Arc::clone(&java_method),
-                &class_name,
+                class_name,
             )?;
             trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }

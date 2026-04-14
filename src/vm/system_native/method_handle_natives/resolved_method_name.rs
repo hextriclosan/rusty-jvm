@@ -4,7 +4,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i64_to_vec, vec_to_i64};
 use getset::CopyGetters;
 
-const RESOLVED_METHOD_NAME: &'static str = "java/lang/invoke/ResolvedMethodName";
+const RESOLVED_METHOD_NAME: &str = "java/lang/invoke/ResolvedMethodName";
 
 #[derive(Debug, CopyGetters)]
 #[get_copy = "pub"]

@@ -3,7 +3,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{decorate, klass};
 use getset::Getters;
 
-const METHOD_TYPE: &'static str = "java/lang/invoke/MethodType";
+const METHOD_TYPE: &str = "java/lang/invoke/MethodType";
 
 #[derive(Debug, Getters)]
 #[get = "pub"]

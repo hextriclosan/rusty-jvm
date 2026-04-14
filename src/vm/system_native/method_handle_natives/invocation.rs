@@ -21,12 +21,12 @@ use once_cell::sync::Lazy;
 use std::env;
 use std::sync::Arc;
 
-const DIRECT_METHOD_HANDLE: &'static str = "java/lang/invoke/DirectMethodHandle";
-const BOUND_METHOD_HANDLE: &'static str = "java/lang/invoke/BoundMethodHandle";
-const MUTABLE_CALL_SITE: &'static str = "java/lang/invoke/MutableCallSite";
-const AS_VARARGS_COLLECTOR: &'static str = "java/lang/invoke/MethodHandleImpl$AsVarargsCollector";
-const COUNTING_WRAPPER: &'static str = "java/lang/invoke/MethodHandleImpl$CountingWrapper";
-const SIMPLE_METHOD_HANDLE: &'static str = "java/lang/invoke/SimpleMethodHandle";
+const DIRECT_METHOD_HANDLE: &str = "java/lang/invoke/DirectMethodHandle";
+const BOUND_METHOD_HANDLE: &str = "java/lang/invoke/BoundMethodHandle";
+const MUTABLE_CALL_SITE: &str = "java/lang/invoke/MutableCallSite";
+const AS_VARARGS_COLLECTOR: &str = "java/lang/invoke/MethodHandleImpl$AsVarargsCollector";
+const COUNTING_WRAPPER: &str = "java/lang/invoke/MethodHandleImpl$CountingWrapper";
+const SIMPLE_METHOD_HANDLE: &str = "java/lang/invoke/SimpleMethodHandle";
 
 static DEBUG_SPECIES_PRINTING: Lazy<bool> =
     Lazy::new(|| env::var("DEBUG_SPECIES_PRINTING").is_ok());
@@ -69,7 +69,7 @@ fn direct_method_handle_invocation(
     stack_frames: &mut StackFrames,
     handle_name: &String,
 ) -> Result<()> {
-    let member_name_ref = HEAP.get_object_field_value(handle_ref, &handle_name, "member")?[0];
+    let member_name_ref = HEAP.get_object_field_value(handle_ref, handle_name, "member")?[0];
     let member_name = MemberName::new(member_name_ref)?;
     let reference_kind = member_name.reference_kind();
 
@@ -135,7 +135,7 @@ fn bound_method_handle_invocation(
         method_to_invoke.name_signature(),
         &new_args,
         Arc::clone(&method_to_invoke),
-        &class_name_to_load,
+        class_name_to_load,
     )
 }
 
@@ -302,7 +302,7 @@ fn mimic_new(
 ) -> Result<Vec<i32>> {
     // bellow we mimic the behavior of the NEW opcode
     let instance_with_default_fields = with_method_area(|method_area| {
-        method_area.create_instance_with_default_fields(&class_name)
+        method_area.create_instance_with_default_fields(class_name)
     })?;
 
     let instanceref = HEAP.create_instance(instance_with_default_fields);

@@ -36,11 +36,11 @@ fn open0(
         .append(append)
         .open(file_name)
     {
-        Ok(file) => ThrowingResult::ok(unwrap_or_return_err!(PlatformFile::set_raw_id(
-            obj_ref,
-            file,
-            FileOutputStream
-        ))),
+        Ok(file) => {
+            let _ =
+                unwrap_or_return_err!(PlatformFile::set_raw_id(obj_ref, file, FileOutputStream));
+            ThrowingResult::ok(())
+        }
         Err(e) => throw_and_return!(throw_file_not_found_exception(
             file_name_ref,
             &e.to_string(),

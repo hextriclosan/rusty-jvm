@@ -149,8 +149,8 @@ pub(super) fn read_bytes0(
     };
 
     let mut input_array = unwrap_or_return_err!(HEAP.get_entire_raw_data_mut(bytes_ref));
-    let mut input = &mut input_array[offset as usize..(offset + len) as usize];
-    let read = file.read(&mut input);
+    let input = &mut input_array[offset as usize..(offset + len) as usize];
+    let read = file.read(input);
 
     match read {
         Ok(n) if n == 0 => ThrowingResult::ok(-1),

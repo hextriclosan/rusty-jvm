@@ -155,11 +155,11 @@ fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
     let fd = unwrap_or_return_err!(get_handle(fd_ref));
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
     let result = match fstat(fd) {
-        Ok(stat) => stat.st_size as i64,
+        Ok(stat) => stat.st_size,
         Err(errno) if matches!(errno, nix::errno::Errno::EINTR) => IOS_INTERRUPTED as i64,
         Err(errno) => {
             throw_and_return!(throw_ioexception(
-                &format!("Size failed: {}", errno.to_string()),
+                &format!("Size failed: {}", errno),
                 stack_frames
             ))
         }
@@ -183,7 +183,7 @@ pub(super) fn truncate0(
         Err(errno) if matches!(errno, nix::errno::Errno::EINTR) => IOS_INTERRUPTED,
         Err(errno) => {
             throw_and_return!(throw_ioexception(
-                &format!("Truncate failed: {}", errno.to_string()),
+                &format!("Truncate failed: {}", errno),
                 stack_frames
             ))
         }

@@ -33,7 +33,7 @@ impl PlatformFile {
 
     pub fn set_raw_id<T: IntoRawFd>(output_stream_ref: i32, file: T, mode: Mode) -> Result<()> {
         let posix_fd = file.into_raw_fd(); // move ownership out of file
-        let fd = posix_fd as i32;
+        let fd = posix_fd;
 
         let fd_ref = HEAP.get_object_field_value(output_stream_ref, mode.as_ref(), "fd")?[0];
         Self::set_fd(fd_ref, fd)

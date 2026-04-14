@@ -62,7 +62,7 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
 
     let method_descriptor: MethodDescriptor = descriptor.parse()?;
     let storage = build_args(args, method_descriptor.parameter_types(), is_static);
-    let ffi_args_from_descriptor = (&storage).iter().map(|s| s.as_arg()).collect::<Vec<_>>();
+    let ffi_args_from_descriptor = storage.iter().map(|s| s.as_arg()).collect::<Vec<_>>();
     ffi_args.extend(ffi_args_from_descriptor);
 
     let code_ptr = CodePtr(fun_ptr);

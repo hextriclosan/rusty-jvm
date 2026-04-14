@@ -6,7 +6,7 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::system_native::throwable::NATIVE_METHOD;
 
 const NATIVE_MARKER: i32 = -2;
-const CLASS_NAME: &'static str = "java/lang/StackTraceElement";
+const CLASS_NAME: &str = "java/lang/StackTraceElement";
 
 pub(crate) fn init_stack_trace_elements_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let element_array_ref = args[0];
@@ -72,12 +72,7 @@ fn init_stack_trace_elements(
         )?;
         HEAP.set_object_field_value(element_ref, CLASS_NAME, "methodName", vec![method_name_ref])?;
         HEAP.set_object_field_value(element_ref, CLASS_NAME, "fileName", vec![file_name_ref])?;
-        HEAP.set_object_field_value(
-            element_ref,
-            CLASS_NAME,
-            "lineNumber",
-            vec![line_number.into()],
-        )?;
+        HEAP.set_object_field_value(element_ref, CLASS_NAME, "lineNumber", vec![line_number])?;
     }
 
     Ok(())

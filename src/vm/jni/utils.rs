@@ -112,10 +112,10 @@ fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> 
         TypeDescriptor::Byte => (unsafe { value.b } as i32).into(),
         TypeDescriptor::Char => (unsafe { value.c } as i32).into(),
         TypeDescriptor::Short => (unsafe { value.s } as i32).into(),
-        TypeDescriptor::Integer => (unsafe { value.i } as i32).into(),
-        TypeDescriptor::Long => (unsafe { value.j } as i64).into(),
-        TypeDescriptor::Float => (unsafe { value.f } as f32).into(),
-        TypeDescriptor::Double => (unsafe { value.d } as f64).into(),
+        TypeDescriptor::Integer => unsafe { value.i }.into(),
+        TypeDescriptor::Long => unsafe { value.j }.into(),
+        TypeDescriptor::Float => unsafe { value.f }.into(),
+        TypeDescriptor::Double => unsafe { value.d }.into(),
         TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => {
             (unsafe { value.l } as i32).into()
         }

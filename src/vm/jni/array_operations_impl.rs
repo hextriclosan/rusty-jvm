@@ -73,7 +73,7 @@ pub(super) extern "system" fn get_object_array_element(
     }
 
     let raw = HEAP
-        .get_array_value(array_ref, index as i32)
+        .get_array_value(array_ref, index)
         .expect("Failed to get array element");
     raw[0] as jobject
 }
@@ -94,7 +94,7 @@ pub(super) extern "system" fn set_object_array_element(
         panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
     }
 
-    HEAP.set_array_value(array_ref, index as i32, vec![value as i32])
+    HEAP.set_array_value(array_ref, index, vec![value as i32])
         .expect("Failed to set array element");
 }
 
@@ -135,7 +135,7 @@ fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
         panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
     }
 
-    HEAP.create_array(&type_name, len) as jarray
+    HEAP.create_array(type_name, len) as jarray
 }
 
 macro_rules! impl_get_array {
@@ -354,7 +354,7 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
 
 fn free_buffer(elems: *mut u8, len: usize) {
     unsafe {
-        let _boxed: Box<_> = Box::from_raw(std::slice::from_raw_parts_mut(elems, len));
+        let _boxed: Box<_> = Box::from_raw(std::ptr::slice_from_raw_parts_mut(elems, len));
     }
 }
 

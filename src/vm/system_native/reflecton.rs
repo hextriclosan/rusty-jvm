@@ -41,10 +41,10 @@ fn are_nest_mates(current_class_ref: i32, member_class_ref: i32) -> Result<bool>
     let member_class_name = member_klass.this_class_name();
 
     let current_class_nest_host =
-        strip_nest_host(&current_class_name).unwrap_or(current_class_name.as_str());
+        strip_nest_host(current_class_name).unwrap_or(current_class_name.as_str());
 
     let member_class_nest_host =
-        strip_nest_host(&member_class_name).unwrap_or(member_class_name.as_str());
+        strip_nest_host(member_class_name).unwrap_or(member_class_name.as_str());
 
     Ok(current_class_nest_host == member_class_nest_host)
 }

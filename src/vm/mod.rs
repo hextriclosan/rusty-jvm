@@ -136,7 +136,7 @@ fn init() -> Result<()> {
     with_method_area(|area| area.set_system_thread_group_id(tg_obj_ref))?;
     let string_obj_ref = StringPoolHelper::get_string("system")?; // refactor candidate B: introduce and use here common string creator, not string pool one
     let _thread_obj_ref =
-        Executor::create_primordial_thread(&vec![tg_obj_ref.into(), string_obj_ref.into()])?;
+        Executor::create_primordial_thread(&[tg_obj_ref.into(), string_obj_ref.into()])?;
 
     StaticInit::initialize("java/lang/reflect/Method")?;
     Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
