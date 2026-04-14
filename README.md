@@ -11,14 +11,14 @@
 
 This project is a Java Virtual Machine (JVM) implemented in Rust, built to run Java programs independently of existing JVMs.
 Everything related to Java is implemented from scratch.
-The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone. 
+The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone.
 The next major objectives include the integration of garbage collection and support for multithreading.
 
 ## Implemented Key Features
 
 - 100% of actual opcodes ([JVMS §6][jvms-6])
 - Lambda Expressions ([JLS §15.27][jls-15.27])
-- Static initialization ([JVMS §5.5][jvms-5.5])
+- Static initialization ([JVMS §5.5][jvms-5.5], [implementation details](docs/class_static_initialization.md))
 - Polymorphic models ([JLS §8.4.8][jls-8.4.8])
 - Single- and multi-dimensional arrays ([JLS §10][jls-10])
 - Exceptions ([JLS §11][jls-11])
@@ -33,8 +33,68 @@ The next major objectives include the integration of garbage collection and supp
 - [java.nio][java.nio-api] (partially)
 - [java.util.zip][java.util.zip-api] (partially)
 - [java.lang.System][java.lang.system-api] (most features)
+- [JAR-files][jar] loading and execution
+- [Shared libraries loading and execution][jni-lib-load] (partially)
+- [Java Native Interface Functions][jni-funcs] (partially)
 
 See [integration tests](tests/test_data) for broader examples of supported Java features.
+
+## Architecture
+
+rusty-jvm is structured around six high-level concerns:
+
+```mermaid
+graph TD
+    CLI["CLI / Library API"]
+    VM["JVM Bootstrap"]
+    CL["Class Loader"]
+    HEAP["Heap"]
+    INTERP["Bytecode Interpreter"]
+    JNI["JNI Bridge"]
+
+    CLI --> VM
+    VM --> CL & HEAP & INTERP
+    INTERP --> CL & HEAP & JNI
+    JNI --> CL & HEAP
+```
+
+See [architecture.md](docs/architecture.md) for detailed diagrams covering the
+class-loading pipeline, heap memory model, execution loop, vtable dispatch, and JNI bridge.
+
+## Design Decisions
+See [design-decisions.md](docs/design-decisions.md) for a detailed description of the design decisions made in this project.
+
+## Sub-crates
+
+The project is organised as a Cargo workspace.
+Components with well-defined, reusable APIs are published as independent crates:
+
+| Crate | Description |
+|---|---|
+| [`jclassfile`](jclassfile/) | `.class` file parser |
+| [`jdescriptor`](jdescriptor/) | JVM type-descriptor and method-signature parser |
+| [`jimage-rs`](jimage-rs/) | Reader for JDK `.jimage` archive files |
+| [`jniname`](jniname/) | JNI name-mangling utilities |
+
+```mermaid
+graph TD
+    JVM["rusty-jvm"]
+    JCF["jclassfile\n- class-file parser"]
+    JD["jdescriptor\n- type-descriptor parser"]
+    JI["jimage-rs\n- jimage-archive reader"]
+    JN["jniname\n- JNI name-mangling"]
+
+    JVM --> JCF & JD & JI & JN
+    JN --> JD
+```
+
+## Roadmap
+
+The following milestones are planned in order:
+
+1. **Garbage Collection** — a tracing GC to reclaim unreachable heap objects.
+2. **Multithreading** — `java.lang.Thread`, `synchronized`, and the Java Memory Model.
+3. **JIT Compilation** — profile-guided native code generation for hot methods.
 
 ## Java Standard Library Classes
 
@@ -86,6 +146,12 @@ public class FruitCount {
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
 
+## Contributing
+
+Contributions are welcome!
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build the project, add integration tests,
+and implement new native methods.
+
 [//]: # (links)
 [platforms-image]: https://img.shields.io/badge/platforms-Linux%20%7C%20MacOS%20%7C%20Windows-blue
 [crate-image]: https://img.shields.io/crates/v/rusty-jvm.svg
@@ -117,3 +183,6 @@ public class FruitCount {
 [java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/reflect/package-summary.html
 [java.util.zip-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/zip/package-summary.html
 [java.lang.system-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/System.html
+[jar]: https://docs.oracle.com/en/java/javase/25/docs/specs/jar/jar.html
+[jni-lib-load]: https://docs.oracle.com/en/java/javase/25/docs/specs/jni/design.html#compiling-loading-and-linking-native-methods
+[jni-funcs]: https://docs.oracle.com/en/java/javase/25/docs/specs/jni/functions.html
