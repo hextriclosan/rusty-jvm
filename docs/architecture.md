@@ -82,7 +82,7 @@ Refer to the dedicated document [class_static_initialization.md](class_static_in
 
 ## 3. Heap Memory Model
 
-The heap is a `DashMap<i32, HeapValue>`.
+The heap is represented by a `Heap` wrapper whose backing storage is `data: AutoDashMapI32<HeapValue>` (a helper based on `DashMap`).
 Every object reference in the VM is a plain `i32` (matching the JVM operand-stack word size).
 References start at 1; 0 is the JVM null.
 
@@ -102,12 +102,12 @@ classDiagram
     class HeapValue {
         <<enum>>
         Object(JavaInstance)
-        Array(Array)
+        Arr(Array)
     }
 
     class JavaInstance {
         -class_name: String
-        -fields: HashMap~FieldKey, Vec~i32~~
+        -fields: IndexMap&lt;ClassName, IndexMap&lt;FieldNameType, FieldValue&gt;&gt;
     }
 
     class Array {

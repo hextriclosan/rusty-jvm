@@ -43,7 +43,7 @@ initialised lazily on first method lookup / vtable access.
 ### Why `OnceCell` (lazy initialisation)?
 Class files are loaded on demand, and the full class hierarchy needed to build a vtable may not
 yet be available at the moment a class is first parsed.
-`OnceCell` lets us defer construction until the first method look up that
+`OnceCell` lets us defer construction until the first method lookup that
 needs the table, at which point all super-classes and super-interfaces are guaranteed to be loaded.
 There is no need for a separate "link" phase as in HotSpot.
 
