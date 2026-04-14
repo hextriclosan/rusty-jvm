@@ -36,14 +36,14 @@ anyway, so the abstraction surface is deliberately kept thin.
 ## 2. Vtable stored as `OnceCell<IndexMap<String, Arc<JavaMethod>>>`
 
 **Decision:** Each `JavaClass` holds its vtable in a `OnceCell<IndexMap<String, Arc<JavaMethod>>>`,
-initialised lazily on first virtual dispatch.
+initialised lazily on first method lookup / vtable access.
 
 **Reasoning:**
 
 ### Why `OnceCell` (lazy initialisation)?
 Class files are loaded on demand, and the full class hierarchy needed to build a vtable may not
 yet be available at the moment a class is first parsed.
-`OnceCell` lets us defer construction until the first `invokevirtual` / `invokeinterface` that
+`OnceCell` lets us defer construction until the first method look up that
 needs the table, at which point all super-classes and super-interfaces are guaranteed to be loaded.
 There is no need for a separate "link" phase as in HotSpot.
 
@@ -57,7 +57,7 @@ A vtable keyed by `(name, descriptor)` string has two advantages over a position
 2. **O(1) lookup** - `IndexMap` provides hash-map lookup speed while preserving insertion order,
    which simplifies debugging and makes the vtable deterministic across runs.
 
-The vtable is built by `MethodArea::build_vtable` following the priority order mandated by
+The vtable is built by `lookup::build_vtable` following the priority order mandated by
 [JVMS §5.4.5][jvms-5.4.5]:
 1. Inherit the parent class's vtable.
 2. Overlay interface default methods.
@@ -76,7 +76,7 @@ vulnerable to use-after-free if any reference were dangling.
 Because `rusty-jvm` does not yet implement a garbage collector, objects live for the entire
 duration of the program; an indirect key-based map is therefore both safe and sufficient.
 
-A `DashMap` was chosen over a `Mutex<HashMap>` to allow concurrent read access from multiple
+An `AutoDashMapI32` helper (based on `DashMap`) was chosen over a `Mutex<HashMap>` to allow concurrent read access from multiple
 native-method calls without a global lock.
 The auto-incrementing key (`AutoDashMapI32`) starts at 1 to ensure 0 is permanently reserved
 as the null reference.

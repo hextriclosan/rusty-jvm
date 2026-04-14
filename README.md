@@ -41,7 +41,7 @@ See [integration tests](tests/test_data) for broader examples of supported Java 
 
 ## Architecture
 
-rusty-jvm is structured around five high-level concerns:
+rusty-jvm is structured around six high-level concerns:
 
 ```mermaid
 graph TD

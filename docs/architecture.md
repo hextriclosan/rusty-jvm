@@ -76,7 +76,7 @@ sequenceDiagram
 ```
 
 ### 2.1 Class Static Initialization
-Refer dedicated [document](class_static_initialization.md)
+Refer to the dedicated document [class_static_initialization.md](class_static_initialization.md).
 
 ---
 
@@ -152,15 +152,15 @@ flowchart TD
 
 ## 5. Virtual Method Dispatch (vtable)
 
-Each `JavaClass` holds a lazily-initialized vtable: an `OnceCell<IndexMap<String, Arc<JavaMethod>>>`.
-The vtable is built once by `MethodArea::build_vtable`, which follows the order mandated by JVMS §5.4.5:
+Each `JavaClass` holds a lazily-initialized vtable: a `OnceCell<IndexMap<String, Arc<JavaMethod>>>`.
+The vtable is built by `lookup::build_vtable` and cached by `JavaClass::vtable()`, following the order mandated by [JVMS §5.4.5][jvms-5.4.5]:
 parent vtable → interface default methods → own concrete methods.
 
 ```mermaid
 flowchart TD
     INVOKE[invokevirtual / invokeinterface] --> LOOKUP[lookup_for_implementation\nclass_name + method_sig]
     LOOKUP --> VTABLE{vtable initialised?}
-    VTABLE -- no --> BUILD[build_vtable:\n1. inherit parent vtable\n2. overlay interface defaults\n3. insert own methods]
+    VTABLE -- no --> BUILD[lookup::build_vtable:\n1. inherit parent vtable\n2. overlay interface defaults\n3. insert own methods]
     BUILD --> STORE_VT[store in OnceCell]
     STORE_VT --> HIT
     VTABLE -- yes --> HIT["O(1) IndexMap lookup"]
@@ -197,3 +197,5 @@ sequenceDiagram
         DISP-->>EE: Vec<i32>
     end
 ```
+
+[jvms-5.4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5
