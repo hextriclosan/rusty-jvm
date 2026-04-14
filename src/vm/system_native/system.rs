@@ -254,7 +254,8 @@ pub(crate) fn set_out0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![])
 }
 fn set_out0(print_stream_ref: i32) -> Result<()> {
-    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "out")?;
+    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "out")?
+        .ok_or_else(|| Error::new_execution("Field System.out not found"))?;
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 
@@ -265,7 +266,8 @@ pub(crate) fn set_err0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![])
 }
 fn set_err0(print_stream_ref: i32) -> Result<()> {
-    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "err")?;
+    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "err")?
+        .ok_or_else(|| Error::new_execution("Field System.err not found"))?;
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 

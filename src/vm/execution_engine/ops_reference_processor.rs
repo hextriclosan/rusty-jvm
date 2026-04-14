@@ -30,7 +30,11 @@ pub(crate) fn process(
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
             let (fields_class_name, field) =
-                lookup::lookup_for_static_field(&class_name, &field_name)?;
+                lookup::lookup_for_static_field(&class_name, &field_name)?.ok_or_else(|| {
+                    Error::new_constant_pool(&format!(
+                        "Error looking up static field for {class_name}.{field_name}"
+                    ))
+                })?;
 
             StaticInit::initialize(&fields_class_name)?;
 
@@ -51,7 +55,11 @@ pub(crate) fn process(
             let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
 
             let (fields_class_name, field_value) =
-                lookup::lookup_for_static_field(&class_name, &field_name)?;
+                lookup::lookup_for_static_field(&class_name, &field_name)?.ok_or_else(|| {
+                    Error::new_constant_pool(&format!(
+                        "Error looking up static field for {class_name}.{field_name}"
+                    ))
+                })?;
 
             let klass = CLASSES.get(&fields_class_name)?;
             let field_info = klass
