@@ -257,16 +257,13 @@ pub(super) extern "system" fn get_string_region(
 
     // Copy the region to the buffer
     unsafe {
-        let src_slice = &raw_data[start as usize..(start + len) as usize];
+        let src_slice = &raw_data[start as usize..start as usize + len as usize];
         let dst_slice = std::slice::from_raw_parts_mut(buf, len as usize);
         dst_slice.copy_from_slice(src_slice);
     }
 }
 
 /// GetStringUTFRegion: Copies a region of the string as modified UTF-8 into the provided buffer.
-/// The caller must ensure the buffer is large enough (use GetStringUTFLength for the full string,
-/// or calculate the region size manually - worst case is 6 bytes per char for supplementary
-/// characters in CESU-8: two 3-byte surrogate sequences).
 /// Throws StringIndexOutOfBoundsException if the range is invalid.
 pub(super) extern "system" fn get_string_utf_region(
     _env: *mut JNIEnv,
@@ -296,20 +293,21 @@ pub(super) extern "system" fn get_string_utf_region(
 
     // Get the raw UTF-16 data and extract the region
     let raw_data = get_string_raw_data(string_ref);
-    let region: Vec<jchar> = raw_data[start as usize..(start + len) as usize].to_vec();
+    let region: Vec<jchar> = raw_data[start as usize..start as usize + len as usize].to_vec();
 
     // Convert to a Rust String from UTF-16
-    let rust_string =
-        String::from_utf16(&region).expect("Failed to build string from UTF-16 data");
+    let rust_string = match String::from_utf16(&region) {
+        Ok(s) => s,
+        Err(_) => return, // todo: throw InternalError
+    };
 
     // Convert to modified UTF-8 (CESU-8)
     let mutf8_data = to_java_cesu8(&rust_string);
 
-    // Copy to the caller's buffer (including null terminator)
+    // Copy to the caller's buffer
     unsafe {
-        let dst_slice = std::slice::from_raw_parts_mut(buf as *mut u8, mutf8_data.len() + 1);
-        dst_slice[..mutf8_data.len()].copy_from_slice(&mutf8_data);
-        dst_slice[mutf8_data.len()] = 0; // null terminator
+        let dst_slice = std::slice::from_raw_parts_mut(buf as *mut u8, mutf8_data.len());
+        dst_slice.copy_from_slice(&mutf8_data);
     }
 }
 
