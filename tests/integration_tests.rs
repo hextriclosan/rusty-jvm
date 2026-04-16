@@ -2068,7 +2068,7 @@ fn should_support_class_for_name_method() {
 Loaded class: samples.reflection.trivial.forname.First (initialized=true)
 Loaded class: samples.reflection.trivial.forname.Second (initialized=false)
 ClassNotFoundException: samples.reflection.trivial.forname.NonExisting - java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
-"#
+"#,
     );
 }
 

@@ -58,23 +58,28 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 
     init_perf_file(arguments)?;
 
-    prelude()?;
+    let result = (|| -> Result<()> {
+        prelude()?;
 
-    let launch_mode = if *arguments.jar_mode() {
-        LmJar
-    } else {
-        LmClass
-    };
-    match resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args()) {
-        Ok(_) => {
-            invoke_shutdown_hooks()?;
-            Ok(())
-        }
+        let launch_mode = if *arguments.jar_mode() {
+            LmJar
+        } else {
+            LmClass
+        };
+        resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args())?;
+
+        invoke_shutdown_hooks()?;
+
+        Ok(())
+    })();
+
+    match result {
+        Ok(()) => Ok(()),
         Err(e) if e.is_uncaught_exception() => {
             if let Some(throwable_ref) = e.throwable_ref() {
-                invoke_uncaught_exception_handler(throwable_ref)?;
+                let _ = invoke_uncaught_exception_handler(throwable_ref);
             }
-            invoke_shutdown_hooks()?;
+            let _ = invoke_shutdown_hooks();
             Err(e)
         }
         Err(e) => Err(e),
