@@ -144,7 +144,7 @@ fn should_convert_long_to_double_and_back() {
 }
 
 #[test]
-fn should_convert_to_string_and_back() {
+fn should_convert_to_string_and_back_slowtest() {
     assert_success(
         "samples.javacore.strings.trivial.ToStringAndBack",
         r#"true
@@ -3173,7 +3173,7 @@ fn should_support_arrays_to_string() {
 }
 
 #[test]
-fn should_support_locales_advanced() {
+fn should_support_locales_advanced_slowtest() {
     assert_success(
         "samples.locale.showlocale.ShowLocale",
         r#"--- Locale: ja_JP ---

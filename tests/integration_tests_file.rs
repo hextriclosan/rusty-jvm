@@ -11,7 +11,7 @@ use std::string::ToString;
 use tempfile::TempDir;
 
 #[test]
-fn should_support_java_io_file() {
+fn should_support_java_io_file_slowtest() {
     let _guard = CleanUp {};
 
     file_info_when_does_not_exist();
