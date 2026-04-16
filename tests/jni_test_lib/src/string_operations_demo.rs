@@ -117,7 +117,9 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     start: jint,
     len: jint,
 ) -> jstring {
-    let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize]; // max 3 bytes per char + null terminator
+    // Buffer sizing: worst case is 6 bytes per char for supplementary chars in CESU-8
+    // (two 3-byte surrogate sequences). Using len*3+1 is sufficient for BMP-only tests.
+    let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize];
     unsafe {
         ((*(*env)).v24.GetStringUTFRegion)(
             env,
@@ -136,9 +138,12 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     _class: jclass,
     input: jstring,
 ) -> jcharArray {
+    // Get length and allocate array BEFORE entering critical section
     let length = unsafe { ((*(*env)).v24.GetStringLength)(env, input) } as jsize;
-    let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
     let char_array = unsafe { ((*(*env)).v24.NewCharArray)(env, length) };
+
+    // Critical section: no allocating JNI calls allowed between Get/Release
+    let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
     unsafe {
         ((*(*env)).v24.GetCharArrayRegion)(env, char_array, 0, length, chars);
         ((*(*env)).v24.ReleaseStringCritical)(env, input, chars);
@@ -153,15 +158,19 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     _class: jclass,
     input: jstring,
 ) -> jstring {
-    let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
+    // Get length BEFORE entering critical section
     let length = unsafe { ((*(*env)).v24.GetStringLength)(env, input) } as jsize;
 
-    // Create a new string from the critical chars
-    let new_str = unsafe { ((*(*env)).v24.NewString)(env, chars, length) };
+    // Critical section: no allocating JNI calls allowed between Get/Release
+    let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
 
+    // Copy chars to a local buffer since we can't call NewString while in critical section
+    let mut local_buf: Vec<jchar> = vec![0; length as usize];
     unsafe {
+        std::ptr::copy_nonoverlapping(chars, local_buf.as_mut_ptr(), length as usize);
         ((*(*env)).v24.ReleaseStringCritical)(env, input, chars);
     }
 
-    new_str
+    // Now safe to allocate: create a new string from the local buffer
+    unsafe { ((*(*env)).v24.NewString)(env, local_buf.as_ptr(), length) }
 }

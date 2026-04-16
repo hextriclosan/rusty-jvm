@@ -233,29 +233,23 @@ pub(super) extern "system" fn get_string_region(
     len: jsize,
     buf: *mut jchar,
 ) {
-    if str.is_null() {
-        panic!("Invalid string reference: null"); // todo throw NullPointerException here
-    }
-    if buf.is_null() {
-        panic!("Null buffer passed to GetStringRegion"); // todo throw NullPointerException here
+    if str.is_null() || buf.is_null() {
+        // todo: throw NullPointerException
+        return;
     }
 
     let string_ref = str as i32;
     let string_len = {
         let raw =
             Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
-                .expect("Failed to get string length");
+                .unwrap_or(vec![0]);
         raw[0] as jsize
     };
 
-    // Check bounds
-    if start < 0 || len < 0 || start > string_len || start + len > string_len {
-        panic!(
-            "StringIndexOutOfBoundsException: Range [{}, {}) out of bounds for length {}",
-            start,
-            start + len,
-            string_len
-        ); // todo throw StringIndexOutOfBoundsException here
+    // Check bounds (using overflow-safe comparison)
+    if start < 0 || len < 0 || start > string_len || len > string_len - start {
+        // todo: throw StringIndexOutOfBoundsException
+        return;
     }
 
     // Get the raw UTF-16 data
@@ -271,7 +265,8 @@ pub(super) extern "system" fn get_string_region(
 
 /// GetStringUTFRegion: Copies a region of the string as modified UTF-8 into the provided buffer.
 /// The caller must ensure the buffer is large enough (use GetStringUTFLength for the full string,
-/// or calculate the region size manually).
+/// or calculate the region size manually - worst case is 6 bytes per char for supplementary
+/// characters in CESU-8: two 3-byte surrogate sequences).
 /// Throws StringIndexOutOfBoundsException if the range is invalid.
 pub(super) extern "system" fn get_string_utf_region(
     _env: *mut JNIEnv,
@@ -280,29 +275,23 @@ pub(super) extern "system" fn get_string_utf_region(
     len: jsize,
     buf: *mut c_char,
 ) {
-    if str.is_null() {
-        panic!("Invalid string reference: null"); // todo throw NullPointerException here
-    }
-    if buf.is_null() {
-        panic!("Null buffer passed to GetStringUTFRegion"); // todo throw NullPointerException here
+    if str.is_null() || buf.is_null() {
+        // todo: throw NullPointerException
+        return;
     }
 
     let string_ref = str as i32;
     let string_len = {
         let raw =
             Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
-                .expect("Failed to get string length");
+                .unwrap_or(vec![0]);
         raw[0] as jsize
     };
 
-    // Check bounds
-    if start < 0 || len < 0 || start > string_len || start + len > string_len {
-        panic!(
-            "StringIndexOutOfBoundsException: Range [{}, {}) out of bounds for length {}",
-            start,
-            start + len,
-            string_len
-        ); // todo throw StringIndexOutOfBoundsException here
+    // Check bounds (using overflow-safe comparison)
+    if start < 0 || len < 0 || start > string_len || len > string_len - start {
+        // todo: throw StringIndexOutOfBoundsException
+        return;
     }
 
     // Get the raw UTF-16 data and extract the region
@@ -327,22 +316,33 @@ pub(super) extern "system" fn get_string_utf_region(
 /// GetStringCritical: Returns a pointer to the string's characters.
 /// This is similar to GetStringChars but signals that a GC-critical section has started.
 /// Since there's no GC yet in rusty-jvm, this is just a wrapper around GetStringChars.
+/// TODO(GC): When GC is implemented, this must:
+///   1. Pin the string object to prevent it from being moved during collection
+///   2. Disable GC for the duration of the critical section
+///   3. Return a direct pointer to the string's internal char array (no copy) when possible
 pub(super) extern "system" fn get_string_critical(
     env: *mut JNIEnv,
     str: jstring,
     is_copy: *mut jboolean,
 ) -> *const jchar {
     // No GC yet, so this is equivalent to GetStringChars
+    // TODO(GC): Pin object and disable GC here
     get_string_chars(env, str, is_copy)
 }
 
 /// ReleaseStringCritical: Releases the pointer obtained from GetStringCritical.
 /// Since there's no GC yet in rusty-jvm, this is just a wrapper around ReleaseStringChars.
+/// TODO(GC): When GC is implemented, this must:
+///   1. Unpin the string object
+///   2. Re-enable GC
+///   3. Must NOT be called between GetStringCritical and ReleaseStringCritical:
+///      - NewString, NewCharArray, SetCharArrayRegion (any allocating JNI function)
 pub(super) extern "system" fn release_string_critical(
     env: *mut JNIEnv,
     str: jstring,
     carray: *const jchar,
 ) {
     // No GC yet, so this is equivalent to ReleaseStringChars
+    // TODO(GC): Unpin object and re-enable GC here
     release_string_chars(env, str, carray);
 }
