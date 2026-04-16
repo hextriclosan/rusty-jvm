@@ -304,10 +304,11 @@ pub(super) extern "system" fn get_string_utf_region(
     // Convert to modified UTF-8 (CESU-8)
     let mutf8_data = to_java_cesu8(&rust_string);
 
-    // Copy to the caller's buffer
+    // Copy to the caller's buffer with null terminator (JNI spec requires len bytes + \0)
     unsafe {
-        let dst_slice = std::slice::from_raw_parts_mut(buf as *mut u8, mutf8_data.len());
-        dst_slice.copy_from_slice(&mutf8_data);
+        let dst_slice = std::slice::from_raw_parts_mut(buf as *mut u8, mutf8_data.len() + 1);
+        dst_slice[..mutf8_data.len()].copy_from_slice(&mutf8_data);
+        dst_slice[mutf8_data.len()] = 0; // null terminator
     }
 }
 
