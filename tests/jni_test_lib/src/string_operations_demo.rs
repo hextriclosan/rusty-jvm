@@ -145,7 +145,8 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     // Critical section: no allocating JNI calls allowed between Get/Release
     let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
     unsafe {
-        ((*(*env)).v24.GetCharArrayRegion)(env, char_array, 0, length, chars);
+        // Cast const to mutable - safe here since GetCharArrayRegion only reads from source
+        ((*(*env)).v24.GetCharArrayRegion)(env, char_array, 0, length, chars as *mut jchar);
         ((*(*env)).v24.ReleaseStringCritical)(env, input, chars);
     }
 
