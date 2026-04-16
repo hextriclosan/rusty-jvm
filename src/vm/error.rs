@@ -40,8 +40,8 @@ impl Error {
         Self::new(Native(String::from(descr)))
     }
 
-    pub(crate) fn uncaught_exception() -> Error {
-        Self::new(UncaughtException)
+    pub(crate) fn uncaught_exception(throwable_ref: i32) -> Error {
+        Self::new(UncaughtException(throwable_ref))
     }
 
     pub fn kind(&self) -> &ErrorKind {
@@ -54,7 +54,15 @@ impl Error {
 
     /// Returns `true` if the error represents an unhandled Java exception.
     pub fn is_uncaught_exception(&self) -> bool {
-        matches!(*self.0, UncaughtException)
+        matches!(*self.0, UncaughtException(_))
+    }
+
+    /// If this error represents an uncaught Java exception, return the throwable heap reference.
+    pub fn throwable_ref(&self) -> Option<i32> {
+        match *self.0 {
+            UncaughtException(r) => Some(r),
+            _ => None,
+        }
     }
 }
 
@@ -66,7 +74,7 @@ impl Display for Error {
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
             Execution(descr) => write!(f, "Execution Error: {descr}"),
             Native(descr) => write!(f, "Native Call Error: {descr}"),
-            UncaughtException => write!(f, "Uncaught Exception"),
+            UncaughtException(_) => write!(f, "Uncaught Exception"),
 
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -198,7 +206,7 @@ pub enum ErrorKind {
     ConstantPool(String),
     Execution(String),
     Native(String),
-    UncaughtException,
+    UncaughtException(i32),
 
     #[doc(hidden)]
     __Nonexhaustive,

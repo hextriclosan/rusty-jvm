@@ -58,24 +58,48 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 
     init_perf_file(arguments)?;
 
-    prelude()?;
+    let result = (|| -> Result<()> {
+        prelude()?;
 
-    let launch_mode = if *arguments.jar_mode() {
-        LmJar
-    } else {
-        LmClass
-    };
-    match resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args()) {
-        Ok(_) => {
-            invoke_shutdown_hooks()?;
-            Ok(())
-        }
+        let launch_mode = if *arguments.jar_mode() {
+            LmJar
+        } else {
+            LmClass
+        };
+        resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args())?;
+
+        invoke_shutdown_hooks()?;
+
+        Ok(())
+    })();
+
+    match result {
+        Ok(()) => Ok(()),
         Err(e) if e.is_uncaught_exception() => {
-            invoke_shutdown_hooks()?;
+            if let Some(throwable_ref) = e.throwable_ref() {
+                if let Err(handler_err) = invoke_uncaught_exception_handler(throwable_ref) {
+                    tracing::error!("Failed to invoke uncaught exception handler: {handler_err}");
+                }
+            }
+            if let Err(hook_err) = invoke_shutdown_hooks() {
+                tracing::error!("Failed to invoke shutdown hooks: {hook_err}");
+            }
             Err(e)
         }
         Err(e) => Err(e),
     }
+}
+
+fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {
+    let system_thread_group_ref = with_method_area(|area| area.system_thread_group_id())?;
+    let system_thread_ref = with_method_area(|area| area.system_thread_id())?;
+    Executor::invoke_non_static_method(
+        "java/lang/ThreadGroup",
+        "uncaughtException:(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
+        system_thread_group_ref,
+        &[system_thread_ref.into(), throwable_ref.into()],
+    )?;
+    Ok(())
 }
 
 fn invoke_shutdown_hooks() -> Result<()> {

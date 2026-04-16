@@ -2061,24 +2061,14 @@ class samples.reflection.trivial.arenestmatesexample.ReflectionAreNestMatesExamp
 }
 
 #[test]
-// fixme https://github.com/hextriclosan/rusty-jvm/issues/676
 fn should_support_class_for_name_method() {
-    utils::assert_with_all_args(
-        &[],
+    assert_success(
         "samples.reflection.trivial.forname.ClassForNameExample",
-        &[],
         r#">>> First static block executed
 Loaded class: samples.reflection.trivial.forname.First (initialized=true)
 Loaded class: samples.reflection.trivial.forname.Second (initialized=false)
 ClassNotFoundException: samples.reflection.trivial.forname.NonExisting - java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
 "#,
-        r#"Exception in thread "system" java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
-	at jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:490)
-"#,
-        Success,
-        0,
-        HashMap::default(),
     );
 }
 
