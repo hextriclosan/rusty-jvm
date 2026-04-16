@@ -1,0 +1,5 @@
+[[profile.default.overrides]]
+# Identify your slow tests by name pattern, module, or package
+filter = 'test(slowtest)'
+# Set a high priority so they start as soon as possible
+priority = 100
