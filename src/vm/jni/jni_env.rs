@@ -48,9 +48,10 @@ use crate::vm::jni::static_methods_impl::{
     call_static_void_method_a, get_static_method_id,
 };
 use crate::vm::jni::string_operations_impl::{
-    get_string_chars, get_string_length, get_string_utf_chars, get_string_utf_length,
-    get_string_utf_length_as_long, new_string, new_string_utf8, release_string_chars,
-    release_string_utf_chars,
+    get_string_chars, get_string_critical, get_string_length, get_string_region,
+    get_string_utf_chars, get_string_utf_length, get_string_utf_length_as_long,
+    get_string_utf_region, new_string, new_string_utf8, release_string_chars,
+    release_string_critical, release_string_utf_chars,
 };
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
@@ -226,12 +227,10 @@ jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
 jni_stub!(MonitorExit(jobject) -> jint);
-jni_stub!(GetStringRegion(jstring, jsize, jsize, *mut jchar) -> ());
-jni_stub!(GetStringUTFRegion(jstring, jsize, jsize, *mut c_char) -> ());
+// GetStringRegion and GetStringUTFRegion are implemented in string_operations_impl.rs
 jni_stub!(GetPrimitiveArrayCritical(jarray, *mut jboolean) -> *mut c_void);
 jni_stub!(ReleasePrimitiveArrayCritical(jarray, *mut c_void, jint) -> ());
-jni_stub!(GetStringCritical(jstring, *mut jboolean) -> *const jchar);
-jni_stub!(ReleaseStringCritical(jstring, *const jchar) -> ());
+// GetStringCritical and ReleaseStringCritical are implemented in string_operations_impl.rs
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);
@@ -467,12 +466,12 @@ static VTABLE: Wrapper = {
     ni.v24.MonitorEnter = MonitorEnter;
     ni.v24.MonitorExit = MonitorExit;
     ni.v24.GetJavaVM = get_java_vm;
-    ni.v24.GetStringRegion = GetStringRegion;
-    ni.v24.GetStringUTFRegion = GetStringUTFRegion;
+    ni.v24.GetStringRegion = get_string_region;
+    ni.v24.GetStringUTFRegion = get_string_utf_region;
     ni.v24.GetPrimitiveArrayCritical = GetPrimitiveArrayCritical;
     ni.v24.ReleasePrimitiveArrayCritical = ReleasePrimitiveArrayCritical;
-    ni.v24.GetStringCritical = GetStringCritical;
-    ni.v24.ReleaseStringCritical = ReleaseStringCritical;
+    ni.v24.GetStringCritical = get_string_critical;
+    ni.v24.ReleaseStringCritical = release_string_critical;
     ni.v24.NewWeakGlobalRef = NewWeakGlobalRef;
     ni.v24.DeleteWeakGlobalRef = DeleteWeakGlobalRef;
     ni.v24.ExceptionCheck = exception_check;

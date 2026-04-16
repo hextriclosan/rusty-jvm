@@ -89,3 +89,79 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
 
     string_ref
 }
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringRegion(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jstring,
+    start: jint,
+    len: jint,
+) -> jcharArray {
+    let length = len as jsize;
+    let char_array = unsafe { ((*(*env)).v24.NewCharArray)(env, length) };
+    let mut buf: Vec<jchar> = vec![0; len as usize];
+    unsafe {
+        ((*(*env)).v24.GetStringRegion)(env, input, start as jsize, length, buf.as_mut_ptr());
+        ((*(*env)).v24.SetCharArrayRegion)(env, char_array, 0, length, buf.as_ptr());
+    }
+
+    char_array
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringUTFRegion(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jstring,
+    start: jint,
+    len: jint,
+) -> jstring {
+    let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize]; // max 3 bytes per char + null terminator
+    unsafe {
+        ((*(*env)).v24.GetStringUTFRegion)(
+            env,
+            input,
+            start as jsize,
+            len as jsize,
+            buf.as_mut_ptr() as *mut i8,
+        );
+        ((*(*env)).v24.NewStringUTF)(env, buf.as_ptr() as *const i8)
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringCritical(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jstring,
+) -> jcharArray {
+    let length = unsafe { ((*(*env)).v24.GetStringLength)(env, input) } as jsize;
+    let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
+    let char_array = unsafe { ((*(*env)).v24.NewCharArray)(env, length) };
+    unsafe {
+        ((*(*env)).v24.GetCharArrayRegion)(env, char_array, 0, length, chars);
+        ((*(*env)).v24.ReleaseStringCritical)(env, input, chars);
+    }
+
+    char_array
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringCriticalAndRelease(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jstring,
+) -> jstring {
+    let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
+    let length = unsafe { ((*(*env)).v24.GetStringLength)(env, input) } as jsize;
+
+    // Create a new string from the critical chars
+    let new_str = unsafe { ((*(*env)).v24.NewString)(env, chars, length) };
+
+    unsafe {
+        ((*(*env)).v24.ReleaseStringCritical)(env, input, chars);
+    }
+
+    new_str
+}

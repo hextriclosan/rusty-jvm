@@ -223,3 +223,126 @@ pub(super) extern "system" fn release_string_utf_chars(
         let _boxed: Box<_> = Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut u8, len));
     }
 }
+
+/// GetStringRegion: Copies a region of the string into the provided buffer.
+/// Throws StringIndexOutOfBoundsException if the range is invalid.
+pub(super) extern "system" fn get_string_region(
+    _env: *mut JNIEnv,
+    str: jstring,
+    start: jsize,
+    len: jsize,
+    buf: *mut jchar,
+) {
+    if str.is_null() {
+        panic!("Invalid string reference: null"); // todo throw NullPointerException here
+    }
+    if buf.is_null() {
+        panic!("Null buffer passed to GetStringRegion"); // todo throw NullPointerException here
+    }
+
+    let string_ref = str as i32;
+    let string_len = {
+        let raw =
+            Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
+                .expect("Failed to get string length");
+        raw[0] as jsize
+    };
+
+    // Check bounds
+    if start < 0 || len < 0 || start > string_len || start + len > string_len {
+        panic!(
+            "StringIndexOutOfBoundsException: Range [{}, {}) out of bounds for length {}",
+            start,
+            start + len,
+            string_len
+        ); // todo throw StringIndexOutOfBoundsException here
+    }
+
+    // Get the raw UTF-16 data
+    let raw_data = get_string_raw_data(string_ref);
+
+    // Copy the region to the buffer
+    unsafe {
+        let src_slice = &raw_data[start as usize..(start + len) as usize];
+        let dst_slice = std::slice::from_raw_parts_mut(buf, len as usize);
+        dst_slice.copy_from_slice(src_slice);
+    }
+}
+
+/// GetStringUTFRegion: Copies a region of the string as modified UTF-8 into the provided buffer.
+/// The caller must ensure the buffer is large enough (use GetStringUTFLength for the full string,
+/// or calculate the region size manually).
+/// Throws StringIndexOutOfBoundsException if the range is invalid.
+pub(super) extern "system" fn get_string_utf_region(
+    _env: *mut JNIEnv,
+    str: jstring,
+    start: jsize,
+    len: jsize,
+    buf: *mut c_char,
+) {
+    if str.is_null() {
+        panic!("Invalid string reference: null"); // todo throw NullPointerException here
+    }
+    if buf.is_null() {
+        panic!("Null buffer passed to GetStringUTFRegion"); // todo throw NullPointerException here
+    }
+
+    let string_ref = str as i32;
+    let string_len = {
+        let raw =
+            Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
+                .expect("Failed to get string length");
+        raw[0] as jsize
+    };
+
+    // Check bounds
+    if start < 0 || len < 0 || start > string_len || start + len > string_len {
+        panic!(
+            "StringIndexOutOfBoundsException: Range [{}, {}) out of bounds for length {}",
+            start,
+            start + len,
+            string_len
+        ); // todo throw StringIndexOutOfBoundsException here
+    }
+
+    // Get the raw UTF-16 data and extract the region
+    let raw_data = get_string_raw_data(string_ref);
+    let region: Vec<jchar> = raw_data[start as usize..(start + len) as usize].to_vec();
+
+    // Convert to a Rust String from UTF-16
+    let rust_string =
+        String::from_utf16(&region).expect("Failed to build string from UTF-16 data");
+
+    // Convert to modified UTF-8 (CESU-8)
+    let mutf8_data = to_java_cesu8(&rust_string);
+
+    // Copy to the caller's buffer (including null terminator)
+    unsafe {
+        let dst_slice = std::slice::from_raw_parts_mut(buf as *mut u8, mutf8_data.len() + 1);
+        dst_slice[..mutf8_data.len()].copy_from_slice(&mutf8_data);
+        dst_slice[mutf8_data.len()] = 0; // null terminator
+    }
+}
+
+/// GetStringCritical: Returns a pointer to the string's characters.
+/// This is similar to GetStringChars but signals that a GC-critical section has started.
+/// Since there's no GC yet in rusty-jvm, this is just a wrapper around GetStringChars.
+pub(super) extern "system" fn get_string_critical(
+    env: *mut JNIEnv,
+    str: jstring,
+    is_copy: *mut jboolean,
+) -> *const jchar {
+    // No GC yet, so this is equivalent to GetStringChars
+    get_string_chars(env, str, is_copy)
+}
+
+/// ReleaseStringCritical: Releases the pointer obtained from GetStringCritical.
+/// Since there's no GC yet in rusty-jvm, this is just a wrapper around ReleaseStringChars.
+pub(super) extern "system" fn release_string_critical(
+    env: *mut JNIEnv,
+    str: jstring,
+    carray: *const jchar,
+) {
+    // No GC yet, so this is equivalent to ReleaseStringChars
+    release_string_chars(env, str, carray);
+}
