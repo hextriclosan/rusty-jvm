@@ -2,7 +2,6 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 use tracing::trace;
@@ -66,14 +65,6 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i1
         }
     }
 
-    let system_thread_group_ref = with_method_area(|area| area.system_thread_group_id())?;
-    let system_thread_ref = with_method_area(|area| area.system_thread_id())?;
-    Executor::invoke_non_static_method(
-        "java/lang/ThreadGroup",
-        "uncaughtException:(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
-        system_thread_group_ref,
-        &[system_thread_ref.into(), throwable_ref.into()],
-    )?;
 
-    Err(Error::uncaught_exception())
+    Err(Error::uncaught_exception(throwable_ref))
 }
