@@ -77,9 +77,13 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
         Ok(()) => Ok(()),
         Err(e) if e.is_uncaught_exception() => {
             if let Some(throwable_ref) = e.throwable_ref() {
-                let _ = invoke_uncaught_exception_handler(throwable_ref);
+                if let Err(handler_err) = invoke_uncaught_exception_handler(throwable_ref) {
+                    tracing::error!("Failed to invoke uncaught exception handler: {handler_err}");
+                }
             }
-            let _ = invoke_shutdown_hooks();
+            if let Err(hook_err) = invoke_shutdown_hooks() {
+                tracing::error!("Failed to invoke shutdown hooks: {hook_err}");
+            }
             Err(e)
         }
         Err(e) => Err(e),
