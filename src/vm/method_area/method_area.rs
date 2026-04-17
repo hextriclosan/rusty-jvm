@@ -131,14 +131,16 @@ impl MethodArea {
         } else {
             let external_name = fully_qualified_class_name.replace('/', ".");
             let name_ref = StringPoolHelper::get_string(&external_name)?;
-            let clazz_ref = Executor::invoke_static_method(
-                "java/lang/Class",
-                "forName:(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;",
-                &[
-                    name_ref.into(),
-                    0.into(),
-                    SYSTEM_CLASSLOADER_REF.get().copied().unwrap_or(0).into(),
-                ],
+            let clazz_ref = crate::vm::concurrency::block_on_async(
+                Executor::invoke_static_method(
+                    "java/lang/Class",
+                    "forName:(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;",
+                    &[
+                        name_ref.into(),
+                        0.into(),
+                        SYSTEM_CLASSLOADER_REF.get().copied().unwrap_or(0).into(),
+                    ],
+                )
             )?[0];
             klass(clazz_ref)
         }

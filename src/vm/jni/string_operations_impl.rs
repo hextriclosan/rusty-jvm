@@ -18,9 +18,9 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
         panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
     }
 
-    let raw =
+    let raw = crate::vm::concurrency::block_on_async(
         Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
-            .unwrap_or(vec![0]); // OpenJDK returns 0 for non-strings
+    ).unwrap_or(vec![0]); // OpenJDK returns 0 for non-strings
 
     raw[0] as jint
 }
@@ -38,13 +38,15 @@ pub(super) extern "system" fn new_string(
     }
     let arr_ref = new_char_array(env, len);
     set_char_array_region(env, arr_ref, 0, len, unicode);
-    let string_instance_ref = Executor::invoke_args_constructor(
-        "java/lang/String",
-        "<init>:([C)V",
-        &[(arr_ref as i32).into()],
-        Some(""),
-    )
-    .expect("Failed to invoke String constructor"); // todo handle exception here
+    
+    let string_instance_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            "java/lang/String",
+            "<init>:([C)V",
+            &[(arr_ref as i32).into()],
+            Some(""),
+        )
+    ).expect("Failed to invoke String constructor"); // todo handle exception here
 
     string_instance_ref as jstring
 }
@@ -151,13 +153,14 @@ pub(super) extern "system" fn new_string_utf8(
         .raw_value()
         .expect("Failed to get UTF_8 value")[0];
 
-    let string_instance_ref = Executor::invoke_args_constructor(
-        "java/lang/String",
-        "<init>:([BLjava/nio/charset/Charset;)V",
-        &[(byte_array as i32).into(), utf8_charset_ref.into()],
-        Some(""),
-    )
-    .expect("Failed to invoke String constructor"); // todo handle exception here
+    let string_instance_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            "java/lang/String",
+            "<init>:([BLjava/nio/charset/Charset;)V",
+            &[(byte_array as i32).into(), utf8_charset_ref.into()],
+            Some(""),
+        )
+    ).expect("Failed to invoke String constructor"); // todo handle exception here
 
     string_instance_ref as jstring
 }

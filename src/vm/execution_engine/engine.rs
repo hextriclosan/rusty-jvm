@@ -1,3 +1,12 @@
+//! Purpose: Core bytecode execution engine for the JVM.
+//!
+//! Implementation Details:
+//! This module implements the main interpreter loop. It continually pops the next
+//! opcode from the current stack frame and dispatches it to the appropriate processor.
+//! As part of the transition to Tokio, this engine operates asynchronously, allowing
+//! instructions (like method invocations that map to blocking native calls) to yield
+//! execution to the Tokio scheduler without blocking the underlying OS thread.
+
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::{
     ops_comparison_processor, ops_constant_processor, ops_control_processor,
@@ -11,11 +20,20 @@ use tracing::{span, trace, Level};
 pub(crate) struct Engine {}
 
 impl Engine {
-    pub(crate) fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<Vec<i32>> {
+    /// Starts the asynchronous execution of a JVM stack frame.
+    ///
+    /// # Arguments
+    /// * `initial_stack_frame` - The root frame of the call stack.
+    /// * `reason` - A debug string describing why this execution loop was started.
+    ///
+    /// # Returns
+    /// A `Result` containing the vector of return values (empty for `void`).
+    pub(crate) async fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<Vec<i32>> {
         trace!("@@@ Entering execute: {reason}");
 
         let mut stack_frames = StackFrames::new(vec![initial_stack_frame]);
         let mut last_value = vec![];
+        
         while !stack_frames.is_empty() {
             let (class, code, pc, line_numbers) = {
                 let frame = stack_frames
@@ -32,6 +50,7 @@ impl Engine {
             let span = span!(Level::TRACE, "", "{class}:{instruction_line_num}");
             let _entered = span.enter();
 
+            // Dispatch the opcode to the appropriate processor based on its byte value.
             match code {
                 0u8..=20u8 => {
                     ops_constant_processor::process(code, &class, &mut stack_frames)?;
@@ -58,12 +77,15 @@ impl Engine {
                     last_value = ops_control_processor::process(code, &mut stack_frames)?;
                 }
                 178u8..=195u8 => {
-                    ops_reference_processor::process(code, &class, &mut stack_frames)?;
+                    // The reference processor handles method invocations (INVOKEVIRTUAL, etc.).
+                    // Because these invocations may ultimately call asynchronous native methods 
+                    // (like Thread.sleep), this processor must be awaited.
+                    ops_reference_processor::process(code, &class, &mut stack_frames).await?;
                 }
                 196u8..=201u8 => {
                     ops_extended_processor::process(code, &class, &mut stack_frames)?;
                 }
-                _ => unreachable!("{}", format! {"xxx = {}", code}),
+                _ => unreachable!("{}", format!("xxx = {}", code)),
             }
         }
 

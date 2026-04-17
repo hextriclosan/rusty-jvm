@@ -23,11 +23,13 @@ pub(super) fn to_ffitype(type_descriptor: &TypeDescriptor) -> Type {
 
 pub(super) fn get_symbol_address(name: &str, native_libraries_ref: i32) -> Result<Option<i64>> {
     let short_name_ref = StringPoolHelper::get_string(name)?;
-    let symbol_address = Executor::invoke_non_static_method(
-        "jdk/internal/loader/NativeLibraries",
-        "find:(Ljava/lang/String;)J",
-        native_libraries_ref,
-        &[short_name_ref.into()],
+    let symbol_address = crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            "jdk/internal/loader/NativeLibraries",
+            "find:(Ljava/lang/String;)J",
+            native_libraries_ref,
+            &[short_name_ref.into()],
+        )
     )?;
     let symbol_address = vec_to_i64(&symbol_address);
     Ok(if symbol_address != 0 {

@@ -11,13 +11,17 @@ pub fn native_accessor_invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> 
     let (method, args) = resolve_method_and_args(method_ref, args_ref)?;
 
     let ret = if obj_ref == 0 {
-        Executor::invoke_static_method(method.class_name(), method.name_signature(), &args)?[0]
+        crate::vm::concurrency::block_on_async(
+            Executor::invoke_static_method(method.class_name(), method.name_signature(), &args)
+        )?[0]
     } else {
-        let ret = Executor::invoke_non_static_method(
-            method.class_name(),
-            method.name_signature(),
-            obj_ref,
-            &args,
+        let ret = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                method.class_name(),
+                method.name_signature(),
+                obj_ref,
+                &args,
+            )
         )?;
         match ret.len() {
             0 => 0,
@@ -46,11 +50,13 @@ pub fn native_accessor_invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> 
 pub fn native_accessor_newinstance0(constructor_ref: i32, args_ref: i32) -> Result<i32> {
     let (method, args) = resolve_method_and_args(constructor_ref, args_ref)?;
 
-    Executor::invoke_args_constructor(
-        method.class_name(),
-        method.name_signature(),
-        &args,
-        Some("Native Accessor newInstance0"),
+    crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            method.class_name(),
+            method.name_signature(),
+            &args,
+            Some("Native Accessor newInstance0"),
+        )
     )
 }
 
@@ -91,57 +97,67 @@ fn resolve_method_and_args(
 }
 
 fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
-    let primitive =
-        Executor::invoke_non_static_method("java/lang/Class", "isPrimitive:()Z", clazz_ref_, &[])?
-            [0]
-            != 0;
+    let primitive = crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method("java/lang/Class", "isPrimitive:()Z", clazz_ref_, &[])
+    )?[0] != 0;
 
     if !primitive {
         return Ok(StackValueKind::I32(obj_ref)); // Return as object if not primitive
     }
 
     let res = if clazz_ref_ == clazz_ref("B")? {
-        let raw =
-            Executor::invoke_non_static_method("java/lang/Byte", "byteValue:()B", obj_ref, &[])?;
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method("java/lang/Byte", "byteValue:()B", obj_ref, &[])
+        )?;
         StackValueKind::I32(i32::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("Z")? {
-        let raw = Executor::invoke_non_static_method(
-            "java/lang/Boolean",
-            "booleanValue:()Z",
-            obj_ref,
-            &[],
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                "java/lang/Boolean",
+                "booleanValue:()Z",
+                obj_ref,
+                &[],
+            )
         )?;
         StackValueKind::I32(i32::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("S")? {
-        let raw =
-            Executor::invoke_non_static_method("java/lang/Short", "shortValue:()S", obj_ref, &[])?;
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method("java/lang/Short", "shortValue:()S", obj_ref, &[])
+        )?;
         StackValueKind::I32(i32::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("C")? {
-        let raw = Executor::invoke_non_static_method(
-            "java/lang/Character",
-            "charValue:()C",
-            obj_ref,
-            &[],
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                "java/lang/Character",
+                "charValue:()C",
+                obj_ref,
+                &[],
+            )
         )?;
         StackValueKind::I32(i32::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("I")? {
-        let raw =
-            Executor::invoke_non_static_method("java/lang/Integer", "intValue:()I", obj_ref, &[])?;
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method("java/lang/Integer", "intValue:()I", obj_ref, &[])
+        )?;
         StackValueKind::I32(i32::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("F")? {
-        let raw =
-            Executor::invoke_non_static_method("java/lang/Float", "floatValue:()F", obj_ref, &[])?;
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method("java/lang/Float", "floatValue:()F", obj_ref, &[])
+        )?;
         StackValueKind::F32(f32::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("J")? {
-        let raw =
-            Executor::invoke_non_static_method("java/lang/Long", "longValue:()J", obj_ref, &[])?;
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method("java/lang/Long", "longValue:()J", obj_ref, &[])
+        )?;
         StackValueKind::I64(i64::from_vec(&raw))
     } else if clazz_ref_ == clazz_ref("D")? {
-        let raw = Executor::invoke_non_static_method(
-            "java/lang/Double",
-            "doubleValue:()D",
-            obj_ref,
-            &[],
+        let raw = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                "java/lang/Double",
+                "doubleValue:()D",
+                obj_ref,
+                &[],
+            )
         )?;
         StackValueKind::F64(f64::from_vec(&raw))
     } else {

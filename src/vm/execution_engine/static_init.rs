@@ -48,9 +48,11 @@ impl StaticInit {
                 if let Some(static_init_method) =
                     java_class.try_get_method(Self::STATIC_INIT_METHOD)
                 {
-                    Engine::execute(
-                        static_init_method.new_stack_frame()?,
-                        &format!("static initialization {}", java_class.this_class_name()),
+                    crate::vm::concurrency::block_on_async(
+                        Engine::execute(
+                            static_init_method.new_stack_frame()?,
+                            &format!("static initialization {}", java_class.this_class_name()),
+                        )
                     )?;
                 }
 

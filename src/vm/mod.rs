@@ -1,3 +1,4 @@
+pub mod concurrency;
 mod commons;
 mod error;
 mod exception;
@@ -58,25 +59,49 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 
     init_perf_file(arguments)?;
 
-    let result = (|| -> Result<()> {
-        prelude()?;
+    // Execute the synchronous initialization prelude.
+    // Nested async calls will automatically spin up temporary lightweight runtimes.
+    prelude()?;
 
-        let launch_mode = if *arguments.jar_mode() {
-            LmJar
-        } else {
-            LmClass
-        };
-        resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args())?;
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| Error::new_execution(&format!("Failed to build Tokio runtime: {e}")))?;
 
-        invoke_shutdown_hooks()?;
+    let launch_mode = if *arguments.jar_mode() {
+        LmJar
+    } else {
+        LmClass
+    };
 
-        Ok(())
-    })();
+    let system_thread_id = crate::vm::method_area::method_area::with_method_area(|area| area.system_thread_id()).unwrap_or(0);
+    
+    // Execute the primary main method using the global Tokio runtime.
+    let result = runtime.block_on(async {
+        crate::vm::concurrency::task_local::CURRENT_JAVA_THREAD_ID.scope(system_thread_id, async {
+            resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args()).await
+        }).await
+    });
 
+    // After the main Java thread finishes, execute shutdown hooks.
+    // Again, these are run outside the main global runtime block.
     match result {
-        Ok(()) => Ok(()),
+        Ok(()) => {
+            invoke_shutdown_hooks()?;
+            Ok(())
+        }
         Err(e) if e.is_uncaught_exception() => {
             if let Some(throwable_ref) = e.throwable_ref() {
+                // FORCE RUST TO PRINT THE SILENT EXCEPTION!
+                let ex_name = crate::vm::heap::heap::HEAP
+                    .get_instance_name(throwable_ref)
+                    .unwrap_or_else(|_| "UnknownException".to_string());
+                
+                eprintln!("\n==========================================");
+                eprintln!("🔥 RUST_CRASH_DEBUG: UNCAUGHT JAVA EXCEPTION 🔥");
+                eprintln!("Exception Class: {}", ex_name);
+                eprintln!("==========================================\n");
+
                 if let Err(handler_err) = invoke_uncaught_exception_handler(throwable_ref) {
                     tracing::error!("Failed to invoke uncaught exception handler: {handler_err}");
                 }
@@ -86,24 +111,31 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
             }
             Err(e)
         }
-        Err(e) => Err(e),
+        Err(e) => {
+            eprintln!("\n🔥 RUST_CRASH_DEBUG: INTERNAL EXECUTION ERROR 🔥\n{:?}\n", e);
+            Err(e)
+        }
     }
 }
 
 fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {
     let system_thread_group_ref = with_method_area(|area| area.system_thread_group_id())?;
     let system_thread_ref = with_method_area(|area| area.system_thread_id())?;
-    Executor::invoke_non_static_method(
-        "java/lang/ThreadGroup",
-        "uncaughtException:(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
-        system_thread_group_ref,
-        &[system_thread_ref.into(), throwable_ref.into()],
+    crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            "java/lang/ThreadGroup",
+            "uncaughtException:(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
+            system_thread_group_ref,
+            &[system_thread_ref.into(), throwable_ref.into()],
+        )
     )?;
     Ok(())
 }
 
 fn invoke_shutdown_hooks() -> Result<()> {
-    Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])?;
+    crate::vm::concurrency::block_on_async(
+        Executor::invoke_static_method("java/lang/Shutdown", "shutdown:()V", &[])
+    )?;
     Ok(())
 }
 
@@ -156,41 +188,48 @@ fn init() -> Result<()> {
     page_size.set_raw_value(vec![page_size::get() as i32])?;
 
     // create primordial ThreadGroup and Thread
-    let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
+    let tg_obj_ref = crate::vm::concurrency::block_on_async(Executor::invoke_default_constructor("java/lang/ThreadGroup"))?;
     with_method_area(|area| area.set_system_thread_group_id(tg_obj_ref))?;
-    let string_obj_ref = StringPoolHelper::get_string("system")?; // refactor candidate B: introduce and use here common string creator, not string pool one
-    let _thread_obj_ref =
-        Executor::create_primordial_thread(&[tg_obj_ref.into(), string_obj_ref.into()])?;
+    let string_obj_ref = StringPoolHelper::get_string("system")?; 
+    let _thread_obj_ref = crate::vm::concurrency::block_on_async(
+        Executor::create_primordial_thread(&[tg_obj_ref.into(), string_obj_ref.into()])
+    )?;
 
     StaticInit::initialize("java/lang/reflect/Method")?;
-    Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
-    let init_phase2_result = Executor::invoke_static_method(
-        "java/lang/System",
-        "initPhase2:(ZZ)I",
-        &[1.into(), 1.into()],
+    crate::vm::concurrency::block_on_async(Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[]))?;
+    let init_phase2_result = crate::vm::concurrency::block_on_async(
+        Executor::invoke_static_method(
+            "java/lang/System",
+            "initPhase2:(ZZ)I",
+            &[1.into(), 1.into()],
+        )
     )?[0];
     if init_phase2_result != 0 {
         return Err(Error::new_execution(&format!(
             "System.initPhase2 returned error code {init_phase2_result}"
         )));
     }
-    Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[])?;
+    crate::vm::concurrency::block_on_async(Executor::invoke_static_method("java/lang/System", "initPhase3:()V", &[]))?;
 
     PLATFORM_CLASSLOADER_REF
         .set(
-            Executor::invoke_static_method(
-                "java/lang/ClassLoader",
-                "getPlatformClassLoader:()Ljava/lang/ClassLoader;",
-                &[],
+            crate::vm::concurrency::block_on_async(
+                Executor::invoke_static_method(
+                    "java/lang/ClassLoader",
+                    "getPlatformClassLoader:()Ljava/lang/ClassLoader;",
+                    &[],
+                )
             )?[0],
         )
         .map_err(|_e| Error::new_execution("value already set"))?;
     SYSTEM_CLASSLOADER_REF
         .set(
-            Executor::invoke_static_method(
-                "java/lang/ClassLoader",
-                "getSystemClassLoader:()Ljava/lang/ClassLoader;",
-                &[],
+            crate::vm::concurrency::block_on_async(
+                Executor::invoke_static_method(
+                    "java/lang/ClassLoader",
+                    "getSystemClassLoader:()Ljava/lang/ClassLoader;",
+                    &[],
+                )
             )?[0],
         )
         .map_err(|_e| Error::new_execution("value already set"))?;
@@ -199,11 +238,13 @@ fn init() -> Result<()> {
         .get()
         .copied()
         .ok_or_else(|| Error::new_execution("SYSTEM_CLASSLOADER_REF not set"))?;
-    let module_ref = Executor::invoke_args_constructor(
-        "java/lang/Module",
-        "<init>:(Ljava/lang/ClassLoader;)V",
-        &[system_classloader_ref.into()],
-        Some("module for reflection class"),
+    let module_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            "java/lang/Module",
+            "<init>:(Ljava/lang/ClassLoader;)V",
+            &[system_classloader_ref.into()],
+            Some("module for reflection class"),
+        )
     )?;
     UNNAMED_MODULE_REF
         .set(module_ref)

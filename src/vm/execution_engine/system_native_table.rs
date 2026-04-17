@@ -1,6 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::system_native_table::NativeMethod::{
-    Basic, WithMutStackFrames, WithStackFrames,
+    AsyncMutStackFrames, Basic, WithMutStackFrames, WithStackFrames,
 };
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -72,7 +72,7 @@ use crate::vm::system_native::system::{
     system_identity_hashcode_wrp, system_map_library_name_wrp,
 };
 use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
-use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
+use crate::vm::system_native::thread::get_next_threadid_offset_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
 use crate::vm::system_native::unsafe_::{
@@ -97,15 +97,19 @@ use crate::vm::system_native::zip::inflater::{
 };
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
 type BasicNativeMethod = fn(&[i32]) -> Result<Vec<i32>>;
 type WithStackFramesNativeMethod = fn(&[i32], &StackFrames) -> Result<Vec<i32>>;
 type WithMutStackFramesNativeMethod = fn(&[i32], &mut StackFrames) -> Result<Vec<i32>>;
+type AsyncNativeMethod = for<'a> fn(&'a [i32], &'a mut StackFrames) -> Pin<Box<dyn Future<Output = Result<Vec<i32>>> + Send + 'a>>;
 
 enum NativeMethod {
     Basic(BasicNativeMethod),
     WithStackFrames(WithStackFramesNativeMethod),
     WithMutStackFrames(WithMutStackFramesNativeMethod),
+    AsyncMutStackFrames(AsyncNativeMethod),
 }
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
@@ -119,6 +123,21 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(clone_wrp),
     );
     table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
+    table.insert(
+        "java/lang/Object:wait0:(J)V",
+        AsyncMutStackFrames(|args, _frames| Box::pin(async move {
+            // args[0] is `this`. args[1] and args[2] form the 64-bit `long timeout`
+            let millis = crate::vm::helper::i32toi64(args[2], args[1]);
+            if millis == 0 {
+                // wait(0) means wait forever. We safely suspend this Tokio task indefinitely.
+                std::future::pending::<()>().await;
+            } else {
+                // wait(millis)
+                tokio::time::sleep(std::time::Duration::from_millis(millis as u64)).await;
+            }
+            Ok(Vec::new())
+        })),
+    );
     table.insert("java/lang/Object:hashCode:()I", Basic(object_hashcode_wrp));
     table.insert(
         "java/lang/System:currentTimeMillis:()J",
@@ -539,11 +558,11 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
-        Basic(current_thread_wrp),
+        AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::current::current_thread(args, frames))),
     );
     table.insert(
         "java/lang/Thread:currentCarrierThread:()Ljava/lang/Thread;",
-        Basic(current_thread_wrp), //todo: use current carrier thread here (no matter what it is)
+        AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::current::current_thread(args, frames))), 
     );
     table.insert("java/lang/Thread:registerNatives:()V", Basic(void_stub));
     table.insert(
@@ -555,7 +574,36 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_next_threadid_offset_wrp),
     );
     table.insert("java/lang/Thread:setPriority0:(I)V", Basic(void_stub));
-    table.insert("java/lang/Thread:start0:()V", Basic(void_stub));
+    table.insert(
+        "java/lang/Thread:start0:()V",
+        AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::start::start0(args, frames))),
+    );
+    table.insert(
+        "java/lang/Thread:sleep0:(J)V",
+        AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::sleep::sleep0(args, frames))),
+    );
+    table.insert(
+        "java/lang/Thread:sleepNanos0:(J)V",
+        AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::sleep::sleep_nanos0(args, frames))),
+    );
+    table.insert(
+        "java/lang/Thread:yield0:()V",
+        AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::yield_thread::yield0(args, frames))),
+    );
+    table.insert(
+        "java/lang/Thread:ensureMaterializedForStackWalk:(Ljava/lang/Object;)V",
+        Basic(void_stub), // Stub to prevent background thread crash
+    );
+    table.insert(
+        "java/lang/ref/Reference:waitForReferencePendingList:()V",
+        AsyncMutStackFrames(|_args, _frames| Box::pin(async {
+            // We do not have a Garbage Collector yet.
+            // If we return immediately, the ReferenceHandler thread will spin-loop at 100% CPU.
+            // Thanks to Tokio, we can just suspend this background Virtual Thread forever!
+            std::future::pending::<()>().await;
+            Ok(vec![])
+        })),
+    );
     table.insert(
         "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
         Basic(|_args: &[i32]| {
@@ -1153,7 +1201,7 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
     }
 }
 
-pub(crate) fn invoke_native_method(
+pub(crate) async fn invoke_native_method(
     method_signature: &str,
     args: &[i32],
     is_static: bool,
@@ -1165,9 +1213,10 @@ pub(crate) fn invoke_native_method(
     };
 
     match native_method {
-        Basic(method) => method(args),
-        WithStackFrames(method) => method(args, stack_frames),
-        WithMutStackFrames(method) => method(args, stack_frames),
+        NativeMethod::Basic(method) => method(args),
+        NativeMethod::WithStackFrames(method) => method(args, stack_frames),
+        NativeMethod::WithMutStackFrames(method) => method(args, stack_frames),
+        NativeMethod::AsyncMutStackFrames(method) => method(args, stack_frames).await,
     }
 }
 

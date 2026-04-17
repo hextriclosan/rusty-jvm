@@ -3694,3 +3694,14 @@ fn should_use_proper_interface_static_field() {
         "42\n",
     );
 }
+
+#[test]
+fn should_support_virtual_thread_execution() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadSleepExample",
+        r#"Thread 2 woke up
+Thread 1 woke up
+Main thread finished
+"#,
+    );
+}

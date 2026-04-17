@@ -97,11 +97,13 @@ impl MemberName {
             _ => 0,
         } as i64;
         let args = vec![vmindex.into()];
-        let long_instance_ref = Executor::invoke_args_constructor(
-            "java/lang/Long",
-            "<init>:(J)V",
-            &args,
-            Some("Long instance creation"),
+        let long_instance_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_args_constructor(
+                "java/lang/Long",
+                "<init>:(J)V",
+                &args,
+                Some("Long instance creation"),
+            )
         )?;
 
         let vmtarget = match reference_kind {

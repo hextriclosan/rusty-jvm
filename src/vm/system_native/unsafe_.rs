@@ -128,6 +128,17 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
         } else {
             Ok(false)
         }
+    } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+        // Fix: Properly handle Unsafe memory access on Static Fields
+        let t_jc = klass(obj_ref)?;
+        let static_field = t_jc.get_static_field_by_offset(offset)?;
+        let result = static_field.raw_value()?[0];
+        if result == expected {
+            static_field.set_raw_value(vec![x])?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     } else {
         let klass = CLASSES.get(class_name.as_str())?;
         let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
@@ -187,8 +198,15 @@ pub(crate) fn get_byte(obj_ref: i32, offset: i64) -> Result<i8> {
         if class_name.starts_with("[") {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 1)?;
             Ok(result[0] as i8)
+        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+            let t_jc = klass(obj_ref)?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            Ok(static_field.raw_value()?[0] as i8)
         } else {
-            todo!("implement get_byte for class field");
+            let klass = CLASSES.get(class_name.as_str())?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
+            let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
+            Ok(result[0] as i8)
         }
     } else {
         let addr = offset as usize as *const u8;
@@ -210,8 +228,15 @@ pub(crate) fn get_short(obj_ref: i32, offset: i64) -> Result<i16> {
         if class_name.starts_with("[") {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 2)?;
             Ok(result[0] as i16)
+        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+            let t_jc = klass(obj_ref)?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            Ok(static_field.raw_value()?[0] as i16)
         } else {
-            todo!("implement get_short for class field");
+            let klass = CLASSES.get(class_name.as_str())?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
+            let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
+            Ok(result[0] as i16)
         }
     } else {
         let addr = offset as usize as *const i16;
@@ -234,8 +259,15 @@ pub(crate) fn get_char(obj_ref: i32, offset: i64) -> Result<u16> {
         if class_name.starts_with("[") {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 2)?;
             Ok(result[0] as u16)
+        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+            let t_jc = klass(obj_ref)?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            Ok(static_field.raw_value()?[0] as u16)
         } else {
-            todo!("implement get_char for class field");
+            let klass = CLASSES.get(class_name.as_str())?;
+            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
+            let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
+            Ok(result[0] as u16)
         }
     } else {
         todo!("implement get_char for null object");
@@ -267,13 +299,13 @@ pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
         if class_name.starts_with("[") {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?;
             Ok(result[0])
+        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+            let t_jc = klass(obj_ref)?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            Ok(static_field.raw_value()?[0])
         } else {
-            let class_name = HEAP.get_instance_name(obj_ref)?;
-
             let klass = CLASSES.get(class_name.as_str())?;
-
             let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
             let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
             Ok(result[0])
         }
@@ -311,13 +343,14 @@ fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
         if class_name.starts_with("[") {
             let bytes = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 8)?;
             Ok(vec_to_i64(&bytes))
+        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+            let t_jc = klass(obj_ref)?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            let bytes = static_field.raw_value()?;
+            Ok(vec_to_i64(&bytes))
         } else {
-            let class_name = HEAP.get_instance_name(obj_ref)?;
-
             let klass = CLASSES.get(class_name.as_str())?;
-
             let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
             let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
             Ok(vec_to_i64(&result))
         }
@@ -376,18 +409,31 @@ fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Resul
 
     let class_name = HEAP.get_instance_name(obj_ref)?;
 
-    let klass = CLASSES.get(class_name.as_str())?;
+    if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+        let t_jc = klass(obj_ref)?;
+        let static_field = t_jc.get_static_field_by_offset(offset)?;
+        let bytes = static_field.raw_value()?;
+        let old_value = i32toi64(bytes[0], bytes[1]);
 
-    let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
-    let bytes = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
-    let old_value = i32toi64(bytes[0], bytes[1]);
-
-    if old_value == expected {
-        HEAP.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))?;
-        Ok((true, old_value))
+        if old_value == expected {
+            static_field.set_raw_value(i64_to_vec(x))?;
+            Ok((true, old_value))
+        } else {
+            Ok((false, old_value))
+        }
     } else {
-        Ok((false, old_value))
+        let klass = CLASSES.get(class_name.as_str())?;
+        let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
+
+        let bytes = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
+        let old_value = i32toi64(bytes[0], bytes[1]);
+
+        if old_value == expected {
+            HEAP.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))?;
+            Ok((true, old_value))
+        } else {
+            Ok((false, old_value))
+        }
     }
 }
 

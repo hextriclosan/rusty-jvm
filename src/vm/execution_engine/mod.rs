@@ -1,5 +1,5 @@
 pub(crate) mod common;
-mod engine;
+pub(crate) mod engine;
 pub(crate) mod executor;
 pub(crate) mod invoke_dynamic_runner;
 pub(crate) mod invoker;

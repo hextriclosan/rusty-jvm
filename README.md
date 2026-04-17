@@ -143,6 +143,11 @@ public class FruitCount {
    cargo run -- FruitCount
    ```
 
+3. Run tests:
+    ```sh
+    cargo test --test integration_tests
+    ```
+
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
 

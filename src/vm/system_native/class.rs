@@ -103,11 +103,13 @@ fn for_name0(
         }
     } else {
         // we have a class loader, so we use it to load the class
-        let res = Executor::invoke_non_static_method(
-            "java/lang/ClassLoader",
-            "loadClass:(Ljava/lang/String;)Ljava/lang/Class;",
-            loader_ref,
-            &[name_ref.into()],
+        let res = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                "java/lang/ClassLoader",
+                "loadClass:(Ljava/lang/String;)Ljava/lang/Class;",
+                loader_ref,
+                &[name_ref.into()],
+            )
         );
 
         match res {
@@ -339,7 +341,9 @@ pub(crate) fn get_constant_pool_wrp(args: &[i32]) -> Result<Vec<i32>> {
 }
 fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     const NAME: &str = "jdk/internal/reflect/ConstantPool";
-    let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
+    let constant_pool_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_default_constructor(NAME)
+    )?;
     HEAP.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])?;
 
     Ok(constant_pool_ref)

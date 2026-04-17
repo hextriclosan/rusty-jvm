@@ -1,3 +1,10 @@
+//! Purpose: Handles Java Bytecode instructions related to object and method references.
+//!
+//! Implementation Details:
+//! Maps instructions like `INVOKEVIRTUAL` and `GETFIELD` to their internal JVM operations.
+//! This processor is entirely asynchronous so that method invocations (which might call
+//! `Thread.sleep` or socket blocking operations) properly yield execution to Tokio.
+
 use crate::unwrap_result_or_return_default;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
@@ -19,7 +26,7 @@ use jdescriptor::MethodDescriptor;
 use std::sync::Arc;
 use tracing::trace;
 
-pub(crate) fn process(
+pub(crate) async fn process(
     code: u8,
     current_class_name: &str,
     stack_frames: &mut StackFrames,
@@ -167,7 +174,7 @@ pub(crate) fn process(
                 &method_args,
                 Arc::clone(&exact_implementation),
                 class_name,
-            )?;
+            ).await?;
             trace!("INVOKEVIRTUAL -> invoked {class_name}.{full_signature}({method_args:?}) via {class_name_by_ref_type}.{full_signature}");
         }
         INVOKESPECIAL => {
@@ -189,7 +196,7 @@ pub(crate) fn process(
                 &method_args,
                 Arc::clone(&java_method),
                 class_name,
-            )?;
+            ).await?;
             trace!("INVOKESPECIAL -> {class_name}.{full_signature}({method_args:?})");
         }
         INVOKESTATIC => {
@@ -212,7 +219,7 @@ pub(crate) fn process(
                 &method_args,
                 Arc::clone(&java_method),
                 &class_name_to_start_lookup_from,
-            )?;
+            ).await?;
             trace!("INVOKESTATIC -> {class_name_to_start_lookup_from}.{full_signature}({method_args:?})");
         }
         INVOKEINTERFACE => {
@@ -258,7 +265,7 @@ pub(crate) fn process(
                 &method_args,
                 Arc::clone(&java_method),
                 exact_class_name,
-            )?;
+            ).await?;
             trace!("INVOKEINTERFACE -> {exact_class_name}.{full_signature}({method_args:?}) on instance {instance_name}");
         }
         INVOKEDYNAMIC => {
@@ -427,7 +434,6 @@ pub(crate) fn process(
         }
         INSTANCEOF => {
             let stack_frame = last_frame_mut(stack_frames)?;
-            // todo: merge me with CHECKCAST
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
             let mut objectref = stack_frame.pop();
@@ -464,14 +470,12 @@ pub(crate) fn process(
                 return Ok(());
             }
 
-            // todo: implement me
             stack_frame.incr_pc();
             trace!("MONITORENTER -> objectref={objectref}");
         }
         MONITOREXIT => {
             let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
-            // todo: implement me
             stack_frame.incr_pc();
             trace!("MONITOREXIT -> objectref={objectref}");
         }

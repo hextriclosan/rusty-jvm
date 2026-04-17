@@ -12,7 +12,6 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
-use crate::vm::system_native::method_handle_natives::invocation::invoke_exact;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use dashmap::DashMap;
 use derive_new::new;
@@ -124,10 +123,12 @@ impl InvokeDynamicRunner {
         let method_descriptor = resolved_method.invoke_dynamic_method_type_desc();
         let args_to_invoke_with = prepare_invoke_context(stack_frames, method_descriptor, false)?;
 
-        invoke_exact(
-            method_handle_dynamic_invoked_ref,
-            &args_to_invoke_with,
-            stack_frames,
+        crate::vm::concurrency::block_on_async(
+            crate::vm::system_native::method_handle_natives::invocation::invoke_exact(
+                method_handle_dynamic_invoked_ref,
+                &args_to_invoke_with,
+                stack_frames,
+            )
         )
     }
 
@@ -144,19 +145,23 @@ impl InvokeDynamicRunner {
     }
 
     fn build_method_handle_dynamic_invoked(args: &[StackValueKind; 6]) -> Result<i32> {
-        let call_site_ref = Executor::invoke_static_method(
-            "java/lang/invoke/BootstrapMethodInvoker",
-            "invoke:(Ljava/lang/Class;Ljava/lang/invoke/MethodHandle;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Class;)Ljava/lang/Object;",
-            args,
+        let call_site_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_static_method(
+                "java/lang/invoke/BootstrapMethodInvoker",
+                "invoke:(Ljava/lang/Class;Ljava/lang/invoke/MethodHandle;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Class;)Ljava/lang/Object;",
+                args,
+            )
         )?[0];
 
         let call_site_name = HEAP.get_instance_name(call_site_ref)?;
 
-        let method_handle_dynamic_invoked_ref = Executor::invoke_non_static_method(
-            &call_site_name,
-            "dynamicInvoker:()Ljava/lang/invoke/MethodHandle;",
-            call_site_ref,
-            &[],
+        let method_handle_dynamic_invoked_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &call_site_name,
+                "dynamicInvoker:()Ljava/lang/invoke/MethodHandle;",
+                call_site_ref,
+                &[],
+            )
         )?[0];
         Ok(method_handle_dynamic_invoked_ref)
     }

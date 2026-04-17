@@ -12,13 +12,15 @@ pub fn construct_exception_and_throw(
     args: &[StackValueKind],
     stack_frames: &mut StackFrames,
 ) -> Result<()> {
-    let exception_instance_ref = Executor::invoke_args_constructor(
-        exception_class_name,
-        constructor_signature,
-        args,
-        Some(&format!(
-            "construction of {exception_class_name}:{constructor_signature}({args:?}) instance"
-        )),
+    let exception_instance_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            exception_class_name,
+            constructor_signature,
+            args,
+            Some(&format!(
+                "construction of {exception_class_name}:{constructor_signature}({args:?}) instance"
+            )),
+        )
     )?;
 
     let (exception_name, found_exception_handler) =
