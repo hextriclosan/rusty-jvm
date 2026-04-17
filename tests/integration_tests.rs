@@ -3415,14 +3415,14 @@ Result of GetStringUTFChars with input 'abc': 'abc'
 === GetStringRegion ===
 Result of GetStringRegion('Hello, JNI 💅☕️!', 0, 5): [72, 101, 108, 108, 111]
 Result of GetStringRegion('Hello, JNI 💅☕️!', 7, 3): [74, 78, 73]
-Result of GetStringRegion('Hello, JNI 💅☕️!', 10, 6): [55357, 56453, 65039, 9749, 65039, 33]
+Result of GetStringRegion('Hello, JNI 💅☕️!', 10, 6): [32, 55357, 56453, 9749, 65039, 33]
 
 === GetStringUTFRegion ===
 Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 0, 5): 'Hello'
 Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 7, 3): 'JNI'
 
 === GetStringCritical ===
-Result of GetStringCritical with input 'Hello, JNI 💅☕️!': [72, 101, 108, 108, 111, 44, 32, 74, 78, 73, 32, 55357, 56453, 65039, 9749, 65039, 33]
+Result of GetStringCritical with input 'Hello, JNI 💅☕️!': [72, 101, 108, 108, 111, 44, 32, 74, 78, 73, 32, 55357, 56453, 9749, 65039, 33]
 Result of GetStringCritical with input 'abc': [97, 98, 99]
 
 === GetStringCriticalAndRelease ===

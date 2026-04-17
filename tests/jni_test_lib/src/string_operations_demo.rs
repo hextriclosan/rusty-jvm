@@ -142,12 +142,20 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     let length = unsafe { ((*(*env)).v24.GetStringLength)(env, input) } as jsize;
     let char_array = unsafe { ((*(*env)).v24.NewCharArray)(env, length) };
 
-    // Critical section: no allocating JNI calls allowed between Get/Release
+    // --- Enter critical section ---
     let chars = unsafe { ((*(*env)).v24.GetStringCritical)(env, input, null_mut()) };
+
+    // Copy to local buffer using only raw pointer ops (no JNI calls allowed here)
+    let mut local_buf: Vec<jchar> = vec![0; length as usize];
     unsafe {
-        // Copy from the string's chars into char_array
-        ((*(*env)).v24.SetCharArrayRegion)(env, char_array, 0, length, chars);
+        std::ptr::copy_nonoverlapping(chars, local_buf.as_mut_ptr(), length as usize);
         ((*(*env)).v24.ReleaseStringCritical)(env, input, chars);
+    }
+    // --- Exit critical section ---
+
+    // Now safe to call JNI functions
+    unsafe {
+        ((*(*env)).v24.SetCharArrayRegion)(env, char_array, 0, length, local_buf.as_ptr());
     }
 
     char_array
