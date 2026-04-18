@@ -12,11 +12,13 @@ pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()>
         let index = args_to_set[1];
         let value = args_to_set[2];
 
-        Executor::invoke_non_static_method(
-            &name,
-            "set:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)V",
-            handle_ref,
-            &[array_ref.into(), index.into(), value.into()],
+        crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "set:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)V",
+                handle_ref,
+                &[array_ref.into(), index.into(), value.into()],
+            )
         )?;
         Ok(())
     } else if name == "java/lang/invoke/VarHandleByteArrayAsInts$ArrayHandle" {
@@ -24,11 +26,13 @@ pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()>
         let index = args_to_set[1];
         let value = args_to_set[2];
 
-        Executor::invoke_non_static_method(
-            &name,
-            "set:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)V",
-            handle_ref,
-            &[array_ref.into(), index.into(), value.into()],
+        crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "set:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)V",
+                handle_ref,
+                &[array_ref.into(), index.into(), value.into()],
+            )
         )?;
         Ok(())
     } else if name == "java/lang/invoke/VarHandleByteArrayAsLongs$ArrayHandle" {
@@ -36,11 +40,13 @@ pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()>
         let index = args_to_set[1];
         let value = i32toi64(args_to_set[3], args_to_set[2]);
 
-        Executor::invoke_non_static_method(
-            &name,
-            "set:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;IJ)V",
-            handle_ref,
-            &[array_ref.into(), index.into(), value.into()],
+        crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "set:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;IJ)V",
+                handle_ref,
+                &[array_ref.into(), index.into(), value.into()],
+            )
         )?;
         Ok(())
     } else {
@@ -56,41 +62,49 @@ pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec
     if name == "java/lang/invoke/VarHandleInts$Array" {
         let array_ref = args_to_get[0];
         let index = args_to_get[1];
-        let ret = Executor::invoke_non_static_method(
-            &name,
-            "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)I",
-            handle_ref,
-            &[array_ref.into(), index.into()],
+        let ret = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)I",
+                handle_ref,
+                &[array_ref.into(), index.into()],
+            )
         )?;
         Ok(ret)
     } else if name == "java/lang/invoke/VarHandleByteArrayAsShorts$ArrayHandle" {
         let array_ref = args_to_get[0];
         let index = args_to_get[1];
-        let ret = Executor::invoke_non_static_method(
-            &name,
-            "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)S",
-            handle_ref,
-            &[array_ref.into(), index.into()],
+        let ret = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)S",
+                handle_ref,
+                &[array_ref.into(), index.into()],
+            )
         )?;
         Ok(ret)
     } else if name == "java/lang/invoke/VarHandleByteArrayAsInts$ArrayHandle" {
         let array_ref = args_to_get[0];
         let index = args_to_get[1];
-        let ret = Executor::invoke_non_static_method(
-            &name,
-            "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)I",
-            handle_ref,
-            &[array_ref.into(), index.into()],
+        let ret = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)I",
+                handle_ref,
+                &[array_ref.into(), index.into()],
+            )
         )?;
         Ok(ret)
     } else if name == "java/lang/invoke/VarHandleByteArrayAsLongs$ArrayHandle" {
         let array_ref = args_to_get[0];
         let index = args_to_get[1];
-        let ret = Executor::invoke_non_static_method(
-            &name,
-            "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)J",
-            handle_ref,
-            &[array_ref.into(), index.into()],
+        let ret = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(
+                &name,
+                "get:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)J",
+                handle_ref,
+                &[array_ref.into(), index.into()],
+            )
         )?;
         Ok(ret)
     } else {
@@ -113,10 +127,12 @@ pub(crate) fn var_handle_compare_and_set(
         .map(|a| a.into())
         .collect::<Vec<StackValueKind>>();
     if name == "java/lang/invoke/VarHandleReferences$FieldInstanceReadWrite" {
-        let ret = Executor::invoke_static_method(
-            &name,
-            "compareAndSet:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z",
-            &all_args,
+        let ret = crate::vm::concurrency::block_on_async(
+            Executor::invoke_static_method(
+                &name,
+                "compareAndSet:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z",
+                &all_args,
+            )
         )?;
         Ok(ret)
     } else {

@@ -24,11 +24,13 @@ impl StringPoolHelper {
         let array_ref = HEAP.create_array_with_values("[I", &codepoints);
 
         let args = vec![array_ref.into(), 0.into(), (codepoints.len() as i32).into()];
-        let string_instance_ref = Executor::invoke_args_constructor(
-            "java/lang/String",
-            "<init>:([III)V",
-            &args,
-            Some(string),
+        let string_instance_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_args_constructor(
+                "java/lang/String",
+                "<init>:([III)V",
+                &args,
+                Some(string),
+            )
         )?;
 
         // todo: ensure that array_ref is collected by GC
@@ -39,11 +41,13 @@ impl StringPoolHelper {
     fn create_empty_string() -> Result<i32> {
         let byte_array_ref = HEAP.create_array_with_values("[B", &[]);
         let args = vec![byte_array_ref.into(), 0.into() /*coder LATIN1*/];
-        let string_instance_ref = Executor::invoke_args_constructor(
-            "java/lang/String",
-            "<init>:([BB)V",
-            &args,
-            Some(""),
+        let string_instance_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_args_constructor(
+                "java/lang/String",
+                "<init>:([BB)V",
+                &args,
+                Some(""),
+            )
         )?;
         Ok(string_instance_ref)
     }

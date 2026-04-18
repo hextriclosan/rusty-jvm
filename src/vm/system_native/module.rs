@@ -27,11 +27,13 @@ fn define_module0(
     _location_str_ref: i32,
     _packages_arr_ref: i32,
 ) -> Result<()> {
-    let module_str_ref = Executor::invoke_non_static_method(
-        "java/lang/Module",
-        "getName:()Ljava/lang/String;",
-        this_module_ref,
-        &[],
+    let module_str_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            "java/lang/Module",
+            "getName:()Ljava/lang/String;",
+            this_module_ref,
+            &[],
+        )
     )?[0];
 
     if module_str_ref != 0 {

@@ -71,11 +71,13 @@ fn perf_create_long(
     let ptr = ptr as i64;
     let len = len as i64;
 
-    let byte_buffer_ref_res = Executor::invoke_args_constructor(
-        "java/nio/DirectByteBuffer",
-        "<init>:(JJ)V",
-        &[ptr.into(), len.into()],
-        Some("native image buffer creation"),
+    let byte_buffer_ref_res = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            "java/nio/DirectByteBuffer",
+            "<init>:(JJ)V",
+            &[ptr.into(), len.into()],
+            Some("native image buffer creation"),
+        )
     );
     let byte_buffer_ref = unwrap_or_return_err!(byte_buffer_ref_res);
 
@@ -158,11 +160,13 @@ fn perf_create_byte_array(
     let ptr = ptr as i64;
     let len = len as i64;
 
-    let byte_buffer_ref_res = Executor::invoke_args_constructor(
-        "java/nio/DirectByteBuffer",
-        "<init>:(JJ)V",
-        &[ptr.into(), len.into()],
-        Some("native image buffer creation"),
+    let byte_buffer_ref_res = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            "java/nio/DirectByteBuffer",
+            "<init>:(JJ)V",
+            &[ptr.into(), len.into()],
+            Some("native image buffer creation"),
+        )
     );
     let byte_buffer_ref = unwrap_or_return_err!(byte_buffer_ref_res);
 

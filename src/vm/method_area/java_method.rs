@@ -206,11 +206,13 @@ impl JavaMethod {
             annotation_default.into(),
         ];
 
-        let method_ref = Executor::invoke_args_constructor(
-            "java/lang/reflect/Method",
-            "<init>:(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B)V",
-            args,
-            None
+        let method_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_args_constructor(
+                "java/lang/reflect/Method",
+                "<init>:(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B)V",
+                args,
+                None
+            )
         )?;
 
         Ok(method_ref)
@@ -289,11 +291,13 @@ impl JavaMethod {
             parameter_annotations.into(),
         ];
 
-        let method_ref = Executor::invoke_args_constructor(
-            "java/lang/reflect/Constructor",
-            "<init>:(Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B)V",
-            args,
-            None
+        let method_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_args_constructor(
+                "java/lang/reflect/Constructor",
+                "<init>:(Ljava/lang/Class;[Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B)V",
+                args,
+                None
+            )
         )?;
 
         Ok(method_ref)

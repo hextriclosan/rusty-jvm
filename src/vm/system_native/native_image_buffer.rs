@@ -14,11 +14,13 @@ fn get_native_map(_image_path_ref: i32) -> Result<i32> {
         (raw_jimage.as_ptr() as usize as i64, raw_jimage.len() as i64)
     });
 
-    let byte_buffer_ref = Executor::invoke_args_constructor(
-        "java/nio/DirectByteBuffer",
-        "<init>:(JJ)V",
-        &[address.into(), capacity.into()],
-        Some("native image buffer creation"),
+    let byte_buffer_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_args_constructor(
+            "java/nio/DirectByteBuffer",
+            "<init>:(JJ)V",
+            &[address.into(), capacity.into()],
+            Some("native image buffer creation"),
+        )
     )?;
 
     Ok(byte_buffer_ref)

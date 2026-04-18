@@ -29,16 +29,20 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
 
     let clazz_ref = clazz_ref(class_name)?;
 
-    let class_loader_ref = Executor::invoke_non_static_method(
-        "java/lang/Class",
-        "getClassLoader:()Ljava/lang/ClassLoader;",
-        clazz_ref,
-        &[],
+    let class_loader_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            "java/lang/Class",
+            "getClassLoader:()Ljava/lang/ClassLoader;",
+            clazz_ref,
+            &[],
+        )
     )?[0];
-    let native_libraries_ref = Executor::invoke_static_method(
-        "java/lang/ClassLoader",
-        "nativeLibrariesFor:(Ljava/lang/ClassLoader;)Ljdk/internal/loader/NativeLibraries;",
-        &[class_loader_ref.into()],
+    let native_libraries_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_static_method(
+            "java/lang/ClassLoader",
+            "nativeLibrariesFor:(Ljava/lang/ClassLoader;)Ljdk/internal/loader/NativeLibraries;",
+            &[class_loader_ref.into()],
+        )
     )?[0];
 
     let symbol_address = match get_symbol_address(&long_name, native_libraries_ref)? {

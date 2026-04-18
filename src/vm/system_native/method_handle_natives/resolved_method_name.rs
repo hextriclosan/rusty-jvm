@@ -16,7 +16,9 @@ pub struct ResolvedMethodName {
 
 impl ResolvedMethodName {
     pub fn new_create_instance(vmholder: i32, vmtarget: i64) -> Result<Self> {
-        let resolved_method_name_ref = Executor::invoke_default_constructor(RESOLVED_METHOD_NAME)?;
+        let resolved_method_name_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_default_constructor(RESOLVED_METHOD_NAME)
+        )?;
         Ok(Self {
             resolved_method_name_ref,
             vmholder,

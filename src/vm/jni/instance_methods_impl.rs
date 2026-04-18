@@ -78,13 +78,15 @@ fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
 
     let implementation_klass_name = implementation.class_name().to_owned();
 
-    Executor::invoke_non_static_method(
-        &implementation_klass_name,
-        &name_signature,
-        this,
-        &args_values,
-    )
-    .expect("Failed to invoke non-static method")
+    // Securely bridge the synchronous JNI call to the asynchronous executor
+    crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            &implementation_klass_name,
+            &name_signature,
+            this,
+            &args_values,
+        )
+    ).expect("Failed to invoke non-static method")
 }
 
 macro_rules! call_non_virtual_method_a_impl {
@@ -120,6 +122,7 @@ fn call_non_virtual_method_a<T: JNIValue>(
     let raw = invoke_non_virtual_method(this as i32, target as i32, method_id as usize, args);
     JNIValue::from_vec(&raw)
 }
+
 fn invoke_non_virtual_method(
     this: i32,
     target: i32,
@@ -141,6 +144,8 @@ fn invoke_non_virtual_method(
     let name_signature = method.name_signature().to_owned();
     let args_values = transform_args_to_vec(&method, args);
 
-    Executor::invoke_non_static_method(&target_klass_name, &name_signature, this, &args_values)
-        .expect("Failed to invoke non-static method") // todo: throw java.lang.AbstractMethodError
+    // Securely bridge the synchronous JNI call to the asynchronous executor
+    crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(&target_klass_name, &name_signature, this, &args_values)
+    ).expect("Failed to invoke non-static method") // todo: throw java.lang.AbstractMethodError
 }

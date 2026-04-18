@@ -1,3 +1,9 @@
+//! Purpose: Resolves and kicks off the initial Java `main` method.
+//!
+//! Implementation Details:
+//! Determines whether to run a class or a JAR, invokes the initial class's main method,
+//! and passes the command-line arguments to it asynchronously.
+
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
@@ -7,7 +13,6 @@ use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use std::sync::Arc;
 
-// refer: sun.launcher.LauncherHelper
 #[repr(i32)]
 #[derive(Debug)]
 pub(crate) enum LaunchMode {
@@ -17,7 +22,7 @@ pub(crate) enum LaunchMode {
 
 const PRINT_TO_STDERR: bool = true;
 
-pub fn resolve_and_execute_main_method(
+pub async fn resolve_and_execute_main_method(
     class_name: &str,
     launch_mode: LaunchMode,
     args: &[String],
@@ -31,7 +36,7 @@ pub fn resolve_and_execute_main_method(
             (launch_mode as i32).into(),
             class_name_ref.into(),
         ],
-    )?[0];
+    ).await?[0];
 
     let jc = klass(app_clazz_ref)?;
     StaticInit::initialize_java_class(&jc)?;
@@ -51,19 +56,19 @@ pub fn resolve_and_execute_main_method(
 
     if static_main {
         if no_arg_main {
-            Executor::invoke_static_method_jc(&jc, "main:()V", &[])?;
+            Executor::invoke_static_method_jc(&jc, "main:()V", &[]).await?;
         } else {
             let args_array_ref = create_array_of_strings(args)?;
             Executor::invoke_static_method_jc(
                 &jc,
                 "main:([Ljava/lang/String;)V",
                 &[args_array_ref.into()],
-            )?;
+            ).await?;
         }
     } else {
-        let main_instance_ref = construct_main_class(&jc)?;
+        let main_instance_ref = construct_main_class(&jc).await?;
         if no_arg_main {
-            Executor::invoke_non_static_method_jc(&jc, "main:()V", main_instance_ref, &[])?;
+            Executor::invoke_non_static_method_jc(&jc, "main:()V", main_instance_ref, &[]).await?;
         } else {
             let args_array_ref = create_array_of_strings(args)?;
             Executor::invoke_non_static_method_jc(
@@ -71,13 +76,13 @@ pub fn resolve_and_execute_main_method(
                 "main:([Ljava/lang/String;)V",
                 main_instance_ref,
                 &[args_array_ref.into()],
-            )?;
+            ).await?;
         }
     }
 
     Ok(())
 }
 
-fn construct_main_class(java_class: &Arc<JavaClass>) -> Result<i32> {
-    Executor::invoke_default_constructor_jc(java_class)
+async fn construct_main_class(java_class: &Arc<JavaClass>) -> Result<i32> {
+    Executor::invoke_default_constructor_jc(java_class).await
 }

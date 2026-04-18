@@ -114,11 +114,13 @@ impl FieldInfo {
             annotations.into(),
         ];
 
-        let method_ref = Executor::invoke_args_constructor(
-            "java/lang/reflect/Field",
-            "<init>:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B)V",
-            args,
-            None
+        let method_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_args_constructor(
+                "java/lang/reflect/Field",
+                "<init>:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B)V",
+                args,
+                None
+            )
         )?;
 
         Ok(method_ref)

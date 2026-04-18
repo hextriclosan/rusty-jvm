@@ -1,3 +1,9 @@
+//! Purpose: Handles deep reflection and method handle invocations.
+//!
+//! Implementation Details:
+//! Maps `invokeExact` to the internal asynchronous `invoker::invoke`. Allows MethodHandles
+//! to properly trigger JVM execution within the Tokio ecosystem.
+
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::executor::Executor;
@@ -20,6 +26,8 @@ use crate::vm::system_native::method_handle_natives::types::ReferenceKind::*;
 use once_cell::sync::Lazy;
 use std::env;
 use std::sync::Arc;
+use std::future::Future;
+use std::pin::Pin;
 
 const DIRECT_METHOD_HANDLE: &str = "java/lang/invoke/DirectMethodHandle";
 const BOUND_METHOD_HANDLE: &str = "java/lang/invoke/BoundMethodHandle";
@@ -31,39 +39,41 @@ const SIMPLE_METHOD_HANDLE: &str = "java/lang/invoke/SimpleMethodHandle";
 static DEBUG_SPECIES_PRINTING: Lazy<bool> =
     Lazy::new(|| env::var("DEBUG_SPECIES_PRINTING").is_ok());
 
-pub fn invoke_exact(
+// By explicitly returning a Boxed Future, we solve the E0733 recursive async issue.
+pub fn invoke_exact<'a>(
     handle_ref: i32,
-    method_args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    let handle_name = HEAP.get_instance_name(handle_ref)?;
-    if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
-        return direct_method_handle_invocation(
-            handle_ref,
-            method_args,
-            stack_frames,
-            &handle_name,
-        );
-    } else if handle_name.starts_with(BOUND_METHOD_HANDLE)
-        || handle_name == AS_VARARGS_COLLECTOR
-        || handle_name == SIMPLE_METHOD_HANDLE
-        || handle_name == COUNTING_WRAPPER
-    {
-        return bound_method_handle_invocation(
-            handle_ref,
-            method_args,
-            stack_frames,
-            &handle_name,
-        );
-    } else if handle_name == MUTABLE_CALL_SITE {
-        // todo: ends with CallSite?
-        return mutable_call_site_invocation(handle_ref, method_args, stack_frames, &handle_name);
-    }
+    method_args: &'a [i32],
+    stack_frames: &'a mut StackFrames,
+) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+    Box::pin(async move {
+        let handle_name = HEAP.get_instance_name(handle_ref)?;
+        if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
+            return direct_method_handle_invocation(
+                handle_ref,
+                method_args,
+                stack_frames,
+                &handle_name,
+            ).await;
+        } else if handle_name.starts_with(BOUND_METHOD_HANDLE)
+            || handle_name == AS_VARARGS_COLLECTOR
+            || handle_name == SIMPLE_METHOD_HANDLE
+            || handle_name == COUNTING_WRAPPER
+        {
+            return bound_method_handle_invocation(
+                handle_ref,
+                method_args,
+                stack_frames,
+                &handle_name,
+            ).await;
+        } else if handle_name == MUTABLE_CALL_SITE {
+            return mutable_call_site_invocation(handle_ref, method_args, stack_frames, &handle_name).await;
+        }
 
-    unimplemented!("invoke_exact: handle: {} is not supported", handle_name)
+        unimplemented!("invoke_exact: handle: {} is not supported", handle_name)
+    })
 }
 
-fn direct_method_handle_invocation(
+async fn direct_method_handle_invocation(
     handle_ref: i32,
     method_args: &[i32],
     stack_frames: &mut StackFrames,
@@ -82,7 +92,7 @@ fn direct_method_handle_invocation(
 
     match reference_kind {
         REF_invokeVirtual | REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => {
-            invoke_exact_method(&member_name, method_args, stack_frames)
+            invoke_exact_method(&member_name, method_args, stack_frames).await
         }
         REF_getField => invoke_exact_get_field(&member_name, method_args, stack_frames),
         REF_putField => invoke_exact_put_field(&member_name, method_args),
@@ -92,7 +102,7 @@ fn direct_method_handle_invocation(
     }
 }
 
-fn bound_method_handle_invocation(
+async fn bound_method_handle_invocation(
     handle_ref: i32,
     method_args: &[i32],
     stack_frames: &mut StackFrames,
@@ -103,14 +113,12 @@ fn bound_method_handle_invocation(
     }
 
     let lambda_form_ref = HEAP.get_object_field_value(handle_ref, handle_name, "form")?[0];
-
     let vmentry_ref =
         HEAP.get_object_field_value(lambda_form_ref, "java/lang/invoke/LambdaForm", "vmentry")?[0];
 
     let member_name = MemberName::new(vmentry_ref)?;
     let class_name_to_load = member_name.class_name();
 
-    // todo: hide this block into MemberName struct
     let type_obj_ref = member_name.type_obj_ref();
     let method_type = MethodType::new(type_obj_ref)?;
     let method_name = member_name.name();
@@ -136,7 +144,7 @@ fn bound_method_handle_invocation(
         &new_args,
         Arc::clone(&method_to_invoke),
         class_name_to_load,
-    )
+    ).await
 }
 
 fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
@@ -180,8 +188,9 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
             method_type.rtype_name()
         );
     } else if handle_name == MUTABLE_CALL_SITE {
-        let target_ref =
-            Executor::invoke_non_static_method(&handle_name, "getTarget", handle_ref, &[])?[0];
+        let target_ref = crate::vm::concurrency::block_on_async(
+            Executor::invoke_non_static_method(&handle_name, "getTarget", handle_ref, &[])
+        )?[0];
         print_species(target_ref, indent + 1)?;
     } else {
         unimplemented!(
@@ -193,19 +202,18 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
     Ok(())
 }
 
-fn mutable_call_site_invocation(
+async fn mutable_call_site_invocation(
     mutable_call_site_ref: i32,
     method_args: &[i32],
     stack_frames: &mut StackFrames,
     handle_name: &str,
 ) -> Result<()> {
     let target_ref =
-        Executor::invoke_non_static_method(handle_name, "getTarget", mutable_call_site_ref, &[])?
-            [0];
-    invoke_exact(target_ref, method_args, stack_frames)
+        Executor::invoke_non_static_method(handle_name, "getTarget", mutable_call_site_ref, &[]).await?[0];
+    invoke_exact(target_ref, method_args, stack_frames).await
 }
 
-fn invoke_exact_method(
+async fn invoke_exact_method(
     member_name: &MemberName,
     method_args: &[i32],
     stack_frames: &mut StackFrames,
@@ -213,8 +221,6 @@ fn invoke_exact_method(
     let (resolved_class_name, resolved_method_to_invoke) = extract_resolved(member_name)?;
 
     let reference_kind = member_name.reference_kind();
-    // todo: merge me with opcodes logic including proper exception handling
-    // todo: cover functionality below with test within MethodHandleExample
     let (method_to_invoke, method_args) = match reference_kind {
         REF_invokeVirtual => {
             let reference = method_args
@@ -268,18 +274,9 @@ fn invoke_exact_method(
         method_args.as_slice(),
         Arc::clone(&method_to_invoke),
         method_to_invoke.class_name(),
-    )
+    ).await
 }
 
-/// Extracts the resolved method name and its class from the `MemberName`.
-/// Returns a tuple containing the class name and an `Arc` to the `JavaMethod`.
-///
-/// Depending on reference_kind returned values will be used in different ways:
-/// - REF_invokeVirtual: exact implementation of the method will be invoked by the instance type (which is got from the first argument of the method)
-/// - REF_invokeSpecial: exact implementation of the method will be invoked by the class that declares the method (or its superclass(es))
-/// - REF_invokeStatic: exact implementation of the method will be invoked by the class that declares the method
-/// - REF_invokeInterface: exact implementation of the method will be invoked by the class that implements the interface
-/// - REF_newInvokeSpecial: the method will be invoked by the class that declares the method, but the first argument will be an instance of the class that declares the method
 fn extract_resolved(member_name: &MemberName) -> Result<(String, Arc<JavaMethod>)> {
     let resolved_method_name = member_name.method().ok_or_else(|| {
         Error::new_execution(&format!("field `method` not found in {member_name:?}"))
@@ -300,7 +297,6 @@ fn mimic_new(
     method_args: &[i32],
     stack_frames: &mut StackFrames,
 ) -> Result<Vec<i32>> {
-    // bellow we mimic the behavior of the NEW opcode
     let instance_with_default_fields = with_method_area(|method_area| {
         method_area.create_instance_with_default_fields(class_name)
     })?;
@@ -308,7 +304,7 @@ fn mimic_new(
     let instanceref = HEAP.create_instance(instance_with_default_fields);
 
     let stack_frame = last_frame_mut(stack_frames)?;
-    stack_frame.push(instanceref)?; // NEW opcode
+    stack_frame.push(instanceref)?;
 
     let method_args = std::iter::once(instanceref)
         .chain(method_args.iter().cloned())

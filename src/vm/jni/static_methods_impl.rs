@@ -65,7 +65,10 @@ fn invoke_static_method(
     args: *const jvalue,
 ) -> Vec<i32> {
     let args_values = transform_args_to_vec(method, args);
-    Executor::invoke_static_method_jc(klass, method.name_signature(), &args_values).unwrap_or_else(
+    
+    crate::vm::concurrency::block_on_async(
+        Executor::invoke_static_method_jc(klass, method.name_signature(), &args_values)
+    ).unwrap_or_else(
         |e| {
             panic!(
                 "Failed to invoke static method {}.{} ({e})",

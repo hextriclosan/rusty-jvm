@@ -122,10 +122,12 @@ impl LdcResolutionManager {
 // todo: consider separate cache for method type references
 pub fn build_methodtype_ref(descriptor: &str) -> Result<i32> {
     let string_ref = StringPoolHelper::get_string(descriptor)?;
-    let method_type_ref = Executor::invoke_static_method(
-        "java/lang/invoke/MethodType",
-        "fromMethodDescriptorString:(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;",
-        &[string_ref.into()],
+    let method_type_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_static_method(
+            "java/lang/invoke/MethodType",
+            "fromMethodDescriptorString:(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;",
+            &[string_ref.into()],
+        )
     )?[0];
     Ok(method_type_ref)
 }
@@ -178,11 +180,13 @@ pub fn resolve_method_handle(
             )))
         }
     };
-    let method_handle_ref = Executor::invoke_non_static_method(
-        lookup_class_name,
-        method_name_lookup_for,
-        new_lookup,
-        &args,
+    let method_handle_ref = crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            lookup_class_name,
+            method_name_lookup_for,
+            new_lookup,
+            &args,
+        )
     )?[0];
     Ok(method_handle_ref)
 }
@@ -212,11 +216,13 @@ fn build_lookup_for_class(current_class_name: &str) -> Result<i32> {
 
     let current_clazz = clazz_ref(current_class_name)?;
 
-    let new_lookup = Executor::invoke_non_static_method(
-        "java/lang/invoke/MethodHandles$Lookup",
-        "in:(Ljava/lang/Class;)Ljava/lang/invoke/MethodHandles$Lookup;",
-        impl_lookup_ref,
-        &[current_clazz.into()],
+    let new_lookup = crate::vm::concurrency::block_on_async(
+        Executor::invoke_non_static_method(
+            "java/lang/invoke/MethodHandles$Lookup",
+            "in:(Ljava/lang/Class;)Ljava/lang/invoke/MethodHandles$Lookup;",
+            impl_lookup_ref,
+            &[current_clazz.into()],
+        )
     )?[0];
     Ok(new_lookup)
 }

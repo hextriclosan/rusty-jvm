@@ -43,7 +43,9 @@ pub(crate) fn method_handle_invoke_exact_wrp(
 ) -> Result<Vec<i32>> {
     let handle_ref = args[0];
     let method_args = &args[1..];
-    invoke_exact(handle_ref, method_args, stack_frames)?;
+    crate::vm::concurrency::block_on_async(
+        invoke_exact(handle_ref, method_args, stack_frames)
+    )?;
     Ok(vec![])
 }
 
