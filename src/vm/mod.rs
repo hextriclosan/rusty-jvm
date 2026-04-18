@@ -92,16 +92,6 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
         }
         Err(e) if e.is_uncaught_exception() => {
             if let Some(throwable_ref) = e.throwable_ref() {
-                // FORCE RUST TO PRINT THE SILENT EXCEPTION!
-                let ex_name = crate::vm::heap::heap::HEAP
-                    .get_instance_name(throwable_ref)
-                    .unwrap_or_else(|_| "UnknownException".to_string());
-                
-                eprintln!("\n==========================================");
-                eprintln!("🔥 RUST_CRASH_DEBUG: UNCAUGHT JAVA EXCEPTION 🔥");
-                eprintln!("Exception Class: {}", ex_name);
-                eprintln!("==========================================\n");
-
                 if let Err(handler_err) = invoke_uncaught_exception_handler(throwable_ref) {
                     tracing::error!("Failed to invoke uncaught exception handler: {handler_err}");
                 }
@@ -111,10 +101,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
             }
             Err(e)
         }
-        Err(e) => {
-            eprintln!("\n🔥 RUST_CRASH_DEBUG: INTERNAL EXECUTION ERROR 🔥\n{:?}\n", e);
-            Err(e)
-        }
+        Err(e) => Err(e),
     }
 }
 

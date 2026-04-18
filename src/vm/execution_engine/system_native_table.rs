@@ -290,19 +290,27 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetInt:(Ljava/lang/Object;JII)Z",
-        Basic(compare_and_set_int_wrp),
+        Basic(crate::vm::system_native::unsafe_::compare_and_set_int_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetReference:(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-        Basic(compare_and_set_int_wrp)
+        Basic(crate::vm::system_native::unsafe_::compare_and_set_int_wrp)
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:compareAndExchangeInt:(Ljava/lang/Object;JII)I",
+        Basic(crate::vm::system_native::unsafe_::compare_and_exchange_int_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:compareAndExchangeReference:(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+        Basic(crate::vm::system_native::unsafe_::compare_and_exchange_reference_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndSetLong:(Ljava/lang/Object;JJJ)Z",
-        Basic(compare_and_set_long_wrp),
+        Basic(crate::vm::system_native::unsafe_::compare_and_set_long_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:compareAndExchangeLong:(Ljava/lang/Object;JJJ)J",
-        Basic(compare_and_exchange_long_wrp),
+        Basic(crate::vm::system_native::unsafe_::compare_and_exchange_long_wrp),
     );
     table.insert(
         "jdk/internal/misc/Unsafe:getReferenceVolatile:(Ljava/lang/Object;J)Ljava/lang/Object;",
@@ -345,6 +353,28 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(array_index_scale0_wrp),
     );
     table.insert("jdk/internal/misc/Unsafe:fullFence:()V", Basic(void_stub));
+    table.insert(
+        "jdk/internal/misc/Unsafe:park:(ZJ)V",
+        AsyncMutStackFrames(|args, _frames| Box::pin(async move {
+            let _is_absolute = args[1] != 0;
+            let time = crate::vm::helper::i32toi64(args[3], args[2]);
+            
+            if time > 0 {
+                // Sleep for the requested duration
+                tokio::time::sleep(std::time::Duration::from_nanos(time as u64)).await;
+            } else {
+                // Park indefinitely (until unparked). We don't have a real unpark 
+                // implementation yet, so we yield/sleep for 1ms to allow cooperative 
+                // polling without deadlocking the stream workers.
+                tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            }
+            Ok(Vec::new())
+        })),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:unpark:(Ljava/lang/Object;)V",
+        Basic(void_stub),
+    );
     table.insert(
         "jdk/internal/misc/Unsafe:getReference:(Ljava/lang/Object;J)Ljava/lang/Object;",
         Basic(get_reference_volatile_wrp),
@@ -404,6 +434,10 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/misc/Unsafe:allocateMemory0:(J)J",
         Basic(allocate_memory0_wrp),
+    );
+    table.insert(
+        "jdk/internal/misc/Unsafe:freeMemory0:(J)V",
+        Basic(void_stub), // We intentionally leak memory for now since there is no GC
     );
     table.insert(
         "java/lang/String:intern:()Ljava/lang/String;",
@@ -632,8 +666,19 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
     table.insert(
         "java/lang/ref/Reference:refersTo0:(Ljava/lang/Object;)Z",
-        Basic(|_args: &[i32]| {
-            Ok(vec![0]) // todo: this should be implemented with GC
+        Basic(|args: &[i32]| {
+            let obj_ref = args[0]; // The Reference object itself
+            let target_ref = args[1]; // The object we are comparing against
+
+            // Without a GC, a WeakReference acts like a strong reference. 
+            // We simply extract the underlying 'referent' field and compare the pointers!
+            let referent_vec = crate::vm::heap::heap::HEAP.get_object_field_value(
+                obj_ref, 
+                "java/lang/ref/Reference", 
+                "referent"
+            )?;
+            
+            Ok(vec![if referent_vec[0] == target_ref { 1 } else { 0 }])
         }),
     );
     table.insert(

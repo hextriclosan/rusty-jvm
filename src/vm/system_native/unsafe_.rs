@@ -11,6 +11,12 @@ use crate::vm::system_native::object_offset::offset_utils::{
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
 use std::ptr;
+use std::sync::Mutex;
+
+/// Global lock to emulate hardware-level atomic Compare-And-Swap (CAS).
+/// Since the JVM Heap uses independent read/write locks, we must serialize 
+/// the check-and-act sequence to prevent "Lost Update" race conditions.
+static CAS_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Clone, Copy, Debug)]
 enum ValueType {
@@ -102,7 +108,7 @@ fn static_field_base0(field_ref: i32) -> Result<i32> {
     Ok(class_ref)
 }
 
-// todo: thread-safety - not atomic
+
 pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
@@ -113,9 +119,35 @@ pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let result = compare_and_set_int(obj_ref, offset, expected, x)?;
     Ok(vec![result as i32])
 }
+
 fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Result<bool> {
+    let (updated, _) = compare_and_x_int(obj_ref, offset, expected, x)?;
+    Ok(updated)
+}
+
+pub(crate) fn compare_and_exchange_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _unsafe_ref = args[0];
+    let obj_ref = args[1];
+    let offset = i32toi64(args[3], args[2]);
+    let expected = args[4];
+    let x = args[5];
+
+    let (_, old_value) = compare_and_x_int(obj_ref, offset, expected, x)?;
+    Ok(vec![old_value])
+}
+
+pub(crate) fn compare_and_exchange_reference_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    // In rusty-jvm, object references are passed as 32-bit integers, 
+    // so we can reuse the exact same integer CAS logic!
+    compare_and_exchange_int_wrp(args)
+}
+
+fn compare_and_x_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Result<(bool, i32)> {
+    // Acquire the global CAS lock to ensure atomicity of the read-modify-write cycle.
+    let _guard = CAS_LOCK.lock().unwrap();
+
     let class_name = HEAP.get_instance_name(obj_ref)?;
-    let updated = if class_name.starts_with("[") {
+    let updated_and_old = if class_name.starts_with("[") {
         let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?[0];
         if result == expected {
             HEAP.set_array_value_by_raw_offset(
@@ -124,9 +156,9 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
                 vec![x],
                 ValueType::Int.into(),
             )?;
-            Ok(true)
+            (true, result)
         } else {
-            Ok(false)
+            (false, result)
         }
     } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
         // Fix: Properly handle Unsafe memory access on Static Fields
@@ -135,9 +167,9 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
         let result = static_field.raw_value()?[0];
         if result == expected {
             static_field.set_raw_value(vec![x])?;
-            Ok(true)
+            (true, result)
         } else {
-            Ok(false)
+            (false, result)
         }
     } else {
         let klass = CLASSES.get(class_name.as_str())?;
@@ -146,14 +178,15 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
 
         if result == expected {
             HEAP.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])?;
-            Ok(true)
+            (true, result)
         } else {
-            Ok(false)
+            (false, result)
         }
     };
 
-    updated
+    Ok(updated_and_old)
 }
+
 
 // todo: thread-safety - not volatile
 pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -165,11 +198,13 @@ pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![result])
 }
 fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
+    let _guard = CAS_LOCK.lock().unwrap();
+
     let class_name = HEAP.get_instance_name(obj_ref)?;
     let raw_value = if class_name.starts_with("[") {
         HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?
     } else {
-        if class_name == "java/lang/Class" {
+        if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
             // Special case for java/lang/Class<T>, in fact it is getting of static field of T
             let t_jc = klass(obj_ref)?;
             let static_field = t_jc.get_static_field_by_offset(offset)?;
@@ -275,6 +310,8 @@ pub(crate) fn get_char(obj_ref: i32, offset: i64) -> Result<u16> {
 }
 
 pub(crate) fn get_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let _guard = CAS_LOCK.lock().unwrap();
+
     let _unsafe_ref = args[0];
     let obj_ref = args[1];
     let offset = i32toi64(args[3], args[2]);
@@ -338,6 +375,8 @@ pub(crate) fn get_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![high, low])
 }
 fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
+    let _guard = CAS_LOCK.lock().unwrap();
+
     if obj_ref != 0 {
         let class_name = HEAP.get_instance_name(obj_ref)?;
         if class_name.starts_with("[") {
@@ -397,6 +436,9 @@ fn compare_and_exchange_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -
 }
 
 fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<(bool, i64)> {
+    // Acquire the global CAS lock to ensure atomicity of the read-modify-write cycle.
+    let _guard = CAS_LOCK.lock().unwrap();
+
     if obj_ref == 0 {
         let old_value: i64 = read_raw(offset);
         return if old_value == expected {
@@ -447,6 +489,8 @@ pub(crate) fn put_reference_wrp(args: &[i32]) -> Result<Vec<i32>> {
     Ok(vec![])
 }
 fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
+    let _guard = CAS_LOCK.lock().unwrap();
+
     let class_name = HEAP.get_instance_name(obj_ref)?;
     if class_name.starts_with("[") {
         HEAP.set_array_value_by_raw_offset(

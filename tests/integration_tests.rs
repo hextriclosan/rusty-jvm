@@ -3705,3 +3705,68 @@ Main thread finished
 "#,
     );
 }
+
+#[test]
+fn should_support_virtual_thread_ping_pong() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadPingPong",
+        r#"Ping
+Pong
+Done
+"#,
+    );
+}
+
+#[test]
+fn should_support_virtual_thread_current_thread() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadCurrentThreadExample",
+        r#"t1 is not main: true
+t2 is not main: true
+t1 is not t2: true
+t1Ref == t1: true
+t2Ref == t2: true
+"#,
+    );
+}
+
+#[test]
+fn should_support_virtual_thread_atomic_counter() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadAtomicCounterExample",
+        r#"Final counter value: 1000
+"#,
+    );
+}
+
+#[test]
+fn should_support_virtual_thread_massive_spawn() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadMassiveSpawn",
+        "Successfully spawned and executed 2000 threads\n",
+    );
+}
+
+#[test]
+fn should_support_virtual_thread_locals() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadLocalExample",
+        r#"results[0]: Task1
+results[1]: Task2
+Main reads: MainContext
+"#,
+    );
+}
+
+#[test]
+fn should_support_virtual_thread_producer_consumer() {
+    assert_success(
+        "samples.concurrency.virtualthreads.VirtualThreadProducerConsumer",
+        r#"Consumed: 0
+Consumed: 10
+Consumed: 20
+Consumed: 30
+Consumed: 40
+"#,
+    );
+}

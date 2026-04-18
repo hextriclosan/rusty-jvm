@@ -69,15 +69,17 @@ fn native_libraries_load(
     let name = unwrap_or_return_err!(get_utf8_string_by_ref(name_ref));
 
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
-    if name
-        .strip_prefix(sun_boot_library_path())
-        .and_then(|s| s.strip_prefix(file_separator()))
-        .and_then(|s| extract_lib_name(s))
-        .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
-    {
-        return ThrowingResult::ok(true);
+    // if name
+    //     .strip_prefix(sun_boot_library_path())
+    //     .and_then(|s| s.strip_prefix(file_separator()))
+    //     .and_then(|s| extract_lib_name(s))
+    //     .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
+    for val in ["nio", "jimage", "zip", "net"].iter() {
+        if name.contains(val)
+        {
+            return ThrowingResult::ok(true);
+        }
     }
-
     match unsafe { Library::new(&name) } {
         Ok(lib) => {
             let raw_ptr = lib.into_raw();
