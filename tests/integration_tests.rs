@@ -3770,3 +3770,19 @@ Consumed: 40
 "#,
     );
 }
+
+#[test]
+fn should_support_executor_service() {
+    assert_success(
+        "samples.concurrency.virtualthreads.ExecutorServiceExample",
+        r#"Task 0 result: 0
+Task 1 result: 1
+Task 2 result: 4
+Task 3 result: 9
+Task 4 result: 16
+Completed tasks: 5
+Sum of squares: 30
+Pool terminated: true
+"#,
+    );
+}

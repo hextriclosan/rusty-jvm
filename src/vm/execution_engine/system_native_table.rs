@@ -40,7 +40,11 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
     method_handle_natives_static_field_offset_wrp, native_accessor_invoke0_wrp,
     native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
-    var_handle_compare_and_set_wrp, var_handle_get_wrp, var_handle_set_wrp,
+    var_handle_compare_and_set_wrp, var_handle_get_acquire_wrp, var_handle_get_opaque_wrp,
+    var_handle_get_volatile_wrp, var_handle_get_wrp, var_handle_set_opaque_wrp,
+    var_handle_set_release_wrp, var_handle_set_volatile_wrp, var_handle_set_wrp,
+    var_handle_weak_compare_and_set_acquire_wrp, var_handle_weak_compare_and_set_plain_wrp,
+    var_handle_weak_compare_and_set_release_wrp, var_handle_weak_compare_and_set_wrp,
 };
 use crate::vm::system_native::module::{
     add_exports0_wrp, add_exports_to_all0_wrp, add_reads0_wrp, define_module0_wrp,
@@ -608,6 +612,17 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_next_threadid_offset_wrp),
     );
     table.insert("java/lang/Thread:setPriority0:(I)V", Basic(void_stub));
+    // `Thread.interrupt0` flips the interrupt flag on a Java thread. Since our
+    // virtual threads are Tokio tasks (no `pthread_kill`-style interruption),
+    // we currently model interruption as a no-op: blocking primitives like
+    // `Thread.sleep` complete normally rather than throwing
+    // `InterruptedException`. This is sufficient for `ExecutorService`
+    // shutdown paths that interrupt idle workers waiting on the queue.
+    table.insert("java/lang/Thread:interrupt0:()V", Basic(void_stub));
+    // `Thread.clearInterruptEvent` clears any pending OS-level interrupt
+    // event on Windows. Safe no-op everywhere for our purely cooperative
+    // scheduler.
+    table.insert("java/lang/Thread:clearInterruptEvent:()V", Basic(void_stub));
     table.insert(
         "java/lang/Thread:start0:()V",
         AsyncMutStackFrames(|args, frames| Box::pin(crate::vm::concurrency::native_methods::start::start0(args, frames))),
@@ -758,12 +773,52 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(var_handle_set_wrp),
     );
     table.insert(
+        "java/lang/invoke/VarHandle:setVolatile", // normalized polymorphic signature
+        Basic(var_handle_set_volatile_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:setRelease", // normalized polymorphic signature
+        Basic(var_handle_set_release_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:setOpaque", // normalized polymorphic signature
+        Basic(var_handle_set_opaque_wrp),
+    );
+    table.insert(
         "java/lang/invoke/VarHandle:get", // this is a normalized polymorphic signature
         Basic(var_handle_get_wrp),
     );
     table.insert(
+        "java/lang/invoke/VarHandle:getVolatile", // normalized polymorphic signature
+        Basic(var_handle_get_volatile_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:getAcquire", // normalized polymorphic signature
+        Basic(var_handle_get_acquire_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:getOpaque", // normalized polymorphic signature
+        Basic(var_handle_get_opaque_wrp),
+    );
+    table.insert(
         "java/lang/invoke/VarHandle:compareAndSet", // this is a normalized polymorphic signature
         Basic(var_handle_compare_and_set_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:weakCompareAndSet", // normalized polymorphic signature
+        Basic(var_handle_weak_compare_and_set_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:weakCompareAndSetPlain", // normalized polymorphic signature
+        Basic(var_handle_weak_compare_and_set_plain_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:weakCompareAndSetAcquire", // normalized polymorphic signature
+        Basic(var_handle_weak_compare_and_set_acquire_wrp),
+    );
+    table.insert(
+        "java/lang/invoke/VarHandle:weakCompareAndSetRelease", // normalized polymorphic signature
+        Basic(var_handle_weak_compare_and_set_release_wrp),
     );
     table.insert(
         "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",

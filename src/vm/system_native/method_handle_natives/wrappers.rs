@@ -142,19 +142,86 @@ pub(crate) fn native_accessor_newinstance0_wrp(args: &[i32]) -> Result<Vec<i32>>
 pub(crate) fn var_handle_set_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let handle_ref = args[0];
     let args_to_set = &args[1..];
-    var_handle_set(handle_ref, args_to_set)?;
+    var_handle_set(handle_ref, args_to_set, "set")?;
+    Ok(vec![])
+}
+
+pub(crate) fn var_handle_set_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_set = &args[1..];
+    var_handle_set(handle_ref, args_to_set, "setVolatile")?;
+    Ok(vec![])
+}
+
+pub(crate) fn var_handle_set_release_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_set = &args[1..];
+    var_handle_set(handle_ref, args_to_set, "setRelease")?;
+    Ok(vec![])
+}
+
+pub(crate) fn var_handle_set_opaque_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_set = &args[1..];
+    var_handle_set(handle_ref, args_to_set, "setOpaque")?;
     Ok(vec![])
 }
 
 pub(crate) fn var_handle_get_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let handle_ref = args[0];
     let args_to_get = &args[1..];
-    var_handle_get(handle_ref, args_to_get)
+    var_handle_get(handle_ref, args_to_get, "get")
+}
+
+pub(crate) fn var_handle_get_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_get = &args[1..];
+    var_handle_get(handle_ref, args_to_get, "getVolatile")
+}
+
+pub(crate) fn var_handle_get_acquire_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_get = &args[1..];
+    var_handle_get(handle_ref, args_to_get, "getAcquire")
+}
+
+pub(crate) fn var_handle_get_opaque_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_get = &args[1..];
+    var_handle_get(handle_ref, args_to_get, "getOpaque")
 }
 
 pub(crate) fn var_handle_compare_and_set_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let handle_ref = args[0];
     let args_to_process = &args[1..];
 
-    var_handle_compare_and_set(handle_ref, args_to_process)
+    var_handle_compare_and_set(handle_ref, args_to_process, "compareAndSet")
+}
+
+pub(crate) fn var_handle_weak_compare_and_set_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_process = &args[1..];
+
+    var_handle_compare_and_set(handle_ref, args_to_process, "weakCompareAndSet")
+}
+
+pub(crate) fn var_handle_weak_compare_and_set_plain_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_process = &args[1..];
+
+    var_handle_compare_and_set(handle_ref, args_to_process, "weakCompareAndSetPlain")
+}
+
+pub(crate) fn var_handle_weak_compare_and_set_acquire_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_process = &args[1..];
+
+    var_handle_compare_and_set(handle_ref, args_to_process, "weakCompareAndSetAcquire")
+}
+
+pub(crate) fn var_handle_weak_compare_and_set_release_wrp(args: &[i32]) -> Result<Vec<i32>> {
+    let handle_ref = args[0];
+    let args_to_process = &args[1..];
+
+    var_handle_compare_and_set(handle_ref, args_to_process, "weakCompareAndSetRelease")
 }
