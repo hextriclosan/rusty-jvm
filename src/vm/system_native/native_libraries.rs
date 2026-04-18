@@ -71,17 +71,19 @@ fn native_libraries_load(
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
     let path = Path::new(&name);
     if let Some(parent_dir) = path.parent() {
-        let canonic_parent_dir = unwrap_or_return_err!(fs::canonicalize(parent_dir));
-        let canonic_boot_lib_path =
-            unwrap_or_return_err!(fs::canonicalize(Path::new(sun_boot_library_path())));
-        if canonic_parent_dir == canonic_boot_lib_path {
-            if path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .and_then(|s| extract_lib_name(s))
-                .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
-            {
-                return ThrowingResult::ok(true);
+        if let (Ok(canonic_parent_dir), Ok(canonic_boot_lib_path)) = (
+            fs::canonicalize(parent_dir),
+            fs::canonicalize(Path::new(sun_boot_library_path())),
+        ) {
+            if canonic_parent_dir == canonic_boot_lib_path {
+                if path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .and_then(|s| extract_lib_name(s))
+                    .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
+                {
+                    return ThrowingResult::ok(true);
+                }
             }
         }
     }
