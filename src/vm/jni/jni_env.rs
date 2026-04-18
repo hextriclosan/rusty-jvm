@@ -227,10 +227,8 @@ jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
 jni_stub!(MonitorExit(jobject) -> jint);
-// GetStringRegion and GetStringUTFRegion are implemented in string_operations_impl.rs
 jni_stub!(GetPrimitiveArrayCritical(jarray, *mut jboolean) -> *mut c_void);
 jni_stub!(ReleasePrimitiveArrayCritical(jarray, *mut c_void, jint) -> ());
-// GetStringCritical and ReleaseStringCritical are implemented in string_operations_impl.rs
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);

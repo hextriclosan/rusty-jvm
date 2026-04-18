@@ -98,6 +98,10 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     start: jint,
     len: jint,
 ) -> jcharArray {
+    // Validate inputs to prevent wrap-around to huge usize values
+    if start < 0 || len < 0 {
+        return null_mut();
+    }
     let length = len as jsize;
     let char_array = unsafe { ((*(*env)).v24.NewCharArray)(env, length) };
     let mut buf: Vec<jchar> = vec![0; len as usize];
@@ -117,6 +121,10 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     start: jint,
     len: jint,
 ) -> jstring {
+    // Validate inputs to prevent wrap-around to huge usize values
+    if start < 0 || len < 0 {
+        return null_mut();
+    }
     // Buffer sizing: worst case is 6 bytes per char for supplementary chars in CESU-8
     // (two 3-byte surrogate sequences). Using len*3+1 is sufficient for BMP-only tests.
     let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize];
