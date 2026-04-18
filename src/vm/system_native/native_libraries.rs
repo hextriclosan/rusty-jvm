@@ -4,9 +4,7 @@ use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::properties_provider::properties::{
-    file_separator, sun_boot_library_path,
-};
+use crate::vm::system_native::properties_provider::properties::sun_boot_library_path;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use dashmap::DashMap;
@@ -16,6 +14,8 @@ use libloading::os::unix::*;
 #[cfg(windows)]
 use libloading::os::windows::*;
 use std::ffi::{c_void, CString};
+use std::fs;
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::LazyLock;
 use tracing::{enabled, trace, warn};
@@ -69,13 +69,21 @@ fn native_libraries_load(
     let name = unwrap_or_return_err!(get_utf8_string_by_ref(name_ref));
 
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
-    if name
-        .strip_prefix(sun_boot_library_path())
-        .and_then(|s| s.strip_prefix(file_separator()))
-        .and_then(|s| extract_lib_name(s))
-        .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
-    {
-        return ThrowingResult::ok(true);
+    let path = Path::new(&name);
+    if let Some(parent_dir) = path.parent() {
+        let canonic_parent_dir = unwrap_or_return_err!(fs::canonicalize(parent_dir));
+        let canonic_boot_lib_path =
+            unwrap_or_return_err!(fs::canonicalize(Path::new(sun_boot_library_path())));
+        if canonic_parent_dir == canonic_boot_lib_path {
+            if path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .and_then(|s| extract_lib_name(s))
+                .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
+            {
+                return ThrowingResult::ok(true);
+            }
+        }
     }
 
     match unsafe { Library::new(&name) } {
