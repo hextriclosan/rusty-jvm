@@ -1,6 +1,7 @@
 use cesu8::to_java_cesu8;
 use jni::sys::{
-    jchar, jcharArray, jclass, jint, jlong, jobject, jsize, jstring, JNIEnv, JNI_ABORT,
+    jbyte, jbyteArray, jchar, jcharArray, jclass, jint, jlong, jobject, jsize, jstring, JNIEnv,
+    JNI_ABORT,
 };
 use std::ffi::CString;
 use std::ptr::null_mut;
@@ -137,6 +138,47 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
             buf.as_mut_ptr() as *mut i8,
         );
         ((*(*env)).v24.NewStringUTF)(env, buf.as_ptr() as *const i8)
+    }
+}
+
+/// Like `GetStringUTFRegion`, but returns the raw modified-UTF-8 bytes (without the trailing NUL)
+/// as a `byte[]`, bypassing the round-trip through `NewStringUTF`. This lets Java assertions
+/// observe the exact MUTF-8 encoding for regions that contain unpaired/split surrogates,
+/// which cannot be represented in a Rust `String` and therefore cannot survive a
+/// `NewStringUTF` round-trip.
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperationsDemo_GetStringUTFRegionRaw(
+    env: *mut JNIEnv,
+    _class: jclass,
+    input: jstring,
+    start: jint,
+    len: jint,
+) -> jbyteArray {
+    // Validate inputs to prevent wrap-around to huge usize values
+    if start < 0 || len < 0 {
+        return null_mut();
+    }
+    // See sibling `GetStringUTFRegion` for the buffer sizing rationale.
+    let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize];
+    unsafe {
+        ((*(*env)).v24.GetStringUTFRegion)(
+            env,
+            input,
+            start as jsize,
+            len as jsize,
+            buf.as_mut_ptr() as *mut i8,
+        );
+        // Drop the trailing NUL terminator and find the actual encoded length.
+        let encoded_len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len()) as jsize;
+        let byte_array = ((*(*env)).v24.NewByteArray)(env, encoded_len);
+        ((*(*env)).v24.SetByteArrayRegion)(
+            env,
+            byte_array,
+            0,
+            encoded_len,
+            buf.as_ptr() as *const jbyte,
+        );
+        byte_array
     }
 }
 

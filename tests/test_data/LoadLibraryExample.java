@@ -106,6 +106,7 @@ class StringOperationsDemo {
     private static native String GetStringUTFChars(String input);
     private static native char[] GetStringRegion(String input, int start, int len);
     private static native String GetStringUTFRegion(String input, int start, int len);
+    private static native byte[] GetStringUTFRegionRaw(String input, int start, int len);
     private static native char[] GetStringCritical(String input);
     private static native String GetStringCriticalAndRelease(String input);
 
@@ -223,6 +224,37 @@ class StringOperationsDemo {
 
         String region2 = GetStringUTFRegion(testString, 7, 3);
         System.out.printf("Result of GetStringUTFRegion('%s', 7, 3): '%s'%n", testString, region2);
+
+        // Full surrogate pair: exercises the 6-byte CESU-8 (supplementary char) encoding path.
+        String region3 = GetStringUTFRegion(testString, 11, 2);
+        System.out.printf("Result of GetStringUTFRegion('%s', 11, 2): '%s'%n", testString, region3);
+
+        // Non-ASCII BMP code point: exercises the 3-byte CESU-8 path.
+        String region4 = GetStringUTFRegion(testString, 13, 1);
+        System.out.printf("Result of GetStringUTFRegion('%s', 13, 1): '%s'%n", testString, region4);
+
+        // Mixed region: supplementary + BMP, covering both encoding paths in a single call.
+        String region5 = GetStringUTFRegion(testString, 11, 4);
+        System.out.printf("Result of GetStringUTFRegion('%s', 11, 4): '%s'%n", testString, region5);
+
+        // Split surrogate pair: the region cuts the 💅 (U+1F485) supplementary char in half,
+        // leaving the high surrogate U+D83D alone. Per the JNI spec, GetStringUTFRegion must
+        // emit the unpaired surrogate as a 3-byte CESU-8 sequence (0xED 0xA0 0xBD).
+        // This exercises the "isolated high surrogate" branch of encode_utf16_to_modified_utf8;
+        // the output cannot survive a NewStringUTF round-trip because Rust strings can't hold
+        // unpaired surrogates, so we read the raw bytes via GetStringUTFRegionRaw.
+        byte[] highHalf = GetStringUTFRegionRaw(testString, 11, 1);
+        System.out.printf("Raw bytes of GetStringUTFRegion('%s', 11, 1): %s%n", testString, Arrays.toString(toUnsignedInts(highHalf)));
+
+        // The matching low surrogate U+DC85 of 💅 must be emitted as 0xED 0xB0 0x85.
+        byte[] lowHalf = GetStringUTFRegionRaw(testString, 12, 1);
+        System.out.printf("Raw bytes of GetStringUTFRegion('%s', 12, 1): %s%n", testString, Arrays.toString(toUnsignedInts(lowHalf)));
+    }
+
+    private static int[] toUnsignedInts(byte[] bytes) {
+        return java.util.stream.IntStream.range(0, bytes.length)
+            .map(i -> bytes[i] & 0xFF)
+            .toArray();
     }
 
     private static void GetStringCriticalDemo() {
