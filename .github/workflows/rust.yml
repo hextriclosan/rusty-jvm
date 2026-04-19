@@ -80,7 +80,7 @@ jobs:
 
       - name: Pull s390x test environment image
         run: |
-          if ! docker pull "${{ steps.img.outputs.name }}:latest"; then
+          if ! docker pull --platform linux/s390x "${{ steps.img.outputs.name }}:latest"; then
             echo "::error::Image ${{ steps.img.outputs.name }}:latest not found in GHCR."
             echo "::error::Run the 'Build s390x test image' workflow once to publish it."
             exit 1
@@ -88,7 +88,7 @@ jobs:
 
       - name: Build jni_test_lib for s390x (Big Endian)
         run: |
-          docker run --rm \
+          docker run --rm --platform linux/s390x \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             ${{ steps.img.outputs.name }}:latest \
@@ -96,7 +96,7 @@ jobs:
 
       - name: Run tests on s390x (Big Endian)
         run: |
-          docker run --rm \
+          docker run --rm --platform linux/s390x \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             ${{ steps.img.outputs.name }}:latest \
