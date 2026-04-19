@@ -88,3 +88,86 @@ impl<'a> DoubleEndedIterator for ResourceNamesIter<'a> {
 }
 
 impl FusedIterator for ResourceNamesIter<'_> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::borrow::Cow;
+
+    fn make(parent: &'static str, base: &'static str, ext: &'static str) -> ResourceName<'static> {
+        ResourceName {
+            module: Cow::Borrowed("java.base"),
+            parent: Cow::Borrowed(parent),
+            base: Cow::Borrowed(base),
+            extension: Cow::Borrowed(ext),
+        }
+    }
+
+    #[test]
+    fn full_name_with_parent_and_extension() {
+        let r = make("java/lang", "String", "class");
+        assert_eq!(
+            r.get_full_name(),
+            (
+                "java.base".to_string(),
+                "java/lang/String.class".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn full_name_without_parent() {
+        let r = make("", "README", "md");
+        assert_eq!(
+            r.get_full_name(),
+            ("java.base".to_string(), "README.md".to_string())
+        );
+    }
+
+    #[test]
+    fn full_name_without_extension() {
+        let r = make("java/lang", "noext", "");
+        assert_eq!(
+            r.get_full_name(),
+            ("java.base".to_string(), "java/lang/noext".to_string())
+        );
+    }
+
+    #[test]
+    fn full_name_without_parent_and_without_extension() {
+        let r = make("", "bare", "");
+        assert_eq!(
+            r.get_full_name(),
+            ("java.base".to_string(), "bare".to_string())
+        );
+    }
+
+    #[test]
+    fn iterator_size_hint_and_double_ended_using_real_jimage() {
+        // Use a real jimage fixture to drive the iterator.
+        let path = "tests/test_data/lib/non-compressed_little-endian.jimage";
+        if !std::path::Path::new(path).exists() {
+            // Fixtures excluded from published crate; skip.
+            return;
+        }
+        let image = JImage::open(path).expect("open jimage");
+        let mut it = image.resource_names_iter();
+        let (lo, hi) = it.size_hint();
+        assert_eq!(lo, 0);
+        assert!(hi.unwrap() >= 1);
+
+        // Forward then backward should still yield items, and the iterator
+        // must be fused once exhausted.
+        let first = it.next();
+        assert!(first.is_some());
+        let last = it.next_back();
+        assert!(last.is_some());
+
+        // Drain the rest.
+        let _: Vec<_> = it.by_ref().collect();
+        // Fused: subsequent calls must keep returning None.
+        assert!(it.next().is_none());
+        assert!(it.next().is_none());
+        assert!(it.next_back().is_none());
+    }
+}

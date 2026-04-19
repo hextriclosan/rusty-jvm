@@ -314,3 +314,66 @@ impl JImage {
         Ok(value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn attribute_kind_try_from_valid_values() {
+        // All valid values are below COUNT (=8).
+        for raw in 0u8..AttributeKind::COUNT as u8 {
+            let kind = AttributeKind::try_from(raw).expect("valid attribute kind");
+            assert_eq!(kind as u8, raw);
+        }
+    }
+
+    #[test]
+    fn attribute_kind_try_from_invalid_value_returns_error() {
+        let err = AttributeKind::try_from(AttributeKind::COUNT as u8).unwrap_err();
+        assert!(matches!(err, JImageError::Internal { .. }));
+        let err = AttributeKind::try_from(255u8).unwrap_err();
+        assert!(matches!(err, JImageError::Internal { .. }));
+    }
+
+    #[test]
+    fn hash_code_is_deterministic_and_non_negative() {
+        let h1 = JImage::hash_code("foo", HASH_MULTIPLIER as i32).unwrap();
+        let h2 = JImage::hash_code("foo", HASH_MULTIPLIER as i32).unwrap();
+        assert_eq!(h1, h2);
+        assert!(h1 >= 0, "high bit must be cleared");
+        // empty string: hash equals seed with high bit cleared.
+        let h_empty = JImage::hash_code("", HASH_MULTIPLIER as i32).unwrap();
+        assert_eq!(h_empty, (HASH_MULTIPLIER as i32) & 0x7FFF_FFFF);
+        // different strings -> different hashes (with overwhelming probability).
+        let h_other = JImage::hash_code("bar", HASH_MULTIPLIER as i32).unwrap();
+        assert_ne!(h1, h_other);
+    }
+
+    #[test]
+    fn find_resource_returns_none_for_unknown_name() {
+        let path = "tests/test_data/lib/non-compressed_little-endian.jimage";
+        if !Path::new(path).exists() {
+            return; // fixtures excluded from published crate
+        }
+        let image = JImage::open(path).expect("open jimage");
+        let res = image
+            .find_resource("/java.base/this/does/not/exist.class")
+            .expect("find_resource");
+        assert!(res.is_none());
+    }
+
+    #[test]
+    fn find_resource_finds_existing_in_compressed_image() {
+        let path = "tests/test_data/lib/compressed_little-endian.jimage";
+        if !Path::new(path).exists() {
+            return;
+        }
+        let image = JImage::open(path).expect("open jimage");
+        let res = image
+            .find_resource("/java.base/java/lang/hank.txt")
+            .expect("find_resource");
+        assert!(res.is_some());
+        assert!(!res.unwrap().is_empty());
+    }
+}
