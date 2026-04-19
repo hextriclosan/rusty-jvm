@@ -51,34 +51,51 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      # Prebuilt image, produced by the `Build s390x test image` workflow.
+      IMAGE: ghcr.io/${{ github.repository_owner }}/rusty-jvm-s390x-test-env
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up QEMU
+        # Registers binfmt_misc on the host so the amd64 cross-build container can
+        # transparently execute s390x binaries (cargo test, java) under emulation.
         uses: docker/setup-qemu-action@v3
         with:
           platforms: s390x
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Lowercase image name
+        id: img
+        run: echo "name=$(echo '${{ env.IMAGE }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Build s390x test environment image
-        uses: docker/build-push-action@v6
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          context: .github/docker/s390x
-          load: true
-          tags: s390x-test-env:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull s390x test environment image
+        # The image itself is linux/amd64 (cross-rs toolchain) — it cross-compiles
+        # to s390x and executes the resulting binaries via host QEMU/binfmt above.
+        run: |
+          if ! docker pull "${{ steps.img.outputs.name }}:latest"; then
+            echo "::error::Image ${{ steps.img.outputs.name }}:latest not found in GHCR."
+            echo "::error::Run the 'Build s390x test image' workflow once to publish it."
+            exit 1
+          fi
 
       - name: Build jni_test_lib for s390x (Big Endian)
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
-            s390x-test-env:latest \
+            ${{ steps.img.outputs.name }}:latest \
             cargo build --locked -p jni_test_lib --target s390x-unknown-linux-gnu
 
       - name: Run tests on s390x (Big Endian)
@@ -86,7 +103,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
-            s390x-test-env:latest \
+            ${{ steps.img.outputs.name }}:latest \
             cargo nextest run --workspace --locked --target s390x-unknown-linux-gnu --no-fail-fast --jobs 8
 
   build-and-test-with-coverage:
