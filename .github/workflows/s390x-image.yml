@@ -1,0 +1,90 @@
+name: Build s390x test image
+
+# Builds the s390x test environment image and pushes it to GHCR.
+# Triggered manually, or automatically when the build context changes on `main`.
+on:
+  workflow_dispatch:
+    inputs:
+      no-cache:
+        description: "Disable BuildKit cache (force a full rebuild)"
+        type: boolean
+        default: false
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/docker/s390x/**"
+      - ".github/workflows/s390x-image.yml"
+
+concurrency:
+  group: s390x-image
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/rusty-jvm-s390x-test-env
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: s390x
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Lowercase image name
+        id: img
+        run: echo "name=$(echo '${{ env.IMAGE }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute build-context hash
+        id: ctx
+        # Hash every file in the build context (sorted for determinism) so any change
+        # produces a new immutable image tag.
+        run: |
+          hash=$(find .github/docker/s390x -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            | sha256sum \
+            | cut -c1-12)
+          echo "hash=${hash}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push s390x test environment image
+        uses: docker/build-push-action@v6
+        with:
+          context: .github/docker/s390x
+          push: true
+          no-cache: ${{ inputs.no-cache == true }}
+          platforms: linux/s390x
+          tags: |
+            ${{ steps.img.outputs.name }}:latest
+            ${{ steps.img.outputs.name }}:${{ steps.ctx.outputs.hash }}
+            ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+          cache-from: |
+            type=registry,ref=${{ steps.img.outputs.name }}:buildcache
+            type=registry,ref=${{ steps.img.outputs.name }}:latest
+          cache-to: type=registry,ref=${{ steps.img.outputs.name }}:buildcache,mode=max
+
+      - name: Summary
+        run: |
+          {
+            echo "### Pushed image"
+            echo ""
+            echo "- \`${{ steps.img.outputs.name }}:latest\`"
+            echo "- \`${{ steps.img.outputs.name }}:${{ steps.ctx.outputs.hash }}\`"
+            echo "- \`${{ steps.img.outputs.name }}:sha-${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
