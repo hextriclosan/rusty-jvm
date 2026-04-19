@@ -3,7 +3,7 @@ use jni::sys::{
     jbyte, jbyteArray, jchar, jcharArray, jclass, jint, jlong, jobject, jsize, jstring, JNIEnv,
     JNI_ABORT,
 };
-use std::ffi::CString;
+use std::ffi::{c_char, CString};
 use std::ptr::null_mut;
 
 #[no_mangle]
@@ -22,8 +22,7 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     unicode: jcharArray,
 ) -> jstring {
     let len = unsafe { ((*(*env)).v24.GetArrayLength)(env, unicode) } as jsize;
-    let chars =
-        unsafe { ((*(*env)).v24.GetCharArrayElements)(env, unicode, std::ptr::null_mut()) };
+    let chars = unsafe { ((*(*env)).v24.GetCharArrayElements)(env, unicode, null_mut()) };
     let string_ref = unsafe { ((*(*env)).v24.NewString)(env, chars as *const jchar, len) };
     unsafe { ((*(*env)).v24.ReleaseCharArrayElements)(env, unicode, chars, JNI_ABORT) };
 
@@ -128,16 +127,16 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
     }
     // Buffer sizing: worst case is 6 bytes per char for supplementary chars in CESU-8
     // (two 3-byte surrogate sequences). Using len*3+1 is sufficient for BMP-only tests.
-    let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize];
+    let mut buf: Vec<c_char> = vec![0; (len * 3 + 1) as usize];
     unsafe {
         ((*(*env)).v24.GetStringUTFRegion)(
             env,
             input,
             start as jsize,
             len as jsize,
-            buf.as_mut_ptr() as *mut i8,
+            buf.as_mut_ptr(),
         );
-        ((*(*env)).v24.NewStringUTF)(env, buf.as_ptr() as *const i8)
+        ((*(*env)).v24.NewStringUTF)(env, buf.as_ptr())
     }
 }
 
@@ -159,14 +158,14 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_StringOperation
         return null_mut();
     }
     // See sibling `GetStringUTFRegion` for the buffer sizing rationale.
-    let mut buf: Vec<u8> = vec![0; (len * 3 + 1) as usize];
+    let mut buf: Vec<c_char> = vec![0; (len * 3 + 1) as usize];
     unsafe {
         ((*(*env)).v24.GetStringUTFRegion)(
             env,
             input,
             start as jsize,
             len as jsize,
-            buf.as_mut_ptr() as *mut i8,
+            buf.as_mut_ptr(),
         );
         // Drop the trailing NUL terminator and find the actual encoded length.
         let encoded_len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len()) as jsize;
