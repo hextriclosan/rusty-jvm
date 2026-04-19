@@ -56,8 +56,8 @@ jobs:
         # Hash every file in the build context (sorted for determinism) so any change
         # produces a new immutable image tag.
         run: |
-          hash=$(find .github/docker/s390x -type f -print0 \
-            | sort -z \
+          hash=$(LC_ALL=C find .github/docker/s390x -type f -print0 \
+            | LC_ALL=C sort -z \
             | xargs -0 sha256sum \
             | sha256sum \
             | cut -c1-12)
@@ -68,12 +68,15 @@ jobs:
         with:
           context: .github/docker/s390x
           push: true
-          no-cache: ${{ inputs.no-cache == true }}
+          no-cache: ${{ (github.event_name == 'workflow_dispatch' && inputs.no-cache == true) || github.event.schedule == '0 3 * * 0' }}
           platforms: linux/s390x
+          # `:latest` is only published from `main` so non-main manual runs cannot
+          # accidentally overwrite the tag consumed by the CI test job. Other runs
+          # still get the immutable `:<hash>` and `:sha-<commit>` tags for testing.
           tags: |
-            ${{ steps.img.outputs.name }}:latest
             ${{ steps.img.outputs.name }}:${{ steps.ctx.outputs.hash }}
             ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+            ${{ github.ref == 'refs/heads/main' && format('{0}:latest', steps.img.outputs.name) || '' }}
           cache-from: |
             type=registry,ref=${{ steps.img.outputs.name }}:buildcache
             type=registry,ref=${{ steps.img.outputs.name }}:latest
@@ -84,8 +87,13 @@ jobs:
           {
             echo "### Pushed image"
             echo ""
-            echo "- \`${{ steps.img.outputs.name }}:latest\`"
             echo "- \`${{ steps.img.outputs.name }}:${{ steps.ctx.outputs.hash }}\`"
             echo "- \`${{ steps.img.outputs.name }}:sha-${{ github.sha }}\`"
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "- \`${{ steps.img.outputs.name }}:latest\` (updated)"
+            else
+              echo ""
+              echo "_\`:latest\` was **not** updated — this run is on \`${{ github.ref }}\`, not \`main\`._"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
