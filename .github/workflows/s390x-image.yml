@@ -5,7 +5,7 @@ name: Build s390x test image
 on:
   workflow_dispatch:
     inputs:
-      no-cache:
+      no_cache:
         description: "Disable BuildKit cache (force a full rebuild)"
         type: boolean
         default: false
@@ -68,7 +68,7 @@ jobs:
         with:
           context: .github/docker/s390x
           push: true
-          no-cache: ${{ (github.event_name == 'workflow_dispatch' && inputs.no-cache == true) || github.event.schedule == '0 3 * * 0' }}
+          no-cache: ${{ (github.event_name == 'workflow_dispatch' && inputs.no_cache == true) || github.event.schedule == '0 3 * * 0' }}
           platforms: linux/s390x
           # `:latest` is only published from `main` so non-main manual runs cannot
           # accidentally overwrite the tag consumed by the CI test job. Other runs
