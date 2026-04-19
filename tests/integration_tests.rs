@@ -3412,6 +3412,27 @@ Length of 'éabc': utfLengthLong=5, utfLengthInt=5 charsLength=4
 Result of GetStringUTFChars with input 'A{null}𝄞': 'A{null}𝄞'
 Result of GetStringUTFChars with input 'abc': 'abc'
 
+=== GetStringRegion ===
+Result of GetStringRegion('Hello, JNI 💅☕️!', 0, 5): [72, 101, 108, 108, 111]
+Result of GetStringRegion('Hello, JNI 💅☕️!', 7, 3): [74, 78, 73]
+Result of GetStringRegion('Hello, JNI 💅☕️!', 10, 6): [32, 55357, 56453, 9749, 65039, 33]
+
+=== GetStringUTFRegion ===
+Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 0, 5): 'Hello'
+Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 7, 3): 'JNI'
+Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 11, 2): '💅'
+Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 13, 1): '☕'
+Result of GetStringUTFRegion('Hello, JNI 💅☕️!', 11, 4): '💅☕️'
+Raw bytes of GetStringUTFRegion('Hello, JNI 💅☕️!', 11, 1): [237, 160, 189]
+Raw bytes of GetStringUTFRegion('Hello, JNI 💅☕️!', 12, 1): [237, 178, 133]
+
+=== GetStringCritical ===
+Result of GetStringCritical with input 'Hello, JNI 💅☕️!': [72, 101, 108, 108, 111, 44, 32, 74, 78, 73, 32, 55357, 56453, 9749, 65039, 33]
+Result of GetStringCritical with input 'abc': [97, 98, 99]
+
+=== GetStringCriticalAndRelease ===
+Result of GetStringCriticalAndRelease with input 'A{null}𝄞💅☕️': 'A{null}𝄞💅☕️'
+
 === GetArrayLength ===
 Length of array [1, 2, 3, 4, 5] is 5
 Length of array [one, two, three] is 3
