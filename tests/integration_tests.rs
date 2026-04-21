@@ -3575,6 +3575,28 @@ StaticDoubleMethodDemo -> 2.718282
 voidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 BaseStatic.method called
 
+=== Static Methods Exception Demo ===
+objectMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticObjectMethodDemo caught - java.lang.RuntimeException: exception from objectMethodToCallThrowing
+booleanMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticBooleanMethodDemo caught - java.lang.NullPointerException: exception from booleanMethodToCallThrowing
+byteMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticByteMethodDemo caught - java.lang.IllegalArgumentException: exception from byteMethodToCallThrowing
+charMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticCharMethodDemo caught - java.lang.UnsupportedOperationException: exception from charMethodToCallThrowing
+shortMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticShortMethodDemo caught - java.io.IOException: exception from shortMethodToCallThrowing
+intMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticIntMethodDemo caught - java.io.FileNotFoundException: exception from intMethodToCallThrowing
+longMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticLongMethodDemo caught - java.sql.SQLException: exception from longMethodToCallThrowing
+floatMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticFloatMethodDemo caught - java.lang.RuntimeException: exception from floatMethodToCallThrowing
+doubleMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticDoubleMethodDemo caught - java.lang.RuntimeException: exception from doubleMethodToCallThrowing
+voidMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+StaticVoidMethodDemo caught - java.lang.RuntimeException: exception from voidMethodToCallThrowing
+
 === Instance Methods Demo ===
 instanceObjectMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 InstanceObjectMethodDemo -> I'm a result from Java!
@@ -3596,10 +3618,37 @@ instanceDoubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -900
 InstanceDoubleMethodDemo -> 2.718282
 instanceVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 
+=== Instance Methods Exception Demo ===
+instanceObjectMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceObjectMethodDemo caught: exception from instanceObjectMethodToCallThrowing
+instanceBooleanMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceBooleanMethodDemo caught: exception from instanceBooleanMethodToCallThrowing
+instanceByteMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceByteMethodDemo caught: exception from instanceByteMethodToCallThrowing
+instanceCharMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceCharMethodDemo caught: exception from instanceCharMethodToCallThrowing
+instanceShortMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceShortMethodDemo caught: exception from instanceShortMethodToCallThrowing
+instanceIntMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceIntMethodDemo caught: exception from instanceIntMethodToCallThrowing
+instanceLongMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceLongMethodDemo caught: exception from instanceLongMethodToCallThrowing
+instanceFloatMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceFloatMethodDemo caught: exception from instanceFloatMethodToCallThrowing
+instanceDoubleMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceDoubleMethodDemo caught: exception from instanceDoubleMethodToCallThrowing
+instanceVoidMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+InstanceVoidMethodDemo caught: exception from instanceVoidMethodToCallThrowing
+
 === Virtual Dispatch Demo ===
 CallViaInterface: woof!
 CallViaAbstractClass: woof!
 CallViaParentClass: bark!
+
+=== Virtual Dispatch Exception Demo ===
+CallViaInterface[speakThrowing] caught: exception from Puppy.speakThrowing
+CallViaAbstractClass[speakThrowing] caught: exception from Puppy.speakThrowing
+CallViaParentClass[soundThrowing] caught: exception from Puppy.soundThrowing
 
 === Non-Virtual Dispatch Demo ===
 CallNonVirtualViaParentClass: generic sound
@@ -3622,6 +3671,28 @@ NonVirtualFloatMethodDemo -> 3.140000104904
 NonVirtualBase.nonVirtualDoubleMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 NonVirtualDoubleMethodDemo -> 3.141592653590
 NonVirtualBase.nonVirtualVoidMethodToCall called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+
+=== Non-Virtual Dispatch Exception Demo ===
+NonVirtualBase.nonVirtualObjectMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualObjectMethodDemo caught: exception from NonVirtualBase.nonVirtualObjectMethodToCallThrowing
+NonVirtualBase.nonVirtualBooleanMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualBooleanMethodDemo caught: exception from NonVirtualBase.nonVirtualBooleanMethodToCallThrowing
+NonVirtualBase.nonVirtualByteMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualByteMethodDemo caught: exception from NonVirtualBase.nonVirtualByteMethodToCallThrowing
+NonVirtualBase.nonVirtualCharMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualCharMethodDemo caught: exception from NonVirtualBase.nonVirtualCharMethodToCallThrowing
+NonVirtualBase.nonVirtualShortMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualShortMethodDemo caught: exception from NonVirtualBase.nonVirtualShortMethodToCallThrowing
+NonVirtualBase.nonVirtualIntMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualIntMethodDemo caught: exception from NonVirtualBase.nonVirtualIntMethodToCallThrowing
+NonVirtualBase.nonVirtualLongMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualLongMethodDemo caught: exception from NonVirtualBase.nonVirtualLongMethodToCallThrowing
+NonVirtualBase.nonVirtualFloatMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualFloatMethodDemo caught: exception from NonVirtualBase.nonVirtualFloatMethodToCallThrowing
+NonVirtualBase.nonVirtualDoubleMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualDoubleMethodDemo caught: exception from NonVirtualBase.nonVirtualDoubleMethodToCallThrowing
+NonVirtualBase.nonVirtualVoidMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
+NonVirtualVoidMethodDemo caught: exception from NonVirtualBase.nonVirtualVoidMethodToCallThrowing
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called
