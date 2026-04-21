@@ -1,15 +1,13 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::klass;
+use crate::vm::jni::jni_invoke::jni_invoke;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
-use crate::vm::method_area::java_class::JavaClass;
-use crate::vm::method_area::java_method::JavaMethod;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
     jvalue, JNIEnv,
 };
 use std::ffi::c_char;
-use std::sync::Arc;
 
 pub(super) extern "system" fn get_static_method_id(
     _env: *mut JNIEnv,
@@ -53,25 +51,10 @@ fn call_static_method_a<T: JNIValue>(
     let klass = klass(declaring_class_ref).expect("Failed to get class from reference");
     let method = klass
         .get_method_by_index(method_index)
-        .expect("Failed to get method by ID for static void method call");
+        .expect("Failed to get method by ID for static method call");
 
-    let raw = invoke_static_method(&klass, &method, args);
-    JNIValue::from_vec(&raw)
-}
-
-fn invoke_static_method(
-    klass: &Arc<JavaClass>,
-    method: &Arc<JavaMethod>,
-    args: *const jvalue,
-) -> Vec<i32> {
-    let args_values = transform_args_to_vec(method, args);
-    Executor::invoke_static_method_jc(klass, method.name_signature(), &args_values).unwrap_or_else(
-        |e| {
-            panic!(
-                "Failed to invoke static method {}.{} ({e})",
-                klass.this_class_name(),
-                method.name_signature()
-            )
-        },
-    )
+    let args_values = transform_args_to_vec(&method, args);
+    let context = format!("{}.{}", klass.this_class_name(), method.name_signature());
+    let result = Executor::invoke_static_method_jc(&klass, method.name_signature(), &args_values);
+    jni_invoke(result, &context)
 }

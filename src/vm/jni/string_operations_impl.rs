@@ -3,6 +3,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::array_operations_impl::{
     new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
 };
+use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::string::get_raw_string_info;
 use crate::{from_mutf8_ptr, to_mutf8_data};
@@ -114,17 +115,13 @@ pub(super) extern "system" fn new_string(
     }
     let arr_ref = new_char_array(env, len);
     set_char_array_region(env, arr_ref, 0, len, unicode);
-    let string_instance_ref = match Executor::invoke_args_constructor(
+    let result = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([C)V",
         &[(arr_ref as i32).into()],
         Some(""),
-    ) {
-        Ok(result) => result,
-        Err(e) => panic!("Failed to invoke String constructor: {e}"), // todo handle exception here
-    };
-
-    string_instance_ref as jstring
+    );
+    jni_invoke_scalar(result, "NewString")
 }
 
 pub(super) extern "system" fn get_string_chars(
@@ -243,17 +240,13 @@ pub(super) extern "system" fn new_string_utf8(
         }
     };
 
-    let string_instance_ref = match Executor::invoke_args_constructor(
+    let result = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([BLjava/nio/charset/Charset;)V",
         &[(byte_array as i32).into(), utf8_charset_ref.into()],
         Some(""),
-    ) {
-        Ok(result) => result,
-        Err(e) => panic!("Failed to invoke String constructor: {e}"), // todo handle exception here
-    };
-
-    string_instance_ref as jstring
+    );
+    jni_invoke_scalar(result, "NewStringUTF")
 }
 
 pub(super) extern "system" fn get_string_utf_length_as_long(

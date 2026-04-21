@@ -1,6 +1,8 @@
 use crate::vm::error::Result;
+use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::system_native_table::invoke_native_method;
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::stack::stack_frame::StackFrames;
 use jclassfile::methods::MethodFlags;
@@ -36,6 +38,15 @@ pub(crate) fn invoke(
         let is_static = method_flags.contains(MethodFlags::ACC_STATIC);
         let result =
             invoke_native_method(&full_native_signature, method_args, is_static, stack_frames)?;
+
+        // JNI spec: if the native method set a pending exception, immediately throw it in Java.
+        if let Some(throwable_ref) = JavaThread::take_pending_exception() {
+            let (exception_name, handler_pc) =
+                throw_exception_with_ref(throwable_ref, stack_frames)?;
+            trace!("<JNI pending exception thrown> -> exception_name={exception_name}, handler_pc={handler_pc}");
+            return Ok(());
+        }
+
         for result_chunk in result.iter().rev() {
             last_frame_mut(stack_frames)?.push(*result_chunk)?;
         }
