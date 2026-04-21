@@ -61,9 +61,16 @@ use jni_sys::{
 };
 use std::ffi::{c_char, c_void};
 
+/// Returns a pointer to the global JNI function table.
+///
+/// Used to initialise [`crate::vm::jni::java_thread::JavaThread::env`] in thread-local storage.
+pub(super) fn jni_native_interface() -> *const JNINativeInterface_ {
+    &VTABLE.0
+}
+
 pub(crate) fn get_jni_env() -> *mut JNIEnv {
-    static mut ENV: *const JNINativeInterface_ = &VTABLE.0;
-    std::ptr::addr_of_mut!(ENV).cast()
+    use crate::vm::jni::java_thread::JavaThread;
+    JavaThread::get_env_ptr()
 }
 
 pub(crate) fn get_jni_vm() -> *mut JavaVM {

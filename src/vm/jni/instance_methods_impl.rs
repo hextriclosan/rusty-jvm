@@ -1,6 +1,7 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
+use crate::vm::jni::jni_invoke::jni_invoke;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
 use crate::vm::method_area::lookup;
@@ -47,12 +48,7 @@ fn call_method_a<T: JNIValue>(
     method_id: jmethodID,
     args: *const jvalue,
 ) -> T {
-    let raw = invoke_method(this as i32, method_id as usize, args);
-    JNIValue::from_vec(&raw)
-}
-
-fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
-    let (declaring_class_ref, method_index) = decode_method_id(method_id);
+    let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
 
     let declaring_klass =
         klass(declaring_class_ref).expect("Failed to get declaring class from jmethodID");
@@ -65,8 +61,9 @@ fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
 
     // Perform virtual dispatch: find the concrete implementation in the actual instance's
     // class hierarchy (handles interface methods, abstract methods, and overridden methods).
+    let this_ref = this as i32;
     let instance_name = HEAP
-        .get_instance_name(this)
+        .get_instance_name(this_ref)
         .expect("Failed to get instance name from reference");
     let implementation = lookup::lookup_method(&instance_name, &name_signature)
         .unwrap_or_else(|e| {
@@ -78,13 +75,14 @@ fn invoke_method(this: i32, method_id: usize, args: *const jvalue) -> Vec<i32> {
 
     let implementation_klass_name = implementation.class_name().to_owned();
 
-    Executor::invoke_non_static_method(
+    let context = format!("{implementation_klass_name}.{name_signature}");
+    let result = Executor::invoke_non_static_method(
         &implementation_klass_name,
         &name_signature,
-        this,
+        this_ref,
         &args_values,
-    )
-    .expect("Failed to invoke non-static method")
+    );
+    jni_invoke(result, &context)
 }
 
 macro_rules! call_non_virtual_method_a_impl {
@@ -117,18 +115,9 @@ fn call_non_virtual_method_a<T: JNIValue>(
     method_id: jmethodID,
     args: *const jvalue,
 ) -> T {
-    let raw = invoke_non_virtual_method(this as i32, target as i32, method_id as usize, args);
-    JNIValue::from_vec(&raw)
-}
-fn invoke_non_virtual_method(
-    this: i32,
-    target: i32,
-    method_id: usize,
-    args: *const jvalue,
-) -> Vec<i32> {
-    let (declaring_class_ref, method_index) = decode_method_id(method_id);
+    let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
 
-    let target_klass_name = klass(target)
+    let target_klass_name = klass(target as i32)
         .expect("Failed to get target class")
         .this_class_name()
         .to_owned();
@@ -141,6 +130,12 @@ fn invoke_non_virtual_method(
     let name_signature = method.name_signature().to_owned();
     let args_values = transform_args_to_vec(&method, args);
 
-    Executor::invoke_non_static_method(&target_klass_name, &name_signature, this, &args_values)
-        .expect("Failed to invoke non-static method") // todo: throw java.lang.AbstractMethodError
+    let context = format!("{target_klass_name}.{name_signature}");
+    let result = Executor::invoke_non_static_method(
+        &target_klass_name,
+        &name_signature,
+        this as i32,
+        &args_values,
+    );
+    jni_invoke(result, &context)
 }

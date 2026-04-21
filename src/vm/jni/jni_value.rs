@@ -2,7 +2,7 @@ use crate::vm::helper::{i64_to_vec, vec_to_i64};
 use crate::vm::stack::stack_value::StackValue;
 use jni_sys::{jboolean, jbyte, jchar, jdouble, jfloat, jint, jlong, jobject, jshort};
 
-pub trait JNIValue {
+pub trait JNIValue: Default {
     fn from_vec(v: &[i32]) -> Self;
     fn to_vec(&self) -> Vec<i32>;
 }

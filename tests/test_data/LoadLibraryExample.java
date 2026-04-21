@@ -3,6 +3,9 @@ package samples.javacore.loadlibrary.example;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.sql.SQLException;
 
 class LoadLibraryExample {
 
@@ -84,15 +87,19 @@ class LoadLibraryExample {
         ObjectFieldDemo objectFieldDemo = new ObjectFieldDemo();
         objectFieldDemo.runDemo();
         StaticMethodsDemo.runDemo();
+        StaticMethodsDemo.runExceptionDemo();
 
         InstanceMethodsDemo instanceMethodDemo = new InstanceMethodsDemo();
         instanceMethodDemo.runDemo();
+        instanceMethodDemo.runExceptionDemo();
 
         VirtualDispatchDemo virtualDispatchDemo = new VirtualDispatchDemo();
         virtualDispatchDemo.runDemo();
+        virtualDispatchDemo.runExceptionDemo();
 
         NonVirtualDispatchDemo nonVirtualDispatchDemo = new NonVirtualDispatchDemo();
         nonVirtualDispatchDemo.runDemo();
+        nonVirtualDispatchDemo.runExceptionDemo();
     }
 }
 
@@ -793,6 +800,94 @@ class StaticMethodsDemo {
     private static void voidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
         System.out.printf(MSG_TMPL, "voidMethodToCall", z, b, c, s, i, j, f, d, l);
     }
+
+    private static final String EX_MSG_TMPL = "exception from %s";
+    public static void runExceptionDemo() {
+        System.out.println();
+        System.out.println("=== Static Methods Exception Demo ===");
+
+        runThrowingCase("StaticObjectMethodDemo",
+            () -> StaticObjectMethodDemo("objectMethodToCallThrowing", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticBooleanMethodDemo",
+            () -> StaticBooleanMethodDemo("booleanMethodToCallThrowing", SIG_TMPL.formatted("Z"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticByteMethodDemo",
+            () -> StaticByteMethodDemo("byteMethodToCallThrowing", SIG_TMPL.formatted("B"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticCharMethodDemo",
+            () -> StaticCharMethodDemo("charMethodToCallThrowing", SIG_TMPL.formatted("C"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticShortMethodDemo",
+            () -> StaticShortMethodDemo("shortMethodToCallThrowing", SIG_TMPL.formatted("S"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticIntMethodDemo",
+            () -> StaticIntMethodDemo("intMethodToCallThrowing", SIG_TMPL.formatted("I"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticLongMethodDemo",
+            () -> StaticLongMethodDemo("longMethodToCallThrowing", SIG_TMPL.formatted("J"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticFloatMethodDemo",
+            () -> StaticFloatMethodDemo("floatMethodToCallThrowing", SIG_TMPL.formatted("F"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticDoubleMethodDemo",
+            () -> StaticDoubleMethodDemo("doubleMethodToCallThrowing", SIG_TMPL.formatted("D"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("StaticVoidMethodDemo", () -> {
+            StaticVoidMethodDemo("voidMethodToCallThrowing", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+            return null;
+        });
+    }
+
+    private static void runThrowingCase(String demoName, java.util.function.Supplier<Object> invocation) {
+        try {
+            Object result = invocation.get();
+            System.out.printf("%s did NOT throw, returned %s%n", demoName, result);
+        } catch (Exception e) {
+            System.out.printf("%s caught - %s%n", demoName, e);
+        }
+    }
+
+    private static Object objectMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "objectMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("objectMethodToCallThrowing"));
+    }
+
+    private static boolean booleanMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "booleanMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new NullPointerException(EX_MSG_TMPL.formatted("booleanMethodToCallThrowing"));
+    }
+
+    private static byte byteMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "byteMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new IllegalArgumentException(EX_MSG_TMPL.formatted("byteMethodToCallThrowing"));
+    }
+
+    private static char charMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "charMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new UnsupportedOperationException(EX_MSG_TMPL.formatted("charMethodToCallThrowing"));
+    }
+
+    private static short shortMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) throws IOException {
+        System.out.printf(MSG_TMPL, "shortMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new IOException(EX_MSG_TMPL.formatted("shortMethodToCallThrowing"));
+    }
+
+    private static int intMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) throws FileNotFoundException {
+        System.out.printf(MSG_TMPL, "intMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new FileNotFoundException(EX_MSG_TMPL.formatted("intMethodToCallThrowing"));
+    }
+
+    private static long longMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) throws SQLException {
+        System.out.printf(MSG_TMPL, "longMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new SQLException(EX_MSG_TMPL.formatted("longMethodToCallThrowing"));
+    }
+
+    private static float floatMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "floatMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("floatMethodToCallThrowing"));
+    }
+
+    private static double doubleMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "doubleMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("doubleMethodToCallThrowing"));
+    }
+
+    private static void voidMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "voidMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("voidMethodToCallThrowing"));
+    }
 }
 
 class InstanceMethodsDemo {
@@ -901,15 +996,108 @@ class InstanceMethodsDemo {
     private void instanceVoidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
         System.out.printf(MSG_TMPL, "instanceVoidMethodToCall", z, b, c, s, i, j, f, d, l);
     }
+
+    private static final String EX_MSG_TMPL = "exception from %s";
+    public void runExceptionDemo() {
+        System.out.println();
+        System.out.println("=== Instance Methods Exception Demo ===");
+
+        runThrowingCase("InstanceObjectMethodDemo",
+            () -> InstanceObjectMethodDemo("instanceObjectMethodToCallThrowing", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceBooleanMethodDemo",
+            () -> InstanceBooleanMethodDemo("instanceBooleanMethodToCallThrowing", SIG_TMPL.formatted("Z"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceByteMethodDemo",
+            () -> InstanceByteMethodDemo("instanceByteMethodToCallThrowing", SIG_TMPL.formatted("B"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceCharMethodDemo",
+            () -> InstanceCharMethodDemo("instanceCharMethodToCallThrowing", SIG_TMPL.formatted("C"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceShortMethodDemo",
+            () -> InstanceShortMethodDemo("instanceShortMethodToCallThrowing", SIG_TMPL.formatted("S"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceIntMethodDemo",
+            () -> InstanceIntMethodDemo("instanceIntMethodToCallThrowing", SIG_TMPL.formatted("I"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceLongMethodDemo",
+            () -> InstanceLongMethodDemo("instanceLongMethodToCallThrowing", SIG_TMPL.formatted("J"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceFloatMethodDemo",
+            () -> InstanceFloatMethodDemo("instanceFloatMethodToCallThrowing", SIG_TMPL.formatted("F"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceDoubleMethodDemo",
+            () -> InstanceDoubleMethodDemo("instanceDoubleMethodToCallThrowing", SIG_TMPL.formatted("D"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("InstanceVoidMethodDemo", () -> {
+            InstanceVoidMethodDemo("instanceVoidMethodToCallThrowing", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+            return null;
+        });
+    }
+
+    private static void runThrowingCase(String demoName, java.util.function.Supplier<Object> invocation) {
+        try {
+            Object result = invocation.get();
+            System.out.printf("%s did NOT throw, returned %s%n", demoName, result);
+        } catch (RuntimeException e) {
+            System.out.printf("%s caught: %s%n", demoName, e.getMessage());
+        }
+    }
+
+    private Object instanceObjectMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceObjectMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceObjectMethodToCallThrowing"));
+    }
+
+    private boolean instanceBooleanMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceBooleanMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceBooleanMethodToCallThrowing"));
+    }
+
+    private byte instanceByteMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceByteMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceByteMethodToCallThrowing"));
+    }
+
+    private char instanceCharMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceCharMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceCharMethodToCallThrowing"));
+    }
+
+    private short instanceShortMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceShortMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceShortMethodToCallThrowing"));
+    }
+
+    private int instanceIntMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceIntMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceIntMethodToCallThrowing"));
+    }
+
+    private long instanceLongMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceLongMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceLongMethodToCallThrowing"));
+    }
+
+    private float instanceFloatMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceFloatMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceFloatMethodToCallThrowing"));
+    }
+
+    private double instanceDoubleMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceDoubleMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceDoubleMethodToCallThrowing"));
+    }
+
+    private void instanceVoidMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "instanceVoidMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("instanceVoidMethodToCallThrowing"));
+    }
 }
 
 // ---- VirtualDispatchDemo: tests for Call<type>MethodA with interface/abstract/overridden methods ----
 interface Speakable {
     String speak();
+    String speakThrowing();
 }
 class BaseAnimal {
     public String sound() {
         return "generic sound";
+    }
+
+    public String soundThrowing() {
+        throw new RuntimeException("exception from BaseAnimal.soundThrowing");
     }
 }
 abstract class AbstractSpeaker extends BaseAnimal implements Speakable {
@@ -923,6 +1111,16 @@ class Puppy extends AbstractSpeaker {
     @Override
     public String sound() {
         return "bark!";
+    }
+
+    @Override
+    public String speakThrowing() {
+        throw new RuntimeException("exception from Puppy.speakThrowing");
+    }
+
+    @Override
+    public String soundThrowing() {
+        throw new RuntimeException("exception from Puppy.soundThrowing");
     }
 }
 class VirtualDispatchDemo {
@@ -948,6 +1146,30 @@ class VirtualDispatchDemo {
         // Test 3: method obtained via parent class, invoked on overriding child instance
         Object r3 = CallViaDeclaringClass(puppy, BaseAnimal.class, "sound", stringSig);
         System.out.println("CallViaParentClass: " + r3);
+    }
+
+    public void runExceptionDemo() {
+        System.out.println();
+        System.out.println("=== Virtual Dispatch Exception Demo ===");
+
+        Puppy puppy = new Puppy();
+        String stringSig = "()Ljava/lang/String;";
+
+        runThrowingCase("CallViaInterface[speakThrowing]",
+            () -> CallViaDeclaringClass(puppy, Speakable.class, "speakThrowing", stringSig));
+        runThrowingCase("CallViaAbstractClass[speakThrowing]",
+            () -> CallViaDeclaringClass(puppy, AbstractSpeaker.class, "speakThrowing", stringSig));
+        runThrowingCase("CallViaParentClass[soundThrowing]",
+            () -> CallViaDeclaringClass(puppy, BaseAnimal.class, "soundThrowing", stringSig));
+    }
+
+    private static void runThrowingCase(String demoName, java.util.function.Supplier<Object> invocation) {
+        try {
+            Object result = invocation.get();
+            System.out.printf("%s did NOT throw, returned %s%n", demoName, result);
+        } catch (RuntimeException e) {
+            System.out.printf("%s caught: %s%n", demoName, e.getMessage());
+        }
     }
 }
 
@@ -1026,6 +1248,45 @@ class NonVirtualDispatchDemo {
 
         NonVirtualVoidMethodDemo(child, NonVirtualBase.class, "nonVirtualVoidMethodToCall", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
     }
+
+    public void runExceptionDemo() {
+        System.out.println();
+        System.out.println("=== Non-Virtual Dispatch Exception Demo ===");
+
+        NonVirtualChild child = new NonVirtualChild();
+
+        runThrowingCase("NonVirtualObjectMethodDemo",
+            () -> NonVirtualObjectMethodDemo(child, NonVirtualBase.class, "nonVirtualObjectMethodToCallThrowing", SIG_TMPL.formatted("Ljava/lang/Object;"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualBooleanMethodDemo",
+            () -> NonVirtualBooleanMethodDemo(child, NonVirtualBase.class, "nonVirtualBooleanMethodToCallThrowing", SIG_TMPL.formatted("Z"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualByteMethodDemo",
+            () -> NonVirtualByteMethodDemo(child, NonVirtualBase.class, "nonVirtualByteMethodToCallThrowing", SIG_TMPL.formatted("B"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualCharMethodDemo",
+            () -> NonVirtualCharMethodDemo(child, NonVirtualBase.class, "nonVirtualCharMethodToCallThrowing", SIG_TMPL.formatted("C"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualShortMethodDemo",
+            () -> NonVirtualShortMethodDemo(child, NonVirtualBase.class, "nonVirtualShortMethodToCallThrowing", SIG_TMPL.formatted("S"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualIntMethodDemo",
+            () -> NonVirtualIntMethodDemo(child, NonVirtualBase.class, "nonVirtualIntMethodToCallThrowing", SIG_TMPL.formatted("I"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualLongMethodDemo",
+            () -> NonVirtualLongMethodDemo(child, NonVirtualBase.class, "nonVirtualLongMethodToCallThrowing", SIG_TMPL.formatted("J"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualFloatMethodDemo",
+            () -> NonVirtualFloatMethodDemo(child, NonVirtualBase.class, "nonVirtualFloatMethodToCallThrowing", SIG_TMPL.formatted("F"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualDoubleMethodDemo",
+            () -> NonVirtualDoubleMethodDemo(child, NonVirtualBase.class, "nonVirtualDoubleMethodToCallThrowing", SIG_TMPL.formatted("D"), Z, B, C, S, I, J, F, D, L));
+        runThrowingCase("NonVirtualVoidMethodDemo", () -> {
+            NonVirtualVoidMethodDemo(child, NonVirtualBase.class, "nonVirtualVoidMethodToCallThrowing", SIG_TMPL.formatted("V"), Z, B, C, S, I, J, F, D, L);
+            return null;
+        });
+    }
+
+    private static void runThrowingCase(String demoName, java.util.function.Supplier<Object> invocation) {
+        try {
+            Object result = invocation.get();
+            System.out.printf("%s did NOT throw, returned %s%n", demoName, result);
+        } catch (RuntimeException e) {
+            System.out.printf("%s caught: %s%n", demoName, e.getMessage());
+        }
+    }
 }
 
 class NonVirtualBase {
@@ -1078,6 +1339,57 @@ class NonVirtualBase {
 
     public void nonVirtualVoidMethodToCall(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
         System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualVoidMethodToCall", z, b, c, s, i, j, f, d, l);
+    }
+
+    private static final String EX_MSG_TMPL = "exception from NonVirtualBase.%s";
+    public Object nonVirtualObjectMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualObjectMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualObjectMethodToCallThrowing"));
+    }
+
+    public boolean nonVirtualBooleanMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualBooleanMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualBooleanMethodToCallThrowing"));
+    }
+
+    public byte nonVirtualByteMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualByteMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualByteMethodToCallThrowing"));
+    }
+
+    public char nonVirtualCharMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualCharMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualCharMethodToCallThrowing"));
+    }
+
+    public short nonVirtualShortMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualShortMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualShortMethodToCallThrowing"));
+    }
+
+    public int nonVirtualIntMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualIntMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualIntMethodToCallThrowing"));
+    }
+
+    public long nonVirtualLongMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualLongMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualLongMethodToCallThrowing"));
+    }
+
+    public float nonVirtualFloatMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualFloatMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualFloatMethodToCallThrowing"));
+    }
+
+    public double nonVirtualDoubleMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualDoubleMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualDoubleMethodToCallThrowing"));
+    }
+
+    public void nonVirtualVoidMethodToCallThrowing(boolean z, byte b, char c, short s, int i, long j, float f, double d, Object l) {
+        System.out.printf(MSG_TMPL, "NonVirtualBase.nonVirtualVoidMethodToCallThrowing", z, b, c, s, i, j, f, d, l);
+        throw new RuntimeException(EX_MSG_TMPL.formatted("nonVirtualVoidMethodToCallThrowing"));
     }
 }
 
