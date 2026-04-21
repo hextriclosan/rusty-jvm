@@ -38,6 +38,10 @@ impl JavaThread {
         JAVA_THREAD.with(|t| t.exception_pending.take())
     }
 
+    pub(crate) fn get_pending_exception() -> Option<i32> {
+        JAVA_THREAD.with(|t| t.exception_pending.get())
+    }
+
     /// Stores `throwable_ref` as the pending exception for the calling thread.
     ///
     /// Returns `true` if it was stored, or `false` if another exception was already pending

@@ -100,6 +100,8 @@ class LoadLibraryExample {
         NonVirtualDispatchDemo nonVirtualDispatchDemo = new NonVirtualDispatchDemo();
         nonVirtualDispatchDemo.runDemo();
         nonVirtualDispatchDemo.runExceptionDemo();
+
+        ExceptionDemo.runDemo();
     }
 }
 
@@ -1453,3 +1455,70 @@ class NonVirtualChild extends NonVirtualBase {
         System.out.printf(MSG_TMPL, "NonVirtualChild.nonVirtualVoidMethodToCall", z, b, c, s, i, j, f, d, l);
     }
 }
+
+class ExceptionDemo {
+    private static native int Throw(Throwable throwable);
+    private static native int ThrowNew(Class<?> clazz, String message);
+    private static native String CheckOccurredClearDemo(String methodName, String signature);
+    private static native String DescribeAndClearDemo(String methodName, String signature);
+
+    public static void runDemo() {
+        System.out.println();
+        System.out.println("=== Exception Demo ===");
+
+        ThrowDemo();
+        ThrowNewDemo();
+        CheckOccurredClearDemoCase();
+        DescribeAndClearDemoCase();
+    }
+
+    private static void ThrowDemo() {
+        System.out.println();
+        System.out.println("--- Throw ---");
+        runThrowingCase("Throw(RuntimeException)",
+            () -> { Throw(new RuntimeException("thrown via JNI Throw")); return null; });
+        runThrowingCase("Throw(FileNotFoundException)",
+            () -> { Throw(new FileNotFoundException("state from JNI Throw")); return null; });
+    }
+
+    private static void ThrowNewDemo() {
+        System.out.println();
+        System.out.println("--- ThrowNew ---");
+        runThrowingCase("ThrowNew(IllegalArgumentException, msg)",
+            () -> { ThrowNew(IllegalArgumentException.class, "thrown via JNI ThrowNew"); return null; });
+        runThrowingCase("ThrowNew(NullPointerException, null)",
+            () -> { ThrowNew(NullPointerException.class, null); return null; });
+        runThrowingCase("ThrowNew(OutOfMemoryError, empty)",
+            () -> { ThrowNew(OutOfMemoryError.class, "ouch"); return null; });
+    }
+
+    private static void CheckOccurredClearDemoCase() {
+        System.out.println();
+        System.out.println("--- ExceptionCheck / ExceptionOccurred / ExceptionClear ---");
+        String summary = CheckOccurredClearDemo("throwingCallback", "()V");
+        System.out.println(summary);
+    }
+
+    private static void DescribeAndClearDemoCase() {
+        System.out.println();
+        System.out.println("--- ExceptionDescribe ---");
+        String summary = DescribeAndClearDemo("throwingCallback", "()V");
+        System.out.println(summary);
+    }
+
+    // Callback used by CheckOccurredClearDemo / DescribeAndClearDemo to produce
+    // a pending exception observable from the native side.
+    private static void throwingCallback() {
+        throw new IllegalStateException("from throwingCallback");
+    }
+
+    private static void runThrowingCase(String demoName, java.util.function.Supplier<Object> invocation) {
+        try {
+            Object result = invocation.get();
+            System.out.printf("%s did NOT throw, returned %s%n", demoName, result);
+        } catch (Throwable t) {
+            System.out.printf("%s caught - %s%n", demoName, t);
+        }
+    }
+}
+
