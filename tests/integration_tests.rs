@@ -3786,3 +3786,31 @@ fn should_use_proper_interface_static_field() {
         "42\n",
     );
 }
+
+#[test]
+fn should_throw_no_such_field_and_method_error_from_jni() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.example.JniNoSuchIdDemo",
+        &[],
+        r#"=== GetFieldID: nonexistent field ===
+Caught NoSuchFieldError: nonexistentField
+=== GetStaticFieldID: nonexistent field ===
+Caught NoSuchFieldError: nonexistentStaticField
+=== GetMethodID: nonexistent method ===
+Caught NoSuchMethodError: nonexistentMethod:()V
+=== GetStaticMethodID: nonexistent method ===
+Caught NoSuchMethodError: nonexistentStaticMethod:()V
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniNoSuchIdDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}

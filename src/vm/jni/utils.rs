@@ -68,9 +68,17 @@ pub(super) fn get_method_id_impl(
 }
 
 fn set_pending_no_such_method_error(signature: &str) {
-    let result = StringPoolHelper::get_string(signature).and_then(|msg_ref| {
+    set_pending_error("java/lang/NoSuchMethodError", signature);
+}
+
+pub(super) fn set_pending_no_such_field_error(field_name: &str) {
+    set_pending_error("java/lang/NoSuchFieldError", field_name);
+}
+
+fn set_pending_error(exception_class: &str, message: &str) {
+    let result = StringPoolHelper::get_string(message).and_then(|msg_ref| {
         Executor::invoke_args_constructor(
-            "java/lang/NoSuchMethodError",
+            exception_class,
             "<init>:(Ljava/lang/String;)V",
             &[StackValueKind::from(msg_ref)],
             None,
@@ -80,7 +88,7 @@ fn set_pending_no_such_method_error(signature: &str) {
         Ok(throwable_ref) => {
             JavaThread::set_pending_exception(throwable_ref);
         }
-        Err(e) => panic!("Failed to construct NoSuchMethodError for '{signature}': {e}"),
+        Err(e) => panic!("Failed to construct {exception_class} for '{message}': {e}"),
     }
 }
 
