@@ -3,12 +3,14 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
+use crate::vm::jni::utils::set_pending_no_such_field_error;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jobject, jshort,
     JNIEnv,
 };
 use std::ffi::c_char;
+use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_field_id(
     _env: *mut JNIEnv,
@@ -22,10 +24,15 @@ pub(super) extern "system" fn get_field_id(
     let class_name = klass.this_class_name();
     StaticInit::initialize_java_class(&klass)
         .expect("Failed to initialize class before getting field ID");
-    let field_offset = klass
-        .get_field_offset(&format!("{class_name}.{field_name}"))
-        .expect("Failed to get field offset by name");
-    field_offset as jfieldID
+    // TODO: get_field_offset returns a 0-based index, so the first field encodes to 0, which is
+    // indistinguishable from the null jfieldID used to signal failure (JNI spec: null == failure).
+    match klass.get_field_offset(&format!("{class_name}.{field_name}")) {
+        Ok(offset) => offset as jfieldID,
+        Err(_) => {
+            set_pending_no_such_field_error(&field_name);
+            null_mut()
+        }
+    }
 }
 
 macro_rules! get_field_impl {

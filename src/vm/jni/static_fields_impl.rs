@@ -2,11 +2,13 @@ use crate::from_mutf8_ptr;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
+use crate::vm::jni::utils::set_pending_no_such_field_error;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jobject, jshort,
     JNIEnv,
 };
 use std::ffi::c_char;
+use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_static_field_id(
     _env: *mut JNIEnv,
@@ -18,10 +20,13 @@ pub(super) extern "system" fn get_static_field_id(
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
     StaticInit::initialize_java_class(&klass)
         .expect("Failed to initialize class before getting static field ID");
-    let static_field_offset = klass
-        .get_static_field_offset(&name_str)
-        .expect("Failed to get static field offset by name");
-    static_field_offset as jfieldID
+    match klass.get_static_field_offset(&name_str) {
+        Ok(offset) => offset as jfieldID,
+        Err(_) => {
+            set_pending_no_such_field_error(&name_str);
+            null_mut()
+        }
+    }
 }
 
 macro_rules! get_static_field_impl {

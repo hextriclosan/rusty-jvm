@@ -1,5 +1,8 @@
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
+use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::lookup;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -45,7 +48,7 @@ pub(super) fn get_method_id_impl(
 
     // Look up the method implementation in the class/interface hierarchy.
     let klass_name = declaring_klass.this_class_name().clone();
-    lookup::lookup_method(&klass_name, &full_signature)
+    let method_id = lookup::lookup_method(&klass_name, &full_signature)
         .unwrap_or_else(|e| panic!("Failed to find implementation of {full_signature}: {e}"))
         .and_then(|method| {
             let found_class_name = method.class_name();
@@ -53,8 +56,40 @@ pub(super) fn get_method_id_impl(
             let found_klass = klass(found_clazz_ref).ok()?;
             let (idx, _) = found_klass.get_method_full(&full_signature)?;
             Some(encode_method_id(found_clazz_ref, idx) as jmethodID)
-        })
-        .unwrap_or(null_mut()) // todo: throw NoSuchMethodError here
+        });
+
+    match method_id {
+        Some(id) => id,
+        None => {
+            set_pending_no_such_method_error(&full_signature);
+            null_mut()
+        }
+    }
+}
+
+fn set_pending_no_such_method_error(signature: &str) {
+    set_pending_error("java/lang/NoSuchMethodError", signature);
+}
+
+pub(super) fn set_pending_no_such_field_error(field_name: &str) {
+    set_pending_error("java/lang/NoSuchFieldError", field_name);
+}
+
+fn set_pending_error(exception_class: &str, message: &str) {
+    let result = StringPoolHelper::get_string(message).and_then(|msg_ref| {
+        Executor::invoke_args_constructor(
+            exception_class,
+            "<init>:(Ljava/lang/String;)V",
+            &[StackValueKind::from(msg_ref)],
+            None,
+        )
+    });
+    match result {
+        Ok(throwable_ref) => {
+            JavaThread::set_pending_exception(throwable_ref);
+        }
+        Err(e) => panic!("Failed to construct {exception_class} for '{message}': {e}"),
+    }
 }
 
 #[cfg(not(target_pointer_width = "64"))]
