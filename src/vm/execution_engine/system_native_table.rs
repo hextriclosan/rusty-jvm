@@ -1014,15 +1014,11 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         );
         table.insert(
             "sun/nio/ch/FileDispatcherImpl:isOther0:(Ljava/io/FileDescriptor;)Z",
-            crate::vm::execution_engine::system_native_table::NativeMethod::WithMutStackFrames(
-                file_dispatcher_is_other0_wrp,
-            ),
+            WithMutStackFrames(file_dispatcher_is_other0_wrp),
         );
         table.insert(
             "sun/nio/ch/FileDispatcherImpl:seek0:(Ljava/io/FileDescriptor;J)J",
-            crate::vm::execution_engine::system_native_table::NativeMethod::WithMutStackFrames(
-                file_dispatcher_is_seek0_wrp,
-            ),
+            WithMutStackFrames(file_dispatcher_seek0_wrp),
         );
         table.insert(
             "sun/nio/ch/FileDispatcherImpl:duplicateHandle:(J)J",
