@@ -1,6 +1,6 @@
 package samples.javacore.loadlibrary.example;
 
-class JniNoSuchIdDemo {
+public class JniNoSuchIdDemo {
     private int instanceField = 42;
     private static int staticField = 99;
 

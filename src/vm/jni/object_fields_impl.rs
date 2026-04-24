@@ -24,6 +24,8 @@ pub(super) extern "system" fn get_field_id(
     let class_name = klass.this_class_name();
     StaticInit::initialize_java_class(&klass)
         .expect("Failed to initialize class before getting field ID");
+    // TODO: get_field_offset returns a 0-based index, so the first field encodes to 0, which is
+    // indistinguishable from the null jfieldID used to signal failure (JNI spec: null == failure).
     match klass.get_field_offset(&format!("{class_name}.{field_name}")) {
         Ok(offset) => offset as jfieldID,
         Err(_) => {

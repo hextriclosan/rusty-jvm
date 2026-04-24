@@ -1,4 +1,5 @@
 use jni::sys::{jclass, jobject, JNIEnv};
+use std::ffi::c_char;
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo_lookupNonexistentFieldId(
@@ -10,8 +11,8 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo
         ((*(*env)).v24.GetFieldID)(
             env,
             class,
-            b"nonexistentField\0".as_ptr() as *const i8,
-            b"I\0".as_ptr() as *const i8,
+            b"nonexistentField\0".as_ptr() as *const c_char,
+            b"I\0".as_ptr() as *const c_char,
         );
     }
 }
@@ -25,8 +26,8 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo
         ((*(*env)).v24.GetStaticFieldID)(
             env,
             class,
-            b"nonexistentStaticField\0".as_ptr() as *const i8,
-            b"I\0".as_ptr() as *const i8,
+            b"nonexistentStaticField\0".as_ptr() as *const c_char,
+            b"I\0".as_ptr() as *const c_char,
         );
     }
 }
@@ -41,8 +42,8 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo
         ((*(*env)).v24.GetMethodID)(
             env,
             class,
-            b"nonexistentMethod\0".as_ptr() as *const i8,
-            b"()V\0".as_ptr() as *const i8,
+            b"nonexistentMethod\0".as_ptr() as *const c_char,
+            b"()V\0".as_ptr() as *const c_char,
         );
     }
 }
@@ -56,8 +57,8 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo
         ((*(*env)).v24.GetStaticMethodID)(
             env,
             class,
-            b"nonexistentStaticMethod\0".as_ptr() as *const i8,
-            b"()V\0".as_ptr() as *const i8,
+            b"nonexistentStaticMethod\0".as_ptr() as *const c_char,
+            b"()V\0".as_ptr() as *const c_char,
         );
     }
 }
