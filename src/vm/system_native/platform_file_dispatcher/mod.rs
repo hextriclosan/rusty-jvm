@@ -119,14 +119,22 @@ fn is_other0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<bool
         ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
     };
 
-    let metadata = unwrap_or_return_err!(file.metadata());
+    let metadata = match file.metadata() {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            throw_and_return!(throw_ioexception(
+                &format!("Failed to get file metadata: {}", e),
+                stack_frames
+            ))
+        }
+    };
 
     ThrowingResult::ok(
         !metadata.is_file() && !metadata.is_dir() && !metadata.file_type().is_symlink(),
     )
 }
 
-pub fn file_dispatcher_is_seek0_wrp(
+pub fn file_dispatcher_seek0_wrp(
     args: &[i32],
     stack_frames: &mut StackFrames,
 ) -> Result<Vec<i32>> {
@@ -143,10 +151,18 @@ fn seek0(fd_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> ThrowingRe
     };
 
     let current_offset = if offset < 0 {
-        unwrap_or_return_err!(file.seek(std::io::SeekFrom::Current(0i64)))
+        file.seek(std::io::SeekFrom::Current(0i64))
     } else {
-        unwrap_or_return_err!(file.seek(std::io::SeekFrom::Start(offset as u64)))
+        file.seek(std::io::SeekFrom::Start(offset as u64))
     };
 
-    ThrowingResult::ok(current_offset as i64)
+    match current_offset {
+        Ok(current_offset) => ThrowingResult::ok(current_offset as i64),
+        Err(e) => {
+            throw_and_return!(throw_ioexception(
+                &format!("Seek failed: {}", e),
+                stack_frames
+            ))
+        }
+    }
 }
