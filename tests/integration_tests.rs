@@ -3814,3 +3814,11 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
         HashMap::default(),
     );
 }
+
+#[test]
+fn should_support_file_dispatcher_impl_native_methods() {
+    assert_success(
+        "samples.nio.filedispatcherimpl.filedispatcherimpldemo.FileDispatcherImplDemo",
+        "Hello, this is a test file for InputStream and FileChannel.\n",
+    );
+}

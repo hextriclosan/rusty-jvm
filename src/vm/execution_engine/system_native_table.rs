@@ -52,7 +52,8 @@ use crate::vm::system_native::native_libraries::{
 use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
 use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
 use crate::vm::system_native::platform_file_dispatcher::{
-    allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp, file_dispatcher_map0_wrp,
+    allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp,
+    file_dispatcher_is_other0_wrp, file_dispatcher_is_seek0_wrp, file_dispatcher_map0_wrp,
     mapped_memory_utils_force0_wrp,
 };
 use crate::vm::system_native::random_access_file::{
@@ -1140,6 +1141,14 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
         table.insert(
             "sun/nio/ch/UnixFileDispatcherImpl:map0:(Ljava/io/FileDescriptor;IJJZ)J",
             WithMutStackFrames(file_dispatcher_map0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:isOther0:(Ljava/io/FileDescriptor;)Z",
+            WithMutStackFrames(file_dispatcher_is_other0_wrp),
+        );
+        table.insert(
+            "sun/nio/ch/UnixFileDispatcherImpl:seek0:(Ljava/io/FileDescriptor;J)J",
+            WithMutStackFrames(file_dispatcher_is_seek0_wrp),
         );
         table.insert(
             "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
