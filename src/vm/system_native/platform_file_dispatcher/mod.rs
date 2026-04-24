@@ -3,6 +3,7 @@ use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::helper::{get_handle, i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
+use std::io::Seek;
 
 #[cfg(windows)]
 pub mod windows_file_dispatcher;
@@ -14,6 +15,7 @@ mod mmap_registry;
 pub mod unix_file_dispatcher;
 
 use crate::vm::exception::helpers::throw_ioexception;
+use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::platform_file_dispatcher::mmap_registry::MmapVariant;
 #[cfg(unix)]
 use unix_file_dispatcher::truncate0;
@@ -97,6 +99,68 @@ fn force0(
         Err(e) => {
             throw_and_return!(throw_ioexception(
                 &format!("Forcing mapped memory to storage failed: {}", e),
+                stack_frames
+            ))
+        }
+    }
+}
+
+pub fn file_dispatcher_is_other0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let fd_ref = args[0];
+    let res = unwrap_result_or_return_default!(is_other0(fd_ref, stack_frames), vec![]);
+    Ok(vec![if res { 1 } else { 0 }])
+}
+fn is_other0(fd_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<bool> {
+    let file = match PlatformFile::get_by_fd(fd_ref, stack_frames) {
+        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    };
+
+    let metadata = match file.metadata() {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            throw_and_return!(throw_ioexception(
+                &format!("Failed to get file metadata: {}", e),
+                stack_frames
+            ))
+        }
+    };
+
+    ThrowingResult::ok(
+        !metadata.is_file() && !metadata.is_dir() && !metadata.file_type().is_symlink(),
+    )
+}
+
+pub fn file_dispatcher_seek0_wrp(
+    args: &[i32],
+    stack_frames: &mut StackFrames,
+) -> Result<Vec<i32>> {
+    let fd_ref = args[0];
+    let offset = i32toi64(args[2], args[1]);
+    let current_offset =
+        unwrap_result_or_return_default!(seek0(fd_ref, offset, stack_frames), vec![]);
+    Ok(i64_to_vec(current_offset))
+}
+fn seek0(fd_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i64> {
+    let mut file = match PlatformFile::get_by_fd(fd_ref, stack_frames) {
+        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
+        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+    };
+
+    let current_offset = if offset < 0 {
+        file.seek(std::io::SeekFrom::Current(0i64))
+    } else {
+        file.seek(std::io::SeekFrom::Start(offset as u64))
+    };
+
+    match current_offset {
+        Ok(current_offset) => ThrowingResult::ok(current_offset as i64),
+        Err(e) => {
+            throw_and_return!(throw_ioexception(
+                &format!("Seek failed: {}", e),
                 stack_frames
             ))
         }
