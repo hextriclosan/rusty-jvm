@@ -90,7 +90,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     }
 }
 
-fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {
+pub(crate) fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {
     let system_thread_group_ref = with_method_area(|area| area.system_thread_group_id())?;
     let system_thread_ref = with_method_area(|area| area.system_thread_id())?;
     Executor::invoke_non_static_method(

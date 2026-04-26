@@ -1,3 +1,5 @@
+use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
+use crate::vm::error::{Error, Result};
 use crate::vm::jni::jni_env::jni_native_interface;
 use jni_sys::{JNIEnv, JNINativeInterface_};
 use std::cell::Cell;
@@ -38,18 +40,42 @@ impl JavaThread {
         JAVA_THREAD.with(|t| t.exception_pending.take())
     }
 
+    pub(crate) fn get_pending_exception() -> Option<i32> {
+        JAVA_THREAD.with(|t| t.exception_pending.get())
+    }
+
     /// Stores `throwable_ref` as the pending exception for the calling thread.
     ///
-    /// Returns `true` if it was stored, or `false` if another exception was already pending
-    /// (in which case the existing pending exception is preserved, matching JNI semantics).
-    pub(crate) fn set_pending_exception(throwable_ref: i32) -> bool {
+    /// Returns `Err(JniAlreadyPendingException(existing))` without modifying state
+    /// when another exception is already pending; the first exception is preserved,
+    /// per JNI semantics. Used by VM-internal paths that surface a Rust `Err` as a
+    /// Java throwable (`GetFieldID`, `NewObject`, `CallXxxMethod`, ...). The dedicated
+    /// `Throw` / `ThrowNew` JNI entry points bypass this and overwrite directly,
+    /// which the spec explicitly permits.
+    pub(crate) fn try_set_pending_exception(throwable_ref: i32) -> Result<()> {
         JAVA_THREAD.with(|t| {
-            if t.exception_pending.get().is_none() {
-                t.exception_pending.set(Some(throwable_ref));
-                true
+            if let Some(pending_ref) = t.exception_pending.get() {
+                Err(Error::new(JniExceptionAlreadyPending(pending_ref)))
             } else {
-                false
+                t.exception_pending.set(Some(throwable_ref));
+                Ok(())
             }
         })
     }
+
+    /// Used by JNI `Throw`/`ThrowNew`: always installs `throwable_ref`,
+    /// replacing any previously-pending exception. This is spec-compliant.
+    pub(super) fn force_set_pending_exception(throwable_ref: i32) {
+        JAVA_THREAD.with(|t| t.exception_pending.set(Some(throwable_ref)));
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn try_set_preserves_first() {
+    let _ = JavaThread::take_pending_exception();
+    assert!(JavaThread::try_set_pending_exception(11).is_ok());
+    let err = JavaThread::try_set_pending_exception(22).unwrap_err();
+    assert!(matches!(err.kind(), JniExceptionAlreadyPending(11)));
+    assert_eq!(JavaThread::take_pending_exception(), Some(11));
 }

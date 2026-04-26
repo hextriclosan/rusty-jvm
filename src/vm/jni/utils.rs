@@ -85,9 +85,10 @@ fn set_pending_error(exception_class: &str, message: &str) {
         )
     });
     match result {
-        Ok(throwable_ref) => {
-            JavaThread::set_pending_exception(throwable_ref);
-        }
+        Ok(throwable_ref) => match JavaThread::try_set_pending_exception(throwable_ref) {
+            Ok(()) => (),
+            Err(e) => panic!("Failed to set pending exception for error: {e}"),
+        },
         Err(e) => panic!("Failed to construct {exception_class} for '{message}': {e}"),
     }
 }

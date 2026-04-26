@@ -1,5 +1,5 @@
 use crate::vm::error::ErrorKind::{
-    ClassFile, ConstantPool, Execution, Io, Native, UncaughtException,
+    ClassFile, ConstantPool, Execution, Io, JniExceptionAlreadyPending, Native, UncaughtException,
 };
 use iana_time_zone::GetTimezoneError;
 use jdescriptor::DescriptorError;
@@ -74,7 +74,13 @@ impl Display for Error {
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
             Execution(descr) => write!(f, "Execution Error: {descr}"),
             Native(descr) => write!(f, "Native Call Error: {descr}"),
-            UncaughtException(_) => write!(f, "Uncaught Exception"),
+            UncaughtException(throwable_ref) => {
+                write!(f, "Uncaught Exception (throwable_ref={throwable_ref})")
+            }
+            JniExceptionAlreadyPending(throwable_ref) => write!(
+                f,
+                "JNI already has a pending exception (existing throwable_ref={throwable_ref}"
+            ),
 
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -207,6 +213,7 @@ pub enum ErrorKind {
     Execution(String),
     Native(String),
     UncaughtException(i32),
+    JniExceptionAlreadyPending(i32),
 
     #[doc(hidden)]
     __Nonexhaustive,

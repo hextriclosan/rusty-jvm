@@ -3693,6 +3693,25 @@ NonVirtualBase.nonVirtualDoubleMethodToCallThrowing called with true, -128, Ї, 
 NonVirtualDoubleMethodDemo caught: exception from NonVirtualBase.nonVirtualDoubleMethodToCallThrowing
 NonVirtualBase.nonVirtualVoidMethodToCallThrowing called with true, -128, Ї, -32768, -2000000000, -9000000000000000000, 3.140000104904, 3.141592653590, Hi
 NonVirtualVoidMethodDemo caught: exception from NonVirtualBase.nonVirtualVoidMethodToCallThrowing
+
+=== Exception Demo ===
+
+--- Throw ---
+Throw(RuntimeException) caught - java.lang.RuntimeException: thrown via JNI Throw
+Throw(FileNotFoundException) caught - java.io.FileNotFoundException: state from JNI Throw
+new IllegalStateException(...), new IllegalArgumentException(...) caught - java.lang.IllegalArgumentException: second exception from JNI ThrowTwo
+
+--- ThrowNew ---
+ThrowNew(IllegalArgumentException, msg) caught - java.lang.IllegalArgumentException: thrown via JNI ThrowNew
+ThrowNew(NullPointerException, null) caught - java.lang.NullPointerException
+ThrowNew(OutOfMemoryError, empty) caught - java.lang.OutOfMemoryError: ouch
+ThrowNewTwo(IllegalStateException.class, IOException.class) caught - java.io.IOException
+
+--- ExceptionCheck / ExceptionOccurred / ExceptionClear ---
+checkBefore=true, occurred=[], checkAfter=false
+
+--- ExceptionDescribe ---
+described, checkBefore=true, checkAfter=false
 "#
         ),
         r#"WARNING: A restricted method in java.lang.System has been called
@@ -3700,7 +3719,9 @@ WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadl
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 
-"#,
+Exception in thread "system" java.lang.IllegalStateException: from throwingCallback
+	at samples.javacore.loadlibrary.example.ExceptionDemo.throwingCallback(LoadLibraryExample.java:1521)
+"#, // fixme ^^^ stacktrace truncated https://github.com/hextriclosan/rusty-jvm/issues/317
         Success,
         0,
         HashMap::default(),
