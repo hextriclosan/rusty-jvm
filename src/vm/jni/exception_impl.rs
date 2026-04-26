@@ -5,14 +5,19 @@ use crate::vm::helper::klass;
 use crate::vm::invoke_uncaught_exception_handler;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::stack::stack_value::StackValueKind;
-use jni_sys::{jboolean, jclass, jint, jthrowable, JNIEnv, JNI_FALSE, JNI_OK, JNI_TRUE};
+use jni_sys::{jboolean, jclass, jint, jthrowable, JNIEnv, JNI_ERR, JNI_FALSE, JNI_OK, JNI_TRUE};
 use std::ffi::{c_char, CStr};
 use std::ptr::null_mut;
+use tracing::warn;
 
 pub(super) extern "system" fn throw(_env: *mut JNIEnv, throwable: jthrowable) -> jint {
+    if throwable.is_null() {
+        return JNI_ERR;
+    }
+
     // `throwable` is a JNI opaque pointer whose numeric value is a heap reference (i32).
     // Truncating to i32 is safe because all heap refs in this JVM fit in 32 bits.
-    JavaThread::replace_pending_exception(throwable as i32);
+    JavaThread::force_set_pending_exception(throwable as i32);
     JNI_OK
 }
 
@@ -21,8 +26,12 @@ pub(super) extern "system" fn throw_new(
     clazz: jclass,
     msg_mutf8: *const c_char,
 ) -> jint {
-    // clear any pending exception, otherwise we'll get an UncaughtException when we invoke the constructor
-    JavaThread::take_pending_exception();
+    if clazz.is_null() {
+        return JNI_ERR;
+    }
+
+    // clear and save any pending exception, otherwise we'll get an UncaughtException when we invoke the constructor
+    let saved = JavaThread::take_pending_exception();
 
     let klass = klass(clazz as i32).expect("Failed to get class from reference for exception");
 
@@ -40,8 +49,20 @@ pub(super) extern "system" fn throw_new(
         )
     };
 
-    let throwable_ref = throwable_res.expect("Failed to construct exception instance");
-    JavaThread::replace_pending_exception(throwable_ref);
+    let throwable_ref = match throwable_res {
+        Ok(v) => v,
+        Err(e) => {
+            warn!(
+                "Failed to create instance of {}: {e}",
+                klass.this_class_name()
+            );
+            if let Some(saved_ref) = saved {
+                JavaThread::force_set_pending_exception(saved_ref);
+            }
+            return JNI_ERR;
+        }
+    };
+    JavaThread::force_set_pending_exception(throwable_ref);
     JNI_OK
 }
 
