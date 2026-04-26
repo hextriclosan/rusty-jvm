@@ -1458,7 +1458,9 @@ class NonVirtualChild extends NonVirtualBase {
 
 class ExceptionDemo {
     private static native int Throw(Throwable throwable);
+    private static native void ThrowTwo(Throwable first, Throwable second);
     private static native int ThrowNew(Class<?> clazz, String message);
+    private static native void ThrowNewTwo(Class<?> firstClazz, Class<?> secondClazz);
     private static native String CheckOccurredClearDemo(String methodName, String signature);
     private static native String DescribeAndClearDemo(String methodName, String signature);
 
@@ -1479,6 +1481,11 @@ class ExceptionDemo {
             () -> { Throw(new RuntimeException("thrown via JNI Throw")); return null; });
         runThrowingCase("Throw(FileNotFoundException)",
             () -> { Throw(new FileNotFoundException("state from JNI Throw")); return null; });
+
+        Throwable first = new IllegalStateException("first exception from JNI ThrowTwo");
+        Throwable second = new IllegalArgumentException("second exception from JNI ThrowTwo");
+        runThrowingCase("new IllegalStateException(...), new IllegalArgumentException(...)",
+            () -> { ThrowTwo(first, second); return null; });
     }
 
     private static void ThrowNewDemo() {
@@ -1490,6 +1497,8 @@ class ExceptionDemo {
             () -> { ThrowNew(NullPointerException.class, null); return null; });
         runThrowingCase("ThrowNew(OutOfMemoryError, empty)",
             () -> { ThrowNew(OutOfMemoryError.class, "ouch"); return null; });
+        runThrowingCase("ThrowNewTwo(IllegalStateException.class, IOException.class)",
+            () -> { ThrowNewTwo(IllegalStateException.class, IOException.class); return null; });
     }
 
     private static void CheckOccurredClearDemoCase() {
@@ -1521,4 +1530,3 @@ class ExceptionDemo {
         }
     }
 }
-

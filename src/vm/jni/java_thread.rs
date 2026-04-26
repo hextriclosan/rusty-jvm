@@ -1,3 +1,4 @@
+use crate::vm::error::{Error, Result};
 use crate::vm::jni::jni_env::jni_native_interface;
 use jni_sys::{JNIEnv, JNINativeInterface_};
 use std::cell::Cell;
@@ -46,14 +47,22 @@ impl JavaThread {
     ///
     /// Returns `true` if it was stored, or `false` if another exception was already pending
     /// (in which case the existing pending exception is preserved, matching JNI semantics).
-    pub(crate) fn set_pending_exception(throwable_ref: i32) -> bool {
+    pub(crate) fn try_set_pending_exception(throwable_ref: i32) -> Result<()> {
         JAVA_THREAD.with(|t| {
-            if t.exception_pending.get().is_none() {
-                t.exception_pending.set(Some(throwable_ref));
-                true
+            if let Some(pending_ref) = t.exception_pending.get() {
+                Err(Error::new_native(&format!(
+                    "Failed to set pending exception throwable_ref={throwable_ref} because another exception (throwable_ref={pending_ref}) is already pending"
+                )))
             } else {
-                false
+                t.exception_pending.set(Some(throwable_ref));
+                Ok(())
             }
         })
+    }
+
+    /// Used by JNI `Throw`/`ThrowNew`: always installs `throwable_ref`,
+    /// replacing any previously-pending exception. This is spec-compliant.
+    pub(crate) fn replace_pending_exception(throwable_ref: i32) {
+        JAVA_THREAD.with(|t| t.exception_pending.set(Some(throwable_ref)));
     }
 }

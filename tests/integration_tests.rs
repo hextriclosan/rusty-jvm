@@ -3699,11 +3699,13 @@ NonVirtualVoidMethodDemo caught: exception from NonVirtualBase.nonVirtualVoidMet
 --- Throw ---
 Throw(RuntimeException) caught - java.lang.RuntimeException: thrown via JNI Throw
 Throw(FileNotFoundException) caught - java.io.FileNotFoundException: state from JNI Throw
+new IllegalStateException(...), new IllegalArgumentException(...) caught - java.lang.IllegalArgumentException: second exception from JNI ThrowTwo
 
 --- ThrowNew ---
 ThrowNew(IllegalArgumentException, msg) caught - java.lang.IllegalArgumentException: thrown via JNI ThrowNew
 ThrowNew(NullPointerException, null) caught - java.lang.NullPointerException
 ThrowNew(OutOfMemoryError, empty) caught - java.lang.OutOfMemoryError: ouch
+ThrowNewTwo(IllegalStateException.class, IOException.class) caught - java.io.IOException
 
 --- ExceptionCheck / ExceptionOccurred / ExceptionClear ---
 checkBefore=true, occurred=[], checkAfter=false
@@ -3718,7 +3720,7 @@ WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers i
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 
 Exception in thread "system" java.lang.IllegalStateException: from throwingCallback
-	at samples.javacore.loadlibrary.example.ExceptionDemo.throwingCallback(LoadLibraryExample.java:1512)
+	at samples.javacore.loadlibrary.example.ExceptionDemo.throwingCallback(LoadLibraryExample.java:1521)
 "#, // fixme ^^^ stacktrace truncated https://github.com/hextriclosan/rusty-jvm/issues/317
         Success,
         0,

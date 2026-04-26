@@ -1,4 +1,4 @@
-use jni::sys::{jclass, jint, jobject, jstring, jthrowable, jvalue, JNIEnv};
+use jni::sys::{jclass, jint, jobject, jstring, jthrowable, jvalue, JNIEnv, JNI_OK};
 use std::ffi::{CStr, CString};
 use std::ptr::null_mut;
 
@@ -9,6 +9,24 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_ExceptionDemo_T
     throwable: jthrowable,
 ) -> jint {
     unsafe { ((*(*env)).v24.Throw)(env, throwable) }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_ExceptionDemo_ThrowTwo(
+    env: *mut JNIEnv,
+    _class: jclass,
+    first: jthrowable,
+    second: jthrowable,
+) {
+    let first_result = unsafe { ((*(*env)).v24.Throw)(env, first) };
+    if first_result != JNI_OK {
+        panic!("first Throw failed");
+    };
+
+    let second_result = unsafe { ((*(*env)).v24.Throw)(env, second) };
+    if second_result != JNI_OK {
+        panic!("second Throw failed");
+    }
 }
 
 #[no_mangle]
@@ -27,6 +45,23 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_ExceptionDemo_T
             ((*(*env)).v24.ReleaseStringUTFChars)(env, message, raw);
             res
         }
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_ExceptionDemo_ThrowNewTwo(
+    env: *mut JNIEnv,
+    _class: jclass,
+    first_clazz: jclass,
+    second_clazz: jclass,
+) {
+    let first_result = unsafe { ((*(*env)).v24.ThrowNew)(env, first_clazz, std::ptr::null()) };
+    if first_result != JNI_OK {
+        panic!("first ThrowNew failed");
+    };
+    let second_result = unsafe { ((*(*env)).v24.ThrowNew)(env, second_clazz, std::ptr::null()) };
+    if second_result != JNI_OK {
+        panic!("second ThrowNew failed");
     }
 }
 
