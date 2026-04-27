@@ -47,7 +47,7 @@ memmap2 = "0.9.9"
 iana-time-zone = "0.1.64"
 jniname = "0.1.0"
 libffi = { version = "5.1.0" }
-lru = "0.17.0"
+lru = "0.18.0"
 jni-sys = "0.4.1"
 whoami = "2.1.1"
 cesu8 = "1.1.0"
