@@ -162,22 +162,22 @@ fn should_convert_to_string_and_back_slowtest() {
 }
 
 #[test]
-fn should_do_3d_arrays() {
+fn should_support_3d_arrays() {
     assert_success("samples.arrays.array3d.Array3D", "780\n360\n");
 }
 
 #[test]
-fn should_do_abstract_classes() {
+fn should_support_abstract_classes() {
     assert_success("samples.inheritance.abstractclass.AbstractClass", "145\n");
 }
 
 #[test]
-fn should_do_adding() {
+fn should_support_adding() {
     assert_success("samples.arithmetics.adder.ints.AdderInt", "55\n");
 }
 
 #[test]
-fn should_do_adding_with_longs() {
+fn should_support_adding_with_longs() {
     assert_success(
         "samples.arithmetics.adder.longs.AdderLong",
         "171798691900\n",
@@ -185,7 +185,7 @@ fn should_do_adding_with_longs() {
 }
 
 #[test]
-fn should_do_adding_with_negative_longs() {
+fn should_support_adding_with_negative_longs() {
     assert_success(
         "samples.arithmetics.addernegative.AdderNegativeLong",
         "-1990000000000000\n",
@@ -193,17 +193,17 @@ fn should_do_adding_with_negative_longs() {
 }
 
 #[test]
-fn should_do_arrays() {
+fn should_support_arrays() {
     assert_success("samples.arrays.array.ints.ArrayInt", "740\n");
 }
 
 #[test]
-fn should_do_arrays_with_longs() {
+fn should_support_arrays_with_longs() {
     assert_success("samples.arrays.array.longs.ArrayLong", "233646220932000\n");
 }
 
 #[test]
-fn should_do_byte_operations() {
+fn should_support_byte_operations() {
     assert_success(
         "samples.javacore.bytes.trivial.ByteOperations",
         r#"b1: -10
@@ -232,7 +232,7 @@ shiftedRightUnsignedOfNegative: 2147483644
 }
 
 #[test]
-fn should_do_calculate_fibonacci_iteratively() {
+fn should_support_calculate_fibonacci_iteratively() {
     assert_success(
         "samples.arithmetics.fibonacci.iterative.FibonacciIterative",
         "55\n",
@@ -240,7 +240,7 @@ fn should_do_calculate_fibonacci_iteratively() {
 }
 
 #[test]
-fn should_do_calculate_fibonacci_recursively() {
+fn should_support_calculate_fibonacci_recursively() {
     assert_success(
         "samples.arithmetics.fibonacci.recursive.FibonacciRecursive",
         "55\n",
@@ -248,7 +248,7 @@ fn should_do_calculate_fibonacci_recursively() {
 }
 
 #[test]
-fn should_do_class_static_initialization() {
+fn should_support_class_static_initialization() {
     assert_success(
         "samples.fields.staticinitialization.array.StaticInitializationArray",
         "257\n",
@@ -256,7 +256,7 @@ fn should_do_class_static_initialization() {
 }
 
 #[test]
-fn should_do_class_static_initialization_advanced() {
+fn should_support_class_static_initialization_advanced() {
     assert_success(
         "samples.fields.staticinitialization.advanced.StaticInitializationAdvanced",
         "826\n",
@@ -264,7 +264,7 @@ fn should_do_class_static_initialization_advanced() {
 }
 
 #[test]
-fn should_do_class_static_initialization_circular() {
+fn should_support_class_static_initialization_circular() {
     assert_success(
         "samples.fields.staticinitialization.circular.StaticInitializationCircular",
         "700\n",
@@ -272,7 +272,7 @@ fn should_do_class_static_initialization_circular() {
 }
 
 #[test]
-fn should_do_class_static_initialization_multiple_classes() {
+fn should_support_class_static_initialization_multiple_classes() {
     assert_success(
         "samples.fields.staticinitialization.chain.StaticInitializationChain",
         "350\n",
@@ -280,7 +280,7 @@ fn should_do_class_static_initialization_multiple_classes() {
 }
 
 #[test]
-fn should_do_class_static_initialization_within_one_class() {
+fn should_support_class_static_initialization_within_one_class() {
     assert_success(
         "samples.fields.staticinitialization.oneclass.StaticInitializationWithinOneClass",
         "100\n",
@@ -288,7 +288,7 @@ fn should_do_class_static_initialization_within_one_class() {
 }
 
 #[test]
-fn should_do_extreme_stack_operations() {
+fn should_support_extreme_stack_operations() {
     assert_success(
         "samples.arithmetics.extremestack.ints.ExtremeStackInt",
         "528\n",
@@ -296,7 +296,7 @@ fn should_do_extreme_stack_operations() {
 }
 
 #[test]
-fn should_do_extreme_stack_operations_with_longs() {
+fn should_support_extreme_stack_operations_with_longs() {
     assert_success(
         "samples.arithmetics.extremestack.longs.ExtremeStackLong",
         "454\n",
@@ -304,7 +304,7 @@ fn should_do_extreme_stack_operations_with_longs() {
 }
 
 #[test]
-fn should_do_inherited_implementations_interfaces() {
+fn should_support_inherited_implementations_interfaces() {
     assert_success(
         "samples.inheritance.interfaces.inheritedimplementation.InheritedImplementationInterface",
         "-200\n",
@@ -312,7 +312,7 @@ fn should_do_inherited_implementations_interfaces() {
 }
 
 #[test]
-fn should_do_inherited_instance_fields() {
+fn should_support_inherited_instance_fields() {
     assert_success(
         "samples.inheritance.instancefield.InheritanceInstanceField",
         "128\n",
@@ -320,7 +320,7 @@ fn should_do_inherited_instance_fields() {
 }
 
 #[test]
-fn should_do_inherited_static_fields() {
+fn should_support_inherited_static_fields() {
     assert_success(
         "samples.inheritance.staticfield.InheritanceStaticField",
         "128\n",
@@ -328,7 +328,7 @@ fn should_do_inherited_static_fields() {
 }
 
 #[test]
-fn should_do_interface_and_abstract_class() {
+fn should_support_interface_and_abstract_class() {
     assert_success(
         "samples.inheritance.interfaceandabstractclass.InterfaceAndAbstractClass",
         "36630\n",
@@ -336,7 +336,7 @@ fn should_do_interface_and_abstract_class() {
 }
 
 #[test]
-fn should_do_native_call_on_system_array_copy() {
+fn should_support_native_call_on_system_array_copy() {
     assert_success(
         "samples.nativecall.system.NativeCallSystemArrayCopy",
         r#"=== POSITIVE CASES ===
@@ -378,7 +378,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
 #[test]
-fn should_do_native_call_on_system_current_time() {
+fn should_support_native_call_on_system_current_time() {
     let start = SystemTime::now();
     let since_the_epoch = start
         .duration_since(UNIX_EPOCH)
@@ -404,7 +404,7 @@ fn should_do_native_call_on_system_current_time() {
 }
 
 #[test]
-fn should_do_operations_with_floats() {
+fn should_support_operations_with_floats() {
     assert_success(
         "samples.arithmetics.operations.floats.FloatOperations",
         r#"3.4028235E38
@@ -424,7 +424,7 @@ NaN
 }
 
 #[test]
-fn should_do_operations_with_doubles() {
+fn should_support_operations_with_doubles() {
     assert_success(
         "samples.arithmetics.operations.doubles.DoubleOperations",
         r#"1.7E308
@@ -442,7 +442,7 @@ NaN
 }
 
 #[test]
-fn should_do_strings_concat_inline() {
+fn should_support_strings_concat_inline() {
     assert_success(
         "samples.javacore.strings.concat.trivial.StringConcatInline",
         "112788\n",
@@ -466,7 +466,7 @@ Compile-time constant folding passed: true
 }
 
 #[test]
-fn should_do_strings_cpool_advanced() {
+fn should_support_strings_cpool_advanced() {
     assert_success(
         "samples.javacore.strings.cpool.advanced.StringPoolAdvanced",
         r#"str1 and str2 have the same reference
@@ -481,12 +481,12 @@ str1 and str7 have different references but the same content
 }
 
 #[test]
-fn should_do_subtraction() {
+fn should_support_subtraction() {
     assert_success("samples.arithmetics.sub.ints.SubInts", "-999\n");
 }
 
 #[test]
-fn should_do_subtraction_with_doubles() {
+fn should_support_subtraction_with_doubles() {
     assert_success(
         "samples.arithmetics.sub.doubles.SubDoubles",
         "-8.76543211E200\n",
@@ -494,22 +494,22 @@ fn should_do_subtraction_with_doubles() {
 }
 
 #[test]
-fn should_do_subtraction_with_floats() {
+fn should_support_subtraction_with_floats() {
     assert_success("samples.arithmetics.sub.floats.SubFloats", "-998.9\n");
 }
 
 #[test]
-fn should_do_subtraction_with_longs() {
+fn should_support_subtraction_with_longs() {
     assert_success("samples.arithmetics.sub.longs.SubLongs", "-1000000000\n");
 }
 
 #[test]
-fn should_do_trivial_cast() {
+fn should_support_trivial_cast() {
     assert_success("samples.javacore.cast.trivial.TrivialCast", "1337\n");
 }
 
 #[test]
-fn should_do_trivial_concurrent_hash_maps() {
+fn should_support_trivial_concurrent_hash_maps() {
     assert_success(
         "samples.javabase.util.concurrent.hashmap.trivial.TrivialConcurrentHashMap",
         "97\n",
@@ -517,7 +517,7 @@ fn should_do_trivial_concurrent_hash_maps() {
 }
 
 #[test]
-fn should_do_trivial_hashmaps() {
+fn should_support_trivial_hashmaps() {
     assert_success(
         "samples.javabase.util.hashmap.trivial.TrivialHashMap",
         "1\n",
@@ -525,7 +525,7 @@ fn should_do_trivial_hashmaps() {
 }
 
 #[test]
-fn should_do_trivial_interfaces() {
+fn should_support_trivial_interfaces() {
     assert_success(
         "samples.inheritance.interfaces.trivial.TrivialInterface",
         "-200\n",
@@ -533,7 +533,7 @@ fn should_do_trivial_interfaces() {
 }
 
 #[test]
-fn should_do_trivial_properties() {
+fn should_support_trivial_properties() {
     assert_success(
         "samples.javabase.util.properties.trivial.PropertiesTrivial",
         "60\n",
@@ -541,7 +541,7 @@ fn should_do_trivial_properties() {
 }
 
 #[test]
-fn should_do_trivial_reflection() {
+fn should_support_trivial_reflection() {
     assert_success(
         "samples.reflection.trivial.TrivialReflection",
         r#"Class: class java.lang.Class
@@ -619,7 +619,7 @@ Class: int
 }
 
 #[test]
-fn should_do_trivial_reflection_with_primitives() {
+fn should_support_trivial_reflection_with_primitives() {
     assert_success(
         "samples.reflection.trivial.synthetic.classes.SyntheticPrimitiveClasses",
         r#"==== int ====
@@ -731,12 +731,12 @@ o.getClass(): class java.lang.Class
 }
 
 #[test]
-fn should_do_trivial_strings() {
+fn should_support_trivial_strings() {
     assert_success("samples.javacore.strings.trivial.TrivialStrings", "8\n");
 }
 
 #[test]
-fn should_do_trivial_strings_cpool() {
+fn should_support_trivial_strings_cpool() {
     assert_success(
         "samples.javacore.strings.cpool.trivial.TrivialStringsCPool",
         "8\n",
@@ -744,12 +744,12 @@ fn should_do_trivial_strings_cpool() {
 }
 
 #[test]
-fn should_do_trivial_switch() {
+fn should_support_trivial_switch() {
     assert_success("samples.javacore.switches.trivial.SwitchExample", "1300\n");
 }
 
 #[test]
-fn should_do_trivial_treemaps() {
+fn should_support_trivial_treemaps() {
     assert_success(
         "samples.javabase.util.treemap.trivial.TrivialTreeMap",
         "1\n",
@@ -757,7 +757,7 @@ fn should_do_trivial_treemaps() {
 }
 
 #[test]
-fn should_do_trivial_unsafe_things() {
+fn should_support_trivial_unsafe_things() {
     let big_endian = if is_bigendian() { 1 } else { 0 };
     let short_bytes = get_ne_bytes_as_string(&24583i16.to_ne_bytes());
     let char_bytes = get_ne_bytes_as_string(&('ї' as u16).to_ne_bytes());
@@ -826,7 +826,7 @@ fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
 }
 
 #[test]
-fn should_do_trivial_util_arrays() {
+fn should_support_trivial_util_arrays() {
     assert_success(
         "samples.javabase.util.arrays.trivial.TrivialUtilArrays",
         r#"Binary search result: 9
@@ -851,7 +851,7 @@ Deep string: [[1, 2], [3, 4]]
 }
 
 #[test]
-fn should_do_unsafe_object_field_offset() {
+fn should_support_unsafe_object_field_offset() {
     assert_success(
         "samples.jdkinternal.unsafe.objectfieldoffset.UnsafeObjectFieldOffset",
         r#"int is compared and set successfully
@@ -863,7 +863,7 @@ Fields are compared and set successfully
 }
 
 #[test]
-fn should_do_wide_instructions() {
+fn should_support_wide_instructions() {
     assert_success(
         "samples.javacore.wide.instructions.trivial.WideInstructionsExample",
         r#"20
@@ -1999,7 +1999,7 @@ Data getValue
 }
 
 #[test]
-fn should_do_trivial_operations_on_enums() {
+fn should_support_trivial_operations_on_enums() {
     assert_success(
         "samples.javacore.enums.trivial.EnumsExample",
         r#"FormatStyle values: [FULL, LONG, MEDIUM, SHORT]
