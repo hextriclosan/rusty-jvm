@@ -75,12 +75,12 @@ pub(super) fn set_pending_no_such_field_error(field_name: &str) {
     set_pending_error("java/lang/NoSuchFieldError", field_name);
 }
 
-pub(super) fn set_pending_no_class_def_found_error(field_name: &str) {
-    set_pending_error("java/lang/NoClassDefFoundError", field_name);
+pub(super) fn set_pending_no_class_def_found_error(message: &str) {
+    set_pending_error("java/lang/NoClassDefFoundError", message);
 }
 
-pub(super) fn set_class_format_error(field_name: &str) {
-    set_pending_error("java/lang/ClassFormatError", field_name);
+pub(super) fn set_pending_class_format_error(message: &str) {
+    set_pending_error("java/lang/ClassFormatError", message);
 }
 
 fn set_pending_error(exception_class: &str, message: &str) {
