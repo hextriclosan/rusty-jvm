@@ -3843,3 +3843,32 @@ fn should_support_file_dispatcher_impl_native_methods() {
         "Hello, this is a test file for InputStream and FileChannel.\n",
     );
 }
+
+#[test]
+fn should_support_jni_class_operations() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.example.JniClassOperationsDemo",
+        &[],
+        r#"[OK] normal String -> class java.lang.String
+[OK] object array -> class [Ljava.lang.String;
+[OK] primitive array -> class [I
+[OK] multi-dim array -> class [[Ljava.lang.String;
+[FAIL] primitive int -> java.lang.NoClassDefFoundError: int
+[FAIL] primitive long -> java.lang.NoClassDefFoundError: long
+[FAIL] primitive void -> java.lang.NoClassDefFoundError: void
+[FAIL] non-existing -> java.lang.NoClassDefFoundError: this/class/DoesNotExist
+[FAIL] broken descriptor -> java.lang.NoClassDefFoundError: Ljava/lang/String
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniClassOperationsDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
