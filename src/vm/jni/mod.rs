@@ -1,4 +1,5 @@
 mod array_operations_impl;
+mod class_operations_impl;
 mod exception_impl;
 mod global_and_local_references_impl;
 mod instance_methods_impl;

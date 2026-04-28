@@ -1,4 +1,5 @@
 mod array_operations_demo;
+mod class_operations_demo;
 mod exception_demo;
 mod instance_methods_demo;
 mod jni_no_such_id_demo;

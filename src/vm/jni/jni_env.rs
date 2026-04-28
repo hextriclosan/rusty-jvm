@@ -13,6 +13,7 @@ use crate::vm::jni::array_operations_impl::{
     set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
     set_long_array_region, set_object_array_element, set_short_array_region,
 };
+use crate::vm::jni::class_operations_impl::find_class;
 use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
@@ -150,7 +151,6 @@ macro_rules! jni_variadic_stub {
 }
 
 jni_stub!(DefineClass(*const c_char, jobject, *const jbyte, jsize) -> jclass);
-jni_stub!(FindClass(*const c_char) -> jclass);
 jni_stub!(FromReflectedMethod(jobject) -> jmethodID);
 jni_stub!(FromReflectedField(jobject) -> jfieldID);
 jni_stub!(ToReflectedMethod(jclass, jmethodID, jboolean) -> jobject);
@@ -255,7 +255,7 @@ static VTABLE: Wrapper = {
     let mut ni: JNINativeInterface_ = unsafe { std::mem::zeroed() };
     ni.v24.GetVersion = get_version;
     ni.v24.DefineClass = DefineClass;
-    ni.v24.FindClass = FindClass;
+    ni.v24.FindClass = find_class;
     ni.v24.FromReflectedMethod = FromReflectedMethod;
     ni.v24.FromReflectedField = FromReflectedField;
     ni.v24.ToReflectedMethod = ToReflectedMethod;
