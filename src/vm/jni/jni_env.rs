@@ -13,7 +13,7 @@ use crate::vm::jni::array_operations_impl::{
     set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
     set_long_array_region, set_object_array_element, set_short_array_region,
 };
-use crate::vm::jni::class_operations_impl::find_class;
+use crate::vm::jni::class_operations_impl::{find_class, get_superclass};
 use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
@@ -154,7 +154,6 @@ jni_stub!(DefineClass(*const c_char, jobject, *const jbyte, jsize) -> jclass);
 jni_stub!(FromReflectedMethod(jobject) -> jmethodID);
 jni_stub!(FromReflectedField(jobject) -> jfieldID);
 jni_stub!(ToReflectedMethod(jclass, jmethodID, jboolean) -> jobject);
-jni_stub!(GetSuperclass(jclass) -> jclass);
 jni_stub!(IsAssignableFrom(jclass, jclass) -> jboolean);
 jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
 jni_stub!(NewGlobalRef(jobject) -> jobject);
@@ -259,7 +258,7 @@ static VTABLE: Wrapper = {
     ni.v24.FromReflectedMethod = FromReflectedMethod;
     ni.v24.FromReflectedField = FromReflectedField;
     ni.v24.ToReflectedMethod = ToReflectedMethod;
-    ni.v24.GetSuperclass = GetSuperclass;
+    ni.v24.GetSuperclass = get_superclass;
     ni.v24.IsAssignableFrom = IsAssignableFrom;
     ni.v24.ToReflectedField = ToReflectedField;
     ni.v24.Throw = throw;
