@@ -13,3 +13,12 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniClassOperati
         clazz
     }
 }
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniClassOperationsDemo_getSuperclass(
+    env: *mut JNIEnv,
+    _this: jclass,
+    class: jclass,
+) -> jclass {
+    unsafe { ((*(*env)).v24.GetSuperclass)(env, class) }
+}

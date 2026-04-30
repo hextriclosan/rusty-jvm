@@ -3851,7 +3851,8 @@ fn should_support_jni_class_operations() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.example.JniClassOperationsDemo",
         &[],
-        r#"[OK] normal String -> class java.lang.String
+        r#"=== Testing FindClass with various class name formats ===
+[OK] normal String -> class java.lang.String
 [OK] object array -> class [Ljava.lang.String;
 [OK] primitive array -> class [I
 [OK] multi-dim array -> class [[Ljava.lang.String;
@@ -3860,6 +3861,13 @@ fn should_support_jni_class_operations() {
 [FAIL] primitive void -> java.lang.NoClassDefFoundError: void
 [FAIL] non-existing -> java.lang.NoClassDefFoundError: this/class/DoesNotExist
 [FAIL] broken descriptor -> java.lang.NoClassDefFoundError: Ljava/lang/String
+=== Testing GetSuperclass with various class name formats ===
+Super class of class java.lang.String is class java.lang.Object
+Super class of class java.util.HashMap is class java.util.AbstractMap
+Super class of interface java.lang.Runnable is null
+Super class of class java.lang.Object is null
+Super class of int is null
+Super class of class [[B is class java.lang.Object
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniClassOperationsDemo in an unnamed module
