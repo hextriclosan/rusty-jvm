@@ -8,7 +8,7 @@ use std::path::Path;
 use std::process::Command;
 use utils::assert_success;
 
-#[ctor::ctor]
+#[ctor::ctor(unsafe)]
 fn before_tests() {
     ensure_jni_test_lib_is_built();
 }
