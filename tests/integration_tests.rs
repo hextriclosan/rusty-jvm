@@ -3861,13 +3861,22 @@ fn should_support_jni_class_operations() {
 [FAIL] primitive void -> java.lang.NoClassDefFoundError: void
 [FAIL] non-existing -> java.lang.NoClassDefFoundError: this/class/DoesNotExist
 [FAIL] broken descriptor -> java.lang.NoClassDefFoundError: Ljava/lang/String
-=== Testing GetSuperclass with various class name formats ===
+=== Testing GetSuperclass with various classes ===
 Super class of class java.lang.String is class java.lang.Object
 Super class of class java.util.HashMap is class java.util.AbstractMap
 Super class of interface java.lang.Runnable is null
 Super class of class java.lang.Object is null
 Super class of int is null
 Super class of class [[B is class java.lang.Object
+=== Testing IsAssignableFrom with various class combinations ===
+class java.lang.Object is assignable from class java.lang.String: true
+class java.lang.String is assignable from class java.lang.Object: false
+class java.lang.Object is assignable from class java.util.HashMap: true
+interface java.util.Map is assignable from class java.util.HashMap: true
+class java.lang.Object is assignable from interface java.lang.Runnable: true
+interface java.lang.Runnable is assignable from class java.lang.Object: false
+int is assignable from int: true
+long is assignable from int: false
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniClassOperationsDemo in an unnamed module

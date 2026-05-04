@@ -1,6 +1,7 @@
 package samples.javacore.loadlibrary.example;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class JniClassOperationsDemo {
     static {
@@ -9,10 +10,12 @@ public class JniClassOperationsDemo {
 
     private static native Class<?> findClass(String className);
     private static native Class<?> getSuperclass(Class<?> clazz);
+    private static native boolean isAssignableFrom(Class<?> sub, Class<?> sup);
 
     public static void main(String[] args) {
         findClassDemo();
         getSuperclassDemo();
+        isAssignableFromDemo();
     }
 
     private static void findClassDemo() {
@@ -47,7 +50,7 @@ public class JniClassOperationsDemo {
     }
 
     private static void getSuperclassDemo() {
-        System.out.println("=== Testing GetSuperclass with various class name formats ===");
+        System.out.println("=== Testing GetSuperclass with various classes ===");
 
         testGetSuperclass(String.class);
         testGetSuperclass(HashMap.class);
@@ -60,5 +63,23 @@ public class JniClassOperationsDemo {
     private static void testGetSuperclass(Class<?> clazz) {
         Class<?> superClazz = getSuperclass(clazz);
         System.out.printf("Super class of %s is %s%n", clazz, superClazz);
+    }
+
+    private static void isAssignableFromDemo() {
+        System.out.println("=== Testing IsAssignableFrom with various class combinations ===");
+
+        testIsAssignableFrom(String.class, Object.class);
+        testIsAssignableFrom(Object.class, String.class);
+        testIsAssignableFrom(HashMap.class, Object.class);
+        testIsAssignableFrom(HashMap.class, Map.class);
+        testIsAssignableFrom(Runnable.class, Object.class);
+        testIsAssignableFrom(Object.class, Runnable.class);
+        testIsAssignableFrom(int.class, int.class);
+        testIsAssignableFrom(int.class, long.class);
+    }
+
+    private static void testIsAssignableFrom(Class<?> sub, Class<?> sup) {
+        boolean result = isAssignableFrom(sub, sup);
+        System.out.printf("%s is assignable from %s: %b%n", sup, sub, result);
     }
 }

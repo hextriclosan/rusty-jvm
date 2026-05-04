@@ -1,4 +1,4 @@
-use jni::sys::{jclass, jstring, JNIEnv};
+use jni::sys::{jboolean, jclass, jstring, JNIEnv};
 
 #[no_mangle]
 pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniClassOperationsDemo_findClass(
@@ -21,4 +21,14 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniClassOperati
     class: jclass,
 ) -> jclass {
     unsafe { ((*(*env)).v24.GetSuperclass)(env, class) }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniClassOperationsDemo_isAssignableFrom(
+    env: *mut JNIEnv,
+    _this: jclass,
+    sub: jclass,
+    sup: jclass,
+) -> jboolean {
+    unsafe { ((*(*env)).v24.IsAssignableFrom)(env, sub, sup) }
 }
