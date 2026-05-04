@@ -3708,7 +3708,7 @@ ThrowNew(OutOfMemoryError, empty) caught - java.lang.OutOfMemoryError: ouch
 ThrowNewTwo(IllegalStateException.class, IOException.class) caught - java.io.IOException
 
 --- ExceptionCheck / ExceptionOccurred / ExceptionClear ---
-checkBefore=true, occurred=[], checkAfter=false
+checkBefore=true, occurred=[java.lang.IllegalStateException: from throwingCallback], checkAfter=false
 
 --- ExceptionDescribe ---
 described, checkBefore=true, checkAfter=false
