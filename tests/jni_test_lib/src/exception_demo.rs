@@ -80,12 +80,12 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_ExceptionDemo_C
         let pending_before = ((*(*env)).v24.ExceptionCheck)(env);
 
         // 3. ExceptionOccurred - should return the pending throwable.
-        //let occurred: jthrowable = ((*(*env)).v24.ExceptionOccurred)(env); // todo use me after FindClass is implemented
-        let occurred_text = ""; //if occurred.is_null() {
-                                //     "null".to_string()
-                                // } else {
-                                //     throwable_to_string(env, occurred)
-                                // };
+        let occurred: jthrowable = ((*(*env)).v24.ExceptionOccurred)(env);
+        let occurred_text = if occurred.is_null() {
+            "null".to_string()
+        } else {
+            throwable_to_string(env, occurred)
+        };
 
         // 4. ExceptionClear - drops the pending exception.
         ((*(*env)).v24.ExceptionClear)(env);
