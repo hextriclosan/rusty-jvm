@@ -3,7 +3,8 @@ use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::jni::utils::{
     set_pending_class_format_error, set_pending_no_class_def_found_error,
 };
-use jni_sys::{jclass, JNIEnv};
+use crate::vm::method_area::instance_checker::InstanceChecker;
+use jni_sys::{jboolean, jclass, JNIEnv};
 use std::ffi::{c_char, CStr};
 use std::ptr::null_mut;
 
@@ -44,4 +45,16 @@ pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> 
     parent
         .map(|parent_name| clazz_ref(&parent_name).expect("Failed to get class from reference"))
         .unwrap_or(0) as jclass
+}
+
+pub(super) extern "system" fn is_assignable_from(
+    _env: *mut JNIEnv,
+    sub: jclass,
+    sup: jclass,
+) -> jboolean {
+    let sub_klass = klass(sub as i32).expect("Failed to get class from reference");
+    let sup_klass = klass(sup as i32).expect("Failed to get class from reference");
+
+    InstanceChecker::checkcast(sub_klass.this_class_name(), sup_klass.this_class_name())
+        .expect("Failed to check assignability")
 }
