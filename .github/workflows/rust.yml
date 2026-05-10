@@ -107,9 +107,12 @@ jobs:
     needs: should-run
 
     if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' &&
-       needs.should-run.outputs.run_ci == 'true')
+      always() && 
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'schedule' &&
+         needs.should-run.outputs.run_ci == 'true')
+      )
 
     name: build-and-test (linux big-endian)
     runs-on: ubuntu-latest
@@ -172,9 +175,12 @@ jobs:
     needs: should-run
 
     if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' &&
-       needs.should-run.outputs.run_ci == 'true')
+      always() && 
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'schedule' &&
+         needs.should-run.outputs.run_ci == 'true')
+      )
 
     runs-on: ${{ matrix.os }}
     strategy:
