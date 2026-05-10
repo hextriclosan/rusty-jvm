@@ -1,0 +1,63 @@
+name: Cleanup Old Caches
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Daily at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+env:
+  CACHE_RETENTION_DAYS: 7
+  CACHE_SCAN_LIMIT: 100
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete old GitHub Actions caches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          echo "Cleaning GitHub Actions caches"
+          echo "Repository: ${GITHUB_REPOSITORY}"
+          echo "Retention days: ${CACHE_RETENTION_DAYS}"
+          echo "Scan limit: ${CACHE_SCAN_LIMIT}"
+          echo
+
+          now_ts=$(date +%s)
+          deleted_count=0
+
+          gh cache list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --limit "${CACHE_SCAN_LIMIT}" \
+            --json id,createdAt,key \
+            --jq '.[] | [.id, .createdAt, .key] | @tsv' |
+          while IFS=$'\t' read -r id created_at key; do
+
+            created_ts=$(date -d "${created_at}" +%s)
+            age_days=$(( (now_ts - created_ts) / 86400 ))
+
+            if (( age_days > CACHE_RETENTION_DAYS )); then
+              echo "Deleting cache:"
+              echo "   ID:   ${id}"
+              echo "   Key:  ${key}"
+              echo "   Age:  ${age_days} days"
+
+              gh cache delete "${id}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --confirm
+
+              deleted_count=$((deleted_count + 1))
+              echo
+            fi
+          done
+
+          echo "Cache cleanup finished"
+          echo "Deleted caches: ${deleted_count}"
