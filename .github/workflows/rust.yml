@@ -75,6 +75,11 @@ jobs:
             );
 
   build-and-test:
+    needs: should-run
+    if: |
+      github.event_name != 'schedule' ||
+      needs.should-run.outputs.run_ci == 'true'
+
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -116,8 +121,11 @@ jobs:
       always() &&
       needs.build-and-test.result == 'success' &&
       (
-        github.event_name != 'schedule' ||
-        needs.should-run.outputs.run_ci == 'true'
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'schedule' &&
+          needs.should-run.outputs.run_ci == 'true'
+        )
       )
 
     name: build-and-test (linux big-endian)
@@ -191,8 +199,11 @@ jobs:
       always() &&
       needs.build-and-test.result == 'success' &&
       (
-        github.event_name != 'schedule' ||
-        needs.should-run.outputs.run_ci == 'true'
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'schedule' &&
+          needs.should-run.outputs.run_ci == 'true'
+        )
       )
 
     runs-on: ${{ matrix.os }}
