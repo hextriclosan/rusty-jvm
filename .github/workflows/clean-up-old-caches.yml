@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  CACHE_RETENTION_DAYS: 7
+  CACHE_RETENTION_DAYS: 3
   CACHE_SCAN_LIMIT: 100
 
 jobs:
