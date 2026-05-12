@@ -34,30 +34,31 @@ jobs:
           now_ts=$(date +%s)
           deleted_count=0
 
-          gh cache list \
+          while IFS=$'\t' read -r id created_at key; do
+
+          created_ts=$(date -d "${created_at}" +%s)
+          age_days=$(( (now_ts - created_ts) / 86400 ))
+
+          if (( age_days > CACHE_RETENTION_DAYS )); then
+            echo "Deleting cache:"
+            echo "   ID:   ${id}"
+            echo "   Key:  ${key}"
+            echo "   Age:  ${age_days} days"
+
+            gh cache delete "${id}" \
+            --repo "${GITHUB_REPOSITORY}"
+          
+            deleted_count=$((deleted_count + 1))
+            echo
+            fi
+
+            done < <(
+            gh cache list \
             --repo "${GITHUB_REPOSITORY}" \
             --limit "${CACHE_SCAN_LIMIT}" \
             --json id,createdAt,key \
-            --jq '.[] | [.id, .createdAt, .key] | @tsv' |
-          while IFS=$'\t' read -r id created_at key; do
+            --jq '.[] | [.id, .createdAt, .key] | @tsv'
+            )
 
-            created_ts=$(date -d "${created_at}" +%s)
-            age_days=$(( (now_ts - created_ts) / 86400 ))
-
-            if (( age_days > CACHE_RETENTION_DAYS )); then
-              echo "Deleting cache:"
-              echo "   ID:   ${id}"
-              echo "   Key:  ${key}"
-              echo "   Age:  ${age_days} days"
-
-              gh cache delete "${id}" \
-                --repo "${GITHUB_REPOSITORY}" \
-                --confirm
-
-              deleted_count=$((deleted_count + 1))
-              echo
-            fi
-          done
-
-          echo "Cache cleanup finished"
-          echo "Deleted caches: ${deleted_count}"
+            echo "Cache cleanup finished"
+            echo "Deleted caches: ${deleted_count}"

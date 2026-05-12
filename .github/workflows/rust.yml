@@ -43,15 +43,11 @@ jobs:
 
             const currentSha = branch.commit.sha;
 
-            // Current workflow filename (e.g. rust.yml)
-            const workflowId =
-              context.workflow_ref.split('/').pop().split('@')[0];
-
             // Previous scheduled workflow runs
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
               repo,
-              workflow_id: workflowId,
+              workflow_id: "rust.yml",
               event: "schedule",
               status: "completed",
               per_page: 20
