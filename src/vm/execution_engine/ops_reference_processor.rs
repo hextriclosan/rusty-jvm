@@ -1,8 +1,6 @@
-use crate::unwrap_result_or_return_default;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
-use crate::vm::exception::throwing_result::ThrowingResult;
 use crate::vm::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::opcode::*;
@@ -92,9 +90,9 @@ pub(crate) fn process(
                 class_name.as_str(),
                 field_name.as_str(),
                 stack_frames,
-            );
+            )?;
 
-            let value = unwrap_result_or_return_default!(value, ());
+            let Some(value) = value else { return Ok(()) };
 
             let stack_frame = last_frame_mut(stack_frames)?;
             value.iter().rev().try_for_each(|x| stack_frame.push(*x))?;
@@ -366,8 +364,9 @@ pub(crate) fn process(
                 stack_frame.pop()
             };
 
-            let throwing_result = HEAP.get_array_len_throwing(arrayref, stack_frames);
-            let len = unwrap_result_or_return_default!(throwing_result, ());
+            let Some(len) = HEAP.get_array_len_throwing(arrayref, stack_frames)? else {
+                return Ok(());
+            };
 
             let stack_frame = last_frame_mut(stack_frames)?;
             stack_frame.push(len)?;

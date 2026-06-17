@@ -1,12 +1,12 @@
+use crate::bail_thrown;
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::{throw_file_not_found_exception, throw_ioexception};
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::{thrown, Throws};
 use crate::vm::heap::heap::HEAP;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode::FileOutputStream;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::fs::OpenOptions;
 use std::io::Write as IoWrite;
 
@@ -17,7 +17,9 @@ pub(crate) fn file_output_stream_open0_wrp(
     let obj_ref = args[0];
     let string_ref = args[1];
     let append = args[2] != 0;
-    unwrap_result_or_return_default!(open0(obj_ref, string_ref, append, stack_frames), vec![]);
+    let Some(()) = open0(obj_ref, string_ref, append, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![])
 }
 
@@ -26,8 +28,8 @@ fn open0(
     file_name_ref: i32,
     append: bool,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<()> {
-    let file_name = unwrap_or_return_err!(get_utf8_string_by_ref(file_name_ref));
+) -> Throws<()> {
+    let file_name = get_utf8_string_by_ref(file_name_ref)?;
 
     match OpenOptions::new()
         .write(true)
@@ -37,11 +39,10 @@ fn open0(
         .open(file_name)
     {
         Ok(file) => {
-            let _ =
-                unwrap_or_return_err!(PlatformFile::set_raw_id(obj_ref, file, FileOutputStream));
-            ThrowingResult::ok(())
+            PlatformFile::set_raw_id(obj_ref, file, FileOutputStream)?;
+            Ok(Some(()))
         }
-        Err(e) => throw_and_return!(throw_file_not_found_exception(
+        Err(e) => bail_thrown!(throw_file_not_found_exception(
             file_name_ref,
             &e.to_string(),
             stack_frames
@@ -56,23 +57,20 @@ pub(crate) fn file_output_stream_write_wrp(
     let obj_ref = args[0];
     let byte = args[1];
     let append = args[2] != 0;
-    unwrap_result_or_return_default!(write(obj_ref, byte, append, stack_frames), vec![]);
+    let Some(()) = write(obj_ref, byte, append, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![])
 }
-fn write(
-    obj_ref: i32,
-    byte: i32,
-    _append: bool,
-    stack_frames: &mut StackFrames,
-) -> ThrowingResult<()> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames) {
-        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
-        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+fn write(obj_ref: i32, byte: i32, _append: bool, stack_frames: &mut StackFrames) -> Throws<()> {
+    let Some(mut file) = PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames)?
+    else {
+        return thrown();
     };
 
     match write!(file, "{}", byte as u8 as char) {
-        Ok(_) => ThrowingResult::ok(()),
-        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
+        Ok(_) => Ok(Some(())),
+        Err(e) => bail_thrown!(throw_ioexception(&e.to_string(), stack_frames)),
     }
 }
 
@@ -85,10 +83,9 @@ pub(crate) fn file_output_stream_write_bytes_wrp(
     let off = args[2];
     let len = args[3];
     let append = args[4] != 0;
-    unwrap_result_or_return_default!(
-        write_bytes(obj_ref, bytes_ref, off, len, append, stack_frames),
-        vec![]
-    );
+    let Some(()) = write_bytes(obj_ref, bytes_ref, off, len, append, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![])
 }
 fn write_bytes(
@@ -98,12 +95,12 @@ fn write_bytes(
     len: i32,
     _append: bool,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<()> {
-    let mut file = match PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames) {
-        ThrowingResult::Result(result) => unwrap_or_return_err!(result),
-        ThrowingResult::ExceptionThrown => return ThrowingResult::ExceptionThrown,
+) -> Throws<()> {
+    let Some(mut file) = PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames)?
+    else {
+        return thrown();
     };
-    let array = unwrap_or_return_err!(HEAP.get_entire_array(bytes_ref));
+    let array = HEAP.get_entire_array(bytes_ref)?;
     let raw = array.get_entire_value();
     let mut vec = Vec::with_capacity(raw.len());
     for i in off..off + len {
@@ -111,7 +108,7 @@ fn write_bytes(
     }
 
     match file.write_all(&vec) {
-        Ok(_) => ThrowingResult::ok(()),
-        Err(e) => throw_and_return!(throw_ioexception(&e.to_string(), stack_frames)),
+        Ok(_) => Ok(Some(())),
+        Err(e) => bail_thrown!(throw_ioexception(&e.to_string(), stack_frames)),
     }
 }

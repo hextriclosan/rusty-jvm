@@ -1,9 +1,9 @@
-use crate::throw_and_return;
+use crate::bail_thrown;
 use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::Throws;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::JavaInstance::Class;
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
@@ -94,17 +94,16 @@ impl Heap {
         class_name: &str,
         field_name_type: &str,
         stack_frames: &mut StackFrames,
-    ) -> ThrowingResult<Vec<i32>> {
+    ) -> Throws<Vec<i32>> {
         if objectref == 0 {
-            throw_and_return!(throw_null_pointer_exception_with_message(
+            bail_thrown!(throw_null_pointer_exception_with_message(
                 &format!("Cannot read field \"{field_name_type}\" because \"<VAR_NAME>\" is null"),
                 stack_frames
-            ))
+            ));
         }
 
-        let result = self.get_object_field_value(objectref, class_name, field_name_type);
-
-        ThrowingResult::Result(result)
+        let result = self.get_object_field_value(objectref, class_name, field_name_type)?;
+        Ok(Some(result))
     }
 
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {
@@ -311,17 +310,16 @@ impl Heap {
         &self,
         arrayref: i32,
         stack_frames: &mut StackFrames,
-    ) -> ThrowingResult<i32> {
+    ) -> Throws<i32> {
         if arrayref == 0 {
-            throw_and_return!(throw_null_pointer_exception_with_message(
+            bail_thrown!(throw_null_pointer_exception_with_message(
                 "Cannot read the array length because \"<VAR_NAME>\" is null",
                 stack_frames
-            ))
+            ));
         }
 
-        let result = self.get_array_len(arrayref);
-
-        ThrowingResult::Result(result)
+        let result = self.get_array_len(arrayref)?;
+        Ok(Some(result))
     }
 
     pub(crate) fn get_const_string_ref(&self, string: &str) -> Option<i32> {
