@@ -15,7 +15,7 @@
 //! `Err(...)` means "VM-level failure, propagate as `?`" or "Java exception, just bail out
 //! quietly". Earlier this module shipped a custom `ThrowingResult<T>` enum with three variants
 //! to encode it. We've replaced that with the much more idiomatic [`Throws<T>`] type alias plus
-//! a tiny extension trait — see below.
+//! small helpers (`thrown()` / `bail_thrown!`) — see below.
 //!
 //! ## The replacement
 //!

@@ -1,8 +1,9 @@
+use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::{
     throw_ioexception, throw_null_pointer_exception_with_message,
 };
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::io_file_system::delete0;
@@ -11,7 +12,6 @@ use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
 };
 use crate::vm::system_native::platform_specific_files::wide_cstring::WideCString;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, MAX_PATH};
 use winapi::um::errhandlingapi::{GetLastError, SetLastError};
@@ -32,31 +32,30 @@ pub(crate) fn get_final_path0_wrp(
     let _filesystem_impl_ref = args[0];
     let path_ref = args[1];
 
-    let ret = unwrap_result_or_return_default!(get_final_path0(path_ref, stack_frames), vec![]);
+    let Some(ret) = get_final_path0(path_ref, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![ret])
 }
-fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
     if path_ref == 0 {
-        throw_and_return!(throw_null_pointer_exception_with_message(
+        bail_thrown!(throw_null_pointer_exception_with_message(
             "Path is null",
             stack_frames
         ))
     }
 
-    let path = unwrap_or_return_err!(get_utf8_string_by_ref(path_ref));
+    let path = get_utf8_string_by_ref(path_ref)?;
     let wide_path = WideCString::new(&path);
     let final_path = match get_final_path0_impl(&wide_path) {
         Ok(final_path) => final_path,
         Err(e) => {
-            let error_msg = format!(
-                "Bad pathname: {path} - ({e}) ({})",
-                unwrap_or_return_err!(get_last_error())
-            );
-            throw_and_return!(throw_ioexception(&error_msg, stack_frames))
+            let error_msg = format!("Bad pathname: {path} - ({e}) ({})", get_last_error()?);
+            bail_thrown!(throw_ioexception(&error_msg, stack_frames))
         }
     };
-    let final_path_ref = unwrap_or_return_err!(StringPoolHelper::get_string(&final_path));
-    ThrowingResult::ok(final_path_ref)
+    let final_path_ref = StringPoolHelper::get_string(&final_path)?;
+    Ok(Some(final_path_ref))
 }
 fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     let handle = unsafe {
@@ -128,14 +127,16 @@ pub(crate) fn get_name_max0_wrp(args: &[i32], stack_frames: &mut StackFrames) ->
     let _filesystem_impl_ref = args[0];
     let path_ref = args[1];
 
-    let ret = unwrap_result_or_return_default!(get_name_max0(path_ref, stack_frames), vec![]);
+    let Some(ret) = get_name_max0(path_ref, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![ret])
 }
-fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
     let path = if path_ref == 0 {
         0usize as LPCWSTR
     } else {
-        let path = unwrap_or_return_err!(get_utf8_string_by_ref(path_ref));
+        let path = get_utf8_string_by_ref(path_ref)?;
         let wide_path = WideCString::new(&path);
         wide_path.as_ptr()
     };
@@ -159,8 +160,8 @@ fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> ThrowingResul
         let error_msg = format!(
             "GetVolumeInformationW failed for path {path_ref} with error code {error_code}"
         );
-        throw_and_return!(throw_ioexception(&error_msg, stack_frames))
+        bail_thrown!(throw_ioexception(&error_msg, stack_frames))
     }
 
-    ThrowingResult::ok(maximum_component_length as i32)
+    Ok(Some(maximum_component_length as i32))
 }
