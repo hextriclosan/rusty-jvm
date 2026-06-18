@@ -133,12 +133,13 @@ pub(crate) fn get_name_max0_wrp(args: &[i32], stack_frames: &mut StackFrames) ->
     Ok(vec![ret])
 }
 fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
+    let path_storage;
     let path = if path_ref == 0 {
-        0usize as LPCWSTR
+        std::ptr::null()
     } else {
-        let path = get_utf8_string_by_ref(path_ref)?;
-        let wide_path = WideCString::new(&path);
-        wide_path.as_ptr()
+        let path_str = get_utf8_string_by_ref(path_ref)?;
+        path_storage = WideCString::new(&path_str);
+        path_storage.as_ptr()
     };
 
     let mut maximum_component_length: DWORD = 0;
