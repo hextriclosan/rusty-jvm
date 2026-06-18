@@ -13,37 +13,14 @@
 //!
 //! Plain `Result<T, E>` doesn't capture the second outcome cleanly: the caller can't tell whether
 //! `Err(...)` means "VM-level failure, propagate as `?`" or "Java exception, just bail out
-//! quietly". Earlier this module shipped a custom `ThrowingResult<T>` enum with three variants
-//! to encode it. We've replaced that with the much more idiomatic [`Throws<T>`] type alias plus
-//! small helpers (`thrown()` / `bail_thrown!`) — see below.
-//!
-//! ## The replacement
-//!
-//! | Outcome                                           | Encoding                       |
-//! |---------------------------------------------------|--------------------------------|
-//! | success with value `v`                            | `Ok(Some(v))`                  |
-//! | Java exception thrown (stack frames already unwound) | `Ok(None)`                  |
-//! | VM-internal error (bug, OOM, IO error in the VM, …) | `Err(e)`                     |
-//!
-//! At call sites this composes naturally:
-//!
-//! ```ignore
-//! // Inside a fn returning `Throws<X>`:
-//! let Some(value) = some_throws_call(stack_frames)? else { return Ok(None); };
-//! //                                              ^ propagates VM errors
-//! //              ^ destructures the `Some` / short-circuits on `None`
-//! ```
-//!
-//! Inside a `*_wrp` function returning `Result<Vec<i32>>`, the same pattern picks a sentinel:
-//! ```ignore
-//! let Some(value) = some_throws_call(stack_frames)? else { return Ok(vec![]); };
-//! ```
+//! quietly". This module's `Throws<T>` type encodes the three possible outcomes in a single return type:
+//! - `Ok(Some(value))` means "success, return this value"
+//! - `Ok(None)` means "a Java exception was thrown, bail out quietly"
+//! - `Err(...)` means "VM-level failure, propagate as `?`"
 
 use crate::vm::error::Result;
 
 /// A computation that may either return a value, throw a Java exception, or fail with a VM error.
-///
-/// See the [module-level docs](self) for the encoding.
 pub type Throws<T> = Result<Option<T>>;
 
 /// Convenience constructor for the "Java exception was thrown" case.
