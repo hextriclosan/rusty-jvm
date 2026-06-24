@@ -1,12 +1,12 @@
+use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::Throws;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::unix_helpers::{
     throw_unix_exception, throw_unix_exception_with_errno,
 };
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use nix::fcntl::{open, OFlag};
 use nix::libc::{c_char, mode_t, rmdir};
 use nix::sys::stat::{lstat, stat, FileStat, Mode};
@@ -18,15 +18,15 @@ use std::os::unix::prelude::OsStringExt;
 use std::path::Path;
 
 pub fn get_cwd_wrp(_args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let byte_array_ref = unwrap_result_or_return_default!(get_cwd(stack_frames), vec![]);
+    let Some(byte_array_ref) = get_cwd(stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![byte_array_ref])
 }
-fn get_cwd(stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+fn get_cwd(stack_frames: &mut StackFrames) -> Throws<i32> {
     let path = match getcwd() {
         Ok(path) => path,
-        Err(errno) => {
-            throw_and_return!(throw_unix_exception_with_errno(errno as i32, stack_frames))
-        }
+        Err(errno) => bail_thrown!(throw_unix_exception_with_errno(errno as i32, stack_frames)),
     };
 
     let cwd = path
@@ -38,7 +38,7 @@ fn get_cwd(stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
     // Allocate the byte array in the heap and return its reference
     let array_ref = HEAP.create_array_with_values("[B", &cwd);
 
-    ThrowingResult::ok(array_ref)
+    Ok(Some(array_ref))
 }
 
 pub fn unix_native_dispatcher_open0_wrp(
@@ -49,21 +49,17 @@ pub fn unix_native_dispatcher_open0_wrp(
     let flags = args[2];
     let mode = args[3];
 
-    let fd =
-        unwrap_result_or_return_default!(open0(path_address, flags, mode, stack_frames), vec![]);
+    let Some(fd) = open0(path_address, flags, mode, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![fd])
 }
-fn open0(
-    path_address: i64,
-    flags: i32,
-    mode: i32,
-    stack_frames: &mut StackFrames,
-) -> ThrowingResult<i32> {
+fn open0(path_address: i64, flags: i32, mode: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
     let path = unsafe { CStr::from_ptr(path_address as *const c_char) };
     let path = match path.to_str() {
         Ok(path) => path,
         Err(e) => {
-            return ThrowingResult::err(Error::new_native(&format!(
+            return Err(Error::new_native(&format!(
                 "Failed to convert path to string: {}",
                 e
             )))
@@ -76,12 +72,10 @@ fn open0(
         Mode::from_bits_truncate(mode as mode_t),
     ) {
         Ok(fd) => fd,
-        Err(errno) => {
-            throw_and_return!(throw_unix_exception_with_errno(errno as i32, stack_frames))
-        }
+        Err(errno) => bail_thrown!(throw_unix_exception_with_errno(errno as i32, stack_frames)),
     };
 
-    ThrowingResult::ok(fd.into_raw_fd() as i32)
+    Ok(Some(fd.into_raw_fd() as i32))
 }
 
 pub fn mkdir0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
@@ -245,20 +239,22 @@ fn copy_stat_attributes(attr_ref: i32, stat: FileStat) -> Result<()> {
 
 pub fn realpath0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let path_ptr = i32toi64(args[1], args[0]);
-    let byte_arr_ref = unwrap_result_or_return_default!(realpath0(path_ptr, stack_frames), vec![]);
+    let Some(byte_arr_ref) = realpath0(path_ptr, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![byte_arr_ref])
 }
-fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
-    let path = unwrap_or_return_err!(cstring_from_i64(path_ptr));
+fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
+    let path = cstring_from_i64(path_ptr)?;
     let path = OsString::from_vec(path.into_bytes());
     let result_path = realpath(Path::new(&path), RealpathFlags::empty());
     let result_path = match result_path {
         Ok(p) => p,
         Err(errno) => {
-            let errno = unwrap_or_return_err!(errno
+            let errno = errno
                 .raw_os_error()
-                .ok_or_else(|| { Error::new_native("Failed to get errno from realpath error") }));
-            throw_and_return!(throw_unix_exception_with_errno(errno, stack_frames))
+                .ok_or_else(|| Error::new_native("Failed to get errno from realpath error"))?;
+            bail_thrown!(throw_unix_exception_with_errno(errno, stack_frames));
         }
     };
 
@@ -271,5 +267,5 @@ fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i3
     // Allocate the byte array in the heap and return its reference
     let array_ref = HEAP.create_array_with_values("[B", &path_bytes);
 
-    ThrowingResult::ok(array_ref)
+    Ok(Some(array_ref))
 }

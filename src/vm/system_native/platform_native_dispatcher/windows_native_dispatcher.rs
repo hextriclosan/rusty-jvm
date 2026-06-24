@@ -1,6 +1,7 @@
+use crate::bail_thrown;
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_internal_error;
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
@@ -8,7 +9,6 @@ use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     throw_windows_exception, wchar_to_string_ref,
 };
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use std::mem::zeroed;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, FALSE, LPVOID, MAX_PATH, TRUE};
@@ -42,18 +42,18 @@ pub fn create_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<
     let creation_disposition = args[6];
     let flags_and_attributes = args[7];
 
-    let handle = unwrap_result_or_return_default!(
-        create_file0(
-            filename_ptr,
-            desired_access,
-            share_mode,
-            sec_desc_ptr,
-            creation_disposition,
-            flags_and_attributes,
-            stack_frames,
-        ),
-        vec![]
-    );
+    let Some(handle) = create_file0(
+        filename_ptr,
+        desired_access,
+        share_mode,
+        sec_desc_ptr,
+        creation_disposition,
+        flags_and_attributes,
+        stack_frames,
+    )?
+    else {
+        return Ok(vec![]);
+    };
 
     Ok(i64_to_vec(handle))
 }
@@ -65,7 +65,7 @@ fn create_file0(
     creation_disposition: i32,
     flags_and_attributes: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<i64> {
+) -> Throws<i64> {
     let filename = filename_ptr as usize as LPCWSTR;
 
     let security_descriptor = sec_desc_ptr as usize as LPSECURITY_ATTRIBUTES;
@@ -92,10 +92,10 @@ fn create_file0(
     };
 
     if result == INVALID_HANDLE_VALUE {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
 
-    ThrowingResult::ok(result as i64)
+    Ok(Some(result as i64))
 }
 
 pub(crate) fn set_end_of_file_wrp(
@@ -218,16 +218,16 @@ pub fn get_file_security0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> R
     let p_security_descriptor_addr = i32toi64(args[4], args[3]);
     let n_length = args[5];
 
-    let result = unwrap_result_or_return_default!(
-        get_file_security0(
-            lp_file_name_addr,
-            requested_information,
-            p_security_descriptor_addr,
-            n_length,
-            stack_frames,
-        ),
-        vec![]
-    );
+    let Some(result) = get_file_security0(
+        lp_file_name_addr,
+        requested_information,
+        p_security_descriptor_addr,
+        n_length,
+        stack_frames,
+    )?
+    else {
+        return Ok(vec![]);
+    };
 
     Ok(vec![result])
 }
@@ -237,7 +237,7 @@ fn get_file_security0(
     p_security_descriptor_addr: i64,
     n_length: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<i32> {
+) -> Throws<i32> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let mut length_needed = 0 as DWORD;
     let res = unsafe {
@@ -252,12 +252,12 @@ fn get_file_security0(
     if res == 0 {
         let last_error = unsafe { GetLastError() };
         if last_error == ERROR_INSUFFICIENT_BUFFER {
-            ThrowingResult::ok(length_needed as i32)
+            Ok(Some(length_needed as i32))
         } else {
-            throw_and_return!(throw_windows_exception(stack_frames))
+            bail_thrown!(throw_windows_exception(stack_frames))
         }
     } else {
-        ThrowingResult::ok(n_length)
+        Ok(Some(n_length))
     }
 }
 
@@ -274,17 +274,16 @@ pub fn open_process_token_wrp(args: &[i32], stack_frames: &mut StackFrames) -> R
     let process = i32toi64(args[1], args[0]);
     let desired_access = args[2];
 
-    let token = unwrap_result_or_return_default!(
-        open_process_token(process, desired_access, stack_frames),
-        vec![]
-    );
+    let Some(token) = open_process_token(process, desired_access, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(i64_to_vec(token))
 }
 fn open_process_token(
     process: i64,
     desired_access: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<i64> {
+) -> Throws<i64> {
     let mut h_token = 0i64 as usize as HANDLE;
     let result = unsafe {
         OpenProcessToken(
@@ -294,10 +293,10 @@ fn open_process_token(
         )
     };
     if result == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
 
-    ThrowingResult::ok(h_token as usize as i64)
+    Ok(Some(h_token as usize as i64))
 }
 
 pub fn get_current_thread_wrp(_args: &[i32]) -> Result<Vec<i32>> {
@@ -314,10 +313,10 @@ pub fn open_thread_token_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Re
     let desired_access = args[2];
     let open_as_self = args[3] != 0;
 
-    let token = unwrap_result_or_return_default!(
-        open_thread_token(thread, desired_access, open_as_self, stack_frames),
-        vec![]
-    );
+    let Some(token) = open_thread_token(thread, desired_access, open_as_self, stack_frames)?
+    else {
+        return Ok(vec![]);
+    };
     Ok(i64_to_vec(token))
 }
 fn open_thread_token(
@@ -325,7 +324,7 @@ fn open_thread_token(
     desired_access: i32,
     open_as_self: bool,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<i64> {
+) -> Throws<i64> {
     let h_thread = thread as usize as HANDLE;
     let mut h_token = 0i64 as usize as HANDLE;
     let open_as_self = if open_as_self { TRUE } else { FALSE };
@@ -340,13 +339,13 @@ fn open_thread_token(
     };
     if result == 0 {
         match unsafe { GetLastError() } {
-            ERROR_NO_TOKEN => ThrowingResult::ok(0),
+            ERROR_NO_TOKEN => Ok(Some(0)),
             _ => {
-                throw_and_return!(throw_windows_exception(stack_frames))
+                bail_thrown!(throw_windows_exception(stack_frames))
             }
         }
     } else {
-        ThrowingResult::ok(h_token as usize as i64)
+        Ok(Some(h_token as usize as i64))
     }
 }
 
@@ -354,17 +353,16 @@ pub fn duplicate_token_ex_wrp(args: &[i32], stack_frames: &mut StackFrames) -> R
     let token = i32toi64(args[1], args[0]);
     let desired_access = args[2];
 
-    let token = unwrap_result_or_return_default!(
-        duplicate_token_ex(token, desired_access, stack_frames),
-        vec![]
-    );
+    let Some(token) = duplicate_token_ex(token, desired_access, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(i64_to_vec(token))
 }
 fn duplicate_token_ex(
     token: i64,
     desired_access: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<i64> {
+) -> Throws<i64> {
     let mut result_token = 0i64 as usize as HANDLE;
     let result = unsafe {
         DuplicateTokenEx(
@@ -377,10 +375,10 @@ fn duplicate_token_ex(
         )
     };
     if result == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
 
-    ThrowingResult::ok(result_token as usize as i64)
+    Ok(Some(result_token as usize as i64))
 }
 
 pub fn access_check_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
@@ -392,19 +390,19 @@ pub fn access_check_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<
     let generic_execute = args[7];
     let generic_all = args[8];
 
-    let result = unwrap_result_or_return_default!(
-        access_check(
-            token,
-            security_info,
-            access_mask,
-            generic_read,
-            generic_write,
-            generic_execute,
-            generic_all,
-            stack_frames,
-        ),
-        vec![]
-    );
+    let Some(result) = access_check(
+        token,
+        security_info,
+        access_mask,
+        generic_read,
+        generic_write,
+        generic_execute,
+        generic_all,
+        stack_frames,
+    )?
+    else {
+        return Ok(vec![]);
+    };
     Ok(vec![if result { 1 } else { 0 }])
 }
 fn access_check(
@@ -416,7 +414,7 @@ fn access_check(
     generic_execute: i32,
     generic_all: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<bool> {
+) -> Throws<bool> {
     let mut mapping = GENERIC_MAPPING {
         GenericRead: generic_read as DWORD,
         GenericWrite: generic_write as DWORD,
@@ -446,9 +444,9 @@ fn access_check(
         )
     };
     if ret == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     } else {
-        ThrowingResult::ok(result == TRUE)
+        Ok(Some(result == TRUE))
     }
 }
 
@@ -467,11 +465,13 @@ pub fn get_volume_path_name0_wrp(
     stack_frames: &mut StackFrames,
 ) -> Result<Vec<i32>> {
     let address = i32toi64(args[1], args[0]);
-    let string_ref =
-        unwrap_result_or_return_default!(get_volume_path_name0(address, stack_frames), vec![]);
+
+    let Some(string_ref) = get_volume_path_name0(address, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![string_ref])
 }
-fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let result = unsafe {
         GetVolumePathNameW(
@@ -482,12 +482,12 @@ fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throwi
     };
 
     if result == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
 
-    let string_ref = unwrap_or_return_err!(wchar_to_string_ref(&volume_name));
+    let string_ref = wchar_to_string_ref(&volume_name)?;
 
-    ThrowingResult::ok(string_ref)
+    Ok(Some(string_ref))
 }
 
 pub fn get_volume_information0_wrp(
@@ -497,17 +497,16 @@ pub fn get_volume_information0_wrp(
     let address = i32toi64(args[1], args[0]);
     let volume_information_ref = args[2];
 
-    unwrap_result_or_return_default!(
-        get_volume_information0(address, volume_information_ref, stack_frames),
-        vec![]
-    );
+    let Some(_) = get_volume_information0(address, volume_information_ref, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![])
 }
 fn get_volume_information0(
     address: i64,
     volume_information_ref: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<()> {
+) -> Throws<()> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let mut volume_serial_number = 0 as DWORD;
     let mut max_component_length = 0 as DWORD;
@@ -528,38 +527,38 @@ fn get_volume_information0(
     };
 
     if result == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
 
-    let volume_name_ref = unwrap_or_return_err!(wchar_to_string_ref(&volume_name));
-    let filesystem_name_ref = unwrap_or_return_err!(wchar_to_string_ref(&filesystem_name));
+    let volume_name_ref = (wchar_to_string_ref(&volume_name))?;
+    let filesystem_name_ref = (wchar_to_string_ref(&filesystem_name))?;
 
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    HEAP.set_object_field_value(
         volume_information_ref,
         "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
         "volumeName",
         vec![volume_name_ref],
-    ));
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    )?;
+    HEAP.set_object_field_value(
         volume_information_ref,
         "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
         "fileSystemName",
         vec![filesystem_name_ref],
-    ));
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    )?;
+    HEAP.set_object_field_value(
         volume_information_ref,
         "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
         "volumeSerialNumber",
         vec![volume_serial_number as i32],
-    ));
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    )?;
+    HEAP.set_object_field_value(
         volume_information_ref,
         "sun/nio/fs/WindowsNativeDispatcher$VolumeInformation",
         "flags",
         vec![flags as i32],
-    ));
+    )?;
 
-    ThrowingResult::ok(())
+    Ok(Some(()))
 }
 
 pub fn get_drive_type0_wrp(args: &[i32]) -> Result<Vec<i32>> {
@@ -607,11 +606,12 @@ fn format_message(error_code: i32) -> Result<i32> {
 pub fn get_full_path_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let address = i32toi64(args[1], args[0]);
 
-    let string_ref =
-        unwrap_result_or_return_default!(get_full_path_name0(address, stack_frames), vec![]);
+    let Some(string_ref) = get_full_path_name0(address, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![string_ref])
 }
-fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> ThrowingResult<i32> {
+fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
     let lp_file_name = address as usize as LPCWSTR;
     let mut result = vec![0 as WCHAR; MAX_PATH + 1];
 
@@ -624,22 +624,22 @@ fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throwing
         )
     };
     if len == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
     if len < MAX_PATH as DWORD {
-        let string_ref = unwrap_or_return_err!(wchar_to_string_ref(&result[..(len + 1) as usize]));
-        ThrowingResult::ok(string_ref)
+        let string_ref = wchar_to_string_ref(&result[..(len + 1) as usize])?;
+        Ok(Some(string_ref))
     } else {
         result.resize((len + 1) as usize, 0);
         let len = unsafe { GetFullPathNameW(lp_file_name, len, result.as_mut_ptr(), 0 as *mut _) };
         if len == 0 {
-            throw_and_return!(throw_internal_error(
+            bail_thrown!(throw_internal_error(
                 "GetFullPathNameW failed",
                 stack_frames
             ))
         } else {
-            let string_ref = unwrap_or_return_err!(wchar_to_string_ref(&result[..len as usize]));
-            ThrowingResult::ok(string_ref)
+            let string_ref = wchar_to_string_ref(&result[..len as usize])?;
+            Ok(Some(string_ref))
         }
     }
 }
@@ -648,76 +648,72 @@ pub fn find_first_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Res
     let lp_file_name = i32toi64(args[1], args[0]);
     let first_file_obj_ref = args[2];
 
-    let _res = unwrap_result_or_return_default!(
-        find_first_file0(lp_file_name, first_file_obj_ref, stack_frames),
-        vec![]
-    );
+    let Some(_res) = find_first_file0(lp_file_name, first_file_obj_ref, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![])
 }
 fn find_first_file0(
     lp_file_name: i64,
     first_file_obj_ref: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<()> {
+) -> Throws<()> {
     let mut data: WIN32_FIND_DATAW = unsafe { zeroed() };
     let lp_file_name = lp_file_name as usize as LPCWSTR;
     let handle = unsafe { FindFirstFileW(lp_file_name, &mut data) };
     if handle == INVALID_HANDLE_VALUE {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
 
     let c_file_name = data.cFileName;
-    let name_ref = unwrap_or_return_err!(wchar_to_string_ref(&c_file_name));
+    let name_ref = (wchar_to_string_ref(&c_file_name))?;
     let attributes = data.dwFileAttributes as i32;
 
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    HEAP.set_object_field_value(
         first_file_obj_ref,
         "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
         "handle",
         i64_to_vec(handle as i64),
-    ));
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    )?;
+    HEAP.set_object_field_value(
         first_file_obj_ref,
         "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
         "name",
         vec![name_ref],
-    ));
-    unwrap_or_return_err!(HEAP.set_object_field_value(
+    )?;
+    HEAP.set_object_field_value(
         first_file_obj_ref,
         "sun/nio/fs/WindowsNativeDispatcher$FirstFile",
         "attributes",
         vec![attributes],
-    ));
+    )?;
 
-    ThrowingResult::ok(())
+    Ok(Some(()))
 }
 
 pub fn find_next_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let handle = i32toi64(args[1], args[0]);
     let address = i32toi64(args[3], args[2]);
 
-    let string_ref =
-        unwrap_result_or_return_default!(find_next_file0(handle, address, stack_frames), vec![]);
+    let Some(string_ref) = find_next_file0(handle, address, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![string_ref])
 }
-fn find_next_file0(
-    handle: i64,
-    address: i64,
-    stack_frames: &mut StackFrames,
-) -> ThrowingResult<i32> {
+fn find_next_file0(handle: i64, address: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
     let handle = handle as usize as HANDLE;
     let data = address as usize as *mut WIN32_FIND_DATAW;
     let result = unsafe { winapi::um::fileapi::FindNextFileW(handle, data) };
     if result != 0 {
         let c_file_name = unsafe { (*data).cFileName };
-        let name_ref = unwrap_or_return_err!(wchar_to_string_ref(&c_file_name));
-        ThrowingResult::ok(name_ref)
+        let name_ref = (wchar_to_string_ref(&c_file_name))?;
+        Ok(Some(name_ref))
     } else {
         let last_error = unsafe { GetLastError() };
         if last_error == ERROR_NO_MORE_FILES {
-            ThrowingResult::ok(0)
+            Ok(Some(0))
         } else {
-            throw_and_return!(throw_windows_exception(stack_frames))
+            bail_thrown!(throw_windows_exception(stack_frames))
         }
     }
 }
@@ -725,14 +721,16 @@ fn find_next_file0(
 pub fn find_close_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
     let handle = i32toi64(args[1], args[0]);
 
-    let _res = unwrap_result_or_return_default!(find_close(handle, stack_frames), vec![]);
+    let Some(_res) = find_close(handle, stack_frames)? else {
+        return Ok(vec![]);
+    };
     Ok(vec![])
 }
-fn find_close(handle: i64, stack_frames: &mut StackFrames) -> ThrowingResult<()> {
+fn find_close(handle: i64, stack_frames: &mut StackFrames) -> Throws<()> {
     let handle = handle as usize as HANDLE;
     let result = unsafe { FindClose(handle) };
     if result == 0 {
-        throw_and_return!(throw_windows_exception(stack_frames))
+        bail_thrown!(throw_windows_exception(stack_frames))
     }
-    ThrowingResult::ok(())
+    Ok(Some(()))
 }

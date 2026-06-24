@@ -1,12 +1,12 @@
+use crate::bail_thrown;
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_unsatisfied_link_error;
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::Throws;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::properties_provider::properties::sun_boot_library_path;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 use dashmap::DashMap;
 use derive_new::new;
 #[cfg(unix)]
@@ -47,16 +47,16 @@ pub(crate) fn native_libraries_load_wrp(
     let builtin = args[2] != 0;
     let throw_exception_if_fail = args[3] != 0;
 
-    let result = unwrap_result_or_return_default!(
-        native_libraries_load(
-            native_lib_impl_ref,
-            name_ref,
-            builtin,
-            throw_exception_if_fail,
-            stack_frames
-        ),
-        vec![]
-    );
+    let Some(result) = native_libraries_load(
+        native_lib_impl_ref,
+        name_ref,
+        builtin,
+        throw_exception_if_fail,
+        stack_frames,
+    )?
+    else {
+        return Ok(vec![]);
+    };
     Ok(vec![if result { 1 } else { 0 }])
 }
 fn native_libraries_load(
@@ -65,8 +65,8 @@ fn native_libraries_load(
     _builtin: bool,
     throw_exception_if_fail: bool,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<bool> {
-    let name = unwrap_or_return_err!(get_utf8_string_by_ref(name_ref));
+) -> Throws<bool> {
+    let name = get_utf8_string_by_ref(name_ref)?;
 
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
     let path = Path::new(&name);
@@ -82,7 +82,7 @@ fn native_libraries_load(
                     .and_then(|s| extract_lib_name(s))
                     .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
                 {
-                    return ThrowingResult::ok(true);
+                    return Ok(Some(true));
                 }
             }
         }
@@ -97,24 +97,23 @@ fn native_libraries_load(
                 let lib = unsafe { Library::from_raw(raw_ptr) };
                 LibraryEntry::new(lib, DashMap::default())
             });
-            let result = HEAP.set_object_field_value(
+            HEAP.set_object_field_value(
                 native_lib_impl_ref,
                 "jdk/internal/loader/NativeLibraries$NativeLibraryImpl",
                 "handle",
                 i64_to_vec(*entry.key() as i64),
-            );
-            unwrap_or_return_err!(result);
+            )?;
 
-            ThrowingResult::ok(true)
+            Ok(Some(true))
         }
         Err(_) => {
             if throw_exception_if_fail {
-                throw_and_return!(throw_unsatisfied_link_error(
+                bail_thrown!(throw_unsatisfied_link_error(
                     &format!("Failed to load {name}"),
                     stack_frames
-                ))
+                ));
             } else {
-                ThrowingResult::ok(false)
+                Ok(Some(false))
             }
         }
     }

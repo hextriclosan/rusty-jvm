@@ -1,6 +1,7 @@
+use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_class_not_found_exception;
-use crate::vm::exception::throwing_result::ThrowingResult;
+use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
@@ -11,7 +12,6 @@ use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
-use crate::{throw_and_return, unwrap_or_return_err, unwrap_result_or_return_default};
 
 const PUBLIC: u16 = 0x00000001;
 
@@ -78,10 +78,10 @@ pub(crate) fn for_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Res
     let loader_ref = args[2];
     let caller_ref = args[3];
 
-    let class_ref = unwrap_result_or_return_default!(
-        for_name0(name_ref, initialize, loader_ref, caller_ref, stack_frames),
-        vec![]
-    );
+    let Some(class_ref) = for_name0(name_ref, initialize, loader_ref, caller_ref, stack_frames)?
+    else {
+        return Ok(vec![]);
+    };
     Ok(vec![class_ref])
 }
 fn for_name0(
@@ -90,15 +90,15 @@ fn for_name0(
     loader_ref: i32,
     _caller_ref: i32,
     stack_frames: &mut StackFrames,
-) -> ThrowingResult<i32> {
-    let name = unwrap_or_return_err!(get_utf8_string_by_ref(name_ref));
+) -> Throws<i32> {
+    let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = name.replace('.', "/");
     let reflection_ref = if loader_ref == 0 {
         // it's a bootstrap class loader, so we load class directly with native code
         match clazz_ref(&internal_name) {
             Ok(r) => r,
             Err(_) => {
-                throw_and_return!(throw_class_not_found_exception(&name, stack_frames))
+                bail_thrown!(throw_class_not_found_exception(&name, stack_frames));
             }
         }
     } else {
@@ -119,16 +119,16 @@ fn for_name0(
                 // Exception in thread "system" java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
                 // 	at jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
                 // 	at java.lang.ClassLoader.loadClass(ClassLoader.java:490)```
-                throw_and_return!(throw_class_not_found_exception(&name, stack_frames));
+                bail_thrown!(throw_class_not_found_exception(&name, stack_frames));
             }
         }
     };
 
     if initialize {
-        unwrap_or_return_err!(StaticInit::initialize(&internal_name));
+        StaticInit::initialize(&internal_name)?;
     }
 
-    ThrowingResult::ok(reflection_ref)
+    Ok(Some(reflection_ref))
 }
 pub(crate) fn get_interfaces0_wrp(args: &[i32]) -> Result<Vec<i32>> {
     let class_ref = args[0];
