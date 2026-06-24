@@ -1,5 +1,4 @@
 # rusty-jvm
-[![oosmetrics](https://api.oosmetrics.com/api/v1/badge/achievement/22c42d1c-9261-460c-859c-f9c87058f046.svg)](https://oosmetrics.com/repo/hextriclosan/rusty-jvm)
 ![Platform][platforms-image]
 [![Crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
