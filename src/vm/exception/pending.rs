@@ -32,9 +32,12 @@ pub fn thrown<T>() -> Throws<T> {
 }
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! bail_thrown {
     ($throw:expr) => {{
-        $throw?;
+        // Enforce that `$throw` is a Result<(), _> (i.e., a "throw Java exception" helper).
+        let _res: ::std::result::Result<(), _> = $throw;
+        _res?;
         return Ok(None);
     }};
 }

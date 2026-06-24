@@ -42,11 +42,8 @@ pub(crate) fn arraycopy_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Res
     let dest_pos = args[3];
     let length = args[4];
 
-    let result = arraycopy(src_ref, src_pos, dest_ref, dest_pos, length, stack_frames);
-    match result {
-        Ok(_) => Ok(vec![]),
-        Err(e) => Err(e),
-    }
+    let _ = arraycopy(src_ref, src_pos, dest_ref, dest_pos, length, stack_frames)?;
+    Ok(vec![])
 }
 pub(crate) fn arraycopy(
     src_ref: i32,
