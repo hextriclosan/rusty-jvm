@@ -19,13 +19,11 @@ use jni_sys::{jclass, jlong, JNIEnv};
 
 /// JNI-style built-in native for `java.lang.System.currentTimeMillis()J`.
 ///
-/// Exported (`#[no_mangle]`) so it lives in the running executable's symbol
-/// table and can be resolved by its JNI name and invoked through the very same
-/// dynamic JNI path (`invoke`) that is used for functions from loaded shared
-/// libraries.
-#[no_mangle]
+/// Its address is taken directly by the built-in native registry and dispatched
+/// through the same dynamic JNI/libffi path (`invoke`) used for functions from
+/// loaded shared libraries.
 #[allow(non_snake_case)]
-pub(crate) unsafe extern "system" fn Java_java_lang_System_currentTimeMillis(
+pub(crate) extern "system" fn Java_java_lang_System_currentTimeMillis(
     _env: *mut JNIEnv,
     _class: jclass,
 ) -> jlong {

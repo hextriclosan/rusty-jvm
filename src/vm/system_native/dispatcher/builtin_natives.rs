@@ -1,39 +1,47 @@
 use crate::vm::system_native::system::Java_java_lang_System_currentTimeMillis;
-#[cfg(unix)]
-use libloading::os::unix::{Library, Symbol};
-#[cfg(windows)]
-use libloading::os::windows::{Library, Symbol};
-use std::ffi::{c_void, CString};
+use std::collections::HashMap;
+use std::ffi::c_void;
 use std::sync::LazyLock;
 
-/// The running executable itself, viewed as a "native library".
+/// Registry of built-in native methods implemented in Rust, keyed by their JNI
+/// C-name and resolving to the function address invoked via libffi.
 ///
-/// Built-in native methods are ordinary exported symbols (`#[no_mangle]`), so
-/// they can be resolved by name straight from the current process image, just
-/// like functions from a loaded shared library. `Library::this` uses the
-/// platform loader (`dlsym`/`GetProcAddress`) under the hood.
-static BUILTIN_LIBRARY: LazyLock<Library> = LazyLock::new(open_self);
-
-#[cfg(unix)]
-fn open_self() -> Library {
-    Library::this()
-}
-
-#[cfg(windows)]
-fn open_self() -> Library {
-    Library::this().expect("failed to load self-library")
-}
-
-/// Keeps built-in natives in the executable's symbol table.
+/// Built-ins live in the running executable rather than in a loaded shared
+/// library, so their address is taken directly here instead of being resolved
+/// through the platform loader (`dlsym`/`GetProcAddress`) — the latter cannot
+/// see executable symbols on Windows and is fragile on Linux. Dispatch itself is
+/// unchanged: the address flows through the very same JNI/libffi path used for
+/// functions from real native libraries.
 ///
-/// `#[no_mangle]` alone does not guarantee the symbol survives dead-code
-/// elimination when nothing references it directly; referencing every built-in
-/// here keeps them present so `dlsym`/`GetProcAddress` can find them by name.
-#[used]
-static KEEP_ALIVE: [unsafe extern "system" fn(
-    *mut jni_sys::JNIEnv,
-    jni_sys::jclass,
-) -> jni_sys::jlong; 1] = [Java_java_lang_System_currentTimeMillis];
+/// Entries are described with plain Java coordinates (class, method, descriptor)
+/// so there are no hand-written JNI-mangled strings; the lookup keys are derived
+/// with [`jniname::c_name`].
+static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = LazyLock::new(|| {
+    let mut table = HashMap::new();
+    register(
+        &mut table,
+        "java/lang/System",
+        "currentTimeMillis",
+        "()J",
+        Java_java_lang_System_currentTimeMillis as *const c_void as i64,
+    );
+    table
+});
+
+/// Registers a built-in native under both its simple and overloaded JNI names,
+/// derived from the Java method coordinates.
+fn register(
+    table: &mut HashMap<String, i64>,
+    class_name: &str,
+    method_name: &str,
+    descriptor: &str,
+    address: i64,
+) {
+    let (short_name, long_name) = jniname::c_name(class_name, method_name, descriptor)
+        .expect("built-in native must have a valid class/method/descriptor");
+    table.insert(short_name, address);
+    table.insert(long_name, address);
+}
 
 /// Resolves a built-in native by its JNI C-names, preferring the overloaded
 /// (long) name over the simple (short) name, matching JNI resolution order.
@@ -41,13 +49,8 @@ static KEEP_ALIVE: [unsafe extern "system" fn(
 /// Returns the function address to be invoked via libffi, or `None` when the
 /// method is not a built-in native.
 pub(super) fn find_builtin_native(short_name: &str, long_name: &str) -> Option<i64> {
-    resolve_symbol(long_name).or_else(|| resolve_symbol(short_name))
-}
-
-fn resolve_symbol(name: &str) -> Option<i64> {
-    let c_name = CString::new(name).ok()?;
-    let symbol: Result<Symbol<*const c_void>, libloading::Error> =
-        unsafe { BUILTIN_LIBRARY.get(c_name.as_bytes_with_nul()) };
-    let address = symbol.ok()?.as_raw_ptr() as i64;
-    (address != 0).then_some(address)
+    BUILTIN_NATIVE_TABLE
+        .get(long_name)
+        .or_else(|| BUILTIN_NATIVE_TABLE.get(short_name))
+        .copied()
 }
