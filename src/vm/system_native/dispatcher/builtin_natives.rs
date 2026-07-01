@@ -1,3 +1,4 @@
+use crate::vm::system_native::object::Java_java_lang_Object_hashCode;
 use crate::vm::system_native::system::Java_java_lang_System_currentTimeMillis;
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -23,7 +24,14 @@ static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = LazyLock::new(|| {
         "java/lang/System",
         "currentTimeMillis",
         "()J",
-        Java_java_lang_System_currentTimeMillis as *const c_void as i64,
+        Java_java_lang_System_currentTimeMillis as *const c_void as usize as i64,
+    );
+    register(
+        &mut table,
+        "java/lang/Object",
+        "hashCode",
+        "()I",
+        Java_java_lang_Object_hashCode as *const c_void as usize as i64,
     );
     table
 });

@@ -49,7 +49,7 @@ use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
-use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
+use crate::vm::system_native::object::{clone_wrp, get_class_wrp};
 use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
 use crate::vm::system_native::platform_file_dispatcher::{
     allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp,
@@ -120,7 +120,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(clone_wrp),
     );
     table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
-    table.insert("java/lang/Object:hashCode:()I", Basic(object_hashcode_wrp));
     table.insert("java/lang/System:nanoTime:()J", Basic(nano_time_wrp));
     table.insert(
         "java/lang/System:arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
