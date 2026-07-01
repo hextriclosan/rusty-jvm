@@ -21,7 +21,7 @@ fn open_self() -> Library {
 
 #[cfg(windows)]
 fn open_self() -> Library {
-    Library::this()
+    Library::this().expect("failed to load self-library")
 }
 
 /// Keeps built-in natives in the executable's symbol table.
