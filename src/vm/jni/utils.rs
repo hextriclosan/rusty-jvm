@@ -83,7 +83,7 @@ pub(super) fn set_pending_class_format_error(message: &str) {
     set_pending_error("java/lang/ClassFormatError", message);
 }
 
-pub(super) fn set_pending_internal_error(message: &str) {
+pub(crate) fn set_pending_internal_error(message: &str) {
     set_pending_error("java/lang/InternalError", message);
 }
 

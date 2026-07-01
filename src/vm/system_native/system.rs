@@ -8,17 +8,39 @@ use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i64_to_vec, undecorate};
+use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::object::identity_hashcode;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
+use jni_sys::{jclass, jlong, JNIEnv};
 
-pub(crate) fn current_time_millis_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let millis = current_time_millis()?;
-    Ok(i64_to_vec(millis))
+/// JNI-style built-in native for `java.lang.System.currentTimeMillis()J`.
+///
+/// Exported (`#[no_mangle]`) so it lives in the running executable's symbol
+/// table and can be resolved by its JNI name and invoked through the very same
+/// dynamic JNI path (`invoke`) that is used for functions from loaded shared
+/// libraries.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub(crate) unsafe extern "system" fn Java_java_lang_System_currentTimeMillis(
+    _env: *mut JNIEnv,
+    _class: jclass,
+) -> jlong {
+    match current_time_millis() {
+        Ok(millis) => millis,
+        Err(e) => {
+            // JNI convention: raise a pending Java exception and return a dummy
+            // value. The interpreter throws it once control returns from the
+            // native call (see execution_engine::invoker::invoke).
+            set_pending_internal_error(&e.to_string());
+            0
+        }
+    }
 }
+
 fn current_time_millis() -> Result<i64> {
     let now = std::time::SystemTime::now();
     let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
