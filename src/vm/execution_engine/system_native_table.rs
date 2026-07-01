@@ -49,7 +49,7 @@ use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
-use crate::vm::system_native::object::{clone_wrp, get_class_wrp, object_hashcode_wrp};
+use crate::vm::system_native::object::{clone_wrp, get_class_wrp};
 use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
 use crate::vm::system_native::platform_file_dispatcher::{
     allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp,
@@ -69,8 +69,8 @@ use crate::vm::system_native::reflecton::{
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::string::intern_wrp;
 use crate::vm::system_native::system::{
-    arraycopy_wrp, current_time_millis_wrp, nano_time_wrp, set_err0_wrp, set_out0_wrp,
-    system_identity_hashcode_wrp, system_map_library_name_wrp,
+    arraycopy_wrp, nano_time_wrp, set_err0_wrp, set_out0_wrp, system_identity_hashcode_wrp,
+    system_map_library_name_wrp,
 };
 use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
@@ -120,11 +120,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(clone_wrp),
     );
     table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
-    table.insert("java/lang/Object:hashCode:()I", Basic(object_hashcode_wrp));
-    table.insert(
-        "java/lang/System:currentTimeMillis:()J",
-        Basic(current_time_millis_wrp),
-    );
     table.insert("java/lang/System:nanoTime:()J", Basic(nano_time_wrp));
     table.insert(
         "java/lang/System:arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",

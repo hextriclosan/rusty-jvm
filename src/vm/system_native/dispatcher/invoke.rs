@@ -4,6 +4,7 @@ use crate::vm::helper::clazz_ref;
 use crate::vm::jni::jni_env::get_jni_env;
 use crate::vm::stack::stack_value::StackValue;
 use crate::vm::system_native::dispatcher::args::build_args;
+use crate::vm::system_native::dispatcher::builtin_natives::find_builtin_native;
 use crate::vm::system_native::dispatcher::cif_cache::get_cif;
 use crate::vm::system_native::dispatcher::utils::get_symbol_address;
 use jdescriptor::{MethodDescriptor, TypeDescriptor};
@@ -27,28 +28,12 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
             Error::new_native(&format!("Failed to convert {method_signature} to C name"))
         })?;
 
-    let clazz_ref = clazz_ref(class_name)?;
-
-    let class_loader_ref = Executor::invoke_non_static_method(
-        "java/lang/Class",
-        "getClassLoader:()Ljava/lang/ClassLoader;",
-        clazz_ref,
-        &[],
-    )?[0];
-    let native_libraries_ref = Executor::invoke_static_method(
-        "java/lang/ClassLoader",
-        "nativeLibrariesFor:(Ljava/lang/ClassLoader;)Ljdk/internal/loader/NativeLibraries;",
-        &[class_loader_ref.into()],
-    )?[0];
-
-    let symbol_address = match get_symbol_address(&long_name, native_libraries_ref)? {
-        Some(v) => v,
-        None => get_symbol_address(&short_name, native_libraries_ref)?.ok_or_else(|| {
-            Error::new_native(&format!(
-                "Failed to find symbol for both short and long names: {short_name}, {long_name}"
-            ))
-        })?,
+    let symbol_address = match find_builtin_native(&short_name, &long_name) {
+        Some(address) => address,
+        None => resolve_library_symbol(class_name, &short_name, &long_name)?,
     };
+
+    let clazz_ref = clazz_ref(class_name)?;
 
     let fun_ptr: *mut c_void =
         std::ptr::with_exposed_provenance_mut::<c_void>(symbol_address as usize);
@@ -74,6 +59,33 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
         &ffi_args,
         method_descriptor.return_type(),
     )
+}
+
+/// Resolves the address of a native symbol exported by a loaded native library,
+/// trying the overloaded (long) name first and then the simple (short) name.
+fn resolve_library_symbol(class_name: &str, short_name: &str, long_name: &str) -> Result<i64> {
+    let clazz_ref = clazz_ref(class_name)?;
+
+    let class_loader_ref = Executor::invoke_non_static_method(
+        "java/lang/Class",
+        "getClassLoader:()Ljava/lang/ClassLoader;",
+        clazz_ref,
+        &[],
+    )?[0];
+    let native_libraries_ref = Executor::invoke_static_method(
+        "java/lang/ClassLoader",
+        "nativeLibrariesFor:(Ljava/lang/ClassLoader;)Ljdk/internal/loader/NativeLibraries;",
+        &[class_loader_ref.into()],
+    )?[0];
+
+    match get_symbol_address(long_name, native_libraries_ref)? {
+        Some(v) => Ok(v),
+        None => get_symbol_address(short_name, native_libraries_ref)?.ok_or_else(|| {
+            Error::new_native(&format!(
+                "Failed to find symbol for both short and long names: {short_name}, {long_name}"
+            ))
+        }),
+    }
 }
 
 fn call_native(
