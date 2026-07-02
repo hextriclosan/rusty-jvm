@@ -1,8 +1,33 @@
-use crate::vm::system_native::object::Java_java_lang_Object_hashCode;
-use crate::vm::system_native::system::Java_java_lang_System_currentTimeMillis;
+use crate::vm::system_native::object::object_hashcode_wrp;
+use crate::vm::system_native::system::current_time_millis_wrp;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
+
+/// Declaratively builds the built-in native registry.
+///
+/// Each entry maps a Java method — written as `class, method, descriptor` — to
+/// its Rust JNI function. The JNI-mangled lookup keys (simple + overloaded) are
+/// derived automatically via [`jniname::c_name`], so there are no hand-written
+/// mangled strings. To migrate a method off `SYSTEM_NATIVE_TABLE`, add one line
+/// here.
+macro_rules! builtin_natives {
+    ($($class:literal, $method:literal, $descriptor:literal => $func:path);* $(;)?) => {
+        LazyLock::new(|| {
+            let mut table = HashMap::new();
+            $(
+                register(
+                    &mut table,
+                    $class,
+                    $method,
+                    $descriptor,
+                    $func as *const c_void as usize as i64,
+                );
+            )*
+            table
+        })
+    };
+}
 
 /// Registry of built-in native methods implemented in Rust, keyed by their JNI
 /// C-name and resolving to the function address invoked via libffi.
@@ -13,28 +38,10 @@ use std::sync::LazyLock;
 /// see executable symbols on Windows and is fragile on Linux. Dispatch itself is
 /// unchanged: the address flows through the very same JNI/libffi path used for
 /// functions from real native libraries.
-///
-/// Entries are described with plain Java coordinates (class, method, descriptor)
-/// so there are no hand-written JNI-mangled strings; the lookup keys are derived
-/// with [`jniname::c_name`].
-static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = LazyLock::new(|| {
-    let mut table = HashMap::new();
-    register(
-        &mut table,
-        "java/lang/System",
-        "currentTimeMillis",
-        "()J",
-        Java_java_lang_System_currentTimeMillis as *const c_void as usize as i64,
-    );
-    register(
-        &mut table,
-        "java/lang/Object",
-        "hashCode",
-        "()I",
-        Java_java_lang_Object_hashCode as *const c_void as usize as i64,
-    );
-    table
-});
+static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = builtin_natives! {
+    "java/lang/System", "currentTimeMillis", "()J" => current_time_millis_wrp;
+    "java/lang/Object", "hashCode",          "()I" => object_hashcode_wrp;
+};
 
 /// Registers a built-in native under both its simple and overloaded JNI names,
 /// derived from the Java method coordinates.

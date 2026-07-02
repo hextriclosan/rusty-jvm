@@ -38,11 +38,7 @@ fn clone(obj_ref: i32) -> Result<i32> {
 /// through the same dynamic JNI/libffi path (`invoke`) used for functions from
 /// loaded shared libraries. As an instance method its receiver arrives as the
 /// `this` `jobject`, whose numeric value is the heap reference.
-#[allow(non_snake_case)]
-pub(crate) extern "system" fn Java_java_lang_Object_hashCode(
-    _env: *mut JNIEnv,
-    this: jobject,
-) -> jint {
+pub(crate) fn object_hashcode_wrp(_env: *mut JNIEnv, this: jobject) -> jint {
     match identity_hashcode(this as i32) {
         Ok(hashcode) => hashcode,
         Err(e) => {

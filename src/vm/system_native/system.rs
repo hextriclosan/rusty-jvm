@@ -22,11 +22,7 @@ use jni_sys::{jclass, jlong, JNIEnv};
 /// Its address is taken directly by the built-in native registry and dispatched
 /// through the same dynamic JNI/libffi path (`invoke`) used for functions from
 /// loaded shared libraries.
-#[allow(non_snake_case)]
-pub(crate) extern "system" fn Java_java_lang_System_currentTimeMillis(
-    _env: *mut JNIEnv,
-    _class: jclass,
-) -> jlong {
+pub(crate) fn current_time_millis_wrp(_env: *mut JNIEnv, _class: jclass) -> jlong {
     match current_time_millis() {
         Ok(millis) => millis,
         Err(e) => {
@@ -38,7 +34,6 @@ pub(crate) extern "system" fn Java_java_lang_System_currentTimeMillis(
         }
     }
 }
-
 fn current_time_millis() -> Result<i64> {
     let now = std::time::SystemTime::now();
     let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
