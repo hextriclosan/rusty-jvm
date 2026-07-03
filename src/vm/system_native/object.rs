@@ -32,19 +32,11 @@ fn clone(obj_ref: i32) -> Result<i32> {
     Ok(cloned_obj_ref)
 }
 
-/// JNI-style built-in native for `java.lang.Object.hashCode()I`.
-///
-/// Its address is taken directly by the built-in native registry and dispatched
-/// through the same dynamic JNI/libffi path (`invoke`) used for functions from
-/// loaded shared libraries. As an instance method its receiver arrives as the
-/// `this` `jobject`, whose numeric value is the heap reference.
+/// JNI-style built-in native for `java.lang.Object.hashCode()I`
 pub(crate) fn object_hashcode_wrp(_env: *mut JNIEnv, this: jobject) -> jint {
     match identity_hashcode(this as i32) {
         Ok(hashcode) => hashcode,
         Err(e) => {
-            // JNI convention: raise a pending Java exception and return a dummy
-            // value. The interpreter throws it once control returns from the
-            // native call (see execution_engine::invoker::invoke).
             set_pending_internal_error(&e.to_string());
             0
         }

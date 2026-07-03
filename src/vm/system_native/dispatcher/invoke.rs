@@ -27,13 +27,11 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
         jniname::c_name(class_name, method_name, descriptor).map_err(|_| {
             Error::new_native(&format!("Failed to convert {method_signature} to C name"))
         })?;
-
+    let clazz_ref = clazz_ref(class_name)?;
     let symbol_address = match find_builtin_native(&short_name, &long_name) {
         Some(address) => address,
-        None => resolve_library_symbol(class_name, &short_name, &long_name)?,
+        None => resolve_library_symbol(clazz_ref, &short_name, &long_name)?,
     };
-
-    let clazz_ref = clazz_ref(class_name)?;
 
     let fun_ptr: *mut c_void =
         std::ptr::with_exposed_provenance_mut::<c_void>(symbol_address as usize);
@@ -63,9 +61,7 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
 
 /// Resolves the address of a native symbol exported by a loaded native library,
 /// trying the overloaded (long) name first and then the simple (short) name.
-fn resolve_library_symbol(class_name: &str, short_name: &str, long_name: &str) -> Result<i64> {
-    let clazz_ref = clazz_ref(class_name)?;
-
+fn resolve_library_symbol(clazz_ref: i32, short_name: &str, long_name: &str) -> Result<i64> {
     let class_loader_ref = Executor::invoke_non_static_method(
         "java/lang/Class",
         "getClassLoader:()Ljava/lang/ClassLoader;",

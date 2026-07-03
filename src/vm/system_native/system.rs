@@ -17,18 +17,11 @@ use crate::vm::system_native::object::identity_hashcode;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use jni_sys::{jclass, jlong, JNIEnv};
 
-/// JNI-style built-in native for `java.lang.System.currentTimeMillis()J`.
-///
-/// Its address is taken directly by the built-in native registry and dispatched
-/// through the same dynamic JNI/libffi path (`invoke`) used for functions from
-/// loaded shared libraries.
+/// JNI-style built-in native for `java.lang.System.currentTimeMillis()J`
 pub(crate) fn current_time_millis_wrp(_env: *mut JNIEnv, _class: jclass) -> jlong {
     match current_time_millis() {
         Ok(millis) => millis,
         Err(e) => {
-            // JNI convention: raise a pending Java exception and return a dummy
-            // value. The interpreter throws it once control returns from the
-            // native call (see execution_engine::invoker::invoke).
             set_pending_internal_error(&e.to_string());
             0
         }
