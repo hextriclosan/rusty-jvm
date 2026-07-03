@@ -33,7 +33,7 @@ fn clone(obj_ref: i32) -> Result<i32> {
 }
 
 /// JNI-style built-in native for `java.lang.Object.hashCode()I`
-pub(crate) fn object_hashcode_wrp(_env: *mut JNIEnv, this: jobject) -> jint {
+pub(crate) extern "system" fn object_hashcode_wrp(_env: *mut JNIEnv, this: jobject) -> jint {
     match identity_hashcode(this as i32) {
         Ok(hashcode) => hashcode,
         Err(e) => {

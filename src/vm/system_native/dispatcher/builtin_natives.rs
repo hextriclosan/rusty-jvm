@@ -1,5 +1,6 @@
 use crate::vm::system_native::object::object_hashcode_wrp;
 use crate::vm::system_native::system::current_time_millis_wrp;
+use crate::vm::system_native::zip::crc32::java_util_zip_crc32_updatebytes0_wrp;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
@@ -28,6 +29,7 @@ macro_rules! builtin_natives {
 static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = builtin_natives! {
     "java/lang/System", "currentTimeMillis", "()J" => current_time_millis_wrp;
     "java/lang/Object", "hashCode",          "()I" => object_hashcode_wrp;
+    "java/util/zip/CRC32", "updateBytes0", "(I[BII)I" => java_util_zip_crc32_updatebytes0_wrp;
 };
 
 fn register(

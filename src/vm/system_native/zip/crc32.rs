@@ -1,16 +1,29 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::jni::set_pending_internal_error;
 use crc32fast::Hasher;
+use jni_sys::{jarray, jclass, jint, JNIEnv};
 
-pub(crate) fn java_util_zip_crc32_updatebytes0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let crc = args[0];
-    let byte_array_ref = args[1];
-    let off = args[2];
-    let len = args[3];
+pub(crate) extern "system" fn java_util_zip_crc32_updatebytes0_wrp(
+    _env: *mut JNIEnv,
+    _class: jclass,
+    crc: jint,
+    b: jarray,
+    off: jint,
+    len: jint,
+) -> jint {
+    let crc = crc as i32;
+    let byte_array_ref = b as i32;
+    let off = off as i32;
+    let len = len as i32;
 
-    let updated_crc = updatebytes0(crc, byte_array_ref, off, len)?;
-
-    Ok(vec![updated_crc])
+    match updatebytes0(crc, byte_array_ref, off, len) {
+        Ok(updated_crc) => updated_crc as jint,
+        Err(e) => {
+            set_pending_internal_error(&e.to_string());
+            0
+        }
+    }
 }
 
 fn updatebytes0(crc: i32, byte_array_ref: i32, off: i32, len: i32) -> Result<i32> {

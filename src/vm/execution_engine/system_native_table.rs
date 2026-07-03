@@ -86,7 +86,6 @@ use crate::vm::system_native::unsafe_::{
     put_long_wrp, put_reference_volatile_wrp, put_reference_wrp, put_short_wrp, set_memory0_wrp,
     should_be_initialized0_wrp, static_field_base0_wrp, static_field_offset_0_wrp,
 };
-use crate::vm::system_native::zip::crc32::java_util_zip_crc32_updatebytes0_wrp;
 use crate::vm::system_native::zip::deflater::{
     java_util_zip_deflater_deflate_bytes_bytes_wrp, java_util_zip_deflater_end_wrp,
     java_util_zip_deflater_init_wrp,
@@ -819,10 +818,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/util/zip/Inflater:reset:(J)V",
         Basic(java_util_zip_inflater_reset_wrp),
-    );
-    table.insert(
-        "java/util/zip/CRC32:updateBytes0:(I[BII)I",
-        Basic(java_util_zip_crc32_updatebytes0_wrp),
     );
     table.insert(
         "java/lang/NullPointerException:getExtendedNPEMessage:()Ljava/lang/String;",

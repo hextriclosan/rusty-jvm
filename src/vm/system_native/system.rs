@@ -18,7 +18,7 @@ use crate::vm::system_native::string::get_utf8_string_by_ref;
 use jni_sys::{jclass, jlong, JNIEnv};
 
 /// JNI-style built-in native for `java.lang.System.currentTimeMillis()J`
-pub(crate) fn current_time_millis_wrp(_env: *mut JNIEnv, _class: jclass) -> jlong {
+pub(crate) extern "system" fn current_time_millis_wrp(_env: *mut JNIEnv, _class: jclass) -> jlong {
     match current_time_millis() {
         Ok(millis) => millis,
         Err(e) => {
