@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::jni_value::JNIValue;
-use tracing::trace;
+use tracing::{trace, warn};
 
 /// Convert a `Result<Vec<i32>>` from a Java method invocation into a typed JNI
 /// return value.  On error the throwable is stored as a pending exception on
@@ -25,9 +25,10 @@ fn handle_error<T: JNIValue>(e: Error, context: &str) -> T {
         Some(throwable_ref) => {
             match JavaThread::try_set_pending_exception(throwable_ref) {
                 Ok(()) => (),
-                Err(e) => {
-                    panic!("Failed to set pending exception in {context}: {e}");
-                }
+                // First-wins: an exception is already pending, so preserve it
+                // and drop this one, like OpenJDK does. Never panic — this runs at the JNI/FFI
+                // boundary where unwinding would abort the VM.
+                Err(e) => warn!("Dropping exception in {context}: {e}"),
             }
 
             T::default()

@@ -1,6 +1,8 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
+use crate::vm::jni::set_pending_internal_error;
+use jni_sys::{jint, jobject, JNIEnv};
 use murmur3::murmur3_32;
 use std::io::Cursor;
 
@@ -30,11 +32,15 @@ fn clone(obj_ref: i32) -> Result<i32> {
     Ok(cloned_obj_ref)
 }
 
-pub(crate) fn object_hashcode_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let hashcode = identity_hashcode(obj_ref)?;
-
-    Ok(vec![hashcode])
+/// JNI-style built-in native for `java.lang.Object.hashCode()I`
+pub(crate) extern "system" fn object_hashcode_wrp(_env: *mut JNIEnv, this: jobject) -> jint {
+    match identity_hashcode(this as i32) {
+        Ok(hashcode) => hashcode,
+        Err(e) => {
+            set_pending_internal_error(&e.to_string());
+            0
+        }
+    }
 }
 pub(crate) fn identity_hashcode(obj_ref: i32) -> Result<i32> {
     if obj_ref == 0 {
