@@ -11,6 +11,7 @@ use jni_sys::{jclass, jmethodID, jvalue};
 use std::ffi::c_char;
 use std::ptr::null_mut;
 use std::sync::Arc;
+use tracing::warn;
 
 #[macro_export]
 macro_rules! from_mutf8_ptr {
@@ -88,6 +89,22 @@ pub(crate) fn set_pending_internal_error(message: &str) {
 }
 
 fn set_pending_error(exception_class: &str, message: &str) {
+    // First-wins semantics: if an exception is already pending, preserve it and
+    // do nothing, like OpenJDK does. This must never panic — `set_pending_error` is reachable from
+    // `extern "system"` natives, and unwinding across that FFI boundary would
+    // abort the VM and violate JNI semantics (the original pending exception
+    // must survive and propagate to Java).
+    //
+    // We check *before* constructing the throwable so we never run Java code
+    // (the exception constructor) while an exception is already pending, which
+    // is itself unsafe.
+    if let Some(pending_ref) = JavaThread::get_pending_exception() {
+        warn!(
+            "Dropping {exception_class} ('{message}'): an exception (ref={pending_ref}) is already pending"
+        );
+        return;
+    }
+
     let result = StringPoolHelper::get_string(message).and_then(|msg_ref| {
         Executor::invoke_args_constructor(
             exception_class,
@@ -99,7 +116,10 @@ fn set_pending_error(exception_class: &str, message: &str) {
     match result {
         Ok(throwable_ref) => match JavaThread::try_set_pending_exception(throwable_ref) {
             Ok(()) => (),
-            Err(e) => panic!("Failed to set pending exception for error: {e}"),
+            // Constructing the throwable ran Java code, which may itself have
+            // raised (and left pending) an exception in the meantime. Honor
+            // first-wins and drop this one rather than panicking across FFI.
+            Err(e) => warn!("Dropping {exception_class} ('{message}'): {e}"),
         },
         Err(e) => panic!("Failed to construct {exception_class} for '{message}': {e}"),
     }
