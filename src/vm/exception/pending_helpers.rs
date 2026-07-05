@@ -34,6 +34,11 @@ pub(crate) fn set_pending_array_index_out_of_bounds_exception(message: &str) -> 
     set_pending_exception_with_message("java/lang/ArrayIndexOutOfBoundsException", message)
 }
 
+/// Sets a pending `ClassNotFoundException` with the given message.
+pub(crate) fn set_pending_class_not_found_exception(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/lang/ClassNotFoundException", message)
+}
+
 fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result<()> {
     let message_ref = StringPoolHelper::get_string(message)?;
     set_pending_exception(

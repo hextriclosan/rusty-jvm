@@ -46,13 +46,6 @@ pub fn throw_null_pointer_exception_with_message(
     throw_exception_with_message("java/lang/NullPointerException", message, stack_frames)
 }
 
-pub fn throw_class_not_found_exception(
-    message: &str,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    throw_exception_with_message("java/lang/ClassNotFoundException", message, stack_frames)
-}
-
 #[cfg(windows)]
 pub fn throw_internal_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
     throw_exception_with_message("java/lang/InternalError", message, stack_frames)

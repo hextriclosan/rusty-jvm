@@ -1,18 +1,25 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
+use crate::vm::system_native::class::{
+    class_is_instance, desired_assertion_status0, for_name0, get_constant_pool,
+    get_declared_constructors0, get_declared_fields0, get_declared_methods0, get_declaring_class0,
+    get_enclosing_method0, get_interfaces0, get_nest_host0, get_primitive_class,
+    get_raw_annotations, get_simple_binary_name0, get_superclass, init_class_name,
+    is_assignable_from, is_hidden, is_record0, register_natives as register_natives_class,
+};
 use crate::vm::system_native::object::{
     clone as clone_object, get_class, identity_hashcode, notify_all,
 };
 use crate::vm::system_native::system::{
     arraycopy as arraycopy_impl, current_time_millis, map_library_name, nano_time,
-    register_natives, set_err0, set_in0, set_out0,
+    register_natives as register_natives_system, set_err0, set_in0, set_out0,
 };
 use crate::vm::system_native::zip::crc32::updatebytes0;
 #[allow(unused_imports)]
 use jni_sys::{
     jarray, jboolean, jbyte, jbyteArray, jchar, jclass, jdouble, jfloat, jint, jlong, jobject,
-    jshort, jstring, JNIEnv,
+    jobjectArray, jshort, jstring, JNIEnv,
 };
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -47,8 +54,20 @@ macro_rules! jni_ffi_ty {
     (byte_array) => {
         jbyteArray
     };
-    (array) => {
-        jarray
+    (object_array) => {
+        jobjectArray
+    };
+    (class_object_array) => {
+        jobjectArray
+    };
+    (field_object_array) => {
+        jobjectArray
+    };
+    (method_object_array) => {
+        jobjectArray
+    };
+    (constructor_object_array) => {
+        jobjectArray
     };
     (object) => {
         jobject
@@ -64,6 +83,12 @@ macro_rules! jni_ffi_ty {
     };
     (string) => {
         jstring
+    };
+    (class_loader) => {
+        jobject
+    };
+    (constant_pool) => {
+        jobject
     };
     (void) => {
         ()
@@ -102,6 +127,18 @@ macro_rules! jni_desc_frag {
     (object_array) => {
         "[Ljava/lang/Object;"
     };
+    (class_object_array) => {
+        "[Ljava/lang/Class;"
+    };
+    (field_object_array) => {
+        "[Ljava/lang/reflect/Field;"
+    };
+    (method_object_array) => {
+        "[Ljava/lang/reflect/Method;"
+    };
+    (constructor_object_array) => {
+        "[Ljava/lang/reflect/Constructor;"
+    };
     (object) => {
         "Ljava/lang/Object;"
     };
@@ -117,6 +154,12 @@ macro_rules! jni_desc_frag {
     (string) => {
         "Ljava/lang/String;"
     };
+    (class_loader) => {
+        "Ljava/lang/ClassLoader;"
+    };
+    (constant_pool) => {
+        "Ljdk/internal/reflect/ConstantPool;"
+    };
     (void) => {
         "V"
     };
@@ -126,7 +169,7 @@ macro_rules! jni_desc_frag {
 /// Reference types (`object`, arrays) are carried as the VM's `i32` object ref.
 macro_rules! jni_arg_cast {
     (boolean, $e:expr) => {
-        $e as i32
+        $e as i32 != 0
     };
     (byte, $e:expr) => {
         $e as i32
@@ -155,6 +198,18 @@ macro_rules! jni_arg_cast {
     (object_array, $e:expr) => {
         $e as i32
     };
+    (class_object_array, $e:expr) => {
+        $e as i32
+    };
+    (field_object_array, $e:expr) => {
+        $e as i32
+    };
+    (method_object_array, $e:expr) => {
+        $e as i32
+    };
+    (constructor_object_array, $e:expr) => {
+        $e as i32
+    };
     (object, $e:expr) => {
         $e as i32
     };
@@ -168,6 +223,12 @@ macro_rules! jni_arg_cast {
         $e as i32
     };
     (string, $e:expr) => {
+        $e as i32
+    };
+    (class_loader, $e:expr) => {
+        $e as i32
+    };
+    (constant_pool, $e:expr) => {
         $e as i32
     };
 }
@@ -206,8 +267,20 @@ macro_rules! jni_ret_conv {
     (byte_array, $e:expr) => {
         $e as usize as jbyteArray
     };
-    (array, $e:expr) => {
-        $e as usize as jarray
+    (object_array, $e:expr) => {
+        $e as usize as jobjectArray
+    };
+    (class_object_array, $e:expr) => {
+        $e as usize as jobjectArray
+    };
+    (field_object_array, $e:expr) => {
+        $e as usize as jobjectArray
+    };
+    (method_object_array, $e:expr) => {
+        $e as usize as jobjectArray
+    };
+    (constructor_object_array, $e:expr) => {
+        $e as usize as jobjectArray
     };
     (object, $e:expr) => {
         $e as usize as jobject
@@ -218,6 +291,12 @@ macro_rules! jni_ret_conv {
     (string, $e:expr) => {
         $e as usize as jstring
     };
+    (class_loader, $e:expr) => {
+        $e as usize as jobject
+    };
+    (constant_pool, $e:expr) => {
+        $e as usize as jobject
+    };
 }
 
 /// The zero/null value of the wrapper's JNI return type, returned after an error is
@@ -227,7 +306,7 @@ macro_rules! jni_ret_default {
         ()
     };
     (boolean) => {
-        0
+        false
     };
     (byte) => {
         0
@@ -253,7 +332,19 @@ macro_rules! jni_ret_default {
     (byte_array) => {
         std::ptr::null_mut()
     };
-    (array) => {
+    (object_array) => {
+        std::ptr::null_mut()
+    };
+    (class_object_array) => {
+        std::ptr::null_mut()
+    };
+    (field_object_array) => {
+        std::ptr::null_mut()
+    };
+    (method_object_array) => {
+        std::ptr::null_mut()
+    };
+    (constructor_object_array) => {
         std::ptr::null_mut()
     };
     (object) => {
@@ -263,6 +354,12 @@ macro_rules! jni_ret_default {
         std::ptr::null_mut()
     };
     (string) => {
+        std::ptr::null_mut()
+    };
+    (class_loader) => {
+        std::ptr::null_mut()
+    };
+    (constant_pool) => {
         std::ptr::null_mut()
     };
 }
@@ -320,20 +417,22 @@ macro_rules! builtin_natives {
             $class:literal : $recv:ident fn $method:ident ( $($pname:ident : $pty:ident),* $(,)? ) -> $ret:ident => $inner:path
         );* $(;)?
     ) => {
-        $(
-            builtin_wrapper!($recv $method ( $($pname : $pty),* ) -> $ret => $inner);
-        )*
-
         static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = LazyLock::new(|| {
             let mut table = HashMap::new();
             $(
-                register(
-                    &mut table,
-                    $class,
-                    stringify!($method),
-                    &build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
-                    $method as *const c_void as usize as i64,
-                );
+                {
+                    // Generate the wrapper in its own scope so that identical method
+                    // names across different classes (e.g. `registerNatives`) don't
+                    // collide at module level.
+                    builtin_wrapper!($recv $method ( $($pname : $pty),* ) -> $ret => $inner);
+                    register(
+                        &mut table,
+                        $class,
+                        stringify!($method),
+                        &build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
+                        $method as *const c_void as usize as i64,
+                    );
+                }
             )*
             table
         });
@@ -363,18 +462,38 @@ builtin_natives! {
     "java/lang/System": static fn currentTimeMillis() -> long => current_time_millis;
     "java/lang/System": static fn nanoTime() -> long => nano_time;
     "java/lang/System": static fn arraycopy(src: object, src_pos: int, dest: object, dest_pos: int, length: int) -> void => arraycopy_impl;
-    "java/lang/System": static fn setIn0(input_stream: input_stream) -> void => set_in0;
+    "java/lang/System": static fn setIn0(input_stream: input_stream) -> void => set_in0; // todo: implement me
     "java/lang/System": static fn setOut0(print_stream: print_stream) -> void => set_out0;
     "java/lang/System": static fn setErr0(print_stream: print_stream) -> void => set_err0;
     "java/lang/System": static fn identityHashCode(obj: object) -> int => identity_hashcode;
     "java/lang/System": static fn mapLibraryName(lib: string) -> string => map_library_name;
-    "java/lang/System": static fn registerNatives() -> void => register_natives;
+    "java/lang/System": static fn registerNatives() -> void => register_natives_system; // todo: implement me
 
     "java/lang/Object": instance fn hashCode() -> int => identity_hashcode;
     "java/lang/Object": instance fn getClass() -> class => get_class;
     "java/lang/Object": instance fn clone() -> object => clone_object;
-    "java/lang/Object": instance fn notifyAll() -> void => notify_all;
+    "java/lang/Object": instance fn notifyAll() -> void => notify_all; // todo: implement me
 
+    "java/lang/Class": instance fn getSuperclass() -> class => get_superclass;
+    "java/lang/Class": static fn getPrimitiveClass(content: string) -> class => get_primitive_class;
+    "java/lang/Class": static fn desiredAssertionStatus0(clazz: class) -> boolean => desired_assertion_status0; // setting all classes to have assertions enabled. todo: implement -ea and -da flags
+    "java/lang/Class": static fn forName0(name: string, initialize: boolean, loader: class_loader, caller: class) -> class => for_name0;
+    "java/lang/Class": static fn registerNatives() -> void => register_natives_class; // todo: implement me
+    "java/lang/Class": instance fn initClassName() -> string => init_class_name;
+    "java/lang/Class": instance fn getInterfaces0() -> class_object_array => get_interfaces0;
+    "java/lang/Class": instance fn getDeclaringClass0() -> class => get_declaring_class0;
+    "java/lang/Class": instance fn getDeclaredFields0(flag: boolean) -> field_object_array => get_declared_fields0;
+    "java/lang/Class": instance fn getDeclaredMethods0(flag: boolean) -> method_object_array => get_declared_methods0;
+    "java/lang/Class": instance fn getDeclaredConstructors0(flag: boolean) -> constructor_object_array => get_declared_constructors0;
+    "java/lang/Class": instance fn getRawAnnotations() -> byte_array => get_raw_annotations;
+    "java/lang/Class": instance fn getEnclosingMethod0() -> object_array => get_enclosing_method0;
+    "java/lang/Class": instance fn getSimpleBinaryName0() -> string => get_simple_binary_name0;
+    "java/lang/Class": instance fn isAssignableFrom(clazz: class) -> boolean => is_assignable_from;
+    "java/lang/Class": instance fn isHidden() -> boolean => is_hidden;  // we are treating all classes as non-hidden since we don't have a way to mark them as hidden (yet)
+    "java/lang/Class": instance fn isInstance(obj: object) -> boolean => class_is_instance;
+    "java/lang/Class": instance fn getConstantPool() -> constant_pool => get_constant_pool;
+    "java/lang/Class": instance fn getNestHost0() -> class => get_nest_host0;
+    "java/lang/Class": instance fn isRecord0() -> boolean => is_record0;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
