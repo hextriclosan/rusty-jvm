@@ -176,7 +176,7 @@ macro_rules! builtin_wrapper {
 
 /// Declaratively defines the built-in native registry from a single source of
 /// truth. For every entry it generates a type-safe `extern "system"` wrapper and
-/// registers its address under both the JNI short and long C-names.
+/// registers its address under the JNI long (descriptor-mangled) C-name.
 ///
 /// Grammar: `"<class>": <static|instance> fn <method>(<name>: <type>, ...) -> <type> => <impl>`
 macro_rules! builtin_natives {
