@@ -60,7 +60,7 @@ pub(crate) fn init_class_name(class_ref: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
-/// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;
+/// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;`
 pub(crate) fn for_name0(
     name_ref: i32,
     initialize: bool,
@@ -162,7 +162,7 @@ pub(crate) fn get_declared_fields0(class_ref: i32, public_only: bool) -> Result<
     Ok(result_ref)
 }
 
-/// `java.lang.Class.getDeclaredMethods0()[Ljava/lang/reflect/Method;`
+/// `java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;`
 pub(crate) fn get_declared_methods0(class_ref: i32, public_only: bool) -> Result<i32> {
     let klass = klass(class_ref)?;
 
@@ -300,7 +300,7 @@ pub(crate) fn get_nest_host0(class_ref: i32) -> Result<i32> {
     nest_host_class_ref
 }
 
-/// `java.lang.Class.isRecord()Z`
+/// `java.lang.Class.isRecord0()Z`
 pub(crate) fn is_record0(clazz_ref: i32) -> Result<bool> {
     let klass = klass(clazz_ref)?;
     let record = klass.class_modifiers().contains(ClassModifier::Final)

@@ -169,7 +169,7 @@ macro_rules! jni_desc_frag {
 /// Reference types (`object`, arrays) are carried as the VM's `i32` object ref.
 macro_rules! jni_arg_cast {
     (boolean, $e:expr) => {
-        $e as bool
+        $e as i32 != 0
     };
     (byte, $e:expr) => {
         $e as i32
