@@ -95,7 +95,7 @@ macro_rules! jni_desc_frag {
     (byte_array) => {
         "[B"
     };
-    (array) => {
+    (object_array) => {
         "[Ljava/lang/Object;"
     };
     (object) => {
@@ -136,7 +136,7 @@ macro_rules! jni_arg_cast {
     (byte_array, $e:expr) => {
         $e as i32
     };
-    (array, $e:expr) => {
+    (object_array, $e:expr) => {
         $e as i32
     };
     (object, $e:expr) => {
