@@ -1,30 +1,20 @@
-
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
 use crate::vm::system_native::object::identity_hashcode;
-use crate::vm::system_native::system::current_time_millis;
+use crate::vm::system_native::system::{
+    current_time_millis, map_library_name, nano_time, register_natives, set_err0, set_in0,
+    set_out0,
+};
 use crate::vm::system_native::zip::crc32::updatebytes0;
 #[allow(unused_imports)]
 use jni_sys::{
     jarray, jboolean, jbyte, jbyteArray, jchar, jclass, jdouble, jfloat, jint, jlong, jobject,
-    jshort, JNIEnv,
+    jshort, jstring, JNIEnv,
 };
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
-
-/// Bridges a pure, `Result`-returning implementation to the JNI/FFI boundary.
-///
-/// On success returns the value; on error it records a pending `InternalError`
-/// (first-wins semantics, never panics across FFI) and returns `T::default()`,
-/// which for every JNI scalar (`jint`, `jlong`, ...) is `0`/null.
-fn dispatch<T: Default>(result: Result<T>) -> T {
-    result.unwrap_or_else(|e| {
-        set_pending_internal_error(&e.to_string());
-        T::default()
-    })
-}
 
 /// Maps a JNI type token to its `extern "system"` FFI parameter/return type.
 macro_rules! jni_ffi_ty {
@@ -60,6 +50,15 @@ macro_rules! jni_ffi_ty {
     };
     (object) => {
         jobject
+    };
+    (input_stream) => {
+        jobject
+    };
+    (print_stream) => {
+        jobject
+    };
+    (string) => {
+        jstring
     };
     (void) => {
         ()
@@ -100,6 +99,15 @@ macro_rules! jni_desc_frag {
     };
     (object) => {
         "Ljava/lang/Object;"
+    };
+    (print_stream) => {
+        "Ljava/io/PrintStream;"
+    };
+    (input_stream) => {
+        "Ljava/io/InputStream;"
+    };
+    (string) => {
+        "Ljava/lang/String;"
     };
     (void) => {
         "V"
@@ -142,6 +150,104 @@ macro_rules! jni_arg_cast {
     (object, $e:expr) => {
         $e as i32
     };
+    (print_stream, $e:expr) => {
+        $e as i32
+    };
+    (input_stream, $e:expr) => {
+        $e as i32
+    };
+    (string, $e:expr) => {
+        $e as i32
+    };
+}
+
+/// Converts the pure impl's success value into the wrapper's JNI return type.
+/// Scalars map directly; reference types are the VM's `i32` object ref and must be
+/// widened back into the JNI pointer handle expected by the FFI return slot.
+macro_rules! jni_ret_conv {
+    (void, $e:expr) => {
+        $e
+    };
+    (boolean, $e:expr) => {
+        $e as jboolean
+    };
+    (byte, $e:expr) => {
+        $e as jbyte
+    };
+    (char, $e:expr) => {
+        $e as jchar
+    };
+    (short, $e:expr) => {
+        $e as jshort
+    };
+    (int, $e:expr) => {
+        $e as jint
+    };
+    (long, $e:expr) => {
+        $e as jlong
+    };
+    (float, $e:expr) => {
+        $e as jfloat
+    };
+    (double, $e:expr) => {
+        $e as jdouble
+    };
+    (byte_array, $e:expr) => {
+        $e as usize as jbyteArray
+    };
+    (array, $e:expr) => {
+        $e as usize as jarray
+    };
+    (object, $e:expr) => {
+        $e as usize as jobject
+    };
+    (string, $e:expr) => {
+        $e as usize as jstring
+    };
+}
+
+/// The zero/null value of the wrapper's JNI return type, returned after an error is
+/// recorded as a pending exception (never panics across the FFI boundary).
+macro_rules! jni_ret_default {
+    (void) => {
+        ()
+    };
+    (boolean) => {
+        0
+    };
+    (byte) => {
+        0
+    };
+    (char) => {
+        0
+    };
+    (short) => {
+        0
+    };
+    (int) => {
+        0
+    };
+    (long) => {
+        0
+    };
+    (float) => {
+        0.0
+    };
+    (double) => {
+        0.0
+    };
+    (byte_array) => {
+        std::ptr::null_mut()
+    };
+    (array) => {
+        std::ptr::null_mut()
+    };
+    (object) => {
+        std::ptr::null_mut()
+    };
+    (string) => {
+        std::ptr::null_mut()
+    };
 }
 
 /// Generates a single `extern "system"` wrapper that adapts a pure impl to JNI.
@@ -158,7 +264,13 @@ macro_rules! builtin_wrapper {
             _class: jclass,
             $($pname: jni_ffi_ty!($pty),)*
         ) -> jni_ffi_ty!($ret) {
-            dispatch($inner($(jni_arg_cast!($pty, $pname)),*))
+            match $inner($(jni_arg_cast!($pty, $pname)),*) {
+                Ok(__value) => jni_ret_conv!($ret, __value),
+                Err(__error) => {
+                    set_pending_internal_error(&__error.to_string());
+                    jni_ret_default!($ret)
+                }
+            }
         }
     };
     // Instance native: 2nd JNI arg is the receiver, passed as the first impl arg.
@@ -169,7 +281,13 @@ macro_rules! builtin_wrapper {
             this: jobject,
             $($pname: jni_ffi_ty!($pty),)*
         ) -> jni_ffi_ty!($ret) {
-            dispatch($inner(this as i32 $(, jni_arg_cast!($pty, $pname))*))
+            match $inner(this as i32 $(, jni_arg_cast!($pty, $pname))*) {
+                Ok(__value) => jni_ret_conv!($ret, __value),
+                Err(__error) => {
+                    set_pending_internal_error(&__error.to_string());
+                    jni_ret_default!($ret)
+                }
+            }
         }
     };
 }
@@ -226,6 +344,14 @@ macro_rules! builtin_natives {
 // C-name and resolving to the function address invoked via libffi.
 builtin_natives! {
     "java/lang/System": static fn currentTimeMillis() -> long => current_time_millis;
+    "java/lang/System": static fn nanoTime() -> long => nano_time;
+    "java/lang/System": static fn setIn0(input_stream: input_stream) -> void => set_in0;
+    "java/lang/System": static fn setOut0(print_stream: print_stream) -> void => set_out0;
+    "java/lang/System": static fn setErr0(print_stream: print_stream) -> void => set_err0;
+    "java/lang/System": static fn identityHashCode(obj: object) -> int => identity_hashcode;
+    "java/lang/System": static fn mapLibraryName(lib: string) -> string => map_library_name;
+    "java/lang/System": static fn registerNatives() -> void => register_natives;
+
     "java/lang/Object": instance fn hashCode() -> int => identity_hashcode;
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }

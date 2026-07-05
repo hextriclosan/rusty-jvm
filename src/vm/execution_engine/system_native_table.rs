@@ -68,10 +68,7 @@ use crate::vm::system_native::reflecton::{
 };
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::string::intern_wrp;
-use crate::vm::system_native::system::{
-    arraycopy_wrp, nano_time_wrp, set_err0_wrp, set_out0_wrp, system_identity_hashcode_wrp,
-    system_map_library_name_wrp,
-};
+use crate::vm::system_native::system::arraycopy_wrp;
 use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
@@ -119,31 +116,9 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(clone_wrp),
     );
     table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
-    table.insert("java/lang/System:nanoTime:()J", Basic(nano_time_wrp));
     table.insert(
         "java/lang/System:arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
         WithMutStackFrames(arraycopy_wrp),
-    );
-    table.insert("java/lang/System:registerNatives:()V", Basic(void_stub));
-    table.insert(
-        "java/lang/System:setIn0:(Ljava/io/InputStream;)V",
-        Basic(void_stub), // todo: implement me
-    );
-    table.insert(
-        "java/lang/System:setOut0:(Ljava/io/PrintStream;)V",
-        Basic(set_out0_wrp),
-    );
-    table.insert(
-        "java/lang/System:setErr0:(Ljava/io/PrintStream;)V",
-        Basic(set_err0_wrp),
-    );
-    table.insert(
-        "java/lang/System:identityHashCode:(Ljava/lang/Object;)I",
-        Basic(system_identity_hashcode_wrp),
-    );
-    table.insert(
-        "java/lang/System:mapLibraryName:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(system_map_library_name_wrp),
     );
     table.insert(
         "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
