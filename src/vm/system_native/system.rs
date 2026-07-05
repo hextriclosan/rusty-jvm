@@ -7,12 +7,11 @@ use crate::vm::exception::helpers::{
 use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i64_to_vec, undecorate};
+use crate::vm::helper::undecorate;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::object::identity_hashcode;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
 /// `java.lang.System.currentTimeMillis()J`
@@ -22,11 +21,8 @@ pub(crate) fn current_time_millis() -> Result<i64> {
     Ok(since_the_epoch.as_millis() as i64)
 }
 
-pub(crate) fn nano_time_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let nanos = nano_time()?;
-    Ok(i64_to_vec(nanos))
-}
-fn nano_time() -> Result<i64> {
+/// `java.lang.System.nanoTime()J`
+pub(crate) fn nano_time() -> Result<i64> {
     let now = std::time::SystemTime::now();
     let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
     Ok(since_the_epoch.as_nanos() as i64)
@@ -229,47 +225,37 @@ fn get_primitive_element_type_name(array_name: &str) -> Result<&str> {
         .copied()
 }
 
-pub(crate) fn system_identity_hashcode_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let hashcode = identity_hashcode(obj_ref)?;
-
-    Ok(vec![hashcode])
+/// `java.lang.System.setIn0(Ljava/io/InputStream;)V`
+pub(crate) fn set_in0(_input_stream_ref: i32) -> Result<()> {
+    // todo: implement me
+    Ok(())
 }
 
-pub(crate) fn set_out0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let print_stream_ref = args[0];
-    set_out0(print_stream_ref)?;
-
-    Ok(vec![])
-}
-fn set_out0(print_stream_ref: i32) -> Result<()> {
+/// `java.lang.System.setOut0(Ljava/io/PrintStream;)V`
+pub(crate) fn set_out0(print_stream_ref: i32) -> Result<()> {
     let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "out")?
         .ok_or_else(|| Error::new_execution("Field System.out not found"))?;
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 
-pub(crate) fn set_err0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let print_stream_ref = args[0];
-    set_err0(print_stream_ref)?;
-
-    Ok(vec![])
-}
-fn set_err0(print_stream_ref: i32) -> Result<()> {
+/// `java.lang.System.setErr0(Ljava/io/PrintStream;)V`
+pub(crate) fn set_err0(print_stream_ref: i32) -> Result<()> {
     let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "err")?
         .ok_or_else(|| Error::new_execution("Field System.err not found"))?;
     field_ref.set_raw_value(vec![print_stream_ref])
 }
 
-pub(crate) fn system_map_library_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let name_ref = args[0];
-    let library_name_ref = map_library_name(name_ref)?;
-
-    Ok(vec![library_name_ref])
-}
-fn map_library_name(name_ref: i32) -> Result<i32> {
+/// `java.lang.System.mapLibraryName(Ljava/lang/String;)Ljava/lang/String;`
+pub(crate) fn map_library_name(name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let library_name = libloading::library_filename(name).into_string()?;
     let library_name_ref = StringPoolHelper::get_string(&library_name)?;
 
     Ok(library_name_ref)
+}
+
+/// `java.lang.System.registerNatives()V`
+pub(crate) fn register_natives() -> Result<()> {
+    // todo implement me
+    Ok(())
 }
