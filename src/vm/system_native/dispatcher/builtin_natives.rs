@@ -1,7 +1,9 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
-use crate::vm::system_native::object::identity_hashcode;
+use crate::vm::system_native::object::{
+    clone as clone_object, get_class, identity_hashcode, notify_all,
+};
 use crate::vm::system_native::system::{
     arraycopy as arraycopy_impl, current_time_millis, map_library_name, nano_time,
     register_natives, set_err0, set_in0, set_out0,
@@ -50,6 +52,9 @@ macro_rules! jni_ffi_ty {
     };
     (object) => {
         jobject
+    };
+    (class) => {
+        jclass
     };
     (input_stream) => {
         jobject
@@ -100,6 +105,9 @@ macro_rules! jni_desc_frag {
     (object) => {
         "Ljava/lang/Object;"
     };
+    (class) => {
+        "Ljava/lang/Class;"
+    };
     (print_stream) => {
         "Ljava/io/PrintStream;"
     };
@@ -148,6 +156,9 @@ macro_rules! jni_arg_cast {
         $e as i32
     };
     (object, $e:expr) => {
+        $e as i32
+    };
+    (class, $e:expr) => {
         $e as i32
     };
     (print_stream, $e:expr) => {
@@ -201,6 +212,9 @@ macro_rules! jni_ret_conv {
     (object, $e:expr) => {
         $e as usize as jobject
     };
+    (class, $e:expr) => {
+        $e as usize as jclass
+    };
     (string, $e:expr) => {
         $e as usize as jstring
     };
@@ -243,6 +257,9 @@ macro_rules! jni_ret_default {
         std::ptr::null_mut()
     };
     (object) => {
+        std::ptr::null_mut()
+    };
+    (class) => {
         std::ptr::null_mut()
     };
     (string) => {
@@ -354,6 +371,11 @@ builtin_natives! {
     "java/lang/System": static fn registerNatives() -> void => register_natives;
 
     "java/lang/Object": instance fn hashCode() -> int => identity_hashcode;
+    "java/lang/Object": instance fn getClass() -> class => get_class;
+    "java/lang/Object": instance fn clone() -> object => clone_object;
+    "java/lang/Object": instance fn notifyAll() -> void => notify_all;
+
+
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
 

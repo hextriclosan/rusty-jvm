@@ -49,7 +49,6 @@ use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
-use crate::vm::system_native::object::{clone_wrp, get_class_wrp};
 use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
 use crate::vm::system_native::platform_file_dispatcher::{
     allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp,
@@ -106,15 +105,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert(
-        "java/lang/Object:getClass:()Ljava/lang/Class;",
-        Basic(get_class_wrp),
-    );
-    table.insert(
-        "java/lang/Object:clone:()Ljava/lang/Object;",
-        Basic(clone_wrp),
-    );
-    table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
     table.insert(
         "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
         Basic(get_superclass_wrp),

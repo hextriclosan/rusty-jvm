@@ -4,13 +4,8 @@ use crate::vm::helper::clazz_ref;
 use murmur3::murmur3_32;
 use std::io::Cursor;
 
-pub(crate) fn get_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let class_ref = get_class(obj_ref)?;
-
-    Ok(vec![class_ref])
-}
-fn get_class(obj_ref: i32) -> Result<i32> {
+/// `java.lang.Object.getClass()Ljava/lang/Class;`
+pub(crate) fn get_class(obj_ref: i32) -> Result<i32> {
     let instance_name = HEAP.get_instance_name(obj_ref)?;
 
     let reflection_ref = clazz_ref(&instance_name)?;
@@ -18,13 +13,8 @@ fn get_class(obj_ref: i32) -> Result<i32> {
     Ok(reflection_ref)
 }
 
-pub(crate) fn clone_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let cloned_obj_ref = clone(obj_ref)?;
-
-    Ok(vec![cloned_obj_ref])
-}
-fn clone(obj_ref: i32) -> Result<i32> {
+/// `java.lang.Object.clone()Ljava/lang/Object;`
+pub(crate) fn clone(obj_ref: i32) -> Result<i32> {
     let cloned_obj_ref = HEAP.clone_instance(obj_ref)?;
 
     Ok(cloned_obj_ref)
@@ -39,4 +29,10 @@ pub(crate) fn identity_hashcode(obj_ref: i32) -> Result<i32> {
     let mut cursor = Cursor::new(obj_ref.to_le_bytes());
     let hashcode = murmur3_32(&mut cursor, 0)?;
     Ok(hashcode as i32)
+}
+
+/// `java.lang.Object.notifyAll()V`
+pub(crate) fn notify_all(_obj_ref: i32) -> Result<()> {
+    // todo: implement me
+    Ok(())
 }
