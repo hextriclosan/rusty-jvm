@@ -4,13 +4,6 @@ use crate::vm::execution_engine::system_native_table::NativeMethod::{
 };
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::class::{
-    class_init_class_name_wrp, class_is_instance_wrp, for_name0_wrp, get_constant_pool_wrp,
-    get_declared_constructors0_wrp, get_declared_fields0_wrp, get_declared_methods0_wrp,
-    get_declaring_class0_wrp, get_enclosing_method0_wrp, get_interfaces0_wrp, get_nest_host0_wrp,
-    get_primitive_class_wrp, get_raw_annotations_wrp, get_simple_binary_name0_wrp,
-    get_superclass_wrp, is_assignable_from_wrp, is_record0_wrp,
-};
 use crate::vm::system_native::class_loader::{
     define_class0_wrp, define_class1_wrp, define_class2_wrp, find_bootstrap_class_wrp,
     find_loaded_class_wrp,
@@ -105,77 +98,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert(
-        "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
-        Basic(get_superclass_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getPrimitiveClass:(Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(get_primitive_class_wrp),
-    );
-    table.insert(
-        "java/lang/Class:desiredAssertionStatus0:(Ljava/lang/Class;)Z",
-        Basic(|_args: &[i32]| Ok(vec![1])), // setting all classes to have assertions enabled. todo: implement -ea and -da flags
-    );
-    table.insert("java/lang/Class:forName0:(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;", WithMutStackFrames(for_name0_wrp));
-    table.insert("java/lang/Class:registerNatives:()V", Basic(void_stub));
-    table.insert(
-        "java/lang/Class:initClassName:()Ljava/lang/String;",
-        Basic(class_init_class_name_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getInterfaces0:()[Ljava/lang/Class;",
-        Basic(get_interfaces0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getDeclaringClass0:()Ljava/lang/Class;",
-        Basic(get_declaring_class0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getDeclaredFields0:(Z)[Ljava/lang/reflect/Field;",
-        Basic(get_declared_fields0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getDeclaredMethods0:(Z)[Ljava/lang/reflect/Method;",
-        Basic(get_declared_methods0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getDeclaredConstructors0:(Z)[Ljava/lang/reflect/Constructor;",
-        Basic(get_declared_constructors0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getRawAnnotations:()[B",
-        Basic(get_raw_annotations_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getEnclosingMethod0:()[Ljava/lang/Object;",
-        Basic(get_enclosing_method0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getSimpleBinaryName0:()Ljava/lang/String;",
-        Basic(get_simple_binary_name0_wrp),
-    );
-    table.insert(
-        "java/lang/Class:isAssignableFrom:(Ljava/lang/Class;)Z",
-        Basic(is_assignable_from_wrp),
-    );
-    table.insert(
-        "java/lang/Class:isHidden:()Z",
-        Basic(|_args: &[i32]| Ok(vec![0])), // we are treating all classes as non-hidden since we don't have a way to mark them as hidden (yet)
-    );
-    table.insert(
-        "java/lang/Class:isInstance:(Ljava/lang/Object;)Z",
-        Basic(class_is_instance_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getConstantPool:()Ljdk/internal/reflect/ConstantPool;",
-        Basic(get_constant_pool_wrp),
-    );
-    table.insert(
-        "java/lang/Class:getNestHost0:()Ljava/lang/Class;",
-        Basic(get_nest_host0_wrp),
-    );
-    table.insert("java/lang/Class:isRecord0:()Z", Basic(is_record0_wrp));
     table.insert("java/lang/Module:defineModule0:(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V", Basic(define_module0_wrp));
     table.insert(
         "java/lang/Module:addReads0:(Ljava/lang/Module;Ljava/lang/Module;)V",

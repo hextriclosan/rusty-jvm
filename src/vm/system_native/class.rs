@@ -1,7 +1,5 @@
-use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::throw_class_not_found_exception;
-use crate::vm::exception::pending::Throws;
+use crate::vm::exception::pending_helpers::set_pending_class_not_found_exception;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
@@ -10,18 +8,12 @@ use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
 use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
 const PUBLIC: u16 = 0x00000001;
 
-pub(crate) fn get_superclass_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let current_clazz_ref = args[0];
-    let super_clazz_ref = get_superclass(current_clazz_ref)?;
-
-    Ok(vec![super_clazz_ref])
-}
-fn get_superclass(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getSuperclass()Ljava/lang/Class;`
+pub(crate) fn get_superclass(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     let parent = if !klass.is_interface() {
         klass.parent().clone()
@@ -34,13 +26,8 @@ fn get_superclass(class_ref: i32) -> Result<i32> {
         .unwrap_or(Ok(0))
 }
 
-pub(crate) fn get_primitive_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let string_ref = args[0];
-    let class_ref = get_primitive_class(string_ref)?;
-    Ok(vec![class_ref])
-}
-
-fn get_primitive_class(string_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;`
+pub(crate) fn get_primitive_class(string_ref: i32) -> Result<i32> {
     let string_content = get_utf8_string_by_ref(string_ref)?;
     let mapped_class_name = map_primitive_class(&string_content)?;
 
@@ -54,15 +41,16 @@ fn map_primitive_class(primitive_type: &str) -> Result<&str> {
     Ok(matched)
 }
 
-pub(crate) fn class_init_class_name_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let string_ref = init_class_name(class_ref)?;
-
-    Ok(vec![string_ref])
+/// `java.lang.Class.desiredAssertionStatus0(Ljava/lang/Class)Z`
+pub(crate) fn desired_assertion_status0(_class_ref: i32) -> Result<bool> {
+    Ok(true) // setting all classes to have assertions enabled. todo: implement -ea and -da flags
 }
+
+/// `java.lang.Class.initClassName()Ljava/lang/String;`
+///
 /// Returns the class name for the given class reference.
 /// Updates Class.name field in the heap.
-fn init_class_name(class_ref: i32) -> Result<i32> {
+pub(crate) fn init_class_name(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     let class_name = klass.external_name();
     let string_ref = StringPoolHelper::get_string(class_name)?;
@@ -72,25 +60,13 @@ fn init_class_name(class_ref: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
-pub(crate) fn for_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let name_ref = args[0];
-    let initialize = args[1] != 0;
-    let loader_ref = args[2];
-    let caller_ref = args[3];
-
-    let Some(class_ref) = for_name0(name_ref, initialize, loader_ref, caller_ref, stack_frames)?
-    else {
-        return Ok(vec![]);
-    };
-    Ok(vec![class_ref])
-}
-fn for_name0(
+/// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;
+pub(crate) fn for_name0(
     name_ref: i32,
     initialize: bool,
     loader_ref: i32,
     _caller_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<i32> {
+) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = name.replace('.', "/");
     let reflection_ref = if loader_ref == 0 {
@@ -98,7 +74,8 @@ fn for_name0(
         match clazz_ref(&internal_name) {
             Ok(r) => r,
             Err(_) => {
-                bail_thrown!(throw_class_not_found_exception(&name, stack_frames));
+                set_pending_class_not_found_exception(&name)?;
+                return Ok(0);
             }
         }
     } else {
@@ -119,7 +96,8 @@ fn for_name0(
                 // Exception in thread "system" java.lang.ClassNotFoundException: samples.reflection.trivial.forname.NonExisting
                 // 	at jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:580)
                 // 	at java.lang.ClassLoader.loadClass(ClassLoader.java:490)```
-                bail_thrown!(throw_class_not_found_exception(&name, stack_frames));
+                set_pending_class_not_found_exception(&name)?;
+                return Ok(0);
             }
         }
     };
@@ -128,14 +106,17 @@ fn for_name0(
         StaticInit::initialize(&internal_name)?;
     }
 
-    Ok(Some(reflection_ref))
+    Ok(reflection_ref)
 }
-pub(crate) fn get_interfaces0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let interfaces_ref = get_interfaces0(class_ref)?;
-    Ok(vec![interfaces_ref])
+
+/// `java.lang.Class.registerNatives()V`
+pub(crate) fn register_natives() -> Result<()> {
+    // todo implement me
+    Ok(())
 }
-fn get_interfaces0(class_ref: i32) -> Result<i32> {
+
+/// `java.lang.Class.getInterfaces0()[Ljava/lang/Class;`
+pub(crate) fn get_interfaces0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     let interfaces = klass.interfaces();
 
@@ -148,12 +129,8 @@ fn get_interfaces0(class_ref: i32) -> Result<i32> {
     Ok(result_ref)
 }
 
-pub(crate) fn get_declaring_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let clazz_ref = args[0];
-    let declaring_class_ref = get_declaring_class0(clazz_ref)?;
-    Ok(vec![declaring_class_ref])
-}
-fn get_declaring_class0(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getDeclaringClass0()Ljava/lang/Class;`
+pub(crate) fn get_declaring_class0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     let declaring_class_ref = klass
         .declaring_class()
@@ -164,14 +141,8 @@ fn get_declaring_class0(class_ref: i32) -> Result<i32> {
     declaring_class_ref
 }
 
-pub(crate) fn get_declared_fields0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let public_only = args[1] != 0;
-    let fields_ref = get_declared_fields(class_ref, public_only)?;
-    Ok(vec![fields_ref])
-}
-
-fn get_declared_fields(class_ref: i32, public_only: bool) -> Result<i32> {
+/// `java.lang.Class.getDeclaredFields0(Z)[Ljava/lang/reflect/Field;`
+pub(crate) fn get_declared_fields0(class_ref: i32, public_only: bool) -> Result<i32> {
     let klass = klass(class_ref)?;
 
     let fields_info = klass.get_fields_info();
@@ -191,13 +162,8 @@ fn get_declared_fields(class_ref: i32, public_only: bool) -> Result<i32> {
     Ok(result_ref)
 }
 
-pub(crate) fn get_declared_methods0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let public_only = args[1] != 0;
-    let methods_ref = get_declared_methods(class_ref, public_only)?;
-    Ok(vec![methods_ref])
-}
-fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
+/// `java.lang.Class.getDeclaredMethods0()[Ljava/lang/reflect/Method;`
+pub(crate) fn get_declared_methods0(class_ref: i32, public_only: bool) -> Result<i32> {
     let klass = klass(class_ref)?;
 
     let method_refs = klass
@@ -219,16 +185,15 @@ fn get_declared_methods(class_ref: i32, public_only: bool) -> Result<i32> {
     Ok(result_ref)
 }
 
-pub(crate) fn get_declared_constructors0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let constructors_ref = get_declared_constructors(class_ref)?;
-    Ok(vec![constructors_ref])
-}
-fn get_declared_constructors(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;`
+pub(crate) fn get_declared_constructors0(class_ref: i32, public_only: bool) -> Result<i32> {
     let klass = klass(class_ref)?;
     let method_refs = klass
         .get_methods()
         .filter(|(_, java_method)| java_method.name() == "<init>")
+        .filter(|(_, java_method)| {
+            !public_only || (java_method.access_flags() as u16 & PUBLIC) != 0
+        })
         .map(|(_, java_method)| java_method.reflection_ref())
         .collect::<Result<Vec<_>>>()?;
 
@@ -237,12 +202,8 @@ fn get_declared_constructors(class_ref: i32) -> Result<i32> {
     Ok(result_ref)
 }
 
-pub(crate) fn get_enclosing_method0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let enclosing_method_ref = get_enclosing_method0(class_ref)?;
-    Ok(vec![enclosing_method_ref])
-}
-fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getEnclosingMethod0()[Ljava/lang/Object;`
+pub(crate) fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     if let Some((class_name, name, descriptor)) = klass.enclosing_method() {
         let class_name_ref = clazz_ref(class_name)?;
@@ -259,13 +220,8 @@ fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     }
 }
 
-pub(crate) fn get_raw_annotations_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let raw_annotations_ref = get_raw_annotations(class_ref)?;
-
-    Ok(vec![raw_annotations_ref])
-}
-fn get_raw_annotations(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getRawAnnotations()[B`
+pub(crate) fn get_raw_annotations(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     let annotations_raw = klass.annotations_raw().to_owned();
     let annotations_ref = annotations_raw
@@ -282,12 +238,8 @@ fn get_raw_annotations(class_ref: i32) -> Result<i32> {
     Ok(annotations_ref)
 }
 
-pub(crate) fn get_simple_binary_name0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_ref = args[0];
-    let simple_binary_name_ref = get_simple_binary_name0(class_ref)?;
-    Ok(vec![simple_binary_name_ref])
-}
-fn get_simple_binary_name0(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getSimpleBinaryName0()Ljava/lang/String;`
+pub(crate) fn get_simple_binary_name0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
 
     let string_ref = klass
@@ -300,28 +252,24 @@ fn get_simple_binary_name0(class_ref: i32) -> Result<i32> {
     string_ref
 }
 
-pub(crate) fn is_assignable_from_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let assignable_class_ref = args[0];
-    let assignee_class_ref = args[1];
-    let is_assignable = is_assignable_from(assignable_class_ref, assignee_class_ref)?;
-
-    Ok(vec![if is_assignable { 1 } else { 0 }])
-}
-fn is_assignable_from(assignable_class_ref: i32, assignee_class_ref: i32) -> Result<bool> {
+/// `java.lang.Class.isAssignableFrom(Ljava/lang/Class;)Z`
+pub(crate) fn is_assignable_from(
+    assignable_class_ref: i32,
+    assignee_class_ref: i32,
+) -> Result<bool> {
     let assignable = klass(assignable_class_ref)?;
     let assignee = klass(assignee_class_ref)?;
 
     InstanceChecker::checkcast(assignee.this_class_name(), assignable.this_class_name())
 }
 
-pub(crate) fn class_is_instance_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let this_class_ref = args[0];
-    let obj_ref_to_check = args[1];
-    let is_instance = class_is_instance(this_class_ref, obj_ref_to_check)?;
-
-    Ok(vec![if is_instance { 1 } else { 0 }])
+/// `java.lang.Class.isHidden()Z`
+pub(crate) fn is_hidden(_class_ref: i32) -> Result<bool> {
+    Ok(false) // we are treating all classes as non-hidden since we don't have a way to mark them as hidden (yet)
 }
-fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> Result<bool> {
+
+/// `java.lang.Class.isInstance(Ljava/lang/Object;)Z`
+pub(crate) fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> Result<bool> {
     if obj_ref_to_check == 0 {
         return Ok(false);
     }
@@ -332,12 +280,8 @@ fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> Result<bool>
     InstanceChecker::checkcast(&class_name_to_check, klass.this_class_name())
 }
 
-pub(crate) fn get_constant_pool_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let clazz_ref = args[0];
-    let constant_pool_ref = get_constant_pool(clazz_ref)?;
-    Ok(vec![constant_pool_ref])
-}
-fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getConstantPool()Ljdk/internal/reflect/ConstantPool;`
+pub(crate) fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     const NAME: &str = "jdk/internal/reflect/ConstantPool";
     let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
     HEAP.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])?;
@@ -345,12 +289,8 @@ fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     Ok(constant_pool_ref)
 }
 
-pub(crate) fn get_nest_host0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let clazz_ref = args[0];
-    let nest_host_class_ref = get_nest_host0(clazz_ref)?;
-    Ok(vec![nest_host_class_ref])
-}
-fn get_nest_host0(class_ref: i32) -> Result<i32> {
+/// `java.lang.Class.getNestHost0()Ljava/lang/Class;`
+pub(crate) fn get_nest_host0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
 
     let nest_host_class_ref = strip_nest_host(klass.this_class_name())
@@ -360,12 +300,8 @@ fn get_nest_host0(class_ref: i32) -> Result<i32> {
     nest_host_class_ref
 }
 
-pub(crate) fn is_record0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let clazz_ref = args[0];
-    let record = is_record0(clazz_ref)?;
-    Ok(vec![if record { 1 } else { 0 }])
-}
-fn is_record0(clazz_ref: i32) -> Result<bool> {
+/// `java.lang.Class.isRecord()Z`
+pub(crate) fn is_record0(clazz_ref: i32) -> Result<bool> {
     let klass = klass(clazz_ref)?;
     let record = klass.class_modifiers().contains(ClassModifier::Final)
         && klass
