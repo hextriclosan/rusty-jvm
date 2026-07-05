@@ -1,17 +1,14 @@
-use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::{
-    throw_array_index_out_of_bounds_exception_with_message, throw_array_store_exception,
-    throw_null_pointer_exception,
+use crate::vm::exception::pending_helpers::{
+    set_pending_array_index_out_of_bounds_exception, set_pending_array_store_exception,
+    set_pending_null_pointer_exception,
 };
-use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::undecorate;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
 /// `java.lang.System.currentTimeMillis()J`
@@ -28,26 +25,17 @@ pub(crate) fn nano_time() -> Result<i64> {
     Ok(since_the_epoch.as_nanos() as i64)
 }
 
-pub(crate) fn arraycopy_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let src_ref = args[0];
-    let src_pos = args[1];
-    let dest_ref = args[2];
-    let dest_pos = args[3];
-    let length = args[4];
-
-    let _ = arraycopy(src_ref, src_pos, dest_ref, dest_pos, length, stack_frames)?;
-    Ok(vec![])
-}
+/// `java.lang.System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V`
 pub(crate) fn arraycopy(
     src_ref: i32,
     src_pos: i32,
     dest_ref: i32,
     dest_pos: i32,
     length: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+) -> Result<()> {
     if src_ref == 0 || dest_ref == 0 {
-        bail_thrown!(throw_null_pointer_exception(stack_frames));
+        set_pending_null_pointer_exception()?;
+        return Ok(());
     }
 
     let src_name = HEAP.get_instance_name(src_ref)?;
@@ -64,7 +52,8 @@ pub(crate) fn arraycopy(
                 to_external(&dest_name)
             )
         };
-        bail_thrown!(throw_array_store_exception(&msg, stack_frames));
+        set_pending_array_store_exception(&msg)?;
+        return Ok(());
     }
 
     let mut primitive = false;
@@ -72,29 +61,27 @@ pub(crate) fn arraycopy(
     if is_primitive_array(&src_name) {
         if !is_primitive_array(&dest_name) {
             let src_type_name = get_primitive_element_type_name(&src_name)?;
-            bail_thrown!(throw_array_store_exception(
-                &format!(
-                    "arraycopy: type mismatch: can not copy {src_type_name}[] into object array[]"
-                ),
-                stack_frames
-            ));
+            set_pending_array_store_exception(&format!(
+                "arraycopy: type mismatch: can not copy {src_type_name}[] into object array[]"
+            ))?;
+            return Ok(());
         } else if src_name != dest_name {
             let src_type_name = get_primitive_element_type_name(&src_name)?;
             let dest_type_name = get_primitive_element_type_name(&dest_name)?;
-            bail_thrown!(throw_array_store_exception(
-                &format!("arraycopy: type mismatch: can not copy {src_type_name}[] into {dest_type_name}[]"),
-                stack_frames,
-            ));
+            set_pending_array_store_exception(&format!(
+                "arraycopy: type mismatch: can not copy {src_type_name}[] into {dest_type_name}[]"
+            ))?;
+            return Ok(());
         }
         primitive = true;
     } else {
         // src is object array
         if is_primitive_array(&dest_name) {
             let dest_type_name = get_primitive_element_type_name(&dest_name)?;
-            bail_thrown!(throw_array_store_exception(
-                &format!("arraycopy: type mismatch: can not copy object array[] into {dest_type_name}[]"),
-                stack_frames,
-            ));
+            set_pending_array_store_exception(&format!(
+                "arraycopy: type mismatch: can not copy object array[] into {dest_type_name}[]"
+            ))?;
+            return Ok(());
         } else {
             // check if src and dest types are compatible,
             // if it's so we can use fast path without per-element checks
@@ -122,10 +109,8 @@ pub(crate) fn arraycopy(
         } else {
             format!("arraycopy: length {length} is negative")
         };
-        bail_thrown!(throw_array_index_out_of_bounds_exception_with_message(
-            &msg,
-            stack_frames
-        ));
+        set_pending_array_index_out_of_bounds_exception(&msg)?;
+        return Ok(());
     }
 
     if src_pos as u32 + length as u32 > src_len as u32
@@ -156,15 +141,13 @@ pub(crate) fn arraycopy(
                 dest_len
             )
         };
-        bail_thrown!(throw_array_index_out_of_bounds_exception_with_message(
-            &msg,
-            stack_frames
-        ));
+        set_pending_array_index_out_of_bounds_exception(&msg)?;
+        return Ok(());
     }
 
     // nothing to copy
     if length == 0 {
-        return Ok(Some(()));
+        return Ok(());
     }
 
     let overlapping = src_ref == dest_ref && dest_pos > src_pos && dest_pos < src_pos + length;
@@ -187,14 +170,12 @@ pub(crate) fn arraycopy(
             if element_ref != 0 {
                 let element_type_name = HEAP.get_instance_name(element_ref)?;
                 if !InstanceChecker::checkcast(&element_type_name, dest_element_type)? {
-                    bail_thrown!(throw_array_store_exception(
-                        &format!(
-                            "arraycopy: element type mismatch: can not cast one of the elements of {}[] to the type of the destination array, {}",
-                            to_external(undecorate(&src_name[1..])),
-                            to_external(dest_element_type),
-                        ),
-                        stack_frames
-                    ));
+                    set_pending_array_store_exception(&format!(
+                        "arraycopy: element type mismatch: can not cast one of the elements of {}[] to the type of the destination array, {}",
+                        to_external(undecorate(&src_name[1..])),
+                        to_external(dest_element_type),
+                    ))?;
+                    return Ok(());
                 }
             }
         }
@@ -204,7 +185,7 @@ pub(crate) fn arraycopy(
         i += step;
     }
 
-    Ok(Some(()))
+    Ok(())
 }
 fn to_external(internal_name: &str) -> String {
     internal_name.replace('/', ".")

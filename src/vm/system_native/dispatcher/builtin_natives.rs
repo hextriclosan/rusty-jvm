@@ -3,8 +3,8 @@ use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
 use crate::vm::system_native::object::identity_hashcode;
 use crate::vm::system_native::system::{
-    current_time_millis, map_library_name, nano_time, register_natives, set_err0, set_in0,
-    set_out0,
+    arraycopy as arraycopy_impl, current_time_millis, map_library_name, nano_time,
+    register_natives, set_err0, set_in0, set_out0,
 };
 use crate::vm::system_native::zip::crc32::updatebytes0;
 #[allow(unused_imports)]
@@ -345,6 +345,7 @@ macro_rules! builtin_natives {
 builtin_natives! {
     "java/lang/System": static fn currentTimeMillis() -> long => current_time_millis;
     "java/lang/System": static fn nanoTime() -> long => nano_time;
+    "java/lang/System": static fn arraycopy(src: object, src_pos: int, dest: object, dest_pos: int, length: int) -> void => arraycopy_impl;
     "java/lang/System": static fn setIn0(input_stream: input_stream) -> void => set_in0;
     "java/lang/System": static fn setOut0(print_stream: print_stream) -> void => set_out0;
     "java/lang/System": static fn setErr0(print_stream: print_stream) -> void => set_err0;

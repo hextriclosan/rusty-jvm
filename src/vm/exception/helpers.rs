@@ -99,21 +99,6 @@ fn throw_index_out_of_bounds_exception(
     )
 }
 
-pub fn throw_array_index_out_of_bounds_exception_with_message(
-    message: &str,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    throw_exception_with_message(
-        "java/lang/ArrayIndexOutOfBoundsException",
-        message,
-        stack_frames,
-    )
-}
-
-pub fn throw_array_store_exception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    throw_exception_with_message("java/lang/ArrayStoreException", message, stack_frames)
-}
-
 pub fn throw_unsatisfied_link_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
     throw_exception_with_message("java/lang/UnsatisfiedLinkError", message, stack_frames)
 }

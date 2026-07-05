@@ -68,7 +68,6 @@ use crate::vm::system_native::reflecton::{
 };
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::string::intern_wrp;
-use crate::vm::system_native::system::arraycopy_wrp;
 use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
@@ -116,10 +115,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(clone_wrp),
     );
     table.insert("java/lang/Object:notifyAll:()V", Basic(void_stub));
-    table.insert(
-        "java/lang/System:arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V",
-        WithMutStackFrames(arraycopy_wrp),
-    );
     table.insert(
         "java/lang/Class:getSuperclass:()Ljava/lang/Class;",
         Basic(get_superclass_wrp),
