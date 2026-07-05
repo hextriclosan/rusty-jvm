@@ -31,7 +31,7 @@ pub(crate) fn identity_hashcode(obj_ref: i32) -> Result<i32> {
     Ok(hashcode as i32)
 }
 
-/// `java.lang.Object.notify()V`
+/// `java.lang.Object.notifyAll()V`
 pub(crate) fn notify_all(_obj_ref: i32) -> Result<()> {
     // todo: implement me
     Ok(())
