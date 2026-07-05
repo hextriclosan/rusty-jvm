@@ -28,7 +28,7 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
             Error::new_native(&format!("Failed to convert {method_signature} to C name"))
         })?;
     let clazz_ref = clazz_ref(class_name)?;
-    let symbol_address = match find_builtin_native(&short_name, &long_name) {
+    let symbol_address = match find_builtin_native(&long_name) {
         Some(address) => address,
         None => resolve_library_symbol(clazz_ref, &short_name, &long_name)?,
     };

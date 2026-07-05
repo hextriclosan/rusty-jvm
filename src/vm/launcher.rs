@@ -5,6 +5,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{create_array_of_strings, klass};
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::system_native::dispatcher::validate_builtin_natives;
 use std::sync::Arc;
 
 // refer: sun.launcher.LauncherHelper
@@ -22,6 +23,9 @@ pub fn resolve_and_execute_main_method(
     launch_mode: LaunchMode,
     args: &[String],
 ) -> Result<()> {
+    #[cfg(debug_assertions)]
+    validate_builtin_natives()?;
+
     let class_name_ref = StringPoolHelper::get_string(class_name)?;
     let app_clazz_ref = Executor::invoke_static_method(
         "sun/launcher/LauncherHelper",

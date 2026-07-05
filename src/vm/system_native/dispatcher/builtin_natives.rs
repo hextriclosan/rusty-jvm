@@ -1,36 +1,238 @@
-use crate::vm::system_native::object::object_hashcode_wrp;
-use crate::vm::system_native::system::current_time_millis_wrp;
-use crate::vm::system_native::zip::crc32::java_util_zip_crc32_updatebytes0_wrp;
+
+use crate::vm::error::{Error, Result};
+use crate::vm::jni::set_pending_internal_error;
+use crate::vm::method_area::lookup::lookup_method;
+use crate::vm::system_native::object::identity_hashcode;
+use crate::vm::system_native::system::current_time_millis;
+use crate::vm::system_native::zip::crc32::updatebytes0;
+#[allow(unused_imports)]
+use jni_sys::{
+    jarray, jboolean, jbyte, jbyteArray, jchar, jclass, jdouble, jfloat, jint, jlong, jobject,
+    jshort, JNIEnv,
+};
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
 
-/// Declaratively builds the built-in native registry
+/// Bridges a pure, `Result`-returning implementation to the JNI/FFI boundary.
+///
+/// On success returns the value; on error it records a pending `InternalError`
+/// (first-wins semantics, never panics across FFI) and returns `T::default()`,
+/// which for every JNI scalar (`jint`, `jlong`, ...) is `0`/null.
+fn dispatch<T: Default>(result: Result<T>) -> T {
+    result.unwrap_or_else(|e| {
+        set_pending_internal_error(&e.to_string());
+        T::default()
+    })
+}
+
+/// Maps a JNI type token to its `extern "system"` FFI parameter/return type.
+macro_rules! jni_ffi_ty {
+    (boolean) => {
+        jboolean
+    };
+    (byte) => {
+        jbyte
+    };
+    (char) => {
+        jchar
+    };
+    (short) => {
+        jshort
+    };
+    (int) => {
+        jint
+    };
+    (long) => {
+        jlong
+    };
+    (float) => {
+        jfloat
+    };
+    (double) => {
+        jdouble
+    };
+    (byte_array) => {
+        jbyteArray
+    };
+    (array) => {
+        jarray
+    };
+    (object) => {
+        jobject
+    };
+    (void) => {
+        ()
+    };
+}
+
+/// Maps a JNI type token to its JVM descriptor fragment (source of truth for the CIF).
+macro_rules! jni_desc_frag {
+    (boolean) => {
+        "Z"
+    };
+    (byte) => {
+        "B"
+    };
+    (char) => {
+        "C"
+    };
+    (short) => {
+        "S"
+    };
+    (int) => {
+        "I"
+    };
+    (long) => {
+        "J"
+    };
+    (float) => {
+        "F"
+    };
+    (double) => {
+        "D"
+    };
+    (byte_array) => {
+        "[B"
+    };
+    (object_array) => {
+        "[Ljava/lang/Object;"
+    };
+    (object) => {
+        "Ljava/lang/Object;"
+    };
+    (void) => {
+        "V"
+    };
+}
+
+/// Casts an incoming JNI argument to the value type expected by the pure impl.
+/// Reference types (`object`, arrays) are carried as the VM's `i32` object ref.
+macro_rules! jni_arg_cast {
+    (boolean, $e:expr) => {
+        $e as i32
+    };
+    (byte, $e:expr) => {
+        $e as i32
+    };
+    (char, $e:expr) => {
+        $e as i32
+    };
+    (short, $e:expr) => {
+        $e as i32
+    };
+    (int, $e:expr) => {
+        $e as i32
+    };
+    (long, $e:expr) => {
+        $e as i64
+    };
+    (float, $e:expr) => {
+        $e as f32
+    };
+    (double, $e:expr) => {
+        $e as f64
+    };
+    (byte_array, $e:expr) => {
+        $e as i32
+    };
+    (object_array, $e:expr) => {
+        $e as i32
+    };
+    (object, $e:expr) => {
+        $e as i32
+    };
+}
+
+/// Generates a single `extern "system"` wrapper that adapts a pure impl to JNI.
+///
+/// The wrapper's signature is derived entirely from the same type tokens used to
+/// build the JVM descriptor, so the descriptor and the Rust signature can never
+/// drift apart, and the call to `$inner` is type-checked against those tokens.
+macro_rules! builtin_wrapper {
+    // Static native: 2nd JNI arg is the `jclass` and is ignored.
+    (static $name:ident ( $($pname:ident : $pty:ident),* ) -> $ret:ident => $inner:path) => {
+        #[allow(non_snake_case)]
+        extern "system" fn $name(
+            _env: *mut JNIEnv,
+            _class: jclass,
+            $($pname: jni_ffi_ty!($pty),)*
+        ) -> jni_ffi_ty!($ret) {
+            dispatch($inner($(jni_arg_cast!($pty, $pname)),*))
+        }
+    };
+    // Instance native: 2nd JNI arg is the receiver, passed as the first impl arg.
+    (instance $name:ident ( $($pname:ident : $pty:ident),* ) -> $ret:ident => $inner:path) => {
+        #[allow(non_snake_case)]
+        extern "system" fn $name(
+            _env: *mut JNIEnv,
+            this: jobject,
+            $($pname: jni_ffi_ty!($pty),)*
+        ) -> jni_ffi_ty!($ret) {
+            dispatch($inner(this as i32 $(, jni_arg_cast!($pty, $pname))*))
+        }
+    };
+}
+
+/// Declaratively defines the built-in native registry from a single source of
+/// truth. For every entry it generates a type-safe `extern "system"` wrapper and
+/// registers its address under the JNI long (descriptor-mangled) C-name.
+///
+/// Grammar: `"<class>": <static|instance> fn <method>(<name>: <type>, ...) -> <type> => <impl>`
 macro_rules! builtin_natives {
-    ($($class:literal, $method:literal, $descriptor:literal => $func:path);* $(;)?) => {
-        LazyLock::new(|| {
+    (
+        $(
+            $class:literal : $recv:ident fn $method:ident ( $($pname:ident : $pty:ident),* $(,)? ) -> $ret:ident => $inner:path
+        );* $(;)?
+    ) => {
+        $(
+            builtin_wrapper!($recv $method ( $($pname : $pty),* ) -> $ret => $inner);
+        )*
+
+        static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = LazyLock::new(|| {
             let mut table = HashMap::new();
             $(
                 register(
                     &mut table,
                     $class,
-                    $method,
-                    $descriptor,
-                    $func as *const c_void as usize as i64,
+                    stringify!($method),
+                    &build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
+                    $method as *const c_void as usize as i64,
                 );
             )*
             table
-        })
+        });
+
+        /// The declared `(class, method, descriptor)` of every built-in native, used
+        /// by [`validate_builtin_natives`] to check each declaration against the real
+        /// JDK method contract. This is the only thing that can catch a self-consistent
+        /// but wrong descriptor (e.g. co-editing the tokens and the impl together),
+        /// which no Rust compile-time check can detect since the contract lives in
+        /// JDK bytecode.
+        static BUILTIN_SPECS: LazyLock<Vec<(&'static str, &'static str, String)>> =
+            LazyLock::new(|| {
+                vec![
+                    $((
+                        $class,
+                        stringify!($method),
+                        build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
+                    )),*
+                ]
+            });
     };
 }
 
-/// Registry of built-in native methods implemented in Rust, keyed by their JNI
-/// C-name and resolving to the function address invoked via libffi
-static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = builtin_natives! {
-    "java/lang/System", "currentTimeMillis", "()J" => current_time_millis_wrp;
-    "java/lang/Object", "hashCode",          "()I" => object_hashcode_wrp;
-    "java/util/zip/CRC32", "updateBytes0", "(I[BII)I" => java_util_zip_crc32_updatebytes0_wrp;
-};
+// Registry of built-in native methods implemented in Rust, keyed by their JNI
+// C-name and resolving to the function address invoked via libffi.
+builtin_natives! {
+    "java/lang/System": static fn currentTimeMillis() -> long => current_time_millis;
+    "java/lang/Object": instance fn hashCode() -> int => identity_hashcode;
+    "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
+}
+
+fn build_descriptor(params: &[&str], ret: &str) -> String {
+    format!("({}){}", params.concat(), ret)
+}
 
 fn register(
     table: &mut HashMap<String, i64>,
@@ -39,15 +241,44 @@ fn register(
     descriptor: &str,
     address: i64,
 ) {
-    let (short_name, long_name) = jniname::c_name(class_name, method_name, descriptor)
+    let (_short_name, long_name) = jniname::c_name(class_name, method_name, descriptor)
         .expect("built-in native must have a valid class/method/descriptor");
-    table.insert(short_name, address);
     table.insert(long_name, address);
 }
 
-pub(super) fn find_builtin_native(short_name: &str, long_name: &str) -> Option<i64> {
-    BUILTIN_NATIVE_TABLE
-        .get(long_name)
-        .or_else(|| BUILTIN_NATIVE_TABLE.get(short_name))
-        .copied()
+pub(super) fn find_builtin_native(long_name: &str) -> Option<i64> {
+    BUILTIN_NATIVE_TABLE.get(long_name).copied()
+}
+
+/// Verifies that every built-in native declared in [`builtin_natives!`] matches a
+/// real, `native` method of its JDK class, with the exact declared descriptor.
+///
+/// The `builtin_natives!` macro only guarantees the *descriptor tokens* and the
+/// Rust *impl* signature agree with each other; it cannot know the real Java
+/// method contract, which lives in JDK bytecode. So editing the tokens and the
+/// impl together (e.g. `len: int`/`i32` -> `len: float`/`f32`) stays
+/// self-consistent and compiles, yet no longer matches `CRC32.updateBytes0`.
+///
+/// This runs against loaded JDK classes and turns such a mistake into a clear,
+/// deterministic error instead of a silent resolution failure at first use.
+pub(crate) fn validate_builtin_natives() -> Result<()> {
+    for (class_name, method_name, descriptor) in BUILTIN_SPECS.iter() {
+        let signature = format!("{method_name}:{descriptor}");
+        match lookup_method(class_name, &signature)? {
+            Some(method) if method.is_native() => {}
+            Some(_) => {
+                return Err(Error::new_native(&format!(
+                    "Built-in native '{class_name}.{signature}' resolves to a non-native JDK \
+                     method; the declared descriptor likely does not match the real method"
+                )));
+            }
+            None => {
+                return Err(Error::new_native(&format!(
+                    "Built-in native '{class_name}.{signature}' does not match any method of the \
+                     JDK class '{class_name}'; the declared descriptor is wrong"
+                )));
+            }
+        }
+    }
+    Ok(())
 }
