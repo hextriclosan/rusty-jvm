@@ -1,6 +1,9 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
+use crate::vm::system_native::cds::{
+    get_cds_config_status, get_random_seed_for_dumping, initialize_from_archive,
+};
 use crate::vm::system_native::class::{
     class_is_instance, desired_assertion_status0, for_name0, get_constant_pool,
     get_declared_constructors0, get_declared_fields0, get_declared_methods0, get_declaring_class0,
@@ -8,17 +11,23 @@ use crate::vm::system_native::class::{
     get_raw_annotations, get_simple_binary_name0, get_superclass, init_class_name,
     is_assignable_from, is_hidden, is_record0, register_natives as register_natives_class,
 };
+use crate::vm::system_native::double::{double_to_raw_long_bits, long_bits_to_double};
+use crate::vm::system_native::float::float_to_raw_int_bits;
 use crate::vm::system_native::module::{
     add_exports0, add_exports_to_all0, add_reads0, define_module0,
 };
+use crate::vm::system_native::native_image_buffer::get_native_map;
 use crate::vm::system_native::object::{
     clone as clone_object, get_class, identity_hashcode, notify_all,
 };
+use crate::vm::system_native::runtime::{available_processors, max_memory};
 use crate::vm::system_native::shutdown::{before_halt, halt0 as halt0_impl};
+use crate::vm::system_native::string::intern as intern_string;
 use crate::vm::system_native::system::{
     arraycopy as arraycopy_impl, current_time_millis, map_library_name, nano_time,
     register_natives as register_natives_system, set_err0, set_in0, set_out0,
 };
+use crate::vm::system_native::system_props_raw::{platform_properties, vm_properties};
 use crate::vm::system_native::unsafe_::{
     allocate_memory0, array_base_offset0, array_index_scale0, compare_and_exchange_long,
     compare_and_set_int, compare_and_set_long, compare_and_set_reference, copy_memory0,
@@ -29,6 +38,7 @@ use crate::vm::system_native::unsafe_::{
     put_short, register_natives as register_natives_unsafe, set_memory0, should_be_initialized0,
     static_field_base0, static_field_offset0,
 };
+use crate::vm::system_native::vm::initialize as initialize_vm;
 use crate::vm::system_native::zip::crc32::updatebytes0;
 #[allow(unused_imports)]
 use jni_sys::{
@@ -171,6 +181,7 @@ jni_types! {
     field_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Field;";
     method_object_array       : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Method;";
     constructor_object_array  : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Constructor;";
+    string_array              : ref   | i32  | jobjectArray | "[Ljava/lang/String;";
     object                    : ref   | i32  | jobject      | "Ljava/lang/Object;";
     class                     : ref   | i32  | jclass       | "Ljava/lang/Class;";
     input_stream              : ref   | i32  | jobject      | "Ljava/io/InputStream;";
@@ -180,6 +191,7 @@ jni_types! {
     constant_pool             : ref   | i32  | jobject      | "Ljdk/internal/reflect/ConstantPool;";
     module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
     field                     : ref   | i32  | jobject      | "Ljava/lang/reflect/Field;";
+    byte_buffer               : ref   | i32  | jobject      | "Ljava/nio/ByteBuffer;";
     void                      : void  | ()   | ()           | "V";
 }
 
@@ -358,6 +370,27 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn copySwapMemory0(src: object, srcOffset: long, dest: object, destOffset: long, bytes: long, swap: long) -> void => copy_swap_memory0;
     "jdk/internal/misc/Unsafe": instance fn setMemory0(obj: object, offset: long, bytes: long, value: byte) -> void => set_memory0;
     "jdk/internal/misc/Unsafe": instance fn allocateMemory0(bytes: long) -> long => allocate_memory0;
+
+    "java/lang/String": instance fn intern() -> string => intern_string;
+
+    "java/lang/Float": static fn floatToRawIntBits(f: float) -> int => float_to_raw_int_bits;
+
+    "java/lang/Double": static fn doubleToRawLongBits(d: double) -> long => double_to_raw_long_bits;
+    "java/lang/Double": static fn longBitsToDouble(l: long) -> double => long_bits_to_double;
+
+    "jdk/internal/misc/CDS": static fn initializeFromArchive(clazz: class) -> void => initialize_from_archive; // todo: implement me
+    "jdk/internal/misc/CDS": static fn getRandomSeedForDumping() -> long => get_random_seed_for_dumping; // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
+    "jdk/internal/misc/CDS": static fn getCDSConfigStatus() -> int => get_cds_config_status;  // Class Data Sharing (CDS) is disabled
+
+    "jdk/internal/misc/VM": static fn initialize() -> void => initialize_vm; // todo: implement me
+
+    "jdk/internal/jimage/NativeImageBuffer": instance fn getNativeMap(name: string) -> byte_buffer => get_native_map;
+
+    "java/lang/Runtime": instance fn maxMemory() -> long => max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
+    "java/lang/Runtime": instance fn availableProcessors() -> int => available_processors;
+
+    "jdk/internal/util/SystemProps$Raw": static fn platformProperties() -> string_array => platform_properties;
+    "jdk/internal/util/SystemProps$Raw": static fn vmProperties() -> string_array => vm_properties;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
