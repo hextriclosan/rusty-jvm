@@ -5,6 +5,7 @@ use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::Result;
 
+/// `java.lang.Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V`
 pub(crate) fn define_module0(
     this_module_ref: i32,
     _is_open: bool,
@@ -59,16 +60,19 @@ pub(crate) fn define_module0(
     Ok(())
 }
 
+/// `java.lang.Module.addReads0(Ljava/lang/Module;Ljava/lang/Module;)V`
 pub(crate) fn add_reads0(_module_from_ref: i32, _module_to_ref: i32) -> Result<()> {
     // todo: implement me?
     Ok(())
 }
 
+/// `java.lang.Module.addExportsToAll0(Ljava/lang/Module;Ljava/lang/String;)V`
 pub(crate) fn add_exports_to_all0(_module_ref: i32, _package_name_ref: i32) -> Result<()> {
     // todo: implement me?
     Ok(())
 }
 
+/// `java.lang.Module.addExports0(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V`
 pub(crate) fn add_exports0(
     _module_from_ref: i32,
     _package_name_ref: i32,

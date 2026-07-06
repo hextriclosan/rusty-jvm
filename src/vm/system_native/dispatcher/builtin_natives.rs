@@ -19,6 +19,16 @@ use crate::vm::system_native::system::{
     arraycopy as arraycopy_impl, current_time_millis, map_library_name, nano_time,
     register_natives as register_natives_system, set_err0, set_in0, set_out0,
 };
+use crate::vm::system_native::unsafe_::{
+    allocate_memory0, array_base_offset0, array_index_scale0, compare_and_exchange_long,
+    compare_and_set_int, compare_and_set_long, compare_and_set_reference, copy_memory0,
+    copy_swap_memory0, ensure_class_initialized0, full_fence, get_boolean_volatile, get_byte,
+    get_char, get_int, get_int_volatile, get_long, get_long_volatile, get_reference,
+    get_reference_volatile, get_short, object_field_offset0, object_field_offset1, put_byte,
+    put_char, put_int, put_int_volatile, put_long, put_reference, put_reference_volatile,
+    put_short, register_natives as register_natives_unsafe, set_memory0, should_be_initialized0,
+    static_field_base0, static_field_offset0,
+};
 use crate::vm::system_native::zip::crc32::updatebytes0;
 #[allow(unused_imports)]
 use jni_sys::{
@@ -28,7 +38,6 @@ use jni_sys::{
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
-
 // ---------------------------------------------------------------------------
 // JNI type-token mapping
 //
@@ -149,9 +158,9 @@ macro_rules! jni_types {
 jni_types! {
     $
     boolean                   : bool  | bool | jboolean     | "Z";
-    byte                      : int   | i32  | jbyte        | "B";
-    char                      : int   | i32  | jchar        | "C";
-    short                     : int   | i32  | jshort       | "S";
+    byte                      : int   | i8   | jbyte        | "B";
+    char                      : int   | u16  | jchar        | "C";
+    short                     : int   | i16  | jshort       | "S";
     int                       : int   | i32  | jint         | "I";
     long                      : int   | i64  | jlong        | "J";
     float                     : float | f32  | jfloat       | "F";
@@ -170,6 +179,7 @@ jni_types! {
     class_loader              : ref   | i32  | jobject      | "Ljava/lang/ClassLoader;";
     constant_pool             : ref   | i32  | jobject      | "Ljdk/internal/reflect/ConstantPool;";
     module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
+    field                     : ref   | i32  | jobject      | "Ljava/lang/reflect/Field;";
     void                      : void  | ()   | ()           | "V";
 }
 
@@ -311,6 +321,43 @@ builtin_natives! {
 
     "java/lang/Shutdown": static fn beforeHalt() -> void => before_halt; // todo: implement me
     "java/lang/Shutdown": static fn halt0(status: int) -> void => halt0_impl; // fixme: by doing this we skip destructors and other shutdown hooks, later it might be an issue
+
+    "jdk/internal/misc/Unsafe": static fn registerNatives() -> void => register_natives_unsafe; // todo: implement me
+    "jdk/internal/misc/Unsafe": instance fn arrayBaseOffset0(array_class: class) -> int => array_base_offset0;
+    "jdk/internal/misc/Unsafe": instance fn objectFieldOffset0(f: field) -> long => object_field_offset0;
+    "jdk/internal/misc/Unsafe": instance fn objectFieldOffset1(clazz: class, name: string) -> long => object_field_offset1;
+    "jdk/internal/misc/Unsafe": instance fn staticFieldOffset0(f: field) -> long => static_field_offset0;
+    "jdk/internal/misc/Unsafe": instance fn staticFieldBase0(f: field) -> object => static_field_base0;
+    "jdk/internal/misc/Unsafe": instance fn compareAndSetInt(obj: object, offset: long, expected: int, x: int) -> boolean => compare_and_set_int;
+    "jdk/internal/misc/Unsafe": instance fn compareAndSetReference(obj: object, offset: long, expected: object, x: object) -> boolean => compare_and_set_reference;
+    "jdk/internal/misc/Unsafe": instance fn compareAndSetLong(obj: object, offset: long, expected: long, x: long) -> boolean => compare_and_set_long;
+    "jdk/internal/misc/Unsafe": instance fn compareAndExchangeLong(obj: object, offset: long, expected: long, x: long) -> long => compare_and_exchange_long;
+    "jdk/internal/misc/Unsafe": instance fn getReferenceVolatile(obj: object, offset: long) -> object => get_reference_volatile;
+    "jdk/internal/misc/Unsafe": instance fn getByte(obj: object, offset: long) -> byte => get_byte;
+    "jdk/internal/misc/Unsafe": instance fn getShort(obj: object, offset: long) -> short => get_short;
+    "jdk/internal/misc/Unsafe": instance fn getChar(obj: object, offset: long) -> char => get_char;
+    "jdk/internal/misc/Unsafe": instance fn getInt(obj: object, offset: long) -> int => get_int;
+    "jdk/internal/misc/Unsafe": instance fn getIntVolatile(obj: object, offset: long) -> int => get_int_volatile;
+    "jdk/internal/misc/Unsafe": instance fn getBooleanVolatile(obj: object, offset: long) -> boolean => get_boolean_volatile;
+    "jdk/internal/misc/Unsafe": instance fn getLong(obj: object, offset: long) -> long => get_long;
+    "jdk/internal/misc/Unsafe": instance fn getLongVolatile(obj: object, offset: long) -> long => get_long_volatile;
+    "jdk/internal/misc/Unsafe": instance fn arrayIndexScale0(clazz: class) -> int => array_index_scale0;
+    "jdk/internal/misc/Unsafe": instance fn fullFence() -> void => full_fence; // todo: implement me
+    "jdk/internal/misc/Unsafe": instance fn getReference(obj: object, offset: long) -> object => get_reference;
+    "jdk/internal/misc/Unsafe": instance fn putReference(obj: object, offset: long, x: object) -> void => put_reference;
+    "jdk/internal/misc/Unsafe": instance fn putReferenceVolatile(obj: object, offset: long, x: object) -> void => put_reference_volatile;
+    "jdk/internal/misc/Unsafe": instance fn putChar(obj: object, offset: long, x: char) -> void => put_char;
+    "jdk/internal/misc/Unsafe": instance fn putByte(obj: object, offset: long, x: byte) -> void => put_byte;
+    "jdk/internal/misc/Unsafe": instance fn putShort(obj: object, offset: long, x: short) -> void => put_short;
+    "jdk/internal/misc/Unsafe": instance fn putInt(obj: object, offset: long, x: int) -> void => put_int;
+    "jdk/internal/misc/Unsafe": instance fn putIntVolatile(obj: object, offset: long, x: int) -> void => put_int_volatile;
+    "jdk/internal/misc/Unsafe": instance fn putLong(obj: object, offset: long, x: long) -> void => put_long;
+    "jdk/internal/misc/Unsafe": instance fn ensureClassInitialized0(clazz: class) -> void => ensure_class_initialized0;
+    "jdk/internal/misc/Unsafe": instance fn shouldBeInitialized0(clazz: class) -> boolean => should_be_initialized0;
+    "jdk/internal/misc/Unsafe": instance fn copyMemory0(src: object, srcOffset: long, dest: object, destOffset: long, bytes: long) -> void => copy_memory0;
+    "jdk/internal/misc/Unsafe": instance fn copySwapMemory0(src: object, srcOffset: long, dest: object, destOffset: long, bytes: long, swap: long) -> void => copy_swap_memory0;
+    "jdk/internal/misc/Unsafe": instance fn setMemory0(obj: object, offset: long, bytes: long, value: byte) -> void => set_memory0;
+    "jdk/internal/misc/Unsafe": instance fn allocateMemory0(bytes: long) -> long => allocate_memory0;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
