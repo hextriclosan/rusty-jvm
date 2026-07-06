@@ -327,7 +327,6 @@ pub(crate) fn compare_and_exchange_long(
     Ok(old_value)
 }
 
-/// `jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J`
 fn compare_and_x_long(
     _this: i32,
     obj_ref: i32,
