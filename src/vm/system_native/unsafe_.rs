@@ -12,58 +12,43 @@ use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
 use std::ptr;
 
-trait ValueTypeTrait {
-    fn size(&self) -> usize;
-    fn to_vec(&self) -> Vec<i32>;
+enum PutValue {
+    I64(i64),
+    I32(i32),
+    I16(i16),
+    U16(u16),
+    I8(i8),
 }
 
-impl ValueTypeTrait for i64 {
+impl PutValue {
     fn size(&self) -> usize {
-        size_of::<i64>()
+        match self {
+            PutValue::I64(_) => size_of::<i64>(),
+            PutValue::I32(_) => size_of::<i32>(),
+            PutValue::I16(_) => size_of::<i16>(),
+            PutValue::U16(_) => size_of::<u16>(),
+            PutValue::I8(_) => size_of::<i8>(),
+        }
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        i64_to_vec(*self)
-    }
-}
-
-impl ValueTypeTrait for i32 {
-    fn size(&self) -> usize {
-        size_of::<i32>()
-    }
-
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self]
-    }
-}
-
-impl ValueTypeTrait for i16 {
-    fn size(&self) -> usize {
-        size_of::<i16>()
+    fn to_raw_vec(&self) -> Vec<i32> {
+        match self {
+            PutValue::I64(value) => i64_to_vec(*value),
+            PutValue::I32(value) => vec![*value],
+            PutValue::I16(value) => vec![*value as i32],
+            PutValue::U16(value) => vec![*value as i32],
+            PutValue::I8(value) => vec![*value as i32],
+        }
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
-    }
-}
-
-impl ValueTypeTrait for u16 {
-    fn size(&self) -> usize {
-        size_of::<u16>()
-    }
-
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
-    }
-}
-
-impl ValueTypeTrait for i8 {
-    fn size(&self) -> usize {
-        size_of::<i8>()
-    }
-
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
+    fn write_raw(&self, address: i64) {
+        match self {
+            PutValue::I64(value) => write_raw(address, *value),
+            PutValue::I32(value) => write_raw(address, *value),
+            PutValue::I16(value) => write_raw(address, *value),
+            PutValue::U16(value) => write_raw(address, *value),
+            PutValue::I8(value) => write_raw(address, *value),
+        }
     }
 }
 
@@ -342,7 +327,7 @@ pub(crate) fn compare_and_exchange_long(
     Ok(old_value)
 }
 
-/// `jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I`
+/// `jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J`
 fn compare_and_x_long(
     _this: i32,
     obj_ref: i32,
@@ -415,22 +400,22 @@ pub(crate) fn put_reference_volatile(
 
 /// `jdk.internal.misc.Unsafe.putChar(Ljava/lang/Object;JC)V`
 pub(crate) fn put_char(_this: i32, obj_ref: i32, offset: i64, x: u16) -> Result<()> {
-    put_value(obj_ref, offset, x)
+    put_value(obj_ref, offset, PutValue::U16(x))
 }
 
 /// `jdk.internal.misc.Unsafe.putByte(Ljava/lang/Object;JB)V`
 pub(crate) fn put_byte(_this: i32, obj_ref: i32, offset: i64, x: i8) -> Result<()> {
-    put_value(obj_ref, offset, x)
+    put_value(obj_ref, offset, PutValue::I8(x))
 }
 
 /// `jdk.internal.misc.Unsafe.putShort(Ljava/lang/Object;JS)V`
 pub(crate) fn put_short(_this: i32, obj_ref: i32, offset: i64, x: i16) -> Result<()> {
-    put_value(obj_ref, offset, x)
+    put_value(obj_ref, offset, PutValue::I16(x))
 }
 
 /// `jdk.internal.misc.Unsafe.putInt(Ljava/lang/Object;JI)V`
 pub(crate) fn put_int(_this: i32, obj_ref: i32, offset: i64, x: i32) -> Result<()> {
-    put_value(obj_ref, offset, x)
+    put_value(obj_ref, offset, PutValue::I32(x))
 }
 
 // todo: thread-safety - not volatile
@@ -441,15 +426,15 @@ pub(crate) fn put_int_volatile(_this: i32, obj_ref: i32, offset: i64, x: i32) ->
 
 /// `jdk.internal.misc.Unsafe.putLong(Ljava/lang/Object;JJ)V`
 pub(crate) fn put_long(_this: i32, obj_ref: i32, offset: i64, x: i64) -> Result<()> {
-    put_value(obj_ref, offset, x)
+    put_value(obj_ref, offset, PutValue::I64(x))
 }
 
-fn put_value<T: ValueTypeTrait + Copy>(obj_ref: i32, offset: i64, value: T) -> Result<()> {
+fn put_value(obj_ref: i32, offset: i64, value: PutValue) -> Result<()> {
     if obj_ref == 0 {
-        write_raw(offset, value);
+        value.write_raw(offset);
         Ok(())
     } else {
-        let raw_value = value.to_vec();
+        let raw_value = value.to_raw_vec();
         put_value_via_object(obj_ref, offset, raw_value, value.size())
     }
 }
