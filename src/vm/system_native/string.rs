@@ -58,11 +58,8 @@ pub(crate) fn get_raw_string_info(string_ref: i32) -> Result<(bool, i32)> {
     Ok((is_latin, array_ref))
 }
 
-pub(crate) fn intern_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let reference = intern(args[0])?;
-    Ok(vec![reference])
-}
-fn intern(reference: i32) -> Result<i32> {
+/// `java.lang.String.intern()Ljava/lang/String;`
+pub(crate) fn intern(reference: i32) -> Result<i32> {
     let string = get_utf8_string_by_ref(reference)?;
 
     StringPoolHelper::get_string(&string)

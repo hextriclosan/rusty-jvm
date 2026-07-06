@@ -4,21 +4,13 @@ use crate::vm::properties::system_properties::{
     OVERRIDDEN_PLATFORM_PROPERTIES, OVERRIDDEN_VM_PROPERTIES,
 };
 
-pub(crate) fn platform_properties_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let string_array_ref = platform_properties()?;
-
-    Ok(vec![string_array_ref])
-}
-fn platform_properties() -> Result<i32> {
+/// `jdk.internal.util.SystemProps$Raw.platformProperties()[Ljava/lang/String;`
+pub(crate) fn platform_properties() -> Result<i32> {
     create_array_of_strings(&get_platform_properties()?)
 }
 
-pub(crate) fn vm_properties_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let string_array_ref = vm_properties()?;
-
-    Ok(vec![string_array_ref])
-}
-fn vm_properties() -> Result<i32> {
+/// `jdk.internal.util.SystemProps$Raw.vmProperties()[Ljava/lang/String;`
+pub(crate) fn vm_properties() -> Result<i32> {
     create_array_of_strings(&get_vm_properties()?)
 }
 

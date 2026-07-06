@@ -35,7 +35,6 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
     var_handle_compare_and_set_wrp, var_handle_get_wrp, var_handle_set_wrp,
 };
-use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
@@ -56,8 +55,6 @@ use crate::vm::system_native::reflecton::{
     reflection_get_class_access_flags_wrp,
 };
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
-use crate::vm::system_native::string::intern_wrp;
-use crate::vm::system_native::system_props_raw::{platform_properties_wrp, vm_properties_wrp};
 use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
@@ -85,60 +82,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert(
-        "java/lang/String:intern:()Ljava/lang/String;",
-        Basic(intern_wrp),
-    );
-    table.insert(
-        "java/lang/Float:floatToRawIntBits:(F)I",
-        Basic(|args: &[i32]| Ok(args.to_vec())),
-    );
-    table.insert(
-        "java/lang/Double:doubleToRawLongBits:(D)J",
-        Basic(|args: &[i32]| {
-            let mut vec = args.to_vec();
-            vec.reverse();
-            Ok(vec)
-        }),
-    );
-    table.insert(
-        "java/lang/Double:longBitsToDouble:(J)D",
-        Basic(|args: &[i32]| {
-            let mut vec = args.to_vec();
-            vec.reverse();
-            Ok(vec)
-        }),
-    );
-    table.insert(
-        "jdk/internal/misc/CDS:initializeFromArchive:(Ljava/lang/Class;)V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "jdk/internal/misc/CDS:getRandomSeedForDumping:()J",
-        Basic(|_args: &[i32]| Ok(vec![1337, 42])), // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
-    );
-    table.insert(
-        "jdk/internal/misc/CDS:getCDSConfigStatus:()I",
-        Basic(|_args: &[i32]| Ok(vec![0])), // Class Data Sharing (CDS) is disabled
-    );
-    table.insert("jdk/internal/misc/VM:initialize:()V", Basic(void_stub));
-    table.insert("jdk/internal/jimage/NativeImageBuffer:getNativeMap:(Ljava/lang/String;)Ljava/nio/ByteBuffer;", Basic(get_native_map_wrp));
-    table.insert(
-        "java/lang/Runtime:maxMemory:()J",
-        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))),
-    );
-    table.insert(
-        "java/lang/Runtime:availableProcessors:()I",
-        Basic(|_args: &[i32]| Ok(vec![14])),
-    );
-    table.insert(
-        "jdk/internal/util/SystemProps$Raw:platformProperties:()[Ljava/lang/String;",
-        Basic(platform_properties_wrp),
-    );
-    table.insert(
-        "jdk/internal/util/SystemProps$Raw:vmProperties:()[Ljava/lang/String;",
-        Basic(vm_properties_wrp),
-    );
     table.insert("java/io/FileDescriptor:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/FileDescriptor:getHandle:(I)J",
