@@ -1,14 +1,16 @@
 use crate::bail_thrown;
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::pending::Throws;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::get_handle;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode;
+use nix::fcntl;
+use nix::fcntl::{FcntlArg, OFlag};
 use std::fs::File;
 use std::mem::ManuallyDrop;
-use std::os::fd::{FromRawFd, IntoRawFd};
+use std::os::fd::{AsFd, FromRawFd, IntoRawFd};
 
 pub struct PlatformFile {}
 
@@ -29,6 +31,14 @@ impl PlatformFile {
 
     pub fn get_handle(_fd: i32) -> Result<i64> {
         Ok(0)
+    }
+
+    pub(crate) fn get_append(raw_fd: i32) -> Result<bool> {
+        let file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) }); // ManuallyDrop prevents `file` from being dropped
+        let flags = fcntl::fcntl(file.as_fd(), FcntlArg::F_GETFL)
+            .map_err(|e| Error::new_native(&format!("Failed to get flags: {e}")))?;
+
+        Ok(OFlag::from_bits_truncate(flags).contains(OFlag::O_APPEND))
     }
 
     pub fn set_raw_id<T: IntoRawFd>(output_stream_ref: i32, file: T, mode: Mode) -> Result<()> {

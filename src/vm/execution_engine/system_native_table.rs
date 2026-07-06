@@ -12,7 +12,6 @@ use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
 use crate::vm::system_native::dispatcher::invoke::invoke;
-use crate::vm::system_native::file_descriptor::{file_descriptor_close0_wrp, get_handle_wrp};
 use crate::vm::system_native::file_input_stream::{
     file_input_stream_available0_wrp, file_input_stream_is_regular_file0_wrp,
     file_input_stream_length0_wrp, file_input_stream_open0_wrp, file_input_stream_position0_wrp,
@@ -82,22 +81,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert("java/io/FileDescriptor:initIDs:()V", Basic(void_stub));
-    table.insert(
-        "java/io/FileDescriptor:getHandle:(I)J",
-        Basic(get_handle_wrp),
-    );
-    table.insert(
-        "java/io/FileDescriptor:getAppend:(I)Z",
-        Basic(|args: &[i32]| {
-            let _fd = args[0];
-            Ok(vec![1])
-        }),
-    );
-    table.insert(
-        "java/io/FileDescriptor:close0:()V",
-        Basic(file_descriptor_close0_wrp),
-    );
     table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
     table.insert("java/io/FileInputStream:initIDs:()V", Basic(void_stub));
     table.insert(

@@ -43,6 +43,10 @@ impl PlatformFile {
         }
     }
 
+    pub(crate) fn get_append(_fd: i32) -> Result<bool> {
+        Ok(false)
+    }
+
     fn get_std_handle(handle: DWORD) -> Result<i64> {
         let std_handle = unsafe { GetStdHandle(handle) };
         if std_handle.is_null() {

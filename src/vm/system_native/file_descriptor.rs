@@ -1,18 +1,26 @@
 use crate::vm::error::Result;
-use crate::vm::helper::i64_to_vec;
 use crate::vm::system_native::platform_file::PlatformFile;
 
-pub(crate) fn file_descriptor_close0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-
-    PlatformFile::close(fd_ref)?;
-    Ok(vec![])
+/// `java.io.FileDescriptor.initIDs()V`
+pub(crate) fn init_ids() -> Result<()> {
+    // todo: implement me
+    Ok(())
 }
 
-pub(crate) fn get_handle_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let fd = args[0];
+/// `java.io.FileDescriptor.close0()V`
+pub(crate) fn file_descriptor_close0(fd_ref: i32) -> Result<()> {
+    PlatformFile::close(fd_ref)?;
+    Ok(())
+}
 
+/// `java.io.FileDescriptor.getHandle(I)J`
+pub(crate) fn get_handle(fd: i32) -> Result<i64> {
     let handle = PlatformFile::get_handle(fd)?;
+    Ok(handle)
+}
 
-    Ok(i64_to_vec(handle))
+/// `java.io.FileDescriptor.getAppend(I)Z`
+pub(crate) fn get_append(fd: i32) -> Result<bool> {
+    let append = PlatformFile::get_append(fd)?;
+    Ok(append)
 }
