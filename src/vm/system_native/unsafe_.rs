@@ -12,38 +12,75 @@ use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::alloc::{alloc, Layout};
 use std::ptr;
 
-#[derive(Clone, Copy, Debug)]
-enum ValueType {
-    Char,
-    Byte,
-    Int,
-    Long,
-    Short,
+trait ValueTypeTrait {
+    fn size(&self) -> usize;
+    fn to_vec(&self) -> Vec<i32>;
 }
 
-impl From<ValueType> for usize {
-    fn from(value: ValueType) -> Self {
-        match value {
-            ValueType::Byte => 1,
-            ValueType::Char => 2,
-            ValueType::Int => 4,
-            ValueType::Long => 8,
-            ValueType::Short => 2,
-        }
+impl ValueTypeTrait for i64 {
+    fn size(&self) -> usize {
+        size_of::<i64>()
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        i64_to_vec(*self)
     }
 }
 
-pub(crate) fn object_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let field_ref = args[1];
-    let offset = object_field_offset_0(field_ref)?;
+impl ValueTypeTrait for i32 {
+    fn size(&self) -> usize {
+        size_of::<i32>()
+    }
 
-    let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
-    let low = (offset & 0xFFFFFFFF) as i32;
-
-    Ok(vec![high, low])
+    fn to_vec(&self) -> Vec<i32> {
+        vec![*self]
+    }
 }
-fn object_field_offset_0(field_ref: i32) -> Result<i64> {
+
+impl ValueTypeTrait for i16 {
+    fn size(&self) -> usize {
+        size_of::<i16>()
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        vec![*self as i32]
+    }
+}
+
+impl ValueTypeTrait for u16 {
+    fn size(&self) -> usize {
+        size_of::<u16>()
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        vec![*self as i32]
+    }
+}
+
+impl ValueTypeTrait for i8 {
+    fn size(&self) -> usize {
+        size_of::<i8>()
+    }
+
+    fn to_vec(&self) -> Vec<i32> {
+        vec![*self as i32]
+    }
+}
+
+/// `jdk.internal.misc.Unsafe.registerNatives()V`
+pub(crate) fn register_natives() -> Result<()> {
+    // todo: implement me
+    Ok(())
+}
+
+/// `jdk.internal.misc.Unsafe.arrayBaseOffset0(Ljava/lang/Class;)I`
+pub(crate) fn array_base_offset0(_this: i32, _array_class: i32) -> Result<i32> {
+    // our implementation does not have array header so the offset is 0
+    Ok(0)
+}
+
+/// `jdk.internal.misc.Unsafe.objectFieldOffset0(Ljava/lang/reflect/Field;)J`
+pub(crate) fn object_field_offset0(_this: i32, field_ref: i32) -> Result<i64> {
     let class_ref = HEAP.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
     let field_name_ref =
         HEAP.get_object_field_value(field_ref, "java/lang/reflect/Field", "name")?[0];
@@ -54,32 +91,13 @@ fn object_field_offset_0(field_ref: i32) -> Result<i64> {
     object_field_offset_by_names(klass.this_class_name(), &field_name)
 }
 
-pub(crate) fn object_field_offset_1_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let class_ref = args[1];
-    let string_ref = args[2];
-    let offset = object_field_offset_1(class_ref, string_ref)?;
-
-    let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
-    let low = (offset & 0xFFFFFFFF) as i32;
-
-    Ok(vec![high, low])
-}
-fn object_field_offset_1(class_ref: i32, string_ref: i32) -> Result<i64> {
+/// `jdk.internal.misc.Unsafe.objectFieldOffset1(Ljava/lang/Class;Ljava/lang/String;)J`
+pub(crate) fn object_field_offset1(_this: i32, class_ref: i32, string_ref: i32) -> Result<i64> {
     object_field_offset_by_refs(class_ref, string_ref)
 }
 
-pub(crate) fn static_field_offset_0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let field_ref = args[1];
-    let offset = static_field_offset_0(field_ref)?;
-
-    let high = ((offset >> 32) & 0xFFFFFFFF) as i32;
-    let low = (offset & 0xFFFFFFFF) as i32;
-
-    Ok(vec![high, low])
-}
-fn static_field_offset_0(field_ref: i32) -> Result<i64> {
+/// `jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J`
+pub(crate) fn static_field_offset0(_this: i32, field_ref: i32) -> Result<i64> {
     let class_ref = HEAP.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
     let field_name_ref =
         HEAP.get_object_field_value(field_ref, "java/lang/reflect/Field", "name")?[0];
@@ -90,30 +108,21 @@ fn static_field_offset_0(field_ref: i32) -> Result<i64> {
     static_field_offset_by_names(klass.this_class_name(), &field_name)
 }
 
-pub(crate) fn static_field_base0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let field_ref = args[1];
-    let base_ref = static_field_base0(field_ref)?;
-
-    Ok(vec![base_ref])
-}
-fn static_field_base0(field_ref: i32) -> Result<i32> {
+/// `jdk.internal.misc.Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;`
+pub(crate) fn static_field_base0(_this: i32, field_ref: i32) -> Result<i32> {
     let class_ref = HEAP.get_object_field_value(field_ref, "java/lang/reflect/Field", "clazz")?[0];
     Ok(class_ref)
 }
 
 // todo: thread-safety - not atomic
-pub(crate) fn compare_and_set_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-    let expected = args[4];
-    let x = args[5];
-
-    let result = compare_and_set_int(obj_ref, offset, expected, x)?;
-    Ok(vec![result as i32])
-}
-fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Result<bool> {
+/// `jdk.internal.misc.Unsafe.compareAndSetInt(Ljava/lang/Object;JII)Z`
+pub(crate) fn compare_and_set_int(
+    _this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i32,
+    x: i32,
+) -> Result<bool> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
     let updated = if class_name.starts_with("[") {
         let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?[0];
@@ -122,7 +131,7 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
                 obj_ref,
                 offset as usize,
                 vec![x],
-                ValueType::Int.into(),
+                size_of::<i32>(),
             )?;
             Ok(true)
         } else {
@@ -144,16 +153,19 @@ fn compare_and_set_int(obj_ref: i32, offset: i64, expected: i32, x: i32) -> Resu
     updated
 }
 
-// todo: thread-safety - not volatile
-pub(crate) fn get_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-
-    let result = get_reference_volatile(obj_ref, offset)?;
-    Ok(vec![result])
+/// `jdk.internal.misc.Unsafe.compareAndSetReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z`
+pub(crate) fn compare_and_set_reference(
+    this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i32,
+    x: i32,
+) -> Result<bool> {
+    compare_and_set_int(this, obj_ref, offset, expected, x)
 }
-fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
+
+/// `jdk.internal.misc.Unsafe.getReference(Ljava/lang/Object;J)Ljava/lang/Object;`
+pub(crate) fn get_reference(_this: i32, obj_ref: i32, offset: i64) -> Result<i32> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
     let raw_value = if class_name.starts_with("[") {
         HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?
@@ -173,15 +185,14 @@ fn get_reference_volatile(obj_ref: i32, offset: i64) -> Result<i32> {
     Ok(raw_value[0])
 }
 
-pub(crate) fn get_byte_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-
-    let byte = get_byte(obj_ref, offset)?;
-    Ok(vec![byte as i32])
+// todo: thread-safety - not volatile
+/// `jdk.internal.misc.Unsafe.getReferenceVolatile(Ljava/lang/Object;J)Ljava/lang/Object;`
+pub(crate) fn get_reference_volatile(this: i32, obj_ref: i32, offset: i64) -> Result<i32> {
+    get_reference(this, obj_ref, offset)
 }
-pub(crate) fn get_byte(obj_ref: i32, offset: i64) -> Result<i8> {
+
+/// `jdk.internal.misc.Unsafe.getByte(Ljava/lang/Object;J)B`
+pub(crate) fn get_byte(_this: i32, obj_ref: i32, offset: i64) -> Result<i8> {
     if obj_ref != 0 {
         let class_name = HEAP.get_instance_name(obj_ref)?;
         if class_name.starts_with("[") {
@@ -196,15 +207,8 @@ pub(crate) fn get_byte(obj_ref: i32, offset: i64) -> Result<i8> {
     }
 }
 
-pub(crate) fn get_short_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-
-    let short = get_short(obj_ref, offset)?;
-    Ok(vec![short as i32])
-}
-pub(crate) fn get_short(obj_ref: i32, offset: i64) -> Result<i16> {
+/// `jdk.internal.misc.Unsafe.getShort(Ljava/lang/Object;J)S`
+pub(crate) fn get_short(_this: i32, obj_ref: i32, offset: i64) -> Result<i16> {
     if obj_ref != 0 {
         let class_name = HEAP.get_instance_name(obj_ref)?;
         if class_name.starts_with("[") {
@@ -219,16 +223,8 @@ pub(crate) fn get_short(obj_ref: i32, offset: i64) -> Result<i16> {
     }
 }
 
-pub(crate) fn get_char_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-
-    let char = get_char(obj_ref, offset)?;
-    Ok(vec![char as i32])
-}
-
-pub(crate) fn get_char(obj_ref: i32, offset: i64) -> Result<u16> {
+/// `jdk.internal.misc.Unsafe.getChar(Ljava/lang/Object;J)C`
+pub(crate) fn get_char(_this: i32, obj_ref: i32, offset: i64) -> Result<u16> {
     if obj_ref != 0 {
         let class_name = HEAP.get_instance_name(obj_ref)?;
         if class_name.starts_with("[") {
@@ -242,26 +238,23 @@ pub(crate) fn get_char(obj_ref: i32, offset: i64) -> Result<u16> {
     }
 }
 
-pub(crate) fn get_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-
-    let int = if obj_ref == 0 {
-        get_int_raw(offset)?
+/// `jdk.internal.misc.Unsafe.getInt(Ljava/lang/Object;J)I`
+pub(crate) fn get_int(_this: i32, obj_ref: i32, offset: i64) -> Result<i32> {
+    if obj_ref == 0 {
+        get_int_raw(offset)
     } else {
-        get_int_via_object(obj_ref, offset)?
-    };
-    Ok(vec![int])
+        get_int_via_object(obj_ref, offset)
+    }
 }
-pub(crate) fn get_int_raw(address: i64) -> Result<i32> {
+
+fn get_int_raw(address: i64) -> Result<i32> {
     let ptr = address as usize as *const i32;
     unsafe {
         let ptr = ptr.add(0);
         Ok(ptr::read(ptr))
     }
 }
-pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
+fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
     if obj_ref != 0 {
         let class_name = HEAP.get_instance_name(obj_ref)?;
         if class_name.starts_with("[") {
@@ -283,29 +276,20 @@ pub(crate) fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
 }
 
 // todo: thread-safety - not volatile
-pub(crate) fn get_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    get_int_wrp(args)
+/// `jdk.internal.misc.Unsafe.getIntVolatile(Ljava/lang/Object;J)I`
+pub(crate) fn get_int_volatile(this: i32, obj_ref: i32, offset: i64) -> Result<i32> {
+    get_int(this, obj_ref, offset)
 }
 
 // todo: thread-safety - not volatile
-pub(crate) fn get_boolean_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let ret = get_int_wrp(args)?;
-    Ok(vec![if ret[0] != 0 { 1 } else { 0 }])
+/// `jdk.internal.misc.Unsafe.getBooleanVolatile(Ljava/lang/Object;J)Z`
+pub(crate) fn get_boolean_volatile(this: i32, obj_ref: i32, offset: i64) -> Result<bool> {
+    let ret = get_int(this, obj_ref, offset)?;
+    Ok(ret != 0)
 }
 
-pub(crate) fn get_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-
-    let result = get_long(obj_ref, offset)?;
-
-    let high = ((result >> 32) & 0xFFFFFFFF) as i32;
-    let low = (result & 0xFFFFFFFF) as i32;
-
-    Ok(vec![high, low])
-}
-fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
+/// `jdk.internal.misc.Unsafe.getLong(Ljava/lang/Object;J)J`
+pub(crate) fn get_long(_this: i32, obj_ref: i32, offset: i64) -> Result<i64> {
     if obj_ref != 0 {
         let class_name = HEAP.get_instance_name(obj_ref)?;
         if class_name.starts_with("[") {
@@ -327,43 +311,45 @@ fn get_long(obj_ref: i32, offset: i64) -> Result<i64> {
 }
 
 // todo: thread-safety - not volatile
-pub(crate) fn get_long_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    get_long_wrp(args)
+/// `jdk.internal.misc.Unsafe.getLongVolatile(Ljava/lang/Object;J)J`
+pub(crate) fn get_long_volatile(this: i32, obj_ref: i32, offset: i64) -> Result<i64> {
+    get_long(this, obj_ref, offset)
 }
 
 // todo: thread-safety - not atomic
-pub(crate) fn compare_and_set_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-    let expected = i32toi64(args[5], args[4]);
-    let x = i32toi64(args[7], args[6]);
-
-    let result = compare_and_set_long(obj_ref, offset, expected, x)?;
-    Ok(vec![result as i32])
-}
-fn compare_and_set_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<bool> {
-    let (updated, _old_value) = compare_and_x_long(obj_ref, offset, expected, x)?;
+/// `jdk.internal.misc.Unsafe.compareAndSetLong(Ljava/lang/Object;JJJ)Z`
+pub(crate) fn compare_and_set_long(
+    this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i64,
+    x: i64,
+) -> Result<bool> {
+    let (updated, _old_value) = compare_and_x_long(this, obj_ref, offset, expected, x)?;
     Ok(updated)
 }
 
 // todo: thread-safety - not atomic
-pub(crate) fn compare_and_exchange_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-    let expected = i32toi64(args[5], args[4]);
-    let x = i32toi64(args[7], args[6]);
-
-    let result = compare_and_exchange_long(obj_ref, offset, expected, x)?;
-    Ok(i64_to_vec(result))
-}
-fn compare_and_exchange_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<i64> {
-    let (_updated, old_value) = compare_and_x_long(obj_ref, offset, expected, x)?;
+/// `jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J`
+pub(crate) fn compare_and_exchange_long(
+    this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i64,
+    x: i64,
+) -> Result<i64> {
+    let (_updated, old_value) = compare_and_x_long(this, obj_ref, offset, expected, x)?;
     Ok(old_value)
 }
 
-fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Result<(bool, i64)> {
+/// `jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I`
+fn compare_and_x_long(
+    _this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i64,
+    x: i64,
+) -> Result<(bool, i64)> {
     if obj_ref == 0 {
         let old_value: i64 = read_raw(offset);
         return if old_value == expected {
@@ -391,23 +377,15 @@ fn compare_and_x_long(obj_ref: i32, offset: i64, expected: i64, x: i64) -> Resul
     }
 }
 
-pub(crate) fn put_reference_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-    let ref_value = args[4];
-
-    put_reference(obj_ref, offset, ref_value)?;
-    Ok(vec![])
-}
-fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
+/// `jdk.internal.misc.Unsafe.putReference(Ljava/lang/Object;JLjava/lang/Object;)V`
+pub(crate) fn put_reference(_this: i32, obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
     if class_name.starts_with("[") {
         HEAP.set_array_value_by_raw_offset(
             obj_ref,
             offset as usize,
             vec![ref_value],
-            ValueType::Int.into(),
+            size_of::<i32>(),
         )
     } else {
         if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
@@ -425,64 +403,54 @@ fn put_reference(obj_ref: i32, offset: i64, ref_value: i32) -> Result<()> {
 }
 
 // todo: thread-safety - not volatile
-pub(crate) fn put_reference_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_reference_wrp(args)
+/// `jdk.internal.misc.Unsafe.putReferenceVolatile(Ljava/lang/Object;JLjava/lang/Object;)V`
+pub(crate) fn put_reference_volatile(
+    this: i32,
+    obj_ref: i32,
+    offset: i64,
+    ref_value: i32,
+) -> Result<()> {
+    put_reference(this, obj_ref, offset, ref_value)
 }
 
-pub(crate) fn put_char_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_value_wrapper(args, ValueType::Char)
+/// `jdk.internal.misc.Unsafe.putChar(Ljava/lang/Object;JC)V`
+pub(crate) fn put_char(_this: i32, obj_ref: i32, offset: i64, x: u16) -> Result<()> {
+    put_value(obj_ref, offset, x)
 }
 
-pub(crate) fn put_byte_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_value_wrapper(args, ValueType::Byte)
+/// `jdk.internal.misc.Unsafe.putByte(Ljava/lang/Object;JB)V`
+pub(crate) fn put_byte(_this: i32, obj_ref: i32, offset: i64, x: i8) -> Result<()> {
+    put_value(obj_ref, offset, x)
 }
-pub(crate) fn put_short_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_value_wrapper(args, ValueType::Short)
+
+/// `jdk.internal.misc.Unsafe.putShort(Ljava/lang/Object;JS)V`
+pub(crate) fn put_short(_this: i32, obj_ref: i32, offset: i64, x: i16) -> Result<()> {
+    put_value(obj_ref, offset, x)
 }
-pub(crate) fn put_int_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_value_wrapper(args, ValueType::Int)
+
+/// `jdk.internal.misc.Unsafe.putInt(Ljava/lang/Object;JI)V`
+pub(crate) fn put_int(_this: i32, obj_ref: i32, offset: i64, x: i32) -> Result<()> {
+    put_value(obj_ref, offset, x)
 }
 
 // todo: thread-safety - not volatile
-pub(crate) fn put_int_volatile_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_int_wrp(args)
+/// `jdk.internal.misc.Unsafe.putIntVolatile(Ljava/lang/Object;JI)V`
+pub(crate) fn put_int_volatile(_this: i32, obj_ref: i32, offset: i64, x: i32) -> Result<()> {
+    put_int(_this, obj_ref, offset, x)
 }
 
-pub(crate) fn put_long_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    put_value_wrapper(args, ValueType::Long)
+/// `jdk.internal.misc.Unsafe.putLong(Ljava/lang/Object;JJ)V`
+pub(crate) fn put_long(_this: i32, obj_ref: i32, offset: i64, x: i64) -> Result<()> {
+    put_value(obj_ref, offset, x)
 }
 
-fn put_value_wrapper(args: &[i32], value_type: ValueType) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-    let value = match value_type {
-        ValueType::Byte | ValueType::Char | ValueType::Int | ValueType::Short => args[4] as i64,
-        ValueType::Long => i32toi64(args[5], args[4]),
-    };
-
-    put_value(obj_ref, offset, value, value_type)?;
-    Ok(vec![])
-}
-
-fn put_value(obj_ref: i32, offset: i64, value: i64, value_type: ValueType) -> Result<()> {
+fn put_value<T: ValueTypeTrait + Copy>(obj_ref: i32, offset: i64, value: T) -> Result<()> {
     if obj_ref == 0 {
-        match value_type {
-            ValueType::Char => write_raw(offset, value as u16),
-            ValueType::Byte => write_raw(offset, value as u8),
-            ValueType::Int => write_raw(offset, value as i32),
-            ValueType::Long => write_raw(offset, value),
-            ValueType::Short => write_raw(offset, value as i16),
-        }
+        write_raw(offset, value);
         Ok(())
     } else {
-        let raw_value = match value_type {
-            ValueType::Char | ValueType::Byte | ValueType::Int | ValueType::Short => {
-                vec![value as i32]
-            }
-            ValueType::Long => i64_to_vec(value),
-        };
-        put_value_via_object(obj_ref, offset, raw_value, value_type)
+        let raw_value = value.to_vec();
+        put_value_via_object(obj_ref, offset, raw_value, value.size())
     }
 }
 
@@ -504,11 +472,11 @@ fn put_value_via_object(
     obj_ref: i32,
     offset: i64,
     raw_value: Vec<i32>,
-    value_type: ValueType,
+    value_size: usize,
 ) -> Result<()> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
     if class_name.starts_with('[') {
-        HEAP.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value, value_type.into())
+        HEAP.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value, value_size)
     } else {
         let klass = CLASSES.get(&class_name)?;
         let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
@@ -516,15 +484,8 @@ fn put_value_via_object(
     }
 }
 
-pub(crate) fn array_index_scale0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let class_ref = args[1];
-
-    let index_scale = array_index_scale0(class_ref)?;
-
-    Ok(vec![index_scale])
-}
-fn array_index_scale0(class_ref: i32) -> Result<i32> {
+/// `jdk.internal.misc.Unsafe.arrayIndexScale0(Ljava/lang/Class;)I`
+pub(crate) fn array_index_scale0(_this: i32, class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
     Ok(match klass.this_class_name().as_str() {
         "[B" => 1,
@@ -539,39 +500,27 @@ fn array_index_scale0(class_ref: i32) -> Result<i32> {
     })
 }
 
-pub(crate) fn ensure_class_initialized0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let class_ref = args[1];
-
-    ensure_class_initialized0(class_ref)?;
-    Ok(vec![])
+/// `jdk.internal.misc.Unsafe.fullFence()V`
+pub(crate) fn full_fence(_this: i32) -> Result<()> {
+    // todo: implement me
+    Ok(())
 }
-fn ensure_class_initialized0(class_ref: i32) -> Result<()> {
+
+/// `jdk.internal.misc.Unsafe.ensureClassInitialized0(Ljava/lang/Class;)V`
+pub(crate) fn ensure_class_initialized0(_this: i32, class_ref: i32) -> Result<()> {
     let klass = klass(class_ref)?;
     StaticInit::initialize(klass.this_class_name())
 }
 
-pub(crate) fn should_be_initialized0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let class_ref = args[1];
-
-    let result = should_be_initialized0(class_ref)?;
-    Ok(vec![if result { 1 } else { 0 }])
-}
-fn should_be_initialized0(class_ref: i32) -> Result<bool> {
+/// `jdk.internal.misc.Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z`
+pub(crate) fn should_be_initialized0(_this: i32, class_ref: i32) -> Result<bool> {
     let klass = klass(class_ref)?;
     let guard = klass.static_fields_init_state().lock();
     Ok(guard.get_inner_state() != Initialized)
 }
 
-pub(crate) fn allocate_memory0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let bytes = i32toi64(args[2], args[1]);
-
-    let addr = allocate_memory0(bytes)?;
-    Ok(i64_to_vec(addr))
-}
-fn allocate_memory0(bytes: i64) -> Result<i64> {
+/// `jdk.internal.misc.Unsafe.allocateMemory0(J)J`
+pub(crate) fn allocate_memory0(_this: i32, bytes: i64) -> Result<i64> {
     let layout = Layout::array::<u8>(bytes as usize)
         .map_err(|_| Error::new_native("Invalid memory allocation"))?;
     let ptr = unsafe { alloc(layout) };
@@ -584,20 +533,11 @@ fn allocate_memory0(bytes: i64) -> Result<i64> {
     Ok(address)
 }
 
-pub(crate) fn copy_memory0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let src_base_ref = args[1];
-    let src_offset = i32toi64(args[3], args[2]);
-    let dest_base_ref = args[4];
-    let dest_offset = i32toi64(args[6], args[5]);
-    let bytes = i32toi64(args[8], args[7]);
-
-    copy_memory0(src_base_ref, src_offset, dest_base_ref, dest_offset, bytes)?;
-    Ok(vec![])
-}
 // Todo: for all *_ref/offset pairs:
 //  *_ref is 0 means that corresponding offset represents absolute address, otherwise it is relative within the object
-fn copy_memory0(
+/// `jdk.internal.misc.Unsafe.copyMemory0(Ljava/lang/Object;JLjava/lang/Object;JJ)V`
+pub(crate) fn copy_memory0(
+    _this: i32,
     src_base_ref: i32,
     src_offset: i64,
     dest_base_ref: i32,
@@ -648,26 +588,9 @@ fn copy_memory0(
     Ok(())
 }
 
-pub(crate) fn copy_swap_memory0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let src_base_ref = args[1];
-    let src_offset = i32toi64(args[3], args[2]);
-    let dest_base_ref = args[4];
-    let dest_offset = i32toi64(args[6], args[5]);
-    let bytes = i32toi64(args[8], args[7]);
-    let elem_size = i32toi64(args[10], args[9]);
-
-    copy_swap_memory0(
-        src_base_ref,
-        src_offset,
-        dest_base_ref,
-        dest_offset,
-        bytes,
-        elem_size,
-    )?;
-    Ok(vec![])
-}
-fn copy_swap_memory0(
+/// `jdk.internal.misc.Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V`
+pub(crate) fn copy_swap_memory0(
+    _this: i32,
     src_base_ref: i32,
     src_offset: i64,
     dest_base_ref: i32,
@@ -731,24 +654,21 @@ fn copy_swap_memory0(
     Ok(())
 }
 
-pub(crate) fn set_memory0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _unsafe_ref = args[0];
-    let obj_ref = args[1];
-    let offset = i32toi64(args[3], args[2]);
-    let bytes = i32toi64(args[5], args[4]);
-    let value = args[6] as u8;
-
-    set_memory0(obj_ref, offset, bytes, value)?;
-    Ok(vec![])
-}
-fn set_memory0(obj_ref: i32, offset: i64, bytes: i64, value: u8) -> Result<()> {
+/// `jdk.internal.misc.Unsafe.setMemory0(Ljava/lang/Object;JJB)V`
+pub(crate) fn set_memory0(
+    _this: i32,
+    obj_ref: i32,
+    offset: i64,
+    bytes: i64,
+    value: i8,
+) -> Result<()> {
     if obj_ref != 0 {
         unimplemented!("implement this for objects")
     }
 
     let dst_ptr = offset as *mut u8;
     unsafe {
-        ptr::write_bytes(dst_ptr, value, bytes as usize);
+        ptr::write_bytes(dst_ptr, value as u8, bytes as usize);
     }
 
     Ok(())
