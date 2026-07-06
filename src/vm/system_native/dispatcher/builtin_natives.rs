@@ -29,358 +29,148 @@ use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
 
-/// Maps a JNI type token to its `extern "system"` FFI parameter/return type.
-macro_rules! jni_ffi_ty {
-    (boolean) => {
-        jboolean
-    };
-    (byte) => {
-        jbyte
-    };
-    (char) => {
-        jchar
-    };
-    (short) => {
-        jshort
-    };
-    (int) => {
-        jint
-    };
-    (long) => {
-        jlong
-    };
-    (float) => {
-        jfloat
-    };
-    (double) => {
-        jdouble
-    };
-    (byte_array) => {
-        jbyteArray
-    };
-    (object_array) => {
-        jobjectArray
-    };
-    (class_object_array) => {
-        jobjectArray
-    };
-    (field_object_array) => {
-        jobjectArray
-    };
-    (method_object_array) => {
-        jobjectArray
-    };
-    (constructor_object_array) => {
-        jobjectArray
-    };
-    (object) => {
-        jobject
-    };
-    (class) => {
-        jclass
-    };
-    (input_stream) => {
-        jobject
-    };
-    (print_stream) => {
-        jobject
-    };
-    (string) => {
-        jstring
-    };
-    (class_loader) => {
-        jobject
-    };
-    (constant_pool) => {
-        jobject
-    };
-    (module) => {
-        jobject
-    };
-    (void) => {
-        ()
-    };
-}
+// ---------------------------------------------------------------------------
+// JNI type-token mapping
+//
+// Every built-in native parameter/return type is described by a single token
+// (e.g. `int`, `object`, `string`). All knowledge about a token lives in ONE
+// place: the `jni_types!` table below. From that table we generate the five
+// mapping macros used by `builtin_wrapper!`:
+//
+//   * jni_ffi_ty!(tok)          -> the `extern "system"` FFI param/return type
+//   * jni_desc_frag!(tok)       -> the JVM descriptor fragment (CIF source)
+//   * jni_arg_cast!(tok, e)     -> cast an incoming JNI arg to the impl's type
+//   * jni_ret_conv!(tok, e)     -> convert the impl's result to the FFI return
+//   * jni_ret_default!(tok)     -> the zero/null FFI value used after an error
+//
+// Each token belongs to a `kind` (bool/int/float/ref/void) that fully
+// determines the arg-cast / ret-conv / ret-default shapes; the only per-token
+// data is the VM-side Rust type, the FFI type, and the descriptor fragment.
+// This makes adding a type a single line and keeps the five mappings from ever
+// drifting apart.
+// ---------------------------------------------------------------------------
 
-/// Maps a JNI type token to its JVM descriptor fragment (source of truth for the CIF).
-macro_rules! jni_desc_frag {
-    (boolean) => {
-        "Z"
-    };
-    (byte) => {
-        "B"
-    };
-    (char) => {
-        "C"
-    };
-    (short) => {
-        "S"
-    };
-    (int) => {
-        "I"
-    };
-    (long) => {
-        "J"
-    };
-    (float) => {
-        "F"
-    };
-    (double) => {
-        "D"
-    };
-    (byte_array) => {
-        "[B"
-    };
-    (object_array) => {
-        "[Ljava/lang/Object;"
-    };
-    (class_object_array) => {
-        "[Ljava/lang/Class;"
-    };
-    (field_object_array) => {
-        "[Ljava/lang/reflect/Field;"
-    };
-    (method_object_array) => {
-        "[Ljava/lang/reflect/Method;"
-    };
-    (constructor_object_array) => {
-        "[Ljava/lang/reflect/Constructor;"
-    };
-    (object) => {
-        "Ljava/lang/Object;"
-    };
-    (class) => {
-        "Ljava/lang/Class;"
-    };
-    (print_stream) => {
-        "Ljava/io/PrintStream;"
-    };
-    (input_stream) => {
-        "Ljava/io/InputStream;"
-    };
-    (string) => {
-        "Ljava/lang/String;"
-    };
-    (class_loader) => {
-        "Ljava/lang/ClassLoader;"
-    };
-    (constant_pool) => {
-        "Ljdk/internal/reflect/ConstantPool;"
-    };
-    (module) => {
-        "Ljava/lang/Module;"
-    };
-    (void) => {
-        "V"
-    };
-}
-
-/// Casts an incoming JNI argument to the value type expected by the pure impl.
-/// Reference types (`object`, arrays) are carried as the VM's `i32` object ref.
-macro_rules! jni_arg_cast {
-    (boolean, $e:expr) => {
+/// Per-kind argument cast: reference types are carried as the VM's `i32`
+/// object ref; scalars are cast to their VM-side value type.
+macro_rules! jni_arg_cast_impl {
+    (bool, $rust:ty, $e:expr) => {
         $e as i32 != 0
     };
-    (byte, $e:expr) => {
+    (int, $rust:ty, $e:expr) => {
+        $e as $rust
+    };
+    (float, $rust:ty, $e:expr) => {
+        $e as $rust
+    };
+    (ref, $rust:ty, $e:expr) => {
         $e as i32
     };
-    (char, $e:expr) => {
-        $e as i32
-    };
-    (short, $e:expr) => {
-        $e as i32
-    };
-    (int, $e:expr) => {
-        $e as i32
-    };
-    (long, $e:expr) => {
-        $e as i64
-    };
-    (float, $e:expr) => {
-        $e as f32
-    };
-    (double, $e:expr) => {
-        $e as f64
-    };
-    (byte_array, $e:expr) => {
-        $e as i32
-    };
-    (object_array, $e:expr) => {
-        $e as i32
-    };
-    (class_object_array, $e:expr) => {
-        $e as i32
-    };
-    (field_object_array, $e:expr) => {
-        $e as i32
-    };
-    (method_object_array, $e:expr) => {
-        $e as i32
-    };
-    (constructor_object_array, $e:expr) => {
-        $e as i32
-    };
-    (object, $e:expr) => {
-        $e as i32
-    };
-    (class, $e:expr) => {
-        $e as i32
-    };
-    (print_stream, $e:expr) => {
-        $e as i32
-    };
-    (input_stream, $e:expr) => {
-        $e as i32
-    };
-    (string, $e:expr) => {
-        $e as i32
-    };
-    (class_loader, $e:expr) => {
-        $e as i32
-    };
-    (constant_pool, $e:expr) => {
-        $e as i32
-    };
-    (module, $e:expr) => {
-        $e as i32
+    (void, $rust:ty, $e:expr) => {
+        compile_error!("`void` cannot be used as an argument")
     };
 }
 
-/// Converts the pure impl's success value into the wrapper's JNI return type.
-/// Scalars map directly; reference types are the VM's `i32` object ref and must be
-/// widened back into the JNI pointer handle expected by the FFI return slot.
-macro_rules! jni_ret_conv {
-    (void, $e:expr) => {
+/// Per-kind return conversion: reference types are the VM's `i32` object ref
+/// and must be widened back into the JNI pointer handle; scalars map directly.
+macro_rules! jni_ret_conv_impl {
+    (void, $ffi:ty, $e:expr) => {
         $e
     };
-    (boolean, $e:expr) => {
-        $e as jboolean
+    (bool, $ffi:ty, $e:expr) => {
+        $e as $ffi
     };
-    (byte, $e:expr) => {
-        $e as jbyte
+    (int, $ffi:ty, $e:expr) => {
+        $e as $ffi
     };
-    (char, $e:expr) => {
-        $e as jchar
+    (float, $ffi:ty, $e:expr) => {
+        $e as $ffi
     };
-    (short, $e:expr) => {
-        $e as jshort
+    (ref, $ffi:ty, $e:expr) => {
+        $e as usize as $ffi
     };
-    (int, $e:expr) => {
-        $e as jint
-    };
-    (long, $e:expr) => {
-        $e as jlong
-    };
-    (float, $e:expr) => {
-        $e as jfloat
-    };
-    (double, $e:expr) => {
-        $e as jdouble
-    };
-    (byte_array, $e:expr) => {
-        $e as usize as jbyteArray
-    };
-    (object_array, $e:expr) => {
-        $e as usize as jobjectArray
-    };
-    (class_object_array, $e:expr) => {
-        $e as usize as jobjectArray
-    };
-    (field_object_array, $e:expr) => {
-        $e as usize as jobjectArray
-    };
-    (method_object_array, $e:expr) => {
-        $e as usize as jobjectArray
-    };
-    (constructor_object_array, $e:expr) => {
-        $e as usize as jobjectArray
-    };
-    (object, $e:expr) => {
-        $e as usize as jobject
-    };
-    (class, $e:expr) => {
-        $e as usize as jclass
-    };
-    (string, $e:expr) => {
-        $e as usize as jstring
-    };
-    (class_loader, $e:expr) => {
-        $e as usize as jobject
-    };
-    (constant_pool, $e:expr) => {
-        $e as usize as jobject
-    };
-    (module, $e:expr) => {
-        $e as usize as jobject
-    }
 }
 
-/// The zero/null value of the wrapper's JNI return type, returned after an error is
-/// recorded as a pending exception (never panics across the FFI boundary).
-macro_rules! jni_ret_default {
-    (void) => {
+/// Per-kind zero/null value returned after an error is recorded as a pending
+/// exception (never panics across the FFI boundary).
+macro_rules! jni_ret_default_impl {
+    (void, $ffi:ty) => {
         ()
     };
-    (boolean) => {
+    (bool, $ffi:ty) => {
         false
     };
-    (byte) => {
+    (int, $ffi:ty) => {
         0
     };
-    (char) => {
-        0
-    };
-    (short) => {
-        0
-    };
-    (int) => {
-        0
-    };
-    (long) => {
-        0
-    };
-    (float) => {
+    (float, $ffi:ty) => {
         0.0
     };
-    (double) => {
-        0.0
-    };
-    (byte_array) => {
+    (ref, $ffi:ty) => {
         std::ptr::null_mut()
     };
-    (object_array) => {
-        std::ptr::null_mut()
+}
+
+/// Generates the five `jni_*` mapping macros from a single type table.
+///
+/// `$dol` is the literal `$` token, threaded in so the *generated* macros can
+/// declare their own `$e:expr` metavariable (the classic nested-`macro_rules!`
+/// workaround on stable Rust).
+macro_rules! jni_types {
+    (
+        $dol:tt
+        $(
+            $token:ident : $kind:ident | $rust:ty | $ffi:ty | $desc:literal
+        );* $(;)?
+    ) => {
+        /// Maps a JNI type token to its `extern "system"` FFI param/return type.
+        macro_rules! jni_ffi_ty {
+            $( ($token) => { $ffi }; )*
+        }
+        /// Maps a JNI type token to its JVM descriptor fragment (CIF source of truth).
+        macro_rules! jni_desc_frag {
+            $( ($token) => { $desc }; )*
+        }
+        /// Casts an incoming JNI argument to the value type expected by the pure impl.
+        macro_rules! jni_arg_cast {
+            $( ($token, $dol e:expr) => { jni_arg_cast_impl!($kind, $rust, $dol e) }; )*
+        }
+        /// Converts the pure impl's success value into the wrapper's JNI return type.
+        macro_rules! jni_ret_conv {
+            $( ($token, $dol e:expr) => { jni_ret_conv_impl!($kind, $ffi, $dol e) }; )*
+        }
+        /// The zero/null value of the wrapper's JNI return type, used after an error.
+        macro_rules! jni_ret_default {
+            $( ($token) => { jni_ret_default_impl!($kind, $ffi) }; )*
+        }
     };
-    (class_object_array) => {
-        std::ptr::null_mut()
-    };
-    (field_object_array) => {
-        std::ptr::null_mut()
-    };
-    (method_object_array) => {
-        std::ptr::null_mut()
-    };
-    (constructor_object_array) => {
-        std::ptr::null_mut()
-    };
-    (object) => {
-        std::ptr::null_mut()
-    };
-    (class) => {
-        std::ptr::null_mut()
-    };
-    (string) => {
-        std::ptr::null_mut()
-    };
-    (class_loader) => {
-        std::ptr::null_mut()
-    };
-    (constant_pool) => {
-        std::ptr::null_mut()
-    };
-    (module) => {
-        std::ptr::null_mut()
-    };
+}
+
+// Single source of truth: `token : kind | vm-rust-type | ffi-type | descriptor`.
+jni_types! {
+    $
+    boolean                   : bool  | bool | jboolean     | "Z";
+    byte                      : int   | i32  | jbyte        | "B";
+    char                      : int   | i32  | jchar        | "C";
+    short                     : int   | i32  | jshort       | "S";
+    int                       : int   | i32  | jint         | "I";
+    long                      : int   | i64  | jlong        | "J";
+    float                     : float | f32  | jfloat       | "F";
+    double                    : float | f64  | jdouble      | "D";
+    byte_array                : ref   | i32  | jbyteArray   | "[B";
+    object_array              : ref   | i32  | jobjectArray | "[Ljava/lang/Object;";
+    class_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/Class;";
+    field_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Field;";
+    method_object_array       : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Method;";
+    constructor_object_array  : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Constructor;";
+    object                    : ref   | i32  | jobject      | "Ljava/lang/Object;";
+    class                     : ref   | i32  | jclass       | "Ljava/lang/Class;";
+    input_stream              : ref   | i32  | jobject      | "Ljava/io/InputStream;";
+    print_stream              : ref   | i32  | jobject      | "Ljava/io/PrintStream;";
+    string                    : ref   | i32  | jstring      | "Ljava/lang/String;";
+    class_loader              : ref   | i32  | jobject      | "Ljava/lang/ClassLoader;";
+    constant_pool             : ref   | i32  | jobject      | "Ljdk/internal/reflect/ConstantPool;";
+    module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
+    void                      : void  | ()   | ()           | "V";
 }
 
 /// Generates a single `extern "system"` wrapper that adapts a pure impl to JNI.
