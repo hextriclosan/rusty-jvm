@@ -35,9 +35,6 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
     native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
     var_handle_compare_and_set_wrp, var_handle_get_wrp, var_handle_set_wrp,
 };
-use crate::vm::system_native::module::{
-    add_exports0_wrp, add_exports_to_all0_wrp, add_reads0_wrp, define_module0_wrp,
-};
 use crate::vm::system_native::native_image_buffer::get_native_map_wrp;
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
@@ -98,30 +95,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert("java/lang/Module:defineModule0:(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V", Basic(define_module0_wrp));
-    table.insert(
-        "java/lang/Module:addReads0:(Ljava/lang/Module;Ljava/lang/Module;)V",
-        Basic(add_reads0_wrp),
-    );
-    table.insert(
-        "java/lang/Module:addExportsToAll0:(Ljava/lang/Module;Ljava/lang/String;)V",
-        Basic(add_exports_to_all0_wrp),
-    );
-    table.insert(
-        "java/lang/Module:addExports0:(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V",
-        Basic(add_exports0_wrp),
-    );
-    table.insert(
-        "java/lang/Shutdown:beforeHalt:()V",
-        Basic(void_stub), // todo: implement me
-    );
-    table.insert(
-        "java/lang/Shutdown:halt0:(I)V",
-        Basic(|args: &[i32]| {
-            let status = args[0];
-            std::process::exit(status); // fixme: by doing this we skip destructors and other shutdown hooks, later it might be an issue
-        }),
-    );
     table.insert(
         "jdk/internal/misc/Unsafe:registerNatives:()V",
         Basic(void_stub),

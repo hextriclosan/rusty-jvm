@@ -24,6 +24,7 @@ pub(crate) mod properties_provider;
 pub(crate) mod random_access_file;
 pub(crate) mod reflect_array;
 pub(crate) mod reflecton;
+pub(crate) mod shutdown;
 pub(crate) mod stack_trace_element;
 pub(crate) mod string;
 pub(crate) mod system;

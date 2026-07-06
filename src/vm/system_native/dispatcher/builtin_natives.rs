@@ -8,9 +8,13 @@ use crate::vm::system_native::class::{
     get_raw_annotations, get_simple_binary_name0, get_superclass, init_class_name,
     is_assignable_from, is_hidden, is_record0, register_natives as register_natives_class,
 };
+use crate::vm::system_native::module::{
+    add_exports0, add_exports_to_all0, add_reads0, define_module0,
+};
 use crate::vm::system_native::object::{
     clone as clone_object, get_class, identity_hashcode, notify_all,
 };
+use crate::vm::system_native::shutdown::{before_halt, halt0 as halt0_impl};
 use crate::vm::system_native::system::{
     arraycopy as arraycopy_impl, current_time_millis, map_library_name, nano_time,
     register_natives as register_natives_system, set_err0, set_in0, set_out0,
@@ -90,6 +94,9 @@ macro_rules! jni_ffi_ty {
     (constant_pool) => {
         jobject
     };
+    (module) => {
+        jobject
+    };
     (void) => {
         ()
     };
@@ -159,6 +166,9 @@ macro_rules! jni_desc_frag {
     };
     (constant_pool) => {
         "Ljdk/internal/reflect/ConstantPool;"
+    };
+    (module) => {
+        "Ljava/lang/Module;"
     };
     (void) => {
         "V"
@@ -231,6 +241,9 @@ macro_rules! jni_arg_cast {
     (constant_pool, $e:expr) => {
         $e as i32
     };
+    (module, $e:expr) => {
+        $e as i32
+    };
 }
 
 /// Converts the pure impl's success value into the wrapper's JNI return type.
@@ -297,6 +310,9 @@ macro_rules! jni_ret_conv {
     (constant_pool, $e:expr) => {
         $e as usize as jobject
     };
+    (module, $e:expr) => {
+        $e as usize as jobject
+    }
 }
 
 /// The zero/null value of the wrapper's JNI return type, returned after an error is
@@ -360,6 +376,9 @@ macro_rules! jni_ret_default {
         std::ptr::null_mut()
     };
     (constant_pool) => {
+        std::ptr::null_mut()
+    };
+    (module) => {
         std::ptr::null_mut()
     };
 }
@@ -494,6 +513,14 @@ builtin_natives! {
     "java/lang/Class": instance fn getConstantPool() -> constant_pool => get_constant_pool;
     "java/lang/Class": instance fn getNestHost0() -> class => get_nest_host0;
     "java/lang/Class": instance fn isRecord0() -> boolean => is_record0;
+
+    "java/lang/Module": static fn addReads0(from: module, to: module) -> void => add_reads0; // todo: implement me?
+    "java/lang/Module": static fn defineModule0(module: module, is_open: boolean, version: string, location: string, pns: object_array) -> void => define_module0;
+    "java/lang/Module": static fn addExportsToAll0(from: module, pn: string) -> void => add_exports_to_all0; // todo: implement me?
+    "java/lang/Module": static fn addExports0(from: module, pn: string, to: module) -> void => add_exports0; // todo: implement me?
+
+    "java/lang/Shutdown": static fn beforeHalt() -> void => before_halt; // todo: implement me
+    "java/lang/Shutdown": static fn halt0(status: int) -> void => halt0_impl; // fixme: by doing this we skip destructors and other shutdown hooks, later it might be an issue
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
