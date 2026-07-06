@@ -12,6 +12,9 @@ use crate::vm::system_native::class::{
     is_assignable_from, is_hidden, is_record0, register_natives as register_natives_class,
 };
 use crate::vm::system_native::double::{double_to_raw_long_bits, long_bits_to_double};
+use crate::vm::system_native::file_descriptor::{
+    file_descriptor_close0, get_append, get_handle, init_ids as init_ids_file_descriptor,
+};
 use crate::vm::system_native::float::float_to_raw_int_bits;
 use crate::vm::system_native::module::{
     add_exports0, add_exports_to_all0, add_reads0, define_module0,
@@ -391,6 +394,11 @@ builtin_natives! {
 
     "jdk/internal/util/SystemProps$Raw": static fn platformProperties() -> string_array => platform_properties;
     "jdk/internal/util/SystemProps$Raw": static fn vmProperties() -> string_array => vm_properties;
+
+    "java/io/FileDescriptor": static fn initIDs() -> void => init_ids_file_descriptor; // todo: implement me
+    "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => get_handle;
+    "java/io/FileDescriptor": static fn getAppend(fd: int) -> boolean => get_append;
+    "java/io/FileDescriptor": instance fn close0() -> void => file_descriptor_close0;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
