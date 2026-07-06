@@ -5,22 +5,7 @@ use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::Result;
 
-pub(crate) fn define_module0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let this_module_ref = args[0];
-    let is_open = args[1] != 0;
-    let version_str_ref = args[2];
-    let location_str_ref = args[3];
-    let packages_arr_ref = args[4];
-    define_module0(
-        this_module_ref,
-        is_open,
-        version_str_ref,
-        location_str_ref,
-        packages_arr_ref,
-    )?;
-    Ok(vec![])
-}
-fn define_module0(
+pub(crate) fn define_module0(
     this_module_ref: i32,
     _is_open: bool,
     _version_str_ref: i32,
@@ -74,36 +59,21 @@ fn define_module0(
     Ok(())
 }
 
-pub(crate) fn add_reads0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let module_from_ref = args[0];
-    let module_to_ref = args[1];
-    add_reads0(module_from_ref, module_to_ref)?;
-    Ok(vec![])
-}
-fn add_reads0(_module_from_ref: i32, _module_to_ref: i32) -> Result<()> {
+pub(crate) fn add_reads0(_module_from_ref: i32, _module_to_ref: i32) -> Result<()> {
     // todo: implement me?
     Ok(())
 }
 
-pub(crate) fn add_exports_to_all0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let module_ref = args[0];
-    let package_name_ref = args[1];
-    add_exports_to_all0(module_ref, package_name_ref)?;
-    Ok(vec![])
-}
-fn add_exports_to_all0(_module_ref: i32, _package_name_ref: i32) -> Result<()> {
+pub(crate) fn add_exports_to_all0(_module_ref: i32, _package_name_ref: i32) -> Result<()> {
     // todo: implement me?
     Ok(())
 }
 
-pub(crate) fn add_exports0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let module_from_ref = args[0];
-    let package_name_ref = args[1];
-    let module_to_ref = args[2];
-    add_exports0(module_from_ref, package_name_ref, module_to_ref)?;
-    Ok(vec![])
-}
-fn add_exports0(_module_from_ref: i32, _package_name_ref: i32, _module_to_ref: i32) -> Result<()> {
+pub(crate) fn add_exports0(
+    _module_from_ref: i32,
+    _package_name_ref: i32,
+    _module_to_ref: i32,
+) -> Result<()> {
     // todo: implement me?
     Ok(())
 }
