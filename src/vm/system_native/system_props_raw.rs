@@ -4,12 +4,12 @@ use crate::vm::properties::system_properties::{
     OVERRIDDEN_PLATFORM_PROPERTIES, OVERRIDDEN_VM_PROPERTIES,
 };
 
-/// `jdk.internal.util.SystemProps$Raw.platformProperties()Ljava/lang/String;`
+/// `jdk.internal.util.SystemProps$Raw.platformProperties()[Ljava/lang/String;`
 pub(crate) fn platform_properties() -> Result<i32> {
     create_array_of_strings(&get_platform_properties()?)
 }
 
-/// `jdk.internal.util.SystemProps$Raw.vmProperties()Ljava/lang/String;`
+/// `jdk.internal.util.SystemProps$Raw.vmProperties()[Ljava/lang/String;`
 pub(crate) fn vm_properties() -> Result<i32> {
     create_array_of_strings(&get_vm_properties()?)
 }
