@@ -2,9 +2,10 @@ use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::pending::Throws;
+use crate::vm::exception::pending_helpers::set_pending_io_exception;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper;
-use crate::vm::helper::{i64_to_vec, vec_to_i64};
+use crate::vm::helper::{get_handle, i64_to_vec, vec_to_i64};
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode;
 use std::fs::File;
@@ -88,11 +89,28 @@ impl PlatformFile {
         Self::get_by_fd(fd_ref, stack_frames)
     }
 
+    pub fn get_by_raw_id_pending(obj_ref: i32, mode: Mode) -> Result<Option<ManuallyDrop<File>>> {
+        let fd_ref = HEAP.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
+        Self::get_by_fd_pending(fd_ref)
+    }
+
     pub fn get_by_fd(fd_ref: i32, stack_frames: &mut StackFrames) -> Throws<ManuallyDrop<File>> {
         let handle = helper::get_handle(fd_ref)?;
 
         if handle == -1 {
             bail_thrown!(throw_ioexception("Stream Closed", stack_frames));
+        }
+
+        let file = ManuallyDrop::new(unsafe { File::from_raw_handle(handle as RawHandle) }); // ManuallyDrop prevents `file` from being dropped
+        Ok(Some(file))
+    }
+
+    pub fn get_by_fd_pending(fd_ref: i32) -> Result<Option<ManuallyDrop<File>>> {
+        let handle = get_handle(fd_ref)?;
+
+        if handle == -1 {
+            set_pending_io_exception("Stream Closed")?;
+            return Ok(None);
         }
 
         let file = ManuallyDrop::new(unsafe { File::from_raw_handle(handle as RawHandle) }); // ManuallyDrop prevents `file` from being dropped
