@@ -12,11 +12,6 @@ use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
 use crate::vm::system_native::dispatcher::invoke::invoke;
-use crate::vm::system_native::file_input_stream::{
-    file_input_stream_available0_wrp, file_input_stream_is_regular_file0_wrp,
-    file_input_stream_length0_wrp, file_input_stream_open0_wrp, file_input_stream_position0_wrp,
-    file_input_stream_read0_wrp, file_input_stream_read_bytes_wrp,
-};
 use crate::vm::system_native::file_output_stream::{
     file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
 };
@@ -82,35 +77,6 @@ enum NativeMethod {
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
     table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
-    table.insert("java/io/FileInputStream:initIDs:()V", Basic(void_stub));
-    table.insert(
-        "java/io/FileInputStream:open0:(Ljava/lang/String;)V",
-        WithMutStackFrames(file_input_stream_open0_wrp),
-    );
-    table.insert(
-        "java/io/FileInputStream:length0:()J",
-        WithMutStackFrames(file_input_stream_length0_wrp),
-    );
-    table.insert(
-        "java/io/FileInputStream:position0:()J",
-        WithMutStackFrames(file_input_stream_position0_wrp),
-    );
-    table.insert(
-        "java/io/FileInputStream:available0:()I",
-        WithMutStackFrames(file_input_stream_available0_wrp),
-    );
-    table.insert(
-        "java/io/FileInputStream:readBytes:([BII)I",
-        WithMutStackFrames(file_input_stream_read_bytes_wrp),
-    );
-    table.insert(
-        "java/io/FileInputStream:read0:()I",
-        WithMutStackFrames(file_input_stream_read0_wrp),
-    );
-    table.insert(
-        "java/io/FileInputStream:isRegularFile0:(Ljava/io/FileDescriptor;)Z",
-        WithMutStackFrames(file_input_stream_is_regular_file0_wrp),
-    );
     table.insert("java/io/RandomAccessFile:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/RandomAccessFile:open0:(Ljava/lang/String;I)V",
