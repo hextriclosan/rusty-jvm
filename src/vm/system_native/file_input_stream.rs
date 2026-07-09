@@ -87,7 +87,11 @@ pub(crate) fn available0(obj_ref: i32) -> Result<i32> {
         return Ok(0);
     }
     let available = file_size - current_pos;
-    let available = i32::try_from(available)?;
+    let available = if available > i32::MAX as u64 {
+        i32::MAX
+    } else {
+        available as i32
+    };
     Ok(available)
 }
 
