@@ -57,7 +57,7 @@ pub(crate) fn position0(obj_ref: i32) -> Result<i64> {
         Ok(p) => p,
         Err(e) => {
             set_pending_io_exception(&e.to_string())?;
-            -1
+            return Ok(-1);
         }
     };
     Ok(pos as i64)
