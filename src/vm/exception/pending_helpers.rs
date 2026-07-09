@@ -39,6 +39,22 @@ pub(crate) fn set_pending_class_not_found_exception(message: &str) -> Result<()>
     set_pending_exception_with_message("java/lang/ClassNotFoundException", message)
 }
 
+/// Sets a pending `FileNotFoundException` with the given file path and message.
+pub(crate) fn set_pending_file_not_found_exception(path_ref: i32, message: &str) -> Result<()> {
+    let reason_ref = StringPoolHelper::get_string(message)?;
+    let args = vec![path_ref.into(), StackValueKind::from(reason_ref)];
+    set_pending_exception(
+        "java/io/FileNotFoundException",
+        "<init>:(Ljava/lang/String;Ljava/lang/String;)V",
+        &args,
+    )
+}
+
+/// Sets a pending `IOException` with the given message.
+pub(crate) fn set_pending_io_exception(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/io/IOException", message)
+}
+
 fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result<()> {
     let message_ref = StringPoolHelper::get_string(message)?;
     set_pending_exception(

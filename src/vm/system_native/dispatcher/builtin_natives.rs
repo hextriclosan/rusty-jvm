@@ -15,6 +15,12 @@ use crate::vm::system_native::double::{double_to_raw_long_bits, long_bits_to_dou
 use crate::vm::system_native::file_descriptor::{
     file_descriptor_close0, get_append, get_handle, init_ids as init_ids_file_descriptor,
 };
+use crate::vm::system_native::file_input_stream::{
+    available0 as available0_file_input_stream, init_ids as init_ids_file_input_stream,
+    is_regular_file0 as is_regular_file0_file_input_stream, length0 as length0_file_input_stream,
+    open0 as open0_file_input_stream, position0 as position0_file_input_stream,
+    read0 as read0_file_input_stream, read_bytes as read_bytes_file_input_stream,
+};
 use crate::vm::system_native::float::float_to_raw_int_bits;
 use crate::vm::system_native::module::{
     add_exports0, add_exports_to_all0, add_reads0, define_module0,
@@ -195,6 +201,7 @@ jni_types! {
     module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
     field                     : ref   | i32  | jobject      | "Ljava/lang/reflect/Field;";
     byte_buffer               : ref   | i32  | jobject      | "Ljava/nio/ByteBuffer;";
+    file_descriptor           : ref   | i32  | jobject      | "Ljava/io/FileDescriptor;";
     void                      : void  | ()   | ()           | "V";
 }
 
@@ -399,6 +406,15 @@ builtin_natives! {
     "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => get_handle;
     "java/io/FileDescriptor": static fn getAppend(fd: int) -> boolean => get_append;
     "java/io/FileDescriptor": instance fn close0() -> void => file_descriptor_close0;
+
+    "java/io/FileInputStream": static fn initIDs() -> void => init_ids_file_input_stream;
+    "java/io/FileInputStream": instance fn open0(name: string) -> void => open0_file_input_stream;
+    "java/io/FileInputStream": instance fn length0() -> long => length0_file_input_stream;
+    "java/io/FileInputStream": instance fn position0() -> long => position0_file_input_stream;
+    "java/io/FileInputStream": instance fn available0() -> int => available0_file_input_stream;
+    "java/io/FileInputStream": instance fn readBytes(b: byte_array, off: int, len: int) -> int => read_bytes_file_input_stream;
+    "java/io/FileInputStream": instance fn read0() -> int => read0_file_input_stream;
+    "java/io/FileInputStream": instance fn isRegularFile0(fd: file_descriptor) -> boolean => is_regular_file0_file_input_stream;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
