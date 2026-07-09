@@ -51,7 +51,7 @@ pub(crate) fn length0(obj_ref: i32) -> Result<i64> {
 /// `java.io.FileInputStream.position0()J`
 pub(crate) fn position0(obj_ref: i32) -> Result<i64> {
     let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileInputStream)? else {
-        return Ok(0);
+        return Ok(-1);
     };
     let pos = match file.stream_position() {
         Ok(p) => p,
@@ -94,14 +94,18 @@ pub(crate) fn available0(obj_ref: i32) -> Result<i32> {
 /// `java.io.FileInputStream.readBytes([BII)I`
 pub(crate) fn read_bytes(obj_ref: i32, bytes_ref: i32, off: i32, len: i32) -> Result<i32> {
     let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileInputStream)? else {
-        return Ok(0);
+        return Ok(-1);
     };
+    if len == 0 {
+        return Ok(0);
+    }
+
     let mut buffer = vec![0u8; len as usize];
     let read_bytes = match file.read(&mut buffer) {
         Ok(n) => n,
         Err(e) => {
             set_pending_io_exception(&e.to_string())?;
-            return Ok(0);
+            return Ok(-1);
         }
     };
     if read_bytes == 0 {
