@@ -20,7 +20,13 @@ pub(crate) fn open0(obj_ref: i32, file_name_ref: i32) -> Result<()> {
     let file_name = get_utf8_string_by_ref(file_name_ref)?;
     match OpenOptions::new().read(true).open(&file_name) {
         Ok(file) => {
-            let metadata = file.metadata()?;
+            let metadata = match file.metadata() {
+                Ok(m) => m,
+                Err(e) => {
+                    set_pending_io_exception(&e.to_string())?;
+                    return Ok(());
+                }
+            };
             if metadata.is_dir() {
                 set_pending_file_not_found_exception(file_name_ref, "Is a directory")?;
                 return Ok(());
@@ -51,7 +57,7 @@ pub(crate) fn position0(obj_ref: i32) -> Result<i64> {
         Ok(p) => p,
         Err(e) => {
             set_pending_io_exception(&e.to_string())?;
-            0
+            -1
         }
     };
     Ok(pos as i64)
@@ -98,6 +104,9 @@ pub(crate) fn read_bytes(obj_ref: i32, bytes_ref: i32, off: i32, len: i32) -> Re
             return Ok(0);
         }
     };
+    if read_bytes == 0 {
+        return Ok(-1);
+    }
     let mut array = HEAP.get_entire_array(bytes_ref)?;
 
     for i in 0..read_bytes {
