@@ -38,7 +38,7 @@ pub(crate) fn length(obj_ref: i32, mode: Mode) -> Result<Option<i64>> {
     Ok(Some(metadata.len() as i64))
 }
 
-pub fn get_by_raw_id(obj_ref: i32, mode: Mode) -> Result<Option<ManuallyDrop<File>>> {
+pub(crate) fn get_by_raw_id(obj_ref: i32, mode: Mode) -> Result<Option<ManuallyDrop<File>>> {
     let fd_ref = HEAP.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
     PlatformFile::get_by_fd_pending(fd_ref)
 }
