@@ -4,7 +4,7 @@ use crate::vm::exception::pending_helpers::{
 };
 use crate::vm::heap::heap::HEAP;
 use crate::vm::system_native::platform_file::Mode::FileInputStream;
-use crate::vm::system_native::platform_file::{length_pending, PlatformFile};
+use crate::vm::system_native::platform_file::{get_by_raw_id, length, PlatformFile};
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::fs::OpenOptions;
 use std::io::{Read as IoRead, Seek};
@@ -44,13 +44,13 @@ pub(crate) fn open0(obj_ref: i32, file_name_ref: i32) -> Result<()> {
 
 /// `java.io.FileInputStream.length0()J`
 pub(crate) fn length0(obj_ref: i32) -> Result<i64> {
-    let len = length_pending(obj_ref, FileInputStream)?.unwrap_or(0);
+    let len = length(obj_ref, FileInputStream)?.unwrap_or(-1);
     Ok(len)
 }
 
 /// `java.io.FileInputStream.position0()J`
 pub(crate) fn position0(obj_ref: i32) -> Result<i64> {
-    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileInputStream)? else {
+    let Some(mut file) = get_by_raw_id(obj_ref, FileInputStream)? else {
         return Ok(-1);
     };
     let pos = match file.stream_position() {
@@ -65,7 +65,7 @@ pub(crate) fn position0(obj_ref: i32) -> Result<i64> {
 
 /// `java.io.FileInputStream.available0()I`
 pub(crate) fn available0(obj_ref: i32) -> Result<i32> {
-    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileInputStream)? else {
+    let Some(mut file) = get_by_raw_id(obj_ref, FileInputStream)? else {
         return Ok(0);
     };
     let current_pos = match file.stream_position() {
@@ -97,7 +97,7 @@ pub(crate) fn available0(obj_ref: i32) -> Result<i32> {
 
 /// `java.io.FileInputStream.readBytes([BII)I`
 pub(crate) fn read_bytes(obj_ref: i32, bytes_ref: i32, off: i32, len: i32) -> Result<i32> {
-    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileInputStream)? else {
+    let Some(mut file) = get_by_raw_id(obj_ref, FileInputStream)? else {
         return Ok(-1);
     };
     if len == 0 {
@@ -128,7 +128,7 @@ pub(crate) fn read_bytes(obj_ref: i32, bytes_ref: i32, off: i32, len: i32) -> Re
 
 /// `java.io.FileInputStream.read()I`
 pub(crate) fn read0(obj_ref: i32) -> Result<i32> {
-    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileInputStream)? else {
+    let Some(mut file) = get_by_raw_id(obj_ref, FileInputStream)? else {
         return Ok(0);
     };
     let mut buffer = [0u8; 1];

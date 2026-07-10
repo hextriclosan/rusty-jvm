@@ -35,11 +35,6 @@ use crate::vm::system_native::platform_file_dispatcher::{
     file_dispatcher_is_other0_wrp, file_dispatcher_map0_wrp, file_dispatcher_seek0_wrp,
     mapped_memory_utils_force0_wrp,
 };
-use crate::vm::system_native::random_access_file::{
-    random_access_file_length0_wrp, random_access_file_open0_wrp,
-    random_access_file_read_bytes0_wrp, random_access_file_seek0_wrp,
-    random_access_file_write_bytes0_wrp,
-};
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
@@ -73,27 +68,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert("java/io/RandomAccessFile:initIDs:()V", Basic(void_stub));
-    table.insert(
-        "java/io/RandomAccessFile:open0:(Ljava/lang/String;I)V",
-        WithMutStackFrames(random_access_file_open0_wrp),
-    );
-    table.insert(
-        "java/io/RandomAccessFile:seek0:(J)V",
-        WithMutStackFrames(random_access_file_seek0_wrp),
-    );
-    table.insert(
-        "java/io/RandomAccessFile:writeBytes0:([BII)V",
-        WithMutStackFrames(random_access_file_write_bytes0_wrp),
-    );
-    table.insert(
-        "java/io/RandomAccessFile:readBytes0:([BII)I",
-        WithMutStackFrames(random_access_file_read_bytes0_wrp),
-    );
-    table.insert(
-        "java/io/RandomAccessFile:length0:()J",
-        WithMutStackFrames(random_access_file_length0_wrp),
-    );
     table.insert(
         "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",
         Basic(void_stub),

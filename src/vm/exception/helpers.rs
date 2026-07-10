@@ -1,31 +1,17 @@
-use crate::bail_thrown;
 use crate::vm::error::Result;
 use crate::vm::exception::common::construct_exception_and_throw;
-use crate::vm::exception::pending::{thrown, Throws};
+use crate::vm::exception::pending_helpers::{
+    set_pending_array_index_out_of_bounds_exception,
+    set_pending_null_pointer_exception_with_message,
+};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::jni::set_pending_internal_error;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 
 pub fn throw_ioexception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
     throw_exception_with_message("java/io/IOException", message, stack_frames)
-}
-
-pub fn throw_file_not_found_exception(
-    path_ref: i32,
-    reason: &str,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    let reason_ref = StringPoolHelper::get_string(reason)?;
-    let args = vec![path_ref.into(), StackValueKind::from(reason_ref)];
-    construct_exception_and_throw(
-        "java/io/FileNotFoundException",
-        "<init>:(Ljava/lang/String;Ljava/lang/String;)V",
-        &args,
-        stack_frames,
-    )?;
-
-    Ok(())
 }
 
 pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()> {
@@ -51,45 +37,30 @@ pub fn throw_internal_error(message: &str, stack_frames: &mut StackFrames) -> Re
     throw_exception_with_message("java/lang/InternalError", message, stack_frames)
 }
 
-pub fn check_bounds(
-    arr_ref: i32,
-    offset: i32,
-    len: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
     if arr_ref == 0 {
-        bail_thrown!(throw_null_pointer_exception_with_message(
-            "array is null",
-            stack_frames
-        ));
+        set_pending_null_pointer_exception_with_message("array is null")?;
+        return Ok(false);
     }
 
-    let Some(arr_len) = HEAP.get_array_len_throwing(arr_ref, stack_frames)? else {
-        return thrown();
+    let arr_len = match HEAP.get_array_len(arr_ref) {
+        Ok(len) => len,
+        Err(e) => {
+            set_pending_internal_error(&format!("Failed to get array length: {}", e));
+            return Ok(false);
+        }
     };
 
     if offset < 0 || len < 0 || arr_len < offset + len {
-        bail_thrown!(throw_index_out_of_bounds_exception(
+        set_pending_array_index_out_of_bounds_exception(&format!(
+            "Index: {}, Size: {}",
             offset + len,
-            arr_len,
-            stack_frames
-        ));
+            arr_len
+        ))?;
+        return Ok(false);
     }
 
-    Ok(Some(()))
-}
-
-fn throw_index_out_of_bounds_exception(
-    index: i32,
-    size: i32,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    let message = format!("Index: {index}, Size: {size}");
-    throw_exception_with_message(
-        "java/lang/IndexOutOfBoundsException",
-        &message,
-        stack_frames,
-    )
+    Ok(true)
 }
 
 pub fn throw_unsatisfied_link_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {

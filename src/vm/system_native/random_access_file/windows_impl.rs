@@ -1,7 +1,5 @@
-use crate::bail_thrown;
-use crate::vm::exception::helpers::throw_file_not_found_exception;
-use crate::vm::exception::pending::Throws;
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::error::Result;
+use crate::vm::exception::pending_helpers::set_pending_file_not_found_exception;
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::get_last_error;
 use crate::vm::system_native::platform_specific_files::wide_cstring::WideCString;
@@ -17,20 +15,15 @@ use winapi::um::winnt::{
     FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE,
 };
 
-pub(super) fn open0(
-    obj_ref: i32,
-    file_name_ref: i32,
-    mode: RandomAccessFileMode,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+pub(super) fn open0(obj_ref: i32, file_name_ref: i32, mode: RandomAccessFileMode) -> Result<()> {
     let file_name = get_utf8_string_by_ref(file_name_ref)?;
 
     if Path::new(&file_name).is_dir() {
-        bail_thrown!(throw_file_not_found_exception(
+        set_pending_file_not_found_exception(
             file_name_ref,
             &format!("{file_name} is a directory"),
-            stack_frames
-        ));
+        )?;
+        return Ok(());
     }
 
     let path = WideCString::new(&file_name);
@@ -71,14 +64,14 @@ pub(super) fn open0(
 
     if handle == INVALID_HANDLE_VALUE {
         let last_error = get_last_error()?;
-        bail_thrown!(throw_file_not_found_exception(
+        set_pending_file_not_found_exception(
             file_name_ref,
             &format!("Could not open file: {last_error}"),
-            stack_frames
-        ));
+        )?;
+        return Ok(());
     }
 
     let owned_handle = unsafe { OwnedHandle::from_raw_handle(handle as _) };
     PlatformFile::set_raw_id(obj_ref, owned_handle, Mode::RandomAccessFile)?;
-    Ok(Some(()))
+    Ok(())
 }
