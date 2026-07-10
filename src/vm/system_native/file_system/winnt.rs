@@ -5,7 +5,6 @@ use crate::vm::exception::pending_helpers::{
 };
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::system_native::file_system::{delete0, Access};
-use crate::vm::system_native::io_file_system::delete0;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     get_last_error, strip_string,
 };

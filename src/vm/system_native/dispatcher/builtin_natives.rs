@@ -27,8 +27,7 @@ use crate::vm::system_native::file_output_stream::{
 };
 use crate::vm::system_native::file_system::{
     canonicalize0 as canonicalize0_file_system, check_access0, create_file_exclusively0,
-    delete0 as delete_impl, get_boolean_attributes0, get_length0,
-    init_ids as init_ids_file_system,
+    get_boolean_attributes0, get_length0, init_ids as init_ids_file_system,
 };
 use crate::vm::system_native::float::float_to_raw_int_bits;
 use crate::vm::system_native::module::{
@@ -499,7 +498,7 @@ builtin_natives! {
     "java/io/UnixFileSystem": instance fn createFileExclusively0(name: string) -> boolean => create_file_exclusively0;
     "java/io/UnixFileSystem": instance fn getBooleanAttributes0(file: file) -> int => get_boolean_attributes0;
     "java/io/UnixFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => check_access0;
-    "java/io/UnixFileSystem": instance fn delete0(file: file) -> boolean => delete_impl;
+    "java/io/UnixFileSystem": instance fn delete0(file: file) -> boolean => crate::vm::system_native::file_system::delete0;
     "java/io/UnixFileSystem": instance fn getNameMax0(name: string) -> long => crate::vm::system_native::file_system::unix::get_name_max0;
     "java/io/UnixFileSystem": instance fn getLength0(file: file) -> long => get_length0;
     }
