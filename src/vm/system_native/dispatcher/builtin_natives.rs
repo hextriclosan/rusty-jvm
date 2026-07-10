@@ -21,6 +21,10 @@ use crate::vm::system_native::file_input_stream::{
     open0 as open0_file_input_stream, position0 as position0_file_input_stream,
     read0 as read0_file_input_stream, read_bytes as read_bytes_file_input_stream,
 };
+use crate::vm::system_native::file_output_stream::{
+    init_ids as init_ids_file_output_stream, open0 as open0_file_output_stream,
+    write as write_file_output_stream, write_bytes as write_bytes_file_output_stream,
+};
 use crate::vm::system_native::float::float_to_raw_int_bits;
 use crate::vm::system_native::module::{
     add_exports0, add_exports_to_all0, add_reads0, define_module0,
@@ -415,6 +419,11 @@ builtin_natives! {
     "java/io/FileInputStream": instance fn readBytes(b: byte_array, off: int, len: int) -> int => read_bytes_file_input_stream;
     "java/io/FileInputStream": instance fn read0() -> int => read0_file_input_stream;
     "java/io/FileInputStream": instance fn isRegularFile0(fd: file_descriptor) -> boolean => is_regular_file0_file_input_stream;
+
+    "java/io/FileOutputStream": static fn initIDs() -> void => init_ids_file_output_stream;
+    "java/io/FileOutputStream": instance fn open0(name: string, append: boolean) -> void => open0_file_output_stream;
+    "java/io/FileOutputStream": instance fn write(byte: int, append: boolean) -> void => write_file_output_stream;
+    "java/io/FileOutputStream": instance fn writeBytes(b: byte_array, off: int, len: int, append: boolean) -> void => write_bytes_file_output_stream;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }
