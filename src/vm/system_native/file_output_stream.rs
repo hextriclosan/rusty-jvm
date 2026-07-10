@@ -1,34 +1,22 @@
-use crate::bail_thrown;
 use crate::vm::error::Result;
-use crate::vm::exception::helpers::{throw_file_not_found_exception, throw_ioexception};
-use crate::vm::exception::pending::{thrown, Throws};
+use crate::vm::exception::pending_helpers::{
+    set_pending_file_not_found_exception, set_pending_io_exception,
+};
 use crate::vm::heap::heap::HEAP;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode::FileOutputStream;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::fs::OpenOptions;
 use std::io::Write as IoWrite;
 
-pub(crate) fn file_output_stream_open0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let string_ref = args[1];
-    let append = args[2] != 0;
-    let Some(()) = open0(obj_ref, string_ref, append, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
+/// `java.io.FileOutputStream.initIDs()V`
+pub(crate) fn init_ids() -> Result<()> {
+    // todo: implement me
+    Ok(())
 }
 
-fn open0(
-    obj_ref: i32,
-    file_name_ref: i32,
-    append: bool,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+/// `java.io.FileOutputStream.open0(Ljava/lang/String;Z)V`
+pub(crate) fn open0(obj_ref: i32, file_name_ref: i32, append: bool) -> Result<()> {
     let file_name = get_utf8_string_by_ref(file_name_ref)?;
 
     match OpenOptions::new()
@@ -40,65 +28,38 @@ fn open0(
     {
         Ok(file) => {
             PlatformFile::set_raw_id(obj_ref, file, FileOutputStream)?;
-            Ok(Some(()))
+            Ok(())
         }
-        Err(e) => bail_thrown!(throw_file_not_found_exception(
-            file_name_ref,
-            &e.to_string(),
-            stack_frames
-        )),
+        Err(e) => {
+            set_pending_file_not_found_exception(file_name_ref, &e.to_string())?;
+            Ok(())
+        }
     }
 }
 
-pub(crate) fn file_output_stream_write_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let byte = args[1];
-    let append = args[2] != 0;
-    let Some(()) = write(obj_ref, byte, append, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
-}
-fn write(obj_ref: i32, byte: i32, _append: bool, stack_frames: &mut StackFrames) -> Throws<()> {
-    let Some(mut file) = PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames)?
-    else {
-        return thrown();
+/// `java.io.FileOutputStream.write(IZ)V`
+pub(crate) fn write(obj_ref: i32, byte: i32, _append: bool) -> Result<()> {
+    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileOutputStream)? else {
+        return Ok(());
     };
 
-    match write!(file, "{}", byte as u8 as char) {
-        Ok(_) => Ok(Some(())),
-        Err(e) => bail_thrown!(throw_ioexception(&e.to_string(), stack_frames)),
+    if let Err(e) = file.write_all(&[byte as u8]) {
+        set_pending_io_exception(&e.to_string())?;
     }
+
+    Ok(())
 }
 
-pub(crate) fn file_output_stream_write_bytes_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let obj_ref = args[0];
-    let bytes_ref = args[1];
-    let off = args[2];
-    let len = args[3];
-    let append = args[4] != 0;
-    let Some(()) = write_bytes(obj_ref, bytes_ref, off, len, append, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
-}
-fn write_bytes(
+/// `java.io.FileOutputStream.writeBytes([BIIZ)V`
+pub(crate) fn write_bytes(
     obj_ref: i32,
     bytes_ref: i32,
     off: i32,
     len: i32,
     _append: bool,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
-    let Some(mut file) = PlatformFile::get_by_raw_id(obj_ref, FileOutputStream, stack_frames)?
-    else {
-        return thrown();
+) -> Result<()> {
+    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileOutputStream)? else {
+        return Ok(());
     };
     let array = HEAP.get_entire_array(bytes_ref)?;
     let raw = array.get_entire_value();
@@ -107,8 +68,9 @@ fn write_bytes(
         vec.push(raw[i as usize][0] as i8 as u8);
     }
 
-    match file.write_all(&vec) {
-        Ok(_) => Ok(Some(())),
-        Err(e) => bail_thrown!(throw_ioexception(&e.to_string(), stack_frames)),
-    }
+    if let Err(e) = file.write_all(&vec) {
+        set_pending_io_exception(&e.to_string())?;
+    };
+
+    Ok(())
 }

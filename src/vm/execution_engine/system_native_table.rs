@@ -12,9 +12,6 @@ use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
 use crate::vm::system_native::dispatcher::invoke::invoke;
-use crate::vm::system_native::file_output_stream::{
-    file_output_stream_open0_wrp, file_output_stream_write_bytes_wrp, file_output_stream_write_wrp,
-};
 use crate::vm::system_native::io_file_system::{
     canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp,
     get_boolean_attributes0_wrp, get_length0_wrp,
@@ -76,7 +73,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
     table.insert("java/io/RandomAccessFile:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/RandomAccessFile:open0:(Ljava/lang/String;I)V",
@@ -159,19 +155,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
             Ok(vec![0]) // null
         }
     ));
-    table.insert(
-        "java/io/FileOutputStream:open0:(Ljava/lang/String;Z)V",
-        WithMutStackFrames(file_output_stream_open0_wrp),
-    );
-    table.insert("java/io/FileOutputStream:initIDs:()V", Basic(void_stub));
-    table.insert(
-        "java/io/FileOutputStream:write:(IZ)V",
-        WithMutStackFrames(file_output_stream_write_wrp),
-    );
-    table.insert(
-        "java/io/FileOutputStream:writeBytes:([BIIZ)V",
-        WithMutStackFrames(file_output_stream_write_bytes_wrp),
-    );
     table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
     table.insert(
         "java/lang/ref/Reference:refersTo0:(Ljava/lang/Object;)Z",
@@ -323,6 +306,7 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "java/io/WinNTFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
         Basic(canonicalize0_wrp),
     );
+    table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
     table.insert(
         "java/io/UnixFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
         Basic(canonicalize0_wrp),
