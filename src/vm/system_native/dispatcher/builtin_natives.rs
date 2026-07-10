@@ -25,6 +25,11 @@ use crate::vm::system_native::file_output_stream::{
     init_ids as init_ids_file_output_stream, open0 as open0_file_output_stream,
     write as write_file_output_stream, write_bytes as write_bytes_file_output_stream,
 };
+use crate::vm::system_native::file_system::{
+    canonicalize0 as canonicalize0_file_system, check_access0, create_file_exclusively0,
+    delete0 as delete_impl, get_boolean_attributes0, get_length0,
+    init_ids as init_ids_file_system,
+};
 use crate::vm::system_native::float::float_to_raw_int_bits;
 use crate::vm::system_native::module::{
     add_exports0, add_exports_to_all0, add_reads0, define_module0,
@@ -211,6 +216,7 @@ jni_types! {
     field                     : ref   | i32  | jobject      | "Ljava/lang/reflect/Field;";
     byte_buffer               : ref   | i32  | jobject      | "Ljava/nio/ByteBuffer;";
     file_descriptor           : ref   | i32  | jobject      | "Ljava/io/FileDescriptor;";
+    file                      : ref   | i32  | jobject      | "Ljava/io/File;";
     void                      : void  | ()   | ()           | "V";
 }
 
@@ -260,28 +266,62 @@ macro_rules! builtin_wrapper {
 /// truth. For every entry it generates a type-safe `extern "system"` wrapper and
 /// registers its address under the JNI long (descriptor-mangled) C-name.
 ///
-/// Grammar: `"<class>": <static|instance> fn <method>(<name>: <type>, ...) -> <type> => <impl>`
+/// The entries are organized into one or more **braced groups**. A group may
+/// carry outer attributes (e.g. `#[cfg(windows)]`) that apply to *every* entry
+/// inside it, so platform-specific natives can be gated once instead of per line:
+///
+/// ```ignore
+/// builtin_natives! {
+///     {
+///         // common, always-compiled entries
+///         "java/lang/System": static fn nanoTime() -> long => nano_time;
+///     }
+///
+///     #[cfg(windows)]
+///     {
+///         "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => get_length0;
+///     }
+/// }
+/// ```
+///
+/// Individual entries may still carry their own attributes.
+///
+/// Entry grammar: `"<class>": <static|instance> fn <method>(<name>: <type>, ...) -> <type> => <impl>`
 macro_rules! builtin_natives {
     (
         $(
-            $class:literal : $recv:ident fn $method:ident ( $($pname:ident : $pty:ident),* $(,)? ) -> $ret:ident => $inner:path
-        );* $(;)?
+            $(#[$gmeta:meta])*
+            {
+                $(
+                    $(#[$imeta:meta])*
+                    $class:literal : $recv:ident fn $method:ident ( $($pname:ident : $pty:ident),* $(,)? ) -> $ret:ident => $inner:path
+                );* $(;)?
+            }
+        )*
     ) => {
         static BUILTIN_NATIVE_TABLE: LazyLock<HashMap<String, i64>> = LazyLock::new(|| {
             let mut table = HashMap::new();
             $(
+                // Group-level attributes (e.g. `#[cfg(windows)]`) gate the whole block.
+                $(#[$gmeta])*
                 {
-                    // Generate the wrapper in its own scope so that identical method
-                    // names across different classes (e.g. `registerNatives`) don't
-                    // collide at module level.
-                    builtin_wrapper!($recv $method ( $($pname : $pty),* ) -> $ret => $inner);
-                    register(
-                        &mut table,
-                        $class,
-                        stringify!($method),
-                        &build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
-                        $method as *const c_void as usize as i64,
-                    );
+                    $(
+                        // Per-entry attributes gate a single native.
+                        $(#[$imeta])*
+                        {
+                            // Generate the wrapper in its own scope so that identical method
+                            // names across different classes (e.g. `registerNatives`) don't
+                            // collide at module level.
+                            builtin_wrapper!($recv $method ( $($pname : $pty),* ) -> $ret => $inner);
+                            register(
+                                &mut table,
+                                $class,
+                                stringify!($method),
+                                &build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
+                                $method as *const c_void as usize as i64,
+                            );
+                        }
+                    )*
                 }
             )*
             table
@@ -295,13 +335,24 @@ macro_rules! builtin_natives {
         /// JDK bytecode.
         static BUILTIN_SPECS: LazyLock<Vec<(&'static str, &'static str, String)>> =
             LazyLock::new(|| {
-                vec![
-                    $((
-                        $class,
-                        stringify!($method),
-                        build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
-                    )),*
-                ]
+                let mut specs: Vec<(&'static str, &'static str, String)> = Vec::new();
+                $(
+                    // Apply the same cfg gating as the native table so that
+                    // platform-specific specs (e.g. `WinNTFileSystem` vs
+                    // `UnixFileSystem`) are only validated on their platform.
+                    $(#[$gmeta])*
+                    {
+                        $(
+                            $(#[$imeta])*
+                            specs.push((
+                                $class,
+                                stringify!($method),
+                                build_descriptor(&[$(jni_desc_frag!($pty)),*], jni_desc_frag!($ret)),
+                            ));
+                        )*
+                    }
+                )*
+                specs
             });
     };
 }
@@ -309,6 +360,7 @@ macro_rules! builtin_natives {
 // Registry of built-in native methods implemented in Rust, keyed by their JNI
 // C-name and resolving to the function address invoked via libffi.
 builtin_natives! {
+    {
     "java/lang/System": static fn currentTimeMillis() -> long => current_time_millis;
     "java/lang/System": static fn nanoTime() -> long => nano_time;
     "java/lang/System": static fn arraycopy(src: object, src_pos: int, dest: object, dest_pos: int, length: int) -> void => arraycopy_impl;
@@ -438,6 +490,32 @@ builtin_natives! {
     "java/io/RandomAccessFile": instance fn length0() -> long => length0_random_access_file;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
+    }
+
+    #[cfg(unix)]
+    {
+    "java/io/UnixFileSystem": static fn initIDs() -> void => init_ids_file_system; // this method is for caching `path` field from java/io/File for faster access in other native methods
+    "java/io/UnixFileSystem": instance fn canonicalize0(name: string) -> string => canonicalize0_file_system;
+    "java/io/UnixFileSystem": instance fn createFileExclusively0(name: string) -> boolean => create_file_exclusively0;
+    "java/io/UnixFileSystem": instance fn getBooleanAttributes0(file: file) -> int => get_boolean_attributes0;
+    "java/io/UnixFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => check_access0;
+    "java/io/UnixFileSystem": instance fn delete0(file: file) -> boolean => delete_impl;
+    "java/io/UnixFileSystem": instance fn getNameMax0(name: string) -> long => crate::vm::system_native::file_system::unix::get_name_max0;
+    "java/io/UnixFileSystem": instance fn getLength0(file: file) -> long => get_length0;
+    }
+
+    #[cfg(windows)]
+    {
+    "java/io/WinNTFileSystem": static fn initIDs() -> void => init_ids_file_system; // this method is for caching `path` field from java/io/File for faster access in other native methods
+    "java/io/WinNTFileSystem": instance fn canonicalize0(name: string) -> string => canonicalize0_file_system;
+    "java/io/WinNTFileSystem": instance fn createFileExclusively0(name: string) -> boolean => create_file_exclusively0;
+    "java/io/WinNTFileSystem": instance fn getBooleanAttributes0(file: file) -> int => get_boolean_attributes0;
+    "java/io/WinNTFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => check_access0;
+    "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => crate::vm::system_native::file_system::winnt::get_final_path0;
+    "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => crate::vm::system_native::file_system::winnt::winnt_file_system_delete0;
+    "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => crate::vm::system_native::file_system::winnt::get_name_max0;
+    "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => get_length0;
+    }
 }
 
 fn build_descriptor(params: &[&str], ret: &str) -> String {
