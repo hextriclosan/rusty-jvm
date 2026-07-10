@@ -21,8 +21,7 @@ use winapi::um::fileapi::{
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use winapi::um::winbase::FILE_FLAG_BACKUP_SEMANTICS;
 use winapi::um::winnt::{
-    FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE, LPCWSTR,
-    WCHAR,
+    FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE, WCHAR,
 };
 
 pub(crate) fn get_final_path0_wrp(

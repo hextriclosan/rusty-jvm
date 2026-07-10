@@ -24,6 +24,10 @@ pub(crate) fn set_pending_null_pointer_exception() -> Result<()> {
     set_pending_exception("java/lang/NullPointerException", "<init>:()V", &[])
 }
 
+pub(crate) fn set_pending_null_pointer_exception_with_message(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/lang/NullPointerException", message)
+}
+
 /// Sets a pending `ArrayStoreException` with the given message.
 pub(crate) fn set_pending_array_store_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/ArrayStoreException", message)
@@ -53,6 +57,11 @@ pub(crate) fn set_pending_file_not_found_exception(path_ref: i32, message: &str)
 /// Sets a pending `IOException` with the given message.
 pub(crate) fn set_pending_io_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/io/IOException", message)
+}
+
+/// Sets a pending `IllegalArgumentException` with the given message.
+pub(crate) fn set_pending_illegal_argument_exception(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/lang/IllegalArgumentException", message)
 }
 
 fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result<()> {

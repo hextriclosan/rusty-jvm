@@ -1,28 +1,21 @@
-use crate::bail_thrown;
-use crate::vm::exception::helpers::throw_file_not_found_exception;
-use crate::vm::exception::pending::Throws;
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::error::Result;
+use crate::vm::exception::pending_helpers::set_pending_file_not_found_exception;
 use crate::vm::system_native::platform_file::{Mode, PlatformFile};
 use crate::vm::system_native::random_access_file::RandomAccessFileMode;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use nix::fcntl::{open, OFlag};
 use std::path::Path;
 
-pub(super) fn open0(
-    obj_ref: i32,
-    file_name_ref: i32,
-    flags: RandomAccessFileMode,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+pub(super) fn open0(obj_ref: i32, file_name_ref: i32, flags: RandomAccessFileMode) -> Result<()> {
     let file_name = get_utf8_string_by_ref(file_name_ref)?;
 
     let path = Path::new(&file_name);
     if path.is_dir() {
-        bail_thrown!(throw_file_not_found_exception(
+        set_pending_file_not_found_exception(
             file_name_ref,
             &format!("{file_name} is a directory"),
-            stack_frames
-        ));
+        )?;
+        return Ok(());
     }
 
     let mut oflag = OFlag::empty();
@@ -45,14 +38,11 @@ pub(super) fn open0(
         Ok(fd) => fd,
         Err(e) => {
             let message = e.to_string();
-            bail_thrown!(throw_file_not_found_exception(
-                file_name_ref,
-                &message,
-                stack_frames
-            ));
+            set_pending_file_not_found_exception(file_name_ref, &message)?;
+            return Ok(());
         }
     };
 
     PlatformFile::set_raw_id(obj_ref, owned_fd, Mode::RandomAccessFile)?;
-    Ok(Some(()))
+    Ok(())
 }

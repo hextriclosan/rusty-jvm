@@ -33,6 +33,11 @@ use crate::vm::system_native::native_image_buffer::get_native_map;
 use crate::vm::system_native::object::{
     clone as clone_object, get_class, identity_hashcode, notify_all,
 };
+use crate::vm::system_native::random_access_file::{
+    init_ids as init_ids_random_access_file, length0 as length0_random_access_file,
+    open0_random_access_file, read_bytes0 as read_bytes0_random_access_file,
+    seek0 as seek0_random_access_file, write_bytes0 as write_bytes0_random_access_file,
+};
 use crate::vm::system_native::runtime::{available_processors, max_memory};
 use crate::vm::system_native::shutdown::{before_halt, halt0 as halt0_impl};
 use crate::vm::system_native::string::intern as intern_string;
@@ -424,6 +429,13 @@ builtin_natives! {
     "java/io/FileOutputStream": instance fn open0(name: string, append: boolean) -> void => open0_file_output_stream;
     "java/io/FileOutputStream": instance fn write(byte: int, append: boolean) -> void => write_file_output_stream;
     "java/io/FileOutputStream": instance fn writeBytes(b: byte_array, off: int, len: int, append: boolean) -> void => write_bytes_file_output_stream;
+
+    "java/io/RandomAccessFile": static fn initIDs() -> void => init_ids_random_access_file;
+    "java/io/RandomAccessFile": instance fn open0(name: string, mode: int) -> void => open0_random_access_file;
+    "java/io/RandomAccessFile": instance fn seek0(offset: long) -> void => seek0_random_access_file;
+    "java/io/RandomAccessFile": instance fn writeBytes0(b: byte_array, off: int, len: int) -> void => write_bytes0_random_access_file;
+    "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => read_bytes0_random_access_file;
+    "java/io/RandomAccessFile": instance fn length0() -> long => length0_random_access_file;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => updatebytes0;
 }

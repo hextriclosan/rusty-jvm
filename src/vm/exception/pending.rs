@@ -23,14 +23,6 @@ use crate::vm::error::Result;
 /// A computation that may either return a value, throw a Java exception, or fail with a VM error.
 pub type Throws<T> = Result<Option<T>>;
 
-/// Convenience constructor for the "Java exception was thrown" case.
-///
-/// Equivalent to `Ok(None)` but reads more clearly at call sites.
-#[inline]
-pub fn thrown<T>() -> Throws<T> {
-    Ok(None)
-}
-
 #[macro_export]
 #[doc(hidden)]
 macro_rules! bail_thrown {

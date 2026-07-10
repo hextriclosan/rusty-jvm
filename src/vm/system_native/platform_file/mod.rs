@@ -3,12 +3,11 @@ pub(crate) mod unix_file;
 #[cfg(windows)]
 pub(crate) mod windows_file;
 
-use crate::bail_thrown;
 use crate::vm::error::Result;
-use crate::vm::exception::helpers::throw_ioexception;
-use crate::vm::exception::pending::{thrown, Throws};
 use crate::vm::exception::pending_helpers::set_pending_io_exception;
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::heap::heap::HEAP;
+use std::fs::File;
+use std::mem::ManuallyDrop;
 use strum::{AsRefStr, EnumString};
 #[cfg(unix)]
 pub use unix_file::PlatformFile;
@@ -25,19 +24,8 @@ pub enum Mode {
     RandomAccessFile,
 }
 
-pub(crate) fn length(obj_ref: i32, mode: Mode, stack_frames: &mut StackFrames) -> Throws<i64> {
-    let Some(file) = PlatformFile::get_by_raw_id(obj_ref, mode, stack_frames)? else {
-        return thrown();
-    };
-    let metadata = match file.metadata() {
-        Ok(m) => m,
-        Err(e) => bail_thrown!(throw_ioexception(&e.to_string(), stack_frames)),
-    };
-    Ok(Some(metadata.len() as i64))
-}
-
-pub(crate) fn length_pending(obj_ref: i32, mode: Mode) -> Result<Option<i64>> {
-    let Some(file) = PlatformFile::get_by_raw_id_pending(obj_ref, mode)? else {
+pub(crate) fn length(obj_ref: i32, mode: Mode) -> Result<Option<i64>> {
+    let Some(file) = get_by_raw_id(obj_ref, mode)? else {
         return Ok(None);
     };
     let metadata = match file.metadata() {
@@ -48,4 +36,9 @@ pub(crate) fn length_pending(obj_ref: i32, mode: Mode) -> Result<Option<i64>> {
         }
     };
     Ok(Some(metadata.len() as i64))
+}
+
+pub(crate) fn get_by_raw_id(obj_ref: i32, mode: Mode) -> Result<Option<ManuallyDrop<File>>> {
+    let fd_ref = HEAP.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
+    PlatformFile::get_by_fd_pending(fd_ref)
 }

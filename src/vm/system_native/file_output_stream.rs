@@ -4,7 +4,7 @@ use crate::vm::exception::pending_helpers::{
 };
 use crate::vm::heap::heap::HEAP;
 use crate::vm::system_native::platform_file::Mode::FileOutputStream;
-use crate::vm::system_native::platform_file::PlatformFile;
+use crate::vm::system_native::platform_file::{get_by_raw_id, PlatformFile};
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::fs::OpenOptions;
 use std::io::Write as IoWrite;
@@ -39,7 +39,7 @@ pub(crate) fn open0(obj_ref: i32, file_name_ref: i32, append: bool) -> Result<()
 
 /// `java.io.FileOutputStream.write(IZ)V`
 pub(crate) fn write(obj_ref: i32, byte: i32, _append: bool) -> Result<()> {
-    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileOutputStream)? else {
+    let Some(mut file) = get_by_raw_id(obj_ref, FileOutputStream)? else {
         return Ok(());
     };
 
@@ -58,7 +58,7 @@ pub(crate) fn write_bytes(
     len: i32,
     _append: bool,
 ) -> Result<()> {
-    let Some(mut file) = PlatformFile::get_by_raw_id_pending(obj_ref, FileOutputStream)? else {
+    let Some(mut file) = get_by_raw_id(obj_ref, FileOutputStream)? else {
         return Ok(());
     };
     let array = HEAP.get_entire_array(bytes_ref)?;

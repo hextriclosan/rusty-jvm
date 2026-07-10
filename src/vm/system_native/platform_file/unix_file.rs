@@ -54,20 +54,6 @@ impl PlatformFile {
         HEAP.set_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", vec![fd])
     }
 
-    pub fn get_by_raw_id(
-        obj_ref: i32,
-        mode: Mode,
-        stack_frames: &mut StackFrames,
-    ) -> Throws<ManuallyDrop<File>> {
-        let fd_ref = HEAP.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
-        Self::get_by_fd(fd_ref, stack_frames)
-    }
-
-    pub fn get_by_raw_id_pending(obj_ref: i32, mode: Mode) -> Result<Option<ManuallyDrop<File>>> {
-        let fd_ref = HEAP.get_object_field_value(obj_ref, mode.as_ref(), "fd")?[0];
-        Self::get_by_fd_pending(fd_ref)
-    }
-
     pub fn get_by_fd(fd_ref: i32, stack_frames: &mut StackFrames) -> Throws<ManuallyDrop<File>> {
         let fd = get_handle(fd_ref)?;
 
