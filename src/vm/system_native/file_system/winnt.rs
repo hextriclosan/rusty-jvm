@@ -1,4 +1,3 @@
-use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::pending_helpers::{
     set_pending_io_exception, set_pending_null_pointer_exception_with_message,
