@@ -1,11 +1,9 @@
 use crate::bail_thrown;
 use crate::vm::error::Result;
 use crate::vm::exception::helpers::throw_internal_error;
-use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i32toi64, i64_to_vec};
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::helper::i64_to_vec;
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     throw_windows_exception, wchar_to_string_ref,
 };
@@ -34,38 +32,77 @@ use winapi::um::winnt::{
     PSECURITY_DESCRIPTOR, SECURITY_INFORMATION, WCHAR,
 };
 
-pub fn create_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let filename_ptr = i32toi64(args[1], args[0]);
-    let desired_access = args[2];
-    let share_mode = args[3];
-    let sec_desc_ptr = i32toi64(args[5], args[4]);
-    let creation_disposition = args[6];
-    let flags_and_attributes = args[7];
+pub(crate) fn init_ids() -> Result<()> {
+    // todo: implement me
+    Ok(())
+}
 
-    let Some(handle) = create_file0(
-        filename_ptr,
-        desired_access,
-        share_mode,
-        sec_desc_ptr,
-        creation_disposition,
-        flags_and_attributes,
-        stack_frames,
-    )?
-    else {
-        return Ok(vec![]);
+pub(crate) fn create_directory0(address_ptr: i64, sd_address_ptr: i64) -> Result<()> {
+    let sd_address = sd_address_ptr as usize as PSECURITY_DESCRIPTOR;
+    let mut sec_attr: SECURITY_ATTRIBUTES = unsafe { zeroed() };
+    let lp_security_attributes: LPSECURITY_ATTRIBUTES = if !sd_address.is_null() {
+        sec_attr.nLength = size_of::<SECURITY_ATTRIBUTES>() as DWORD;
+        sec_attr.lpSecurityDescriptor = sd_address;
+        sec_attr.bInheritHandle = FALSE;
+        &mut sec_attr
+    } else {
+        null_mut()
     };
 
-    Ok(i64_to_vec(handle))
+    let address = address_ptr as usize as LPCWSTR;
+    let result = unsafe { CreateDirectoryW(address, lp_security_attributes) };
+
+    if result == 0 {
+        throw_windows_exception(stack_frames)?;
+    }
+
+    Ok(())
 }
-fn create_file0(
+
+pub(crate) fn get_file_attributes_ex0(lp_file_name_addr: i64, output_addr: i64) -> Result<()> {
+    let address = lp_file_name_addr as usize as LPCWSTR;
+    let res = unsafe {
+        GetFileAttributesExW(
+            address,
+            GetFileExInfoStandard,
+            output_addr as usize as LPVOID,
+        )
+    };
+    if res == 0 {
+        throw_windows_exception(stack_frames)?;
+    }
+
+    Ok(())
+}
+
+pub(crate) fn delete_file0(lp_file_name_addr: i64) -> Result<()> {
+    let address = lp_file_name_addr as usize as LPCWSTR;
+    let res = unsafe { DeleteFileW(address) };
+    if res == 0 {
+        throw_windows_exception(stack_frames)?;
+    }
+
+    Ok(())
+}
+
+pub(crate) fn remove_directory0(lp_file_name_addr: i64) -> Result<()> {
+    let address = lp_file_name_addr as usize as LPCWSTR;
+    let res = unsafe { RemoveDirectoryW(address) };
+    if res == 0 {
+        throw_windows_exception(stack_frames)?;
+    }
+
+    Ok(())
+}
+
+pub(crate) fn create_file0(
     filename_ptr: i64,
     desired_access: i32,
     share_mode: i32,
     sec_desc_ptr: i64,
     creation_disposition: i32,
     flags_and_attributes: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<i64> {
+) -> Result<i64> {
     let filename = filename_ptr as usize as LPCWSTR;
 
     let security_descriptor = sec_desc_ptr as usize as LPSECURITY_ATTRIBUTES;
@@ -98,15 +135,7 @@ fn create_file0(
     Ok(Some(result as i64))
 }
 
-pub(crate) fn set_end_of_file_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let handle_ptr = i32toi64(args[1], args[0]);
-    set_end_of_file(handle_ptr, stack_frames)?;
-    Ok(vec![])
-}
-fn set_end_of_file(handle_ptr: i64, stack_frames: &mut StackFrames) -> Result<()> {
+pub(crate) fn set_end_of_file(handle_ptr: i64) -> Result<()> {
     let handle = handle_ptr as usize as HANDLE;
     let result = unsafe { SetEndOfFile(handle) };
 
@@ -117,127 +146,12 @@ fn set_end_of_file(handle_ptr: i64, stack_frames: &mut StackFrames) -> Result<()
     Ok(())
 }
 
-pub fn create_directory0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let address_ptr = i32toi64(args[1], args[0]);
-    let sd_address_ptr = i32toi64(args[3], args[2]);
-    create_directory0(address_ptr, sd_address_ptr, stack_frames)?;
-
-    Ok(vec![])
-}
-fn create_directory0(
-    address_ptr: i64,
-    sd_address_ptr: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    let sd_address = sd_address_ptr as usize as PSECURITY_DESCRIPTOR;
-    let mut sec_attr: SECURITY_ATTRIBUTES = unsafe { zeroed() };
-    let lp_security_attributes: LPSECURITY_ATTRIBUTES = if !sd_address.is_null() {
-        sec_attr.nLength = size_of::<SECURITY_ATTRIBUTES>() as DWORD;
-        sec_attr.lpSecurityDescriptor = sd_address;
-        sec_attr.bInheritHandle = FALSE;
-        &mut sec_attr
-    } else {
-        null_mut()
-    };
-
-    let address = address_ptr as usize as LPCWSTR;
-    let result = unsafe { CreateDirectoryW(address, lp_security_attributes) };
-
-    if result == 0 {
-        throw_windows_exception(stack_frames)?;
-    }
-
-    Ok(())
-}
-
-pub fn get_file_attributes_ex0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let lp_file_name_addr = i32toi64(args[1], args[0]);
-    let output_addr = i32toi64(args[3], args[2]);
-    get_file_attributes_ex0(lp_file_name_addr, output_addr, stack_frames)?;
-
-    Ok(vec![])
-}
-fn get_file_attributes_ex0(
-    lp_file_name_addr: i64,
-    output_addr: i64,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    let address = lp_file_name_addr as usize as LPCWSTR;
-    let res = unsafe {
-        GetFileAttributesExW(
-            address,
-            GetFileExInfoStandard,
-            output_addr as usize as LPVOID,
-        )
-    };
-    if res == 0 {
-        throw_windows_exception(stack_frames)?;
-    }
-
-    Ok(())
-}
-
-pub fn delete_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let lp_file_name_addr = i32toi64(args[1], args[0]);
-    delete_file0(lp_file_name_addr, stack_frames)?;
-
-    Ok(vec![])
-}
-fn delete_file0(lp_file_name_addr: i64, stack_frames: &mut StackFrames) -> Result<()> {
-    let address = lp_file_name_addr as usize as LPCWSTR;
-    let res = unsafe { DeleteFileW(address) };
-    if res == 0 {
-        throw_windows_exception(stack_frames)?;
-    }
-
-    Ok(())
-}
-
-pub fn remove_directory0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let lp_file_name_addr = i32toi64(args[1], args[0]);
-    remove_directory0(lp_file_name_addr, stack_frames)?;
-
-    Ok(vec![])
-}
-fn remove_directory0(lp_file_name_addr: i64, stack_frames: &mut StackFrames) -> Result<()> {
-    let address = lp_file_name_addr as usize as LPCWSTR;
-    let res = unsafe { RemoveDirectoryW(address) };
-    if res == 0 {
-        throw_windows_exception(stack_frames)?;
-    }
-
-    Ok(())
-}
-
-pub fn get_file_security0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let lp_file_name_addr = i32toi64(args[1], args[0]);
-    let requested_information = args[2];
-    let p_security_descriptor_addr = i32toi64(args[4], args[3]);
-    let n_length = args[5];
-
-    let Some(result) = get_file_security0(
-        lp_file_name_addr,
-        requested_information,
-        p_security_descriptor_addr,
-        n_length,
-        stack_frames,
-    )?
-    else {
-        return Ok(vec![]);
-    };
-
-    Ok(vec![result])
-}
-fn get_file_security0(
+pub(crate) fn get_file_security0(
     lp_file_name_addr: i64,
     requested_information: i32,
     p_security_descriptor_addr: i64,
     n_length: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<i32> {
+) -> Result<i32> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let mut length_needed = 0 as DWORD;
     let res = unsafe {
@@ -261,29 +175,12 @@ fn get_file_security0(
     }
 }
 
-pub fn get_current_process_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let process_id = get_current_process()?;
-    Ok(i64_to_vec(process_id))
-}
-fn get_current_process() -> Result<i64> {
+pub(crate) fn get_current_process() -> Result<i64> {
     let handle = unsafe { GetCurrentProcess() as usize as i64 };
     Ok(handle)
 }
 
-pub fn open_process_token_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let process = i32toi64(args[1], args[0]);
-    let desired_access = args[2];
-
-    let Some(token) = open_process_token(process, desired_access, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(token))
-}
-fn open_process_token(
-    process: i64,
-    desired_access: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<i64> {
+pub(crate) fn open_process_token(process: i64, desired_access: i32) -> Result<i64> {
     let mut h_token = 0i64 as usize as HANDLE;
     let result = unsafe {
         OpenProcessToken(
@@ -299,32 +196,16 @@ fn open_process_token(
     Ok(Some(h_token as usize as i64))
 }
 
-pub fn get_current_thread_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    let process_id = get_current_thread()?;
-    Ok(i64_to_vec(process_id))
-}
-fn get_current_thread() -> Result<i64> {
+pub(crate) fn get_current_thread() -> Result<i64> {
     let handle = unsafe { GetCurrentThread() as usize as i64 };
     Ok(handle)
 }
 
-pub fn open_thread_token_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let thread = i32toi64(args[1], args[0]);
-    let desired_access = args[2];
-    let open_as_self = args[3] != 0;
-
-    let Some(token) = open_thread_token(thread, desired_access, open_as_self, stack_frames)?
-    else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(token))
-}
-fn open_thread_token(
+pub(crate) fn open_thread_token(
     thread: i64,
     desired_access: i32,
     open_as_self: bool,
-    stack_frames: &mut StackFrames,
-) -> Throws<i64> {
+) -> Result<i64> {
     let h_thread = thread as usize as HANDLE;
     let mut h_token = 0i64 as usize as HANDLE;
     let open_as_self = if open_as_self { TRUE } else { FALSE };
@@ -349,20 +230,7 @@ fn open_thread_token(
     }
 }
 
-pub fn duplicate_token_ex_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let token = i32toi64(args[1], args[0]);
-    let desired_access = args[2];
-
-    let Some(token) = duplicate_token_ex(token, desired_access, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(token))
-}
-fn duplicate_token_ex(
-    token: i64,
-    desired_access: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<i64> {
+pub(crate) fn duplicate_token_ex(token: i64, desired_access: i32) -> Result<i64> {
     let mut result_token = 0i64 as usize as HANDLE;
     let result = unsafe {
         DuplicateTokenEx(
@@ -381,31 +249,7 @@ fn duplicate_token_ex(
     Ok(Some(result_token as usize as i64))
 }
 
-pub fn access_check_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let token = i32toi64(args[1], args[0]);
-    let security_info = i32toi64(args[3], args[2]);
-    let access_mask = args[4];
-    let generic_read = args[5];
-    let generic_write = args[6];
-    let generic_execute = args[7];
-    let generic_all = args[8];
-
-    let Some(result) = access_check(
-        token,
-        security_info,
-        access_mask,
-        generic_read,
-        generic_write,
-        generic_execute,
-        generic_all,
-        stack_frames,
-    )?
-    else {
-        return Ok(vec![]);
-    };
-    Ok(vec![if result { 1 } else { 0 }])
-}
-fn access_check(
+pub(crate) fn access_check(
     token: i64,
     security_info: i64,
     access_mask: i32,
@@ -413,8 +257,7 @@ fn access_check(
     generic_write: i32,
     generic_execute: i32,
     generic_all: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<bool> {
+) -> Result<bool> {
     let mut mapping = GENERIC_MAPPING {
         GenericRead: generic_read as DWORD,
         GenericWrite: generic_write as DWORD,
@@ -450,28 +293,11 @@ fn access_check(
     }
 }
 
-pub fn close_handle_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let handle = i32toi64(args[1], args[0]);
-    close_handle(handle);
-
-    Ok(vec![])
-}
-fn close_handle(handle: i64) {
+pub(crate) fn close_handle(handle: i64) {
     let _result = unsafe { CloseHandle(handle as HANDLE) };
 }
 
-pub fn get_volume_path_name0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let address = i32toi64(args[1], args[0]);
-
-    let Some(string_ref) = get_volume_path_name0(address, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![string_ref])
-}
-fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let result = unsafe {
         GetVolumePathNameW(
@@ -490,23 +316,7 @@ fn get_volume_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throws
     Ok(Some(string_ref))
 }
 
-pub fn get_volume_information0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let address = i32toi64(args[1], args[0]);
-    let volume_information_ref = args[2];
-
-    let Some(_) = get_volume_information0(address, volume_information_ref, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
-}
-fn get_volume_information0(
-    address: i64,
-    volume_information_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32) -> Result<()> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let mut volume_serial_number = 0 as DWORD;
     let mut max_component_length = 0 as DWORD;
@@ -561,23 +371,11 @@ fn get_volume_information0(
     Ok(Some(()))
 }
 
-pub fn get_drive_type0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let address = i32toi64(args[1], args[0]);
-    let drive_type = get_drive_type0(address);
-
-    Ok(vec![drive_type])
-}
-fn get_drive_type0(address: i64) -> i32 {
+pub(crate) fn get_drive_type0(address: i64) -> i32 {
     unsafe { GetDriveTypeW(address as LPCWSTR) as i32 }
 }
 
-pub fn format_message_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let error_code = args[0];
-    let string_ref = format_message(error_code)?;
-
-    Ok(vec![string_ref])
-}
-fn format_message(error_code: i32) -> Result<i32> {
+pub(crate) fn format_message(error_code: i32) -> Result<i32> {
     let mut message = [0 as WCHAR; 256];
     let msg_len = unsafe {
         FormatMessageW(
@@ -603,15 +401,7 @@ fn format_message(error_code: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
-pub fn get_full_path_name0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let address = i32toi64(args[1], args[0]);
-
-    let Some(string_ref) = get_full_path_name0(address, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![string_ref])
-}
-fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn get_full_path_name0(address: i64) -> Result<i32> {
     let lp_file_name = address as usize as LPCWSTR;
     let mut result = vec![0 as WCHAR; MAX_PATH + 1];
 
@@ -644,20 +434,7 @@ fn get_full_path_name0(address: i64, stack_frames: &mut StackFrames) -> Throws<i
     }
 }
 
-pub fn find_first_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let lp_file_name = i32toi64(args[1], args[0]);
-    let first_file_obj_ref = args[2];
-
-    let Some(_res) = find_first_file0(lp_file_name, first_file_obj_ref, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
-}
-fn find_first_file0(
-    lp_file_name: i64,
-    first_file_obj_ref: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<()> {
+pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Result<()> {
     let mut data: WIN32_FIND_DATAW = unsafe { zeroed() };
     let lp_file_name = lp_file_name as usize as LPCWSTR;
     let handle = unsafe { FindFirstFileW(lp_file_name, &mut data) };
@@ -691,16 +468,7 @@ fn find_first_file0(
     Ok(Some(()))
 }
 
-pub fn find_next_file0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let handle = i32toi64(args[1], args[0]);
-    let address = i32toi64(args[3], args[2]);
-
-    let Some(string_ref) = find_next_file0(handle, address, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![string_ref])
-}
-fn find_next_file0(handle: i64, address: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn find_next_file0(handle: i64, address: i64) -> Result<i32> {
     let handle = handle as usize as HANDLE;
     let data = address as usize as *mut WIN32_FIND_DATAW;
     let result = unsafe { winapi::um::fileapi::FindNextFileW(handle, data) };
@@ -718,15 +486,7 @@ fn find_next_file0(handle: i64, address: i64, stack_frames: &mut StackFrames) ->
     }
 }
 
-pub fn find_close_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let handle = i32toi64(args[1], args[0]);
-
-    let Some(_res) = find_close(handle, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
-}
-fn find_close(handle: i64, stack_frames: &mut StackFrames) -> Throws<()> {
+pub(crate) fn find_close(handle: i64) -> Result<()> {
     let handle = handle as usize as HANDLE;
     let result = unsafe { FindClose(handle) };
     if result == 0 {
