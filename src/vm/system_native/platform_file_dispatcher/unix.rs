@@ -12,6 +12,7 @@ const IOS_EOF: i32 = -1;
 const IOS_UNAVAILABLE: i32 = -2;
 const IOS_INTERRUPTED: i32 = -3;
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.write0(Ljava/io/FileDescriptor;JI)I`
 pub(crate) fn write0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
     let address = address as usize as *const u8;
     let buf = unsafe { from_raw_parts(address, len as usize) };
@@ -33,6 +34,7 @@ pub(crate) fn write0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
     Ok(result)
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I`
 pub(crate) fn read0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
     let address = address as usize as *mut u8;
     let buf = unsafe { from_raw_parts_mut(address, len as usize) };
@@ -60,6 +62,7 @@ pub(crate) fn read0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
     Ok(result)
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I`
 pub(crate) fn pread0(fd_ref: i32, address: i64, len: i32, position: i64) -> Result<i32> {
     let address = address as usize as *mut u8;
     let buf = unsafe { from_raw_parts_mut(address, len as usize) };
@@ -87,6 +90,7 @@ pub(crate) fn pread0(fd_ref: i32, address: i64, len: i32, position: i64) -> Resu
     Ok(result)
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J`
 pub(crate) fn size0(fd_ref: i32) -> Result<i64> {
     let fd = (get_handle(fd_ref))?;
     let fd = unsafe { BorrowedFd::borrow_raw(fd) };
@@ -102,6 +106,7 @@ pub(crate) fn size0(fd_ref: i32) -> Result<i64> {
     Ok(result)
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I`
 pub(crate) fn truncate0(fd_ref: i32, size: i64) -> Result<i32> {
     let Some(file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
         return Ok(0);

@@ -17,10 +17,14 @@ use crate::vm::exception::pending_helpers::set_pending_io_exception;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::platform_file_dispatcher::mmap_registry::MmapVariant;
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.allocationGranularity0()J`
+/// `sun.nio.ch.FileDispatcherImpl.allocationGranularity0()J`
 pub(crate) fn allocation_granularity0() -> Result<i64> {
     Ok(page_size::get_granularity() as i64)
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J`
+/// `sun.nio.ch.FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J`
 pub(crate) fn map0(
     fd_ref: i32,
     prot: i32,
@@ -29,9 +33,9 @@ pub(crate) fn map0(
     _is_sync: bool, // is not supported
 ) -> Result<i64> {
     #[cfg(windows)]
-    let raw_handle = (get_handle(fd_ref))? as std::os::windows::io::RawHandle;
+    let raw_handle = get_handle(fd_ref)? as std::os::windows::io::RawHandle;
     #[cfg(unix)]
-    let raw_handle = (get_handle(fd_ref))?;
+    let raw_handle = get_handle(fd_ref)?;
 
     let addr = match MmapVariant::register(raw_handle, prot, position as u64, length as usize) {
         Ok(addr) => addr,
@@ -69,6 +73,8 @@ fn force0(_fd_ref: i32, address: i64, length: i64, stack_frames: &mut StackFrame
     }
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
+/// `sun.nio.ch.FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
 pub(crate) fn is_other0(fd_ref: i32) -> Result<bool> {
     let Some(file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
         return Ok(false);
@@ -85,6 +91,8 @@ pub(crate) fn is_other0(fd_ref: i32) -> Result<bool> {
     Ok(!metadata.is_file() && !metadata.is_dir() && !metadata.file_type().is_symlink())
 }
 
+/// `sun.nio.ch.UnixFileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J`
+/// `sun.nio.ch.FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J`
 pub(crate) fn seek0(fd_ref: i32, offset: i64) -> Result<i64> {
     let Some(mut file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
         return Ok(0);

@@ -20,10 +20,12 @@ use winapi::um::winnt::{DUPLICATE_SAME_ACCESS, HANDLE, LARGE_INTEGER};
 const IOS_EOF: i32 = -1; // End of file
 const IOS_UNAVAILABLE: i32 = -2; // Nothing available (non-blocking)
 
+/// `sun.nio.ch.FileDispatcherImpl.maxDirectTransferSize0()I`
 pub(crate) fn max_direct_transfer_size0() -> Result<i32> {
     Ok(i32::MAX - 1) // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
 }
 
+/// `sun.nio.ch.FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I`
 pub(crate) fn write0(fd_ref: i32, address: i64, len: i32, append: bool) -> Result<i32> {
     let handle = get_handle(fd_ref)?;
     let handle = handle as usize as HANDLE;
@@ -60,6 +62,7 @@ pub(crate) fn write0(fd_ref: i32, address: i64, len: i32, append: bool) -> Resul
     Ok(written as i32)
 }
 
+/// `sun.nio.ch.FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I`
 pub(crate) fn read0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
     let handle = get_handle(fd_ref)? as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
@@ -93,6 +96,7 @@ pub(crate) fn read0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
     Ok(if read == 0 { IOS_EOF } else { read as i32 })
 }
 
+/// `sun.nio.ch.FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I`
 pub(crate) fn pread0(fd_ref: i32, address: i64, len: i32, offset: i64) -> Result<i32> {
     let handle = get_handle(fd_ref)? as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
@@ -141,6 +145,7 @@ pub(crate) fn pread0(fd_ref: i32, address: i64, len: i32, offset: i64) -> Result
     Ok(if read == 0 { IOS_EOF } else { read as i32 })
 }
 
+/// `sun.nio.ch.FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J`
 pub(crate) fn size0(fd_ref: i32) -> Result<i64> {
     let handle = get_handle(fd_ref)? as usize as HANDLE;
     let mut size: LARGE_INTEGER = unsafe { zeroed() };
@@ -155,6 +160,7 @@ pub(crate) fn size0(fd_ref: i32) -> Result<i64> {
     Ok(size)
 }
 
+/// `sun.nio.ch.FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I`
 pub(crate) fn truncate0(fd_ref: i32, size: i64) -> Result<i32> {
     let handle = (get_handle(fd_ref))? as usize as HANDLE;
     let mut eof_info: FILE_END_OF_FILE_INFO = unsafe { zeroed() };
@@ -179,6 +185,7 @@ pub(crate) fn truncate0(fd_ref: i32, size: i64) -> Result<i32> {
     Ok(0)
 }
 
+/// `sun.nio.ch.FileDispatcherImpl.duplicateHandle0(J)J`
 pub(crate) fn duplicate_handle(fd: i64) -> Result<i64> {
     let handle = fd as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
