@@ -1,81 +1,51 @@
 use crate::vm::error::Result;
-use crate::vm::helper::{get_handle, i32toi64, i64_to_vec};
+use crate::vm::helper::{get_handle, i32toi64};
 use crate::vm::stack::stack_frame::StackFrames;
 use std::io::Seek;
 
 #[cfg(windows)]
-pub mod windows_file_dispatcher;
-#[cfg(windows)]
-use windows_file_dispatcher::truncate0;
+pub mod win;
 
 mod mmap_registry;
 #[cfg(unix)]
-pub mod unix_file_dispatcher;
+pub mod unix;
 
 use crate::bail_thrown;
 use crate::vm::exception::helpers::throw_ioexception;
 use crate::vm::exception::pending::Throws;
+use crate::vm::exception::pending_helpers::set_pending_io_exception;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::platform_file_dispatcher::mmap_registry::MmapVariant;
-#[cfg(unix)]
-use unix_file_dispatcher::truncate0;
 
-pub fn allocation_granularity0_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(i64_to_vec(allocation_granularity0()))
-}
-fn allocation_granularity0() -> i64 {
-    page_size::get_granularity() as i64
+/// `sun.nio.ch.UnixFileDispatcherImpl.allocationGranularity0()J`
+/// `sun.nio.ch.FileDispatcherImpl.allocationGranularity0()J`
+pub(crate) fn allocation_granularity0() -> Result<i64> {
+    Ok(page_size::get_granularity() as i64)
 }
 
-pub fn file_dispatcher_impl_truncate0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let size = i32toi64(args[2], args[1]);
-
-    let Some(result) = truncate0(fd_ref, size, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![result])
-}
-
-pub fn file_dispatcher_map0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let prot = args[1];
-    let position = i32toi64(args[3], args[2]);
-    let length = i32toi64(args[5], args[4]);
-    let is_sync = args[6] != 0;
-
-    let Some(address) = map0(fd_ref, prot, position, length, is_sync, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(address))
-}
-pub(super) fn map0(
+/// `sun.nio.ch.UnixFileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J`
+/// `sun.nio.ch.FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J`
+pub(crate) fn map0(
     fd_ref: i32,
     prot: i32,
     position: i64,
     length: i64,
     _is_sync: bool, // is not supported
-    stack_frames: &mut StackFrames,
-) -> Throws<i64> {
+) -> Result<i64> {
     #[cfg(windows)]
-    let raw_handle = (get_handle(fd_ref))? as std::os::windows::io::RawHandle;
+    let raw_handle = get_handle(fd_ref)? as std::os::windows::io::RawHandle;
     #[cfg(unix)]
-    let raw_handle = (get_handle(fd_ref))?;
+    let raw_handle = get_handle(fd_ref)?;
 
     let addr = match MmapVariant::register(raw_handle, prot, position as u64, length as usize) {
         Ok(addr) => addr,
         Err(e) => {
-            bail_thrown!(throw_ioexception(
-                &format!("Memory mapping failed: {}", e),
-                stack_frames
-            ))
+            set_pending_io_exception(&format!("Memory mapping failed: {}", e))?;
+            return Ok(0);
         }
     };
 
-    Ok(Some(addr))
+    Ok(addr)
 }
 
 pub fn mapped_memory_utils_force0_wrp(
@@ -103,50 +73,29 @@ fn force0(_fd_ref: i32, address: i64, length: i64, stack_frames: &mut StackFrame
     }
 }
 
-pub fn file_dispatcher_is_other0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let Some(res) = is_other0(fd_ref, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![if res { 1 } else { 0 }])
-}
-fn is_other0(fd_ref: i32, stack_frames: &mut StackFrames) -> Throws<bool> {
-    let Some(file) = PlatformFile::get_by_fd(fd_ref, stack_frames)? else {
-        return Ok(None);
+/// `sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
+/// `sun.nio.ch.FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
+pub(crate) fn is_other0(fd_ref: i32) -> Result<bool> {
+    let Some(file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
+        return Ok(false);
     };
 
     let metadata = match file.metadata() {
         Ok(metadata) => metadata,
         Err(e) => {
-            bail_thrown!(throw_ioexception(
-                &format!("Failed to get file metadata: {}", e),
-                stack_frames
-            ))
+            set_pending_io_exception(&format!("Failed to get file metadata: {}", e))?;
+            return Ok(false);
         }
     };
 
-    Ok(Some(
-        !metadata.is_file() && !metadata.is_dir() && !metadata.file_type().is_symlink(),
-    ))
+    Ok(!metadata.is_file() && !metadata.is_dir() && !metadata.file_type().is_symlink())
 }
 
-pub fn file_dispatcher_seek0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let offset = i32toi64(args[2], args[1]);
-    let Some(current_offset) = seek0(fd_ref, offset, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(current_offset))
-}
-fn seek0(fd_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> Throws<i64> {
-    let Some(mut file) = PlatformFile::get_by_fd(fd_ref, stack_frames)? else {
-        return Ok(None);
+/// `sun.nio.ch.UnixFileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J`
+/// `sun.nio.ch.FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J`
+pub(crate) fn seek0(fd_ref: i32, offset: i64) -> Result<i64> {
+    let Some(mut file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
+        return Ok(0);
     };
 
     let current_offset = if offset < 0 {
@@ -156,12 +105,10 @@ fn seek0(fd_ref: i32, offset: i64, stack_frames: &mut StackFrames) -> Throws<i64
     };
 
     match current_offset {
-        Ok(current_offset) => Ok(Some(current_offset as i64)),
+        Ok(current_offset) => Ok(current_offset as i64),
         Err(e) => {
-            bail_thrown!(throw_ioexception(
-                &format!("Seek failed: {}", e),
-                stack_frames
-            ))
+            set_pending_io_exception(&format!("Seek failed: {}", e))?;
+            Ok(0)
         }
     }
 }

@@ -70,8 +70,7 @@ impl<V> AutoDashMap<V> for AutoDashMapI64<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json;
-    use serde_json::json;
+    use serde_json::{self, json};
 
     #[test]
     fn should_create_default_map() {
