@@ -1,7 +1,7 @@
 #[cfg(windows)]
-pub mod windows_helpers;
+pub mod win;
 #[cfg(windows)]
-pub mod windows_native_dispatcher;
+pub mod windows_helpers;
 
 #[cfg(unix)]
-pub mod unix_native_dispatcher;
+pub mod unix;
