@@ -379,8 +379,8 @@ pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32)
 }
 
 pub(crate) fn get_drive_type0(address: i64) -> Result<i32> {
-    let address = unsafe { GetDriveTypeW(address as LPCWSTR) as i32 };
-    Ok(address)
+    let drive_type = unsafe { GetDriveTypeW(address as LPCWSTR) as i32 };
+    Ok(drive_type)
 }
 
 pub(crate) fn format_message(error_code: i32) -> Result<i32> {
