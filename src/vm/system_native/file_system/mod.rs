@@ -1,4 +1,5 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::Result;
+use crate::vm::exception::pending_helpers::set_pending_io_exception;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
@@ -28,10 +29,20 @@ pub(crate) fn canonicalize0(_this: i32, path_ref: i32) -> Result<i32> {
     let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
-    let canonical_path = path.absolutize()?;
-    let canonical_name = canonical_path.to_str().ok_or_else(|| {
-        Error::new_execution(&format!("Failed to convert path {canonical_path:?}"))
-    })?;
+    let canonical_path = match path.absolutize() {
+        Ok(path) => path,
+        Err(e) => {
+            set_pending_io_exception(&format!("Failed to canonicalize path {path:?}: {e}"))?;
+            return Ok(0);
+        }
+    };
+    let canonical_name = match canonical_path.to_str() {
+        Some(name) => name,
+        None => {
+            set_pending_io_exception(&format!("Failed to convert path {canonical_path:?}"))?;
+            return Ok(0);
+        }
+    };
     let canonical_name_ref = StringPoolHelper::get_string(canonical_name)?;
 
     Ok(canonical_name_ref)
@@ -44,9 +55,10 @@ pub(crate) fn create_file_exclusively0(_this: i32, path_ref: i32) -> Result<bool
     match std::fs::File::create_new(path) {
         Ok(_) => Ok(true),
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
-        Err(e) => Err(Error::new_execution(&format!(
-            "Failed to create file {path:?}: {e}"
-        ))),
+        Err(e) => {
+            set_pending_io_exception(&format!("Failed to create file {path:?}: {e}"))?;
+            Ok(false)
+        }
     }
 }
 
@@ -122,9 +134,10 @@ pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
         return Ok(false);
     }
 
-    std::fs::remove_file(path)
-        .map(|_| true)
-        .map_err(|e| Error::new_execution(&format!("Failed to delete file {path:?}: {e}")))
+    match std::fs::remove_file(path) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false),
+    }
 }
 
 /// Get the length of the file in bytes.
