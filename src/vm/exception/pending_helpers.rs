@@ -79,7 +79,7 @@ fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result
 /// First-wins semantics: if an exception is already pending it is preserved and
 /// this one is dropped (like OpenJDK), and the throwable is *not* constructed —
 /// so we never run a Java constructor while an exception is already pending.
-fn set_pending_exception(
+pub(super) fn set_pending_exception(
     class_name: &str,
     constructor_signature: &str,
     args: &[StackValueKind],

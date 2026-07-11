@@ -32,11 +32,6 @@ pub fn throw_null_pointer_exception_with_message(
     throw_exception_with_message("java/lang/NullPointerException", message, stack_frames)
 }
 
-#[cfg(windows)]
-pub fn throw_internal_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    throw_exception_with_message("java/lang/InternalError", message, stack_frames)
-}
-
 pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
     if arr_ref == 0 {
         set_pending_null_pointer_exception_with_message("array is null")?;

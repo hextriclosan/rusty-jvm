@@ -1,12 +1,9 @@
-use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::pending::Throws;
-use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i32toi64, i64_to_vec};
-use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::platform_native_dispatcher::unix_helpers::{
-    throw_unix_exception, throw_unix_exception_with_errno,
+use crate::vm::exception::pending_helpers_unix::{
+    set_pending_unix_exception, set_pending_unix_exception_with_errno,
 };
+use crate::vm::heap::heap::HEAP;
+use crate::vm::helper::i64_to_vec;
 use nix::fcntl::{open, OFlag};
 use nix::libc::{c_char, mode_t, rmdir};
 use nix::sys::stat::{lstat, stat, FileStat, Mode};
@@ -17,16 +14,13 @@ use std::os::fd::IntoRawFd;
 use std::os::unix::prelude::OsStringExt;
 use std::path::Path;
 
-pub fn get_cwd_wrp(_args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let Some(byte_array_ref) = get_cwd(stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![byte_array_ref])
-}
-fn get_cwd(stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn get_cwd() -> Result<i32> {
     let path = match getcwd() {
         Ok(path) => path,
-        Err(errno) => bail_thrown!(throw_unix_exception_with_errno(errno as i32, stack_frames)),
+        Err(errno) => {
+            set_pending_unix_exception_with_errno(errno as i32)?;
+            return Ok(0);
+        }
     };
 
     let cwd = path
@@ -38,23 +32,14 @@ fn get_cwd(stack_frames: &mut StackFrames) -> Throws<i32> {
     // Allocate the byte array in the heap and return its reference
     let array_ref = HEAP.create_array_with_values("[B", &cwd);
 
-    Ok(Some(array_ref))
+    Ok(array_ref)
 }
 
-pub fn unix_native_dispatcher_open0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let path_address = i32toi64(args[1], args[0]);
-    let flags = args[2];
-    let mode = args[3];
-
-    let Some(fd) = open0(path_address, flags, mode, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![fd])
+pub(crate) fn init() -> Result<i32> {
+    Ok(0) // todo: return real capability flags
 }
-fn open0(path_address: i64, flags: i32, mode: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
+
+pub(crate) fn open0(path_address: i64, flags: i32, mode: i32) -> Result<i32> {
     let path = unsafe { CStr::from_ptr(path_address as *const c_char) };
     let path = match path.to_str() {
         Ok(path) => path,
@@ -72,79 +57,16 @@ fn open0(path_address: i64, flags: i32, mode: i32, stack_frames: &mut StackFrame
         Mode::from_bits_truncate(mode as mode_t),
     ) {
         Ok(fd) => fd,
-        Err(errno) => bail_thrown!(throw_unix_exception_with_errno(errno as i32, stack_frames)),
-    };
-
-    Ok(Some(fd.into_raw_fd() as i32))
-}
-
-pub fn mkdir0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-    let mode = args[2];
-
-    mkdir0(path_ptr, mode, stack_frames)?;
-
-    Ok(vec![])
-}
-
-fn mkdir0(path_ptr: i64, mode: i32, stack_frames: &mut StackFrames) -> Result<()> {
-    let path = cstring_from_i64(path_ptr)?;
-
-    let mode = Mode::from_bits_truncate(mode as mode_t);
-    match mkdir(path.as_c_str(), mode) {
-        Ok(()) => (),
         Err(errno) => {
-            throw_unix_exception_with_errno(errno as i32, stack_frames)?;
+            set_pending_unix_exception_with_errno(errno as i32)?;
+            return Ok(0);
         }
     };
-    Ok(())
+
+    Ok(fd.into_raw_fd() as i32)
 }
 
-pub fn unlink0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-
-    unlink0(path_ptr, stack_frames)?;
-
-    Ok(vec![])
-}
-fn unlink0(path_ptr: i64, stack_frames: &mut StackFrames) -> Result<()> {
-    let path = cstring_from_i64(path_ptr)?;
-
-    match unlink(path.as_c_str()) {
-        Ok(()) => (),
-        Err(errno) => {
-            throw_unix_exception_with_errno(errno as i32, stack_frames)?;
-        }
-    }
-    Ok(())
-}
-
-pub fn rmdir0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-
-    rmdir0(path_ptr, stack_frames)?;
-
-    Ok(vec![])
-}
-
-fn rmdir0(path_ptr: i64, stack_frames: &mut StackFrames) -> Result<()> {
-    let path = cstring_from_i64(path_ptr)?;
-    let result = unsafe { rmdir(path.as_ptr()) };
-    if result == -1 {
-        throw_unix_exception(stack_frames)?
-    }
-    Ok(())
-}
-
-pub fn get_access0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-    let mode = args[2];
-
-    let result = get_access0(path_ptr, mode)?;
-
-    Ok(vec![result])
-}
-fn get_access0(path_ptr: i64, mode: i32) -> Result<i32> {
+pub(crate) fn access0(path_ptr: i64, mode: i32) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
 
     let flags =
@@ -156,15 +78,7 @@ fn get_access0(path_ptr: i64, mode: i32) -> Result<i32> {
     }
 }
 
-pub fn stat0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-    let attr_ref = args[2];
-
-    let result = stat0(path_ptr, attr_ref)?;
-
-    Ok(vec![result])
-}
-fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
+pub(crate) fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
 
     match stat(path.as_c_str()) {
@@ -176,15 +90,7 @@ fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
     }
 }
 
-pub fn lstat0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-    let attr_ref = args[2];
-
-    lstat0(path_ptr, attr_ref, stack_frames)?;
-
-    Ok(vec![])
-}
-fn lstat0(path_ptr: i64, attr_ref: i32, stack_frames: &mut StackFrames) -> Result<()> {
+pub(crate) fn lstat0(path_ptr: i64, attr_ref: i32) -> Result<()> {
     let path = cstring_from_i64(path_ptr)?;
 
     match lstat(path.as_c_str()) {
@@ -192,9 +98,47 @@ fn lstat0(path_ptr: i64, attr_ref: i32, stack_frames: &mut StackFrames) -> Resul
             copy_stat_attributes(attr_ref, stat)?;
         }
         Err(errno) => {
-            throw_unix_exception_with_errno(errno as i32, stack_frames)?;
+            set_pending_unix_exception_with_errno(errno as i32)?;
+            return Ok(());
         }
     }
+    Ok(())
+}
+
+pub(crate) fn mkdir0(path_ptr: i64, mode: i32) -> Result<()> {
+    let path = cstring_from_i64(path_ptr)?;
+
+    let mode = Mode::from_bits_truncate(mode as mode_t);
+    match mkdir(path.as_c_str(), mode) {
+        Ok(()) => (),
+        Err(errno) => {
+            set_pending_unix_exception_with_errno(errno as i32)?;
+            return Ok(());
+        }
+    };
+    Ok(())
+}
+
+pub(crate) fn unlink0(path_ptr: i64) -> Result<()> {
+    let path = cstring_from_i64(path_ptr)?;
+
+    match unlink(path.as_c_str()) {
+        Ok(()) => (),
+        Err(errno) => {
+            set_pending_unix_exception_with_errno(errno as i32)?;
+            return Ok(());
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn rmdir0(path_ptr: i64) -> Result<()> {
+    let path = cstring_from_i64(path_ptr)?;
+    let result = unsafe { rmdir(path.as_ptr()) };
+    if result == -1 {
+        set_pending_unix_exception()?;
+    }
+
     Ok(())
 }
 
@@ -237,14 +181,7 @@ fn copy_stat_attributes(attr_ref: i32, stat: FileStat) -> Result<()> {
     )
 }
 
-pub fn realpath0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let path_ptr = i32toi64(args[1], args[0]);
-    let Some(byte_arr_ref) = realpath0(path_ptr, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![byte_arr_ref])
-}
-fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn realpath0(path_ptr: i64) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
     let path = OsString::from_vec(path.into_bytes());
     let result_path = realpath(Path::new(&path), RealpathFlags::empty());
@@ -254,7 +191,8 @@ fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
             let errno = errno
                 .raw_os_error()
                 .ok_or_else(|| Error::new_native("Failed to get errno from realpath error"))?;
-            bail_thrown!(throw_unix_exception_with_errno(errno, stack_frames));
+            set_pending_unix_exception_with_errno(errno)?;
+            return Ok(0);
         }
     };
 
@@ -267,5 +205,5 @@ fn realpath0(path_ptr: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
     // Allocate the byte array in the heap and return its reference
     let array_ref = HEAP.create_array_with_values("[B", &path_bytes);
 
-    Ok(Some(array_ref))
+    Ok(array_ref)
 }
