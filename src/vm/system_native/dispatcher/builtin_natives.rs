@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::system_native as sn;
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
+use crate::vm::system_native as sn;
 #[allow(unused_imports)]
 use jni_sys::{
     jarray, jboolean, jbyte, jbyteArray, jchar, jclass, jdouble, jfloat, jint, jlong, jobject,

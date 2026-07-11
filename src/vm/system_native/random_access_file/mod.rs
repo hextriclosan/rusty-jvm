@@ -5,7 +5,7 @@ use std::io::{Read, Seek, Write};
 #[cfg(windows)]
 mod windows_impl;
 #[cfg(windows)]
-use windows_impl::open0;
+use windows_impl::open0 as open0_impl;
 
 #[cfg(unix)]
 mod unix_impl;
@@ -36,11 +36,7 @@ pub(crate) fn init_ids() -> Result<()> {
 }
 
 /// `java.io.RandomAccessFile.open0(Ljava/lang/String;I)V`
-pub(crate) fn open0(
-    obj_ref: i32,
-    file_name_ref: i32,
-    mode_raw: i32,
-) -> Result<()> {
+pub(crate) fn open0(obj_ref: i32, file_name_ref: i32, mode_raw: i32) -> Result<()> {
     let Some(mode) = RandomAccessFileMode::from_bits(mode_raw) else {
         set_pending_illegal_argument_exception(&format!("Invalid mode: {}", mode_raw))?;
         return Ok(());
