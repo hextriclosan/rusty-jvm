@@ -540,9 +540,9 @@ builtin_natives! {
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileAttributesEx0(name_ptr: long, output_ptr: long) -> void => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_file_attributes_ex0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn DeleteFile0(name_ptr: long) -> void => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::delete_file0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn RemoveDirectory0(name_ptr: long) -> void => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::remove_directory0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn CreateFile0(name_ptr: long, access: int, share: int, sd_ptr: long, create: int, creation_dsp: int, flags: long) -> long => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::create_file0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn CreateFile0(name_ptr: long, access: int, share: int, sd_ptr: long, creation_dsp: int, flags: int) -> long => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::create_file0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn SetEndOfFile(handle_ptr: long) -> void => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::set_end_of_file;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileSecurity0(name_ptr: long, req_info: int, descr_ptr: long, length: int, len: int) -> int => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_file_security0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileSecurity0(name_ptr: long, req_info: int, descr_ptr: long, length: int) -> int => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_file_security0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetCurrentProcess() -> long => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_current_process;
     "sun/nio/fs/WindowsNativeDispatcher": static fn OpenProcessToken(proc_handle: long, access: int) -> long => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::open_process_token;
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetCurrentThread() -> long => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_current_thread;
@@ -553,7 +553,7 @@ builtin_natives! {
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetVolumePathName0(address_ptr: long) -> string => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_volume_path_name0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetVolumeInformation0(address_ptr: long, info_ref: volume_info) -> void => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_volume_information0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetDriveType0(address_handle: long) -> int => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_drive_type0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn FormatMessage0(error_code: int) -> string => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::format_message;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn FormatMessage(error_code: int) -> string => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::format_message;
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetFullPathName0(address_ptr: long) -> string => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::get_full_path_name0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn FindFirstFile0(name_ptr: long, first_file: first_file) -> void => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::find_first_file0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn FindNextFile0(handle: long, addr: long) -> string => crate::vm::system_native::platform_native_dispatcher::windows_native_dispatcher::find_next_file0;

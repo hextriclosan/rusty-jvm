@@ -1,12 +1,10 @@
-use crate::bail_thrown;
 use crate::vm::error::Result;
-use crate::vm::exception::helpers::throw_internal_error;
+use crate::vm::exception::pending_helpers_win::set_pending_windows_exception;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
-use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
-    throw_windows_exception, wchar_to_string_ref,
-};
+use crate::vm::jni::set_pending_internal_error;
+use crate::vm::system_native::platform_native_dispatcher::windows_helpers::wchar_to_string_ref;
 use std::mem::zeroed;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, FALSE, LPVOID, MAX_PATH, TRUE};
@@ -53,7 +51,7 @@ pub(crate) fn create_directory0(address_ptr: i64, sd_address_ptr: i64) -> Result
     let result = unsafe { CreateDirectoryW(address, lp_security_attributes) };
 
     if result == 0 {
-        throw_windows_exception(stack_frames)?;
+        set_pending_windows_exception()?;
     }
 
     Ok(())
@@ -69,7 +67,7 @@ pub(crate) fn get_file_attributes_ex0(lp_file_name_addr: i64, output_addr: i64) 
         )
     };
     if res == 0 {
-        throw_windows_exception(stack_frames)?;
+        set_pending_windows_exception()?;
     }
 
     Ok(())
@@ -79,7 +77,7 @@ pub(crate) fn delete_file0(lp_file_name_addr: i64) -> Result<()> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let res = unsafe { DeleteFileW(address) };
     if res == 0 {
-        throw_windows_exception(stack_frames)?;
+        set_pending_windows_exception()?;
     }
 
     Ok(())
@@ -89,7 +87,7 @@ pub(crate) fn remove_directory0(lp_file_name_addr: i64) -> Result<()> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let res = unsafe { RemoveDirectoryW(address) };
     if res == 0 {
-        throw_windows_exception(stack_frames)?;
+        set_pending_windows_exception()?;
     }
 
     Ok(())
@@ -129,10 +127,11 @@ pub(crate) fn create_file0(
     };
 
     if result == INVALID_HANDLE_VALUE {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(0);
     }
 
-    Ok(Some(result as i64))
+    Ok(result as i64)
 }
 
 pub(crate) fn set_end_of_file(handle_ptr: i64) -> Result<()> {
@@ -140,7 +139,7 @@ pub(crate) fn set_end_of_file(handle_ptr: i64) -> Result<()> {
     let result = unsafe { SetEndOfFile(handle) };
 
     if result == 0 {
-        throw_windows_exception(stack_frames)?;
+        set_pending_windows_exception()?;
     }
 
     Ok(())
@@ -166,12 +165,13 @@ pub(crate) fn get_file_security0(
     if res == 0 {
         let last_error = unsafe { GetLastError() };
         if last_error == ERROR_INSUFFICIENT_BUFFER {
-            Ok(Some(length_needed as i32))
+            Ok(length_needed as i32)
         } else {
-            bail_thrown!(throw_windows_exception(stack_frames))
+            set_pending_windows_exception()?;
+            Ok(0)
         }
     } else {
-        Ok(Some(n_length))
+        Ok(n_length)
     }
 }
 
@@ -190,10 +190,11 @@ pub(crate) fn open_process_token(process: i64, desired_access: i32) -> Result<i6
         )
     };
     if result == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(0);
     }
 
-    Ok(Some(h_token as usize as i64))
+    Ok(h_token as usize as i64)
 }
 
 pub(crate) fn get_current_thread() -> Result<i64> {
@@ -220,13 +221,14 @@ pub(crate) fn open_thread_token(
     };
     if result == 0 {
         match unsafe { GetLastError() } {
-            ERROR_NO_TOKEN => Ok(Some(0)),
+            ERROR_NO_TOKEN => Ok(0),
             _ => {
-                bail_thrown!(throw_windows_exception(stack_frames))
+                set_pending_windows_exception()?;
+                Ok(0)
             }
         }
     } else {
-        Ok(Some(h_token as usize as i64))
+        Ok(h_token as usize as i64)
     }
 }
 
@@ -243,10 +245,11 @@ pub(crate) fn duplicate_token_ex(token: i64, desired_access: i32) -> Result<i64>
         )
     };
     if result == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(0);
     }
 
-    Ok(Some(result_token as usize as i64))
+    Ok(result_token as usize as i64)
 }
 
 pub(crate) fn access_check(
@@ -287,14 +290,16 @@ pub(crate) fn access_check(
         )
     };
     if ret == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        Ok(false)
     } else {
-        Ok(Some(result == TRUE))
+        Ok(result == TRUE)
     }
 }
 
-pub(crate) fn close_handle(handle: i64) {
+pub(crate) fn close_handle(handle: i64) -> Result<()> {
     let _result = unsafe { CloseHandle(handle as HANDLE) };
+    Ok(())
 }
 
 pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
@@ -308,12 +313,13 @@ pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
     };
 
     if result == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(0);
     }
 
     let string_ref = wchar_to_string_ref(&volume_name)?;
 
-    Ok(Some(string_ref))
+    Ok(string_ref)
 }
 
 pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32) -> Result<()> {
@@ -337,7 +343,8 @@ pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32)
     };
 
     if result == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(());
     }
 
     let volume_name_ref = (wchar_to_string_ref(&volume_name))?;
@@ -368,11 +375,12 @@ pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32)
         vec![flags as i32],
     )?;
 
-    Ok(Some(()))
+    Ok(())
 }
 
-pub(crate) fn get_drive_type0(address: i64) -> i32 {
-    unsafe { GetDriveTypeW(address as LPCWSTR) as i32 }
+pub(crate) fn get_drive_type0(address: i64) -> Result<i32> {
+    let address = unsafe { GetDriveTypeW(address as LPCWSTR) as i32 };
+    Ok(address)
 }
 
 pub(crate) fn format_message(error_code: i32) -> Result<i32> {
@@ -414,22 +422,21 @@ pub(crate) fn get_full_path_name0(address: i64) -> Result<i32> {
         )
     };
     if len == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(0);
     }
     if len < MAX_PATH as DWORD {
         let string_ref = wchar_to_string_ref(&result[..(len + 1) as usize])?;
-        Ok(Some(string_ref))
+        Ok(string_ref)
     } else {
         result.resize((len + 1) as usize, 0);
         let len = unsafe { GetFullPathNameW(lp_file_name, len, result.as_mut_ptr(), 0 as *mut _) };
         if len == 0 {
-            bail_thrown!(throw_internal_error(
-                "GetFullPathNameW failed",
-                stack_frames
-            ))
+            set_pending_internal_error("GetFullPathNameW failed");
+            return Ok(0);
         } else {
             let string_ref = wchar_to_string_ref(&result[..len as usize])?;
-            Ok(Some(string_ref))
+            Ok(string_ref)
         }
     }
 }
@@ -439,7 +446,8 @@ pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Re
     let lp_file_name = lp_file_name as usize as LPCWSTR;
     let handle = unsafe { FindFirstFileW(lp_file_name, &mut data) };
     if handle == INVALID_HANDLE_VALUE {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
+        return Ok(());
     }
 
     let c_file_name = data.cFileName;
@@ -465,7 +473,7 @@ pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Re
         vec![attributes],
     )?;
 
-    Ok(Some(()))
+    Ok(())
 }
 
 pub(crate) fn find_next_file0(handle: i64, address: i64) -> Result<i32> {
@@ -475,14 +483,13 @@ pub(crate) fn find_next_file0(handle: i64, address: i64) -> Result<i32> {
     if result != 0 {
         let c_file_name = unsafe { (*data).cFileName };
         let name_ref = (wchar_to_string_ref(&c_file_name))?;
-        Ok(Some(name_ref))
+        Ok(name_ref)
     } else {
         let last_error = unsafe { GetLastError() };
-        if last_error == ERROR_NO_MORE_FILES {
-            Ok(Some(0))
-        } else {
-            bail_thrown!(throw_windows_exception(stack_frames))
+        if last_error != ERROR_NO_MORE_FILES {
+            set_pending_windows_exception()?;
         }
+        Ok(0)
     }
 }
 
@@ -490,7 +497,7 @@ pub(crate) fn find_close(handle: i64) -> Result<()> {
     let handle = handle as usize as HANDLE;
     let result = unsafe { FindClose(handle) };
     if result == 0 {
-        bail_thrown!(throw_windows_exception(stack_frames))
+        set_pending_windows_exception()?;
     }
-    Ok(Some(()))
+    Ok(())
 }
