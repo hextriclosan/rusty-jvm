@@ -23,27 +23,7 @@ use winapi::um::winnt::{DUPLICATE_SAME_ACCESS, HANDLE, LARGE_INTEGER};
 const IOS_EOF: i32 = -1; // End of file
 const IOS_UNAVAILABLE: i32 = -2; // Nothing available (non-blocking)
 
-pub fn windows_file_dispatcher_write0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let address = i32toi64(args[2], args[1]);
-    let len = args[3];
-    let append = args[4] != 0;
-
-    let Some(result) = write0(fd_ref, address, len, append, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![result])
-}
-fn write0(
-    fd_ref: i32,
-    address: i64,
-    len: i32,
-    append: bool,
-    stack_frames: &mut StackFrames,
-) -> Throws<i32> {
+pub(crate) fn write0(fd_ref: i32, address: i64, len: i32, append: bool) -> Result<i32> {
     let handle = get_handle(fd_ref)?;
     let handle = handle as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
@@ -77,21 +57,8 @@ fn write0(
     Ok(Some(written as i32))
 }
 
-pub fn windows_file_dispatcher_read0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let address = i32toi64(args[2], args[1]);
-    let len = args[3];
-
-    let Some(ret) = read0(fd_ref, address, len, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![ret])
-}
-fn read0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
-    let handle = (get_handle(fd_ref))? as usize as HANDLE;
+pub(crate) fn read0(fd_ref: i32, address: i64, len: i32) -> Result<i32> {
+    let handle = get_handle(fd_ref)? as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
         bail_thrown!(throw_ioexception("Invalid handle", stack_frames))
     }
@@ -123,28 +90,8 @@ fn read0(fd_ref: i32, address: i64, len: i32, stack_frames: &mut StackFrames) ->
     Ok(Some(if read == 0 { IOS_EOF } else { read as i32 }))
 }
 
-pub fn windows_file_dispatcher_pread0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let address = i32toi64(args[2], args[1]);
-    let len = args[3];
-    let position = i32toi64(args[5], args[4]);
-
-    let Some(ret) = pread0(fd_ref, address, len, position, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![ret])
-}
-fn pread0(
-    fd_ref: i32,
-    address: i64,
-    len: i32,
-    offset: i64,
-    stack_frames: &mut StackFrames,
-) -> Throws<i32> {
-    let handle = (get_handle(fd_ref))? as usize as HANDLE;
+pub(crate) fn pread0(fd_ref: i32, address: i64, len: i32, offset: i64) -> Result<i32> {
+    let handle = get_handle(fd_ref)? as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
         bail_thrown!(throw_ioexception("Invalid handle", stack_frames))
     }
@@ -193,19 +140,8 @@ fn pread0(
     Ok(Some(if read == 0 { IOS_EOF } else { read as i32 }))
 }
 
-pub fn windows_file_dispatcher_size0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-
-    let Some(size) = size0(fd_ref, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(size))
-}
-fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> Throws<i64> {
-    let handle = (get_handle(fd_ref))? as usize as HANDLE;
+pub(crate) fn size0(fd_ref: i32) -> Result<i64> {
+    let handle = get_handle(fd_ref)? as usize as HANDLE;
     let mut size: LARGE_INTEGER = unsafe { zeroed() };
 
     let result = unsafe { GetFileSizeEx(handle, &mut size) };
@@ -219,7 +155,7 @@ fn size0(fd_ref: i32, stack_frames: &mut StackFrames) -> Throws<i64> {
     Ok(Some(size))
 }
 
-pub(super) fn truncate0(fd_ref: i32, size: i64, stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn truncate0(fd_ref: i32, size: i64) -> Result<i32> {
     let handle = (get_handle(fd_ref))? as usize as HANDLE;
     let mut eof_info: FILE_END_OF_FILE_INFO = unsafe { zeroed() };
     unsafe {
@@ -244,18 +180,7 @@ pub(super) fn truncate0(fd_ref: i32, size: i64, stack_frames: &mut StackFrames) 
     Ok(Some(0))
 }
 
-pub fn windows_file_dispatcher_duplicate_handle_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd = i32toi64(args[1], args[0]);
-
-    let Some(dup_fd) = duplicate_handle(fd, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(i64_to_vec(dup_fd))
-}
-fn duplicate_handle(fd: i64, stack_frames: &mut StackFrames) -> Throws<i64> {
+pub(crate) fn duplicate_handle(fd: i64) -> Result<i64> {
     let handle = fd as usize as HANDLE;
     if handle == INVALID_HANDLE_VALUE {
         bail_thrown!(throw_ioexception("Invalid handle", stack_frames))

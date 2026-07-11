@@ -26,11 +26,7 @@ use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
 use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
-use crate::vm::system_native::platform_file_dispatcher::{
-    allocation_granularity0_wrp, file_dispatcher_impl_truncate0_wrp,
-    file_dispatcher_is_other0_wrp, file_dispatcher_map0_wrp, file_dispatcher_seek0_wrp,
-    mapped_memory_utils_force0_wrp,
-};
+use crate::vm::system_native::platform_file_dispatcher::mapped_memory_utils_force0_wrp;
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
@@ -371,57 +367,8 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
     #[cfg(windows)]
     {
         use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
-        use crate::vm::system_native::platform_file_dispatcher::windows_file_dispatcher::{
-            windows_file_dispatcher_duplicate_handle_wrp, windows_file_dispatcher_pread0_wrp,
-            windows_file_dispatcher_read0_wrp, windows_file_dispatcher_size0_wrp,
-            windows_file_dispatcher_write0_wrp,
-        };
         use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
 
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:allocationGranularity0:()J",
-            Basic(allocation_granularity0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:maxDirectTransferSize0:()I", // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
-            Basic(|_args| Ok(vec![i32::MAX - 1])),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JIZ)I",
-            WithMutStackFrames(windows_file_dispatcher_write0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:read0:(Ljava/io/FileDescriptor;JI)I",
-            WithMutStackFrames(windows_file_dispatcher_read0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:pread0:(Ljava/io/FileDescriptor;JIJ)I",
-            WithMutStackFrames(windows_file_dispatcher_pread0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",
-            WithMutStackFrames(windows_file_dispatcher_size0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:truncate0:(Ljava/io/FileDescriptor;J)I",
-            WithMutStackFrames(file_dispatcher_impl_truncate0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:map0:(Ljava/io/FileDescriptor;IJJZ)J",
-            WithMutStackFrames(file_dispatcher_map0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:isOther0:(Ljava/io/FileDescriptor;)Z",
-            WithMutStackFrames(file_dispatcher_is_other0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:seek0:(Ljava/io/FileDescriptor;J)J",
-            WithMutStackFrames(file_dispatcher_seek0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/FileDispatcherImpl:duplicateHandle:(J)J",
-            WithMutStackFrames(windows_file_dispatcher_duplicate_handle_wrp),
-        );
         table.insert(
             "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
             WithMutStackFrames(mapped_memory_utils_force0_wrp),
@@ -438,47 +385,6 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
 
     #[cfg(unix)]
     {
-        use crate::vm::system_native::platform_file_dispatcher::unix_file_dispatcher::{
-            unix_file_dispatcher_impl_pread0_wrp, unix_file_dispatcher_impl_read0_wrp,
-            unix_file_dispatcher_impl_size0_wrp, unix_file_dispatcher_impl_write0_wrp,
-        };
-
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:write0:(Ljava/io/FileDescriptor;JI)I",
-            WithMutStackFrames(unix_file_dispatcher_impl_write0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:read0:(Ljava/io/FileDescriptor;JI)I",
-            WithMutStackFrames(unix_file_dispatcher_impl_read0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:pread0:(Ljava/io/FileDescriptor;JIJ)I",
-            WithMutStackFrames(unix_file_dispatcher_impl_pread0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:size0:(Ljava/io/FileDescriptor;)J",
-            WithMutStackFrames(unix_file_dispatcher_impl_size0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:allocationGranularity0:()J",
-            Basic(allocation_granularity0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:truncate0:(Ljava/io/FileDescriptor;J)I",
-            WithMutStackFrames(file_dispatcher_impl_truncate0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:map0:(Ljava/io/FileDescriptor;IJJZ)J",
-            WithMutStackFrames(file_dispatcher_map0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:isOther0:(Ljava/io/FileDescriptor;)Z",
-            WithMutStackFrames(file_dispatcher_is_other0_wrp),
-        );
-        table.insert(
-            "sun/nio/ch/UnixFileDispatcherImpl:seek0:(Ljava/io/FileDescriptor;J)J",
-            WithMutStackFrames(file_dispatcher_seek0_wrp),
-        );
         table.insert(
             "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
             WithMutStackFrames(mapped_memory_utils_force0_wrp),

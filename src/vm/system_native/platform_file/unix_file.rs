@@ -1,11 +1,7 @@
-use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::throw_ioexception;
-use crate::vm::exception::pending::Throws;
 use crate::vm::exception::pending_helpers::set_pending_io_exception;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::get_handle;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::platform_file::Mode;
 use nix::fcntl;
 use nix::fcntl::{FcntlArg, OFlag};
@@ -52,17 +48,6 @@ impl PlatformFile {
 
     fn set_fd(fd_ref: i32, fd: i32) -> Result<()> {
         HEAP.set_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", vec![fd])
-    }
-
-    pub fn get_by_fd(fd_ref: i32, stack_frames: &mut StackFrames) -> Throws<ManuallyDrop<File>> {
-        let fd = get_handle(fd_ref)?;
-
-        if fd == -1 {
-            bail_thrown!(throw_ioexception("Stream Closed", stack_frames));
-        }
-
-        let file = ManuallyDrop::new(unsafe { File::from_raw_fd(fd) }); // ManuallyDrop prevents `file` from being dropped
-        Ok(Some(file))
     }
 
     pub fn get_by_fd_pending(fd_ref: i32) -> Result<Option<ManuallyDrop<File>>> {

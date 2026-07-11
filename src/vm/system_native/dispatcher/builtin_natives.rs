@@ -499,6 +499,19 @@ builtin_natives! {
     "sun/nio/fs/WindowsNativeDispatcher": static fn FindNextFile0(handle: long, addr: long) -> string => sn::platform_native_dispatcher::win::find_next_file0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn FindClose(handle: long) -> void => sn::platform_native_dispatcher::win::find_close;
     }
+
+    #[cfg(unix)]
+    {
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn write0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::unix::write0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn read0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::unix::read0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn pread0(fd: file_descriptor, address: long, len: int, pos: long) -> int => sn::platform_file_dispatcher::unix::pread0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn size0(fd: file_descriptor) -> long => sn::platform_file_dispatcher::unix::size0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn allocationGranularity0() -> long => sn::platform_file_dispatcher::allocation_granularity0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn truncate0(fd: file_descriptor, size: long) -> int => sn::platform_file_dispatcher::unix::truncate0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn map0(fd: file_descriptor, prot: int, pos: long, len: long, is_sync: boolean) -> long => sn::platform_file_dispatcher::map0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
+    }
 }
 
 fn build_descriptor(params: &[&str], ret: &str) -> String {
