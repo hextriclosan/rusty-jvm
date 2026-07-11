@@ -17,7 +17,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::system_native::platform_file::Mode::RandomAccessFile;
 use crate::vm::system_native::platform_file::{get_by_raw_id, length};
 #[cfg(unix)]
-use unix_impl::open0;
+use unix_impl::open0 as open0_impl;
 
 bitflags! {
     pub(crate) struct RandomAccessFileMode: i32 {
@@ -36,7 +36,7 @@ pub(crate) fn init_ids() -> Result<()> {
 }
 
 /// `java.io.RandomAccessFile.open0(Ljava/lang/String;I)V`
-pub(crate) fn open0_random_access_file(
+pub(crate) fn open0(
     obj_ref: i32,
     file_name_ref: i32,
     mode_raw: i32,
@@ -46,7 +46,7 @@ pub(crate) fn open0_random_access_file(
         return Ok(());
     };
 
-    open0(obj_ref, file_name_ref, mode)
+    open0_impl(obj_ref, file_name_ref, mode)
 }
 
 /// `java.io.RandomAccessFile.seek0(J)V`

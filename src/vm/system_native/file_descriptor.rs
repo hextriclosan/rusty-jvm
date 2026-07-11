@@ -8,7 +8,7 @@ pub(crate) fn init_ids() -> Result<()> {
 }
 
 /// `java.io.FileDescriptor.close0()V`
-pub(crate) fn file_descriptor_close0(fd_ref: i32) -> Result<()> {
+pub(crate) fn close0(fd_ref: i32) -> Result<()> {
     PlatformFile::close(fd_ref)?;
     Ok(())
 }
