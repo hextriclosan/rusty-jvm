@@ -41,13 +41,13 @@ pub(crate) fn create_file_exclusively0(_this: i32, path_ref: i32) -> Result<bool
     let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
 
-    if path.exists() {
-        return Ok(false);
+    match std::fs::File::create_new(path) {
+        Ok(_) => Ok(true),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
+        Err(e) => Err(Error::new_execution(&format!(
+            "Failed to create file {path:?}: {e}"
+        ))),
     }
-
-    std::fs::File::create_new(path)
-        .map(|_| true)
-        .map_err(|e| Error::new_execution(&format!("Failed to create file {path:?}: {e}")))
 }
 
 bitflags! {
@@ -108,8 +108,7 @@ pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bo
         return Ok(false);
     }
 
-    let access_flags = Access::from_bits(access).expect("Invalid access flags");
-
+    let access_flags = Access::from_bits_truncate(access);
     Ok(check_access(path, access_flags))
 }
 
