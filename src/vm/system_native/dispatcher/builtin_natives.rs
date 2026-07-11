@@ -466,11 +466,11 @@ builtin_natives! {
     "sun/nio/fs/UnixNativeDispatcher": static fn open0(path_ptr: long, flags: int, mode: int) -> int => sn::platform_native_dispatcher::unix_native_dispatcher::open0;
     "sun/nio/fs/UnixNativeDispatcher": static fn access0(path_ptr: long, mode: int) -> int => sn::platform_native_dispatcher::unix_native_dispatcher::access0;
     "sun/nio/fs/UnixNativeDispatcher": static fn stat0(path_ptr: long, attrs: unix_file_attrs) -> int => sn::platform_native_dispatcher::unix_native_dispatcher::stat0;
-        "sun/nio/fs/UnixNativeDispatcher": static fn lstat0(path_ptr: long, attrs: unix_file_attrs) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::lstat0;
-        "sun/nio/fs/UnixNativeDispatcher": static fn mkdir0(path_ptr: long, mode: int) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::mkdir0;
-        "sun/nio/fs/UnixNativeDispatcher": static fn unlink0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::unlink0;
-        "sun/nio/fs/UnixNativeDispatcher": static fn rmdir0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::rmdir0;
-        "sun/nio/fs/UnixNativeDispatcher": static fn realpath0(path_ptr: long) -> byte_array => sn::platform_native_dispatcher::unix_native_dispatcher::realpath0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn lstat0(path_ptr: long, attrs: unix_file_attrs) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::lstat0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn mkdir0(path_ptr: long, mode: int) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::mkdir0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn unlink0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::unlink0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn rmdir0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::rmdir0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn realpath0(path_ptr: long) -> byte_array => sn::platform_native_dispatcher::unix_native_dispatcher::realpath0;
     }
 
     #[cfg(windows)]
