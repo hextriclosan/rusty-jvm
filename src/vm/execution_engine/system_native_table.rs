@@ -12,10 +12,6 @@ use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
 use crate::vm::system_native::dispatcher::invoke::invoke;
-use crate::vm::system_native::io_file_system::{
-    canonicalize0_wrp, check_access0_wrp, create_file_exclusively0_wrp,
-    get_boolean_attributes0_wrp, get_length0_wrp,
-};
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
@@ -272,43 +268,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "jdk/internal/loader/NativeLibraries$NativeLibraryImpl:findEntry0:(JLjava/lang/String;)J",
         Basic(native_libraries_find_entry0_wrp),
     );
-    table.insert(
-        "java/io/WinNTFileSystem:initIDs:()V", // this method is for caching `path` field from java/io/File for faster access in other native methods
-        Basic(void_stub),
-    );
-    table.insert(
-        "java/io/WinNTFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(canonicalize0_wrp),
-    );
-    table.insert("java/io/UnixFileSystem:initIDs:()V", Basic(void_stub));
-    table.insert(
-        "java/io/UnixFileSystem:canonicalize0:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(canonicalize0_wrp),
-    );
-    table.insert(
-        "java/io/WinNTFileSystem:createFileExclusively0:(Ljava/lang/String;)Z",
-        Basic(create_file_exclusively0_wrp),
-    );
-    table.insert(
-        "java/io/UnixFileSystem:createFileExclusively0:(Ljava/lang/String;)Z",
-        Basic(create_file_exclusively0_wrp),
-    );
-    table.insert(
-        "java/io/WinNTFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
-        Basic(get_boolean_attributes0_wrp),
-    );
-    table.insert(
-        "java/io/UnixFileSystem:getBooleanAttributes0:(Ljava/io/File;)I",
-        Basic(get_boolean_attributes0_wrp),
-    );
-    table.insert(
-        "java/io/WinNTFileSystem:checkAccess0:(Ljava/io/File;I)Z",
-        Basic(check_access0_wrp),
-    );
-    table.insert(
-        "java/io/UnixFileSystem:checkAccess0:(Ljava/io/File;I)Z",
-        Basic(check_access0_wrp),
-    );
     table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
     table.insert("sun/nio/ch/IOUtil:iovMax:()I", Basic(iov_max_wrp));
     table.insert("sun/nio/ch/IOUtil:writevMax:()J", Basic(writev_max_wrp));
@@ -427,9 +386,6 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             remove_directory0_wrp, set_end_of_file_wrp,
         };
         use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
-        use crate::vm::system_native::platform_specific_files::winnt_file_system::{
-            get_final_path0_wrp, get_name_max0_wrp, winnt_file_system_delete0_wrp,
-        };
 
         table.insert(
             "sun/nio/fs/WindowsNativeDispatcher:initIDs:()V",
@@ -577,23 +533,6 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             Basic(set_error_mode_wrp),
         );
         table.insert(
-            "java/io/WinNTFileSystem:getFinalPath0:(Ljava/lang/String;)Ljava/lang/String;",
-            WithMutStackFrames(get_final_path0_wrp),
-        );
-        table.insert(
-            "java/io/WinNTFileSystem:delete0:(Ljava/io/File;Z)Z",
-            Basic(winnt_file_system_delete0_wrp),
-        );
-        table.insert(
-            "java/io/WinNTFileSystem:getNameMax0:(Ljava/lang/String;)I",
-            WithMutStackFrames(get_name_max0_wrp),
-        );
-        table.insert(
-            "java/io/WinNTFileSystem:getLength0:(Ljava/io/File;)J",
-            Basic(get_length0_wrp),
-        );
-
-        table.insert(
             "sun/security/provider/NativeSeedGenerator:nativeGenerateSeed:([B)Z",
             Basic(native_generate_seed_wrp),
         );
@@ -601,7 +540,6 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
 
     #[cfg(unix)]
     {
-        use crate::vm::system_native::io_file_system::delete0_wrp;
         use crate::vm::system_native::platform_file_dispatcher::unix_file_dispatcher::{
             unix_file_dispatcher_impl_pread0_wrp, unix_file_dispatcher_impl_read0_wrp,
             unix_file_dispatcher_impl_size0_wrp, unix_file_dispatcher_impl_write0_wrp,
@@ -610,21 +548,6 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             get_access0_wrp, get_cwd_wrp, lstat0_wrp, mkdir0_wrp, realpath0_wrp, rmdir0_wrp,
             stat0_wrp, unix_native_dispatcher_open0_wrp, unlink0_wrp,
         };
-        use crate::vm::system_native::platform_specific_files::unix_file_system::get_name_max0_wrp;
-
-        table.insert(
-            "java/io/UnixFileSystem:delete0:(Ljava/io/File;)Z",
-            Basic(delete0_wrp),
-        );
-        table.insert(
-            "java/io/UnixFileSystem:getNameMax0:(Ljava/lang/String;)J",
-            Basic(get_name_max0_wrp),
-        );
-        table.insert(
-            "java/io/UnixFileSystem:getLength0:(Ljava/io/File;)J",
-            Basic(get_length0_wrp),
-        );
-
         table.insert(
             "sun/nio/fs/UnixNativeDispatcher:getcwd:()[B",
             WithMutStackFrames(get_cwd_wrp),

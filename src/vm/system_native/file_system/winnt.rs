@@ -1,17 +1,15 @@
-use crate::bail_thrown;
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::{
-    throw_ioexception, throw_null_pointer_exception_with_message,
+use crate::vm::exception::pending_helpers::{
+    set_pending_io_exception, set_pending_null_pointer_exception_with_message,
 };
-use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::io_file_system::delete0;
+use crate::vm::system_native::file_system::{delete0, Access};
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     get_last_error, strip_string,
 };
 use crate::vm::system_native::platform_specific_files::wide_cstring::WideCString;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
+use std::path::Path;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, MAX_PATH};
 use winapi::um::errhandlingapi::{GetLastError, SetLastError};
@@ -24,24 +22,32 @@ use winapi::um::winnt::{
     FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE, WCHAR,
 };
 
-pub(crate) fn get_final_path0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let _filesystem_impl_ref = args[0];
-    let path_ref = args[1];
+pub(super) fn check_access_winnt_impl(path: &Path, mode: Access) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::um::fileapi::{GetFileAttributesW, INVALID_FILE_ATTRIBUTES};
+    use winapi::um::winnt::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY};
 
-    let Some(ret) = get_final_path0(path_ref, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![ret])
+    let wide_path: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let attr = unsafe { GetFileAttributesW(wide_path.as_ptr()) }; // todo: add support of reparse point cases
+    if attr == INVALID_FILE_ATTRIBUTES {
+        return false;
+    }
+
+    match mode {
+        Access::ACCESS_READ | Access::ACCESS_EXECUTE => true,
+        Access::ACCESS_WRITE
+            if (attr & FILE_ATTRIBUTE_DIRECTORY) > 0 || (attr & FILE_ATTRIBUTE_READONLY) == 0 =>
+        {
+            true
+        }
+        _ => false,
+    }
 }
-fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
+
+pub(crate) fn get_final_path0(_this: i32, path_ref: i32) -> Result<i32> {
     if path_ref == 0 {
-        bail_thrown!(throw_null_pointer_exception_with_message(
-            "Path is null",
-            stack_frames
-        ))
+        set_pending_null_pointer_exception_with_message("Path is null")?;
+        return Ok(0);
     }
 
     let path = get_utf8_string_by_ref(path_ref)?;
@@ -50,11 +56,12 @@ fn get_final_path0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32>
         Ok(final_path) => final_path,
         Err(e) => {
             let error_msg = format!("Bad pathname: {path} - ({e}) ({})", get_last_error()?);
-            bail_thrown!(throw_ioexception(&error_msg, stack_frames))
+            set_pending_io_exception(&error_msg)?;
+            return Ok(0);
         }
     };
     let final_path_ref = StringPoolHelper::get_string(&final_path)?;
-    Ok(Some(final_path_ref))
+    Ok(final_path_ref)
 }
 fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     let handle = unsafe {
@@ -107,31 +114,22 @@ fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     Ok(result)
 }
 
-pub(crate) fn winnt_file_system_delete0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _filesystem_impl_ref = args[0];
-    let file_ref = args[1];
-    let allow_delete_readonly = args[2] != 0;
-
+pub(crate) fn winnt_file_system_delete0(
+    this: i32,
+    file_ref: i32,
+    allow_delete_readonly: bool,
+) -> Result<bool> {
     if allow_delete_readonly {
         return Err(Error::new_native(
             "-Djdk.io.File.allowDeleteReadOnlyFiles is not supported (JDK-8356195)",
         ));
     }
 
-    let deleted = delete0(file_ref)?;
-    Ok(vec![if deleted { 1 } else { 0 }])
+    let deleted = delete0(this, file_ref)?;
+    Ok(deleted)
 }
 
-pub(crate) fn get_name_max0_wrp(args: &[i32], stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let _filesystem_impl_ref = args[0];
-    let path_ref = args[1];
-
-    let Some(ret) = get_name_max0(path_ref, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![ret])
-}
-fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
+pub(crate) fn get_name_max0(_this: i32, path_ref: i32) -> Result<i32> {
     let path_storage;
     let path = if path_ref == 0 {
         std::ptr::null()
@@ -160,8 +158,26 @@ fn get_name_max0(path_ref: i32, stack_frames: &mut StackFrames) -> Throws<i32> {
         let error_msg = format!(
             "GetVolumeInformationW failed for path {path_ref} with error code {error_code}"
         );
-        bail_thrown!(throw_ioexception(&error_msg, stack_frames))
+        set_pending_io_exception(&error_msg)?;
     }
 
-    Ok(Some(maximum_component_length as i32))
+    Ok(maximum_component_length as i32)
+}
+
+pub(super) fn is_hidden_winnt(path: &Path) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::um::fileapi::{GetFileAttributesW, INVALID_FILE_ATTRIBUTES};
+    use winapi::um::winnt::FILE_ATTRIBUTE_HIDDEN;
+
+    let wide_path = path
+        .as_os_str()
+        .encode_wide()
+        .chain(Some(0))
+        .collect::<Vec<_>>();
+    let attr = unsafe { GetFileAttributesW(wide_path.as_ptr()) };
+    if attr == INVALID_FILE_ATTRIBUTES {
+        false
+    } else {
+        attr & FILE_ATTRIBUTE_HIDDEN != 0
+    }
 }
