@@ -3,7 +3,7 @@ use crate::vm::exception::pending_helpers::{
     set_pending_io_exception, set_pending_null_pointer_exception_with_message,
 };
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::system_native::file_system::{delete0, Access};
+use crate::vm::system_native::file_system::{delete0 as delete_impl, Access};
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     get_last_error, strip_string,
 };
@@ -114,18 +114,14 @@ fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     Ok(result)
 }
 
-pub(crate) fn winnt_file_system_delete0(
-    this: i32,
-    file_ref: i32,
-    allow_delete_readonly: bool,
-) -> Result<bool> {
+pub(crate) fn delete0(this: i32, file_ref: i32, allow_delete_readonly: bool) -> Result<bool> {
     if allow_delete_readonly {
         return Err(Error::new_native(
             "-Djdk.io.File.allowDeleteReadOnlyFiles is not supported (JDK-8356195)",
         ));
     }
 
-    let deleted = delete0(this, file_ref)?;
+    let deleted = delete_impl(this, file_ref)?;
     Ok(deleted)
 }
 

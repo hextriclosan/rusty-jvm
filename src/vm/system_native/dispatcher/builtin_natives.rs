@@ -454,50 +454,50 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn getBooleanAttributes0(file: file) -> int => sn::file_system::get_boolean_attributes0;
     "java/io/WinNTFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => sn::file_system::check_access0;
     "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => sn::file_system::winnt::get_final_path0;
-    "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::winnt_file_system_delete0;
+    "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::delete0;
     "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => sn::file_system::winnt::get_name_max0;
     "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
     }
 
     #[cfg(unix)]
     {
-    "sun/nio/fs/UnixNativeDispatcher": static fn getcwd() -> byte_array => sn::platform_native_dispatcher::unix_native_dispatcher::get_cwd;
-    "sun/nio/fs/UnixNativeDispatcher": static fn init() -> int => sn::platform_native_dispatcher::unix_native_dispatcher::init; // todo: return real capability flags
-    "sun/nio/fs/UnixNativeDispatcher": static fn open0(path_ptr: long, flags: int, mode: int) -> int => sn::platform_native_dispatcher::unix_native_dispatcher::open0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn access0(path_ptr: long, mode: int) -> int => sn::platform_native_dispatcher::unix_native_dispatcher::access0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn stat0(path_ptr: long, attrs: unix_file_attrs) -> int => sn::platform_native_dispatcher::unix_native_dispatcher::stat0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn lstat0(path_ptr: long, attrs: unix_file_attrs) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::lstat0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn mkdir0(path_ptr: long, mode: int) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::mkdir0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn unlink0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::unlink0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn rmdir0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix_native_dispatcher::rmdir0;
-    "sun/nio/fs/UnixNativeDispatcher": static fn realpath0(path_ptr: long) -> byte_array => sn::platform_native_dispatcher::unix_native_dispatcher::realpath0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn getcwd() -> byte_array => sn::platform_native_dispatcher::unix::get_cwd;
+    "sun/nio/fs/UnixNativeDispatcher": static fn init() -> int => sn::platform_native_dispatcher::unix::init; // todo: return real capability flags
+    "sun/nio/fs/UnixNativeDispatcher": static fn open0(path_ptr: long, flags: int, mode: int) -> int => sn::platform_native_dispatcher::unix::open0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn access0(path_ptr: long, mode: int) -> int => sn::platform_native_dispatcher::unix::access0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn stat0(path_ptr: long, attrs: unix_file_attrs) -> int => sn::platform_native_dispatcher::unix::stat0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn lstat0(path_ptr: long, attrs: unix_file_attrs) -> void => sn::platform_native_dispatcher::unix::lstat0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn mkdir0(path_ptr: long, mode: int) -> void => sn::platform_native_dispatcher::unix::mkdir0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn unlink0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix::unlink0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn rmdir0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix::rmdir0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn realpath0(path_ptr: long) -> byte_array => sn::platform_native_dispatcher::unix::realpath0;
     }
 
     #[cfg(windows)]
     {
-    "sun/nio/fs/WindowsNativeDispatcher": static fn initIDs() -> void => sn::platform_native_dispatcher::windows_native_dispatcher::init_ids; // todo: implement me
-    "sun/nio/fs/WindowsNativeDispatcher": static fn CreateDirectory0(path_ptr: long, sd_ptr: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::create_directory0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileAttributesEx0(name_ptr: long, output_ptr: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::get_file_attributes_ex0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn DeleteFile0(name_ptr: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::delete_file0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn RemoveDirectory0(name_ptr: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::remove_directory0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn CreateFile0(name_ptr: long, access: int, share: int, sd_ptr: long, creation_dsp: int, flags: int) -> long => sn::platform_native_dispatcher::windows_native_dispatcher::create_file0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn SetEndOfFile(handle_ptr: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::set_end_of_file;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileSecurity0(name_ptr: long, req_info: int, descr_ptr: long, length: int) -> int => sn::platform_native_dispatcher::windows_native_dispatcher::get_file_security0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetCurrentProcess() -> long => sn::platform_native_dispatcher::windows_native_dispatcher::get_current_process;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn OpenProcessToken(proc_handle: long, access: int) -> long => sn::platform_native_dispatcher::windows_native_dispatcher::open_process_token;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetCurrentThread() -> long => sn::platform_native_dispatcher::windows_native_dispatcher::get_current_thread;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn OpenThreadToken(thread_handle: long, access: int, open_as_self: boolean) -> long => sn::platform_native_dispatcher::windows_native_dispatcher::open_thread_token;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn DuplicateTokenEx(token_handle: long, access: int) -> long => sn::platform_native_dispatcher::windows_native_dispatcher::duplicate_token_ex;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn AccessCheck(token: long, sd_ptr: long, mask: int, read: int, write: int, exec: int, all: int) -> boolean => sn::platform_native_dispatcher::windows_native_dispatcher::access_check;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn CloseHandle(handle: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::close_handle;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetVolumePathName0(address_ptr: long) -> string => sn::platform_native_dispatcher::windows_native_dispatcher::get_volume_path_name0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetVolumeInformation0(address_ptr: long, info_ref: volume_info) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::get_volume_information0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetDriveType0(address_handle: long) -> int => sn::platform_native_dispatcher::windows_native_dispatcher::get_drive_type0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn FormatMessage(error_code: int) -> string => sn::platform_native_dispatcher::windows_native_dispatcher::format_message;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFullPathName0(address_ptr: long) -> string => sn::platform_native_dispatcher::windows_native_dispatcher::get_full_path_name0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn FindFirstFile0(name_ptr: long, first_file: first_file) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::find_first_file0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn FindNextFile0(handle: long, addr: long) -> string => sn::platform_native_dispatcher::windows_native_dispatcher::find_next_file0;
-    "sun/nio/fs/WindowsNativeDispatcher": static fn FindClose(handle: long) -> void => sn::platform_native_dispatcher::windows_native_dispatcher::find_close;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn initIDs() -> void => sn::platform_native_dispatcher::win::init_ids; // todo: implement me
+    "sun/nio/fs/WindowsNativeDispatcher": static fn CreateDirectory0(path_ptr: long, sd_ptr: long) -> void => sn::platform_native_dispatcher::win::create_directory0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileAttributesEx0(name_ptr: long, output_ptr: long) -> void => sn::platform_native_dispatcher::win::get_file_attributes_ex0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn DeleteFile0(name_ptr: long) -> void => sn::platform_native_dispatcher::win::delete_file0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn RemoveDirectory0(name_ptr: long) -> void => sn::platform_native_dispatcher::win::remove_directory0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn CreateFile0(name_ptr: long, access: int, share: int, sd_ptr: long, creation_dsp: int, flags: int) -> long => sn::platform_native_dispatcher::win::create_file0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn SetEndOfFile(handle_ptr: long) -> void => sn::platform_native_dispatcher::win::set_end_of_file;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileSecurity0(name_ptr: long, req_info: int, descr_ptr: long, length: int) -> int => sn::platform_native_dispatcher::win::get_file_security0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetCurrentProcess() -> long => sn::platform_native_dispatcher::win::get_current_process;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn OpenProcessToken(proc_handle: long, access: int) -> long => sn::platform_native_dispatcher::win::open_process_token;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetCurrentThread() -> long => sn::platform_native_dispatcher::win::get_current_thread;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn OpenThreadToken(thread_handle: long, access: int, open_as_self: boolean) -> long => sn::platform_native_dispatcher::win::open_thread_token;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn DuplicateTokenEx(token_handle: long, access: int) -> long => sn::platform_native_dispatcher::win::duplicate_token_ex;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn AccessCheck(token: long, sd_ptr: long, mask: int, read: int, write: int, exec: int, all: int) -> boolean => sn::platform_native_dispatcher::win::access_check;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn CloseHandle(handle: long) -> void => sn::platform_native_dispatcher::win::close_handle;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetVolumePathName0(address_ptr: long) -> string => sn::platform_native_dispatcher::win::get_volume_path_name0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetVolumeInformation0(address_ptr: long, info_ref: volume_info) -> void => sn::platform_native_dispatcher::win::get_volume_information0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetDriveType0(address_handle: long) -> int => sn::platform_native_dispatcher::win::get_drive_type0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn FormatMessage(error_code: int) -> string => sn::platform_native_dispatcher::win::format_message;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn GetFullPathName0(address_ptr: long) -> string => sn::platform_native_dispatcher::win::get_full_path_name0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn FindFirstFile0(name_ptr: long, first_file: first_file) -> void => sn::platform_native_dispatcher::win::find_first_file0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn FindNextFile0(handle: long, addr: long) -> string => sn::platform_native_dispatcher::win::find_next_file0;
+    "sun/nio/fs/WindowsNativeDispatcher": static fn FindClose(handle: long) -> void => sn::platform_native_dispatcher::win::find_close;
     }
 }
 
