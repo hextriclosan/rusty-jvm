@@ -30,11 +30,13 @@ use winapi::um::winnt::{
     PSECURITY_DESCRIPTOR, SECURITY_INFORMATION, WCHAR,
 };
 
+/// `sun.nio.fs.WindowsNativeDispatcher.initIDs()V`
 pub(crate) fn init_ids() -> Result<()> {
     // todo: implement me
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.createDirectory0(JJ)V`
 pub(crate) fn create_directory0(address_ptr: i64, sd_address_ptr: i64) -> Result<()> {
     let sd_address = sd_address_ptr as usize as PSECURITY_DESCRIPTOR;
     let mut sec_attr: SECURITY_ATTRIBUTES = unsafe { zeroed() };
@@ -57,6 +59,7 @@ pub(crate) fn create_directory0(address_ptr: i64, sd_address_ptr: i64) -> Result
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getFileAttributesEx0(JJ)V`
 pub(crate) fn get_file_attributes_ex0(lp_file_name_addr: i64, output_addr: i64) -> Result<()> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let res = unsafe {
@@ -73,6 +76,7 @@ pub(crate) fn get_file_attributes_ex0(lp_file_name_addr: i64, output_addr: i64) 
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.deleteFile0(J)V`
 pub(crate) fn delete_file0(lp_file_name_addr: i64) -> Result<()> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let res = unsafe { DeleteFileW(address) };
@@ -83,6 +87,7 @@ pub(crate) fn delete_file0(lp_file_name_addr: i64) -> Result<()> {
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.removeDirectory0(J)V`
 pub(crate) fn remove_directory0(lp_file_name_addr: i64) -> Result<()> {
     let address = lp_file_name_addr as usize as LPCWSTR;
     let res = unsafe { RemoveDirectoryW(address) };
@@ -93,6 +98,7 @@ pub(crate) fn remove_directory0(lp_file_name_addr: i64) -> Result<()> {
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.createFile0(JIIJII)J`
 pub(crate) fn create_file0(
     filename_ptr: i64,
     desired_access: i32,
@@ -134,6 +140,7 @@ pub(crate) fn create_file0(
     Ok(result as i64)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.setEndOfFile(J)V`
 pub(crate) fn set_end_of_file(handle_ptr: i64) -> Result<()> {
     let handle = handle_ptr as usize as HANDLE;
     let result = unsafe { SetEndOfFile(handle) };
@@ -145,6 +152,7 @@ pub(crate) fn set_end_of_file(handle_ptr: i64) -> Result<()> {
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getFileSecurity0(JIJI)I`
 pub(crate) fn get_file_security0(
     lp_file_name_addr: i64,
     requested_information: i32,
@@ -175,11 +183,13 @@ pub(crate) fn get_file_security0(
     }
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getCurrentProcess()J`
 pub(crate) fn get_current_process() -> Result<i64> {
     let handle = unsafe { GetCurrentProcess() as usize as i64 };
     Ok(handle)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.openProcessToken(JI)J`
 pub(crate) fn open_process_token(process: i64, desired_access: i32) -> Result<i64> {
     let mut h_token = 0i64 as usize as HANDLE;
     let result = unsafe {
@@ -197,11 +207,13 @@ pub(crate) fn open_process_token(process: i64, desired_access: i32) -> Result<i6
     Ok(h_token as usize as i64)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getCurrentThread()J`
 pub(crate) fn get_current_thread() -> Result<i64> {
     let handle = unsafe { GetCurrentThread() as usize as i64 };
     Ok(handle)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.openThreadToken(JIZ)J`
 pub(crate) fn open_thread_token(
     thread: i64,
     desired_access: i32,
@@ -232,6 +244,7 @@ pub(crate) fn open_thread_token(
     }
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.duplicateTokenEx(JI)J`
 pub(crate) fn duplicate_token_ex(token: i64, desired_access: i32) -> Result<i64> {
     let mut result_token = 0i64 as usize as HANDLE;
     let result = unsafe {
@@ -252,6 +265,7 @@ pub(crate) fn duplicate_token_ex(token: i64, desired_access: i32) -> Result<i64>
     Ok(result_token as usize as i64)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.accessCheck(JJIIIII)Z`
 pub(crate) fn access_check(
     token: i64,
     security_info: i64,
@@ -297,11 +311,13 @@ pub(crate) fn access_check(
     }
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.closeHandle(J)V`
 pub(crate) fn close_handle(handle: i64) -> Result<()> {
     let _result = unsafe { CloseHandle(handle as HANDLE) };
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getVolumePathName0(J)Ljava/lang/String;`
 pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let result = unsafe {
@@ -322,6 +338,7 @@ pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
     Ok(string_ref)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getVolumeInformation0(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V`
 pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32) -> Result<()> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let mut volume_serial_number = 0 as DWORD;
@@ -378,11 +395,13 @@ pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32)
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getDriveType0(J)I`
 pub(crate) fn get_drive_type0(address: i64) -> Result<i32> {
     let drive_type = unsafe { GetDriveTypeW(address as LPCWSTR) as i32 };
     Ok(drive_type)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.formatMessage(I)Ljava/lang/String;`
 pub(crate) fn format_message(error_code: i32) -> Result<i32> {
     let mut message = [0 as WCHAR; 256];
     let msg_len = unsafe {
@@ -409,6 +428,7 @@ pub(crate) fn format_message(error_code: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.getFullPathName0(J)Ljava/lang/String;`
 pub(crate) fn get_full_path_name0(address: i64) -> Result<i32> {
     let lp_file_name = address as usize as LPCWSTR;
     let mut result = vec![0 as WCHAR; MAX_PATH + 1];
@@ -441,6 +461,7 @@ pub(crate) fn get_full_path_name0(address: i64) -> Result<i32> {
     }
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.findFirstFile0(JLsun/nio/fs/WindowsNativeDispatcher$FirstFile;)V`
 pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Result<()> {
     let mut data: WIN32_FIND_DATAW = unsafe { zeroed() };
     let lp_file_name = lp_file_name as usize as LPCWSTR;
@@ -476,6 +497,7 @@ pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Re
     Ok(())
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.findNextFile0(JJ)Ljava/lang/String;`
 pub(crate) fn find_next_file0(handle: i64, address: i64) -> Result<i32> {
     let handle = handle as usize as HANDLE;
     let data = address as usize as *mut WIN32_FIND_DATAW;
@@ -493,6 +515,7 @@ pub(crate) fn find_next_file0(handle: i64, address: i64) -> Result<i32> {
     }
 }
 
+/// `sun.nio.fs.WindowsNativeDispatcher.findClose(J)V`
 pub(crate) fn find_close(handle: i64) -> Result<()> {
     let handle = handle as usize as HANDLE;
     let result = unsafe { FindClose(handle) };

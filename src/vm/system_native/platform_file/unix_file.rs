@@ -50,7 +50,7 @@ impl PlatformFile {
         HEAP.set_object_field_value(fd_ref, "java/io/FileDescriptor", "fd", vec![fd])
     }
 
-    pub fn get_by_fd_pending(fd_ref: i32) -> Result<Option<ManuallyDrop<File>>> {
+    pub fn get_by_fd(fd_ref: i32) -> Result<Option<ManuallyDrop<File>>> {
         let fd = get_handle(fd_ref)?;
 
         if fd == -1 {

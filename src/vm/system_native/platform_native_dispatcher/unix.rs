@@ -14,6 +14,7 @@ use std::os::fd::IntoRawFd;
 use std::os::unix::prelude::OsStringExt;
 use std::path::Path;
 
+/// `sun.nio.fs.UnixNativeDispatcher.getcwd()[B`
 pub(crate) fn get_cwd() -> Result<i32> {
     let path = match getcwd() {
         Ok(path) => path,
@@ -35,10 +36,12 @@ pub(crate) fn get_cwd() -> Result<i32> {
     Ok(array_ref)
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.init()I`
 pub(crate) fn init() -> Result<i32> {
     Ok(0) // todo: return real capability flags
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.open0(JII)I`
 pub(crate) fn open0(path_address: i64, flags: i32, mode: i32) -> Result<i32> {
     let path = unsafe { CStr::from_ptr(path_address as *const c_char) };
     let path = match path.to_str() {
@@ -66,6 +69,7 @@ pub(crate) fn open0(path_address: i64, flags: i32, mode: i32) -> Result<i32> {
     Ok(fd.into_raw_fd() as i32)
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.access0(JI)I`
 pub(crate) fn access0(path_ptr: i64, mode: i32) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
 
@@ -78,6 +82,7 @@ pub(crate) fn access0(path_ptr: i64, mode: i32) -> Result<i32> {
     }
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)I`
 pub(crate) fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
 
@@ -90,6 +95,7 @@ pub(crate) fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
     }
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V`
 pub(crate) fn lstat0(path_ptr: i64, attr_ref: i32) -> Result<()> {
     let path = cstring_from_i64(path_ptr)?;
 
@@ -105,6 +111,7 @@ pub(crate) fn lstat0(path_ptr: i64, attr_ref: i32) -> Result<()> {
     Ok(())
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.mkdir0(JI)V`
 pub(crate) fn mkdir0(path_ptr: i64, mode: i32) -> Result<()> {
     let path = cstring_from_i64(path_ptr)?;
 
@@ -119,6 +126,7 @@ pub(crate) fn mkdir0(path_ptr: i64, mode: i32) -> Result<()> {
     Ok(())
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.unlink0(J)V`
 pub(crate) fn unlink0(path_ptr: i64) -> Result<()> {
     let path = cstring_from_i64(path_ptr)?;
 
@@ -132,6 +140,7 @@ pub(crate) fn unlink0(path_ptr: i64) -> Result<()> {
     Ok(())
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.rmdir0(J)V`
 pub(crate) fn rmdir0(path_ptr: i64) -> Result<()> {
     let path = cstring_from_i64(path_ptr)?;
     let result = unsafe { rmdir(path.as_ptr()) };
@@ -181,6 +190,7 @@ fn copy_stat_attributes(attr_ref: i32, stat: FileStat) -> Result<()> {
     )
 }
 
+/// `sun.nio.fs.UnixNativeDispatcher.realpath0(J)[B`
 pub(crate) fn realpath0(path_ptr: i64) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
     let path = OsString::from_vec(path.into_bytes());

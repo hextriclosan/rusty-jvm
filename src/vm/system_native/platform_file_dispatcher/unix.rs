@@ -108,7 +108,7 @@ pub(crate) fn size0(fd_ref: i32) -> Result<i64> {
 
 /// `sun.nio.ch.UnixFileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I`
 pub(crate) fn truncate0(fd_ref: i32, size: i64) -> Result<i32> {
-    let Some(file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
+    let Some(file) = PlatformFile::get_by_fd(fd_ref)? else {
         return Ok(0);
     };
 

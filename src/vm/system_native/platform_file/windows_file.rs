@@ -75,7 +75,7 @@ impl PlatformFile {
         )
     }
 
-    pub fn get_by_fd_pending(fd_ref: i32) -> Result<Option<ManuallyDrop<File>>> {
+    pub fn get_by_fd(fd_ref: i32) -> Result<Option<ManuallyDrop<File>>> {
         let handle = get_handle(fd_ref)?;
 
         if handle == -1 {
