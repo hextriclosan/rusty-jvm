@@ -6,6 +6,8 @@ use std::io::Seek;
 #[cfg(windows)]
 pub mod win;
 
+#[cfg(target_os = "linux")]
+pub mod linux;
 mod mmap_registry;
 #[cfg(unix)]
 pub mod unix;
