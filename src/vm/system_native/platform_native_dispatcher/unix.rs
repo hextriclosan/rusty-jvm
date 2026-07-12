@@ -82,7 +82,7 @@ pub(crate) fn access0(path_ptr: i64, mode: i32) -> Result<i32> {
     }
 }
 
-/// `sun.nio.fs.UnixNativeDispatcher.stat0(JI)I`
+/// `sun.nio.fs.UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)I`
 pub(crate) fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
     let path = cstring_from_i64(path_ptr)?;
 
@@ -95,7 +95,7 @@ pub(crate) fn stat0(path_ptr: i64, attr_ref: i32) -> Result<i32> {
     }
 }
 
-/// `sun.nio.fs.UnixNativeDispatcher.lstat0(JI)V`
+/// `sun.nio.fs.UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V`
 pub(crate) fn lstat0(path_ptr: i64, attr_ref: i32) -> Result<()> {
     let path = cstring_from_i64(path_ptr)?;
 

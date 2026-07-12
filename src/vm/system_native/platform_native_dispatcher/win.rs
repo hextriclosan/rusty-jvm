@@ -497,7 +497,7 @@ pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Re
     Ok(())
 }
 
-/// `sun.nio.fs.WindowsNativeDispatcher.findNextFile0(JJ)I`
+/// `sun.nio.fs.WindowsNativeDispatcher.findNextFile0(JJ)Ljava/lang/String;`
 pub(crate) fn find_next_file0(handle: i64, address: i64) -> Result<i32> {
     let handle = handle as usize as HANDLE;
     let data = address as usize as *mut WIN32_FIND_DATAW;
