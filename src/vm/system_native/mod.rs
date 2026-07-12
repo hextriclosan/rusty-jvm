@@ -10,6 +10,7 @@ pub(crate) mod file_output_stream;
 mod file_system;
 pub(crate) mod float;
 pub(crate) mod io_util;
+mod mapped_memory_utils;
 pub(crate) mod method_handle_natives;
 pub(crate) mod module;
 pub(crate) mod native_image_buffer;

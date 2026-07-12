@@ -10,10 +10,6 @@ use crate::vm::jni::set_pending_internal_error;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 
-pub fn throw_ioexception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    throw_exception_with_message("java/io/IOException", message, stack_frames)
-}
-
 pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()> {
     construct_exception_and_throw(
         "java/lang/NullPointerException",

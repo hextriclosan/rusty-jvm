@@ -1,6 +1,5 @@
 use crate::vm::error::Result;
-use crate::vm::helper::{get_handle, i32toi64};
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::helper::get_handle;
 use std::io::Seek;
 
 #[cfg(windows)]
@@ -8,13 +7,11 @@ pub mod win;
 
 #[cfg(target_os = "linux")]
 pub mod linux;
-mod mmap_registry;
+pub(crate) mod mmap_registry;
+
 #[cfg(unix)]
 pub mod unix;
 
-use crate::bail_thrown;
-use crate::vm::exception::helpers::throw_ioexception;
-use crate::vm::exception::pending::Throws;
 use crate::vm::exception::pending_helpers::set_pending_io_exception;
 use crate::vm::system_native::platform_file::PlatformFile;
 use crate::vm::system_native::platform_file_dispatcher::mmap_registry::MmapVariant;
@@ -48,31 +45,6 @@ pub(crate) fn map0(
     };
 
     Ok(addr)
-}
-
-pub fn mapped_memory_utils_force0_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let fd_ref = args[0];
-    let address = i32toi64(args[2], args[1]);
-    let length = i32toi64(args[4], args[3]);
-
-    let Some(_) = force0(fd_ref, address, length, stack_frames)? else {
-        return Ok(vec![]);
-    };
-    Ok(vec![])
-}
-fn force0(_fd_ref: i32, address: i64, length: i64, stack_frames: &mut StackFrames) -> Throws<()> {
-    match MmapVariant::flush(address, length as usize) {
-        Ok(_) => Ok(Some(())),
-        Err(e) => {
-            bail_thrown!(throw_ioexception(
-                &format!("Forcing mapped memory to storage failed: {}", e),
-                stack_frames
-            ))
-        }
-    }
 }
 
 /// `sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
