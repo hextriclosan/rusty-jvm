@@ -431,6 +431,8 @@ builtin_natives! {
     "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => sn::random_access_file::read_bytes0;
     "java/io/RandomAccessFile": instance fn length0() -> long => sn::random_access_file::length0;
 
+    "java/nio/MappedMemoryUtils": static fn force0(fd: file_descriptor, addr: long, len: long) -> void => sn::mapped_memory_utils::force0;
+
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
     }
 

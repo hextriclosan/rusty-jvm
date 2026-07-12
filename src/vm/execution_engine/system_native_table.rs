@@ -26,7 +26,6 @@ use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
 use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
-use crate::vm::system_native::platform_file_dispatcher::mapped_memory_utils_force0_wrp;
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
@@ -358,38 +357,25 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_system_time_zone_id_wrp),
     );
 
+    #[cfg(windows)]
     platform_specific(&mut table);
 
     table
 });
 
+#[cfg(windows)]
 fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
-    #[cfg(windows)]
-    {
-        use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
-        use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
+    use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
+    use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
 
-        table.insert(
-            "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
-            WithMutStackFrames(mapped_memory_utils_force0_wrp),
-        );
-        table.insert(
-            "sun/io/Win32ErrorMode:setErrorMode:(J)J",
-            Basic(set_error_mode_wrp),
-        );
-        table.insert(
-            "sun/security/provider/NativeSeedGenerator:nativeGenerateSeed:([B)Z",
-            Basic(native_generate_seed_wrp),
-        );
-    }
-
-    #[cfg(unix)]
-    {
-        table.insert(
-            "java/nio/MappedMemoryUtils:force0:(Ljava/io/FileDescriptor;JJ)V",
-            WithMutStackFrames(mapped_memory_utils_force0_wrp),
-        );
-    }
+    table.insert(
+        "sun/io/Win32ErrorMode:setErrorMode:(J)J",
+        Basic(set_error_mode_wrp),
+    );
+    table.insert(
+        "sun/security/provider/NativeSeedGenerator:nativeGenerateSeed:([B)Z",
+        Basic(native_generate_seed_wrp),
+    );
 }
 
 pub(crate) fn invoke_native_method(

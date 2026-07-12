@@ -3,7 +3,7 @@ use dashmap::DashMap;
 use memmap2::{Mmap, MmapAsRawDesc, MmapMut, MmapOptions};
 use std::sync::LazyLock;
 
-pub(super) enum MmapVariant {
+pub(crate) enum MmapVariant {
     ReadOnly(Mmap),
     ReadWrite(MmapMut),
     Private(MmapMut),
@@ -15,7 +15,7 @@ const MAP_RO: i32 = 0;
 const MAP_RW: i32 = 1;
 const MAP_PV: i32 = 2;
 impl MmapVariant {
-    pub(super) fn register<T: MmapAsRawDesc>(
+    pub fn register<T: MmapAsRawDesc>(
         handle: T,
         map_mode: i32,
         offset: u64,
@@ -27,7 +27,7 @@ impl MmapVariant {
         Ok(address)
     }
 
-    pub(super) fn flush(address: i64, length: usize) -> Result<()> {
+    pub fn flush(address: i64, length: usize) -> Result<()> {
         let entry = REGISTRY
             .get(&address)
             .ok_or_else(|| Error::new_native("Invalid mmap address"))?;
