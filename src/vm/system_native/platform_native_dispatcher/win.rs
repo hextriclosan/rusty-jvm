@@ -317,7 +317,7 @@ pub(crate) fn close_handle(handle: i64) -> Result<()> {
     Ok(())
 }
 
-/// `sun.nio.fs.WindowsNativeDispatcher.getVolumePathName0(J)I`
+/// `sun.nio.fs.WindowsNativeDispatcher.getVolumePathName0(J)Ljava/lang/String;`
 pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let result = unsafe {
@@ -338,7 +338,7 @@ pub(crate) fn get_volume_path_name0(address: i64) -> Result<i32> {
     Ok(string_ref)
 }
 
-/// `sun.nio.fs.WindowsNativeDispatcher.getVolumeInformation0(JI)V`
+/// `sun.nio.fs.WindowsNativeDispatcher.getVolumeInformation0(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V`
 pub(crate) fn get_volume_information0(address: i64, volume_information_ref: i32) -> Result<()> {
     let mut volume_name = [0 as WCHAR; MAX_PATH + 1];
     let mut volume_serial_number = 0 as DWORD;
@@ -401,7 +401,7 @@ pub(crate) fn get_drive_type0(address: i64) -> Result<i32> {
     Ok(drive_type)
 }
 
-/// `sun.nio.fs.WindowsNativeDispatcher.formatMessage(I)I`
+/// `sun.nio.fs.WindowsNativeDispatcher.formatMessage(I)Ljava/lang/String;`
 pub(crate) fn format_message(error_code: i32) -> Result<i32> {
     let mut message = [0 as WCHAR; 256];
     let msg_len = unsafe {
@@ -428,7 +428,7 @@ pub(crate) fn format_message(error_code: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
-/// `sun.nio.fs.WindowsNativeDispatcher.getFullPathName0(J)I`
+/// `sun.nio.fs.WindowsNativeDispatcher.getFullPathName0(J)Ljava/lang/String;`
 pub(crate) fn get_full_path_name0(address: i64) -> Result<i32> {
     let lp_file_name = address as usize as LPCWSTR;
     let mut result = vec![0 as WCHAR; MAX_PATH + 1];
@@ -461,7 +461,7 @@ pub(crate) fn get_full_path_name0(address: i64) -> Result<i32> {
     }
 }
 
-/// `sun.nio.fs.WindowsNativeDispatcher.findFirstFile0(JI)V`
+/// `sun.nio.fs.WindowsNativeDispatcher.findFirstFile0(JLsun/nio/fs/WindowsNativeDispatcher$FirstFile;)V`
 pub(crate) fn find_first_file0(lp_file_name: i64, first_file_obj_ref: i32) -> Result<()> {
     let mut data: WIN32_FIND_DATAW = unsafe { zeroed() };
     let lp_file_name = lp_file_name as usize as LPCWSTR;

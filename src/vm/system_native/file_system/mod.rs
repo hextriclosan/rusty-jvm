@@ -21,12 +21,14 @@ pub(crate) mod unix;
 pub(crate) mod winnt;
 
 /// `java.io.WinNTFileSystem.initIDs()V`
+/// `java.io.UnixFileSystem.initIDs()V`
 pub(crate) fn init_ids() -> Result<()> {
     // todo: implement me
     Ok(()) // this method is for caching `path` field from java/io/File for faster access in other native methods
 }
 
 /// `java.io.WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;`
+/// `java.io.UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;`
 pub(crate) fn canonicalize0(_this: i32, path_ref: i32) -> Result<i32> {
     let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
@@ -51,6 +53,7 @@ pub(crate) fn canonicalize0(_this: i32, path_ref: i32) -> Result<i32> {
 }
 
 /// `java.io.WinNTFileSystem.createFileExclusively0(Ljava/lang/String;)Z`
+/// `java.io.UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z`
 pub(crate) fn create_file_exclusively0(_this: i32, path_ref: i32) -> Result<bool> {
     let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
@@ -75,6 +78,7 @@ bitflags! {
     }
 }
 /// `java.io.WinNTFileSystem.getBooleanAttributes0(Ljava/io/File;)I`
+/// `java.io.UnixFileSystem.getBooleanAttributes0(Ljava/io/File;)I`
 pub(crate) fn get_boolean_attributes0(_this: i32, file_ref: i32) -> Result<i32> {
     let path_ref = extract_path(file_ref)?;
 
@@ -115,6 +119,7 @@ bitflags! {
     }
 }
 /// `java.io.WinNTFileSystem.checkAccess0(Ljava/io/File;I)Z`
+/// `java.io.UnixFileSystem.checkAccess0(Ljava/io/File;I)Z`
 pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bool> {
     let path_ref = extract_path(file_ref)?;
 
@@ -130,6 +135,7 @@ pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bo
 }
 
 /// `java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z`
+/// `java.io.UnixFileSystem.delete0(Ljava/io/File;)Z`
 pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
     let path_ref = extract_path(file_ref)?;
 
