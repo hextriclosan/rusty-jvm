@@ -512,6 +512,21 @@ builtin_natives! {
     "sun/nio/ch/UnixFileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
     "sun/nio/ch/UnixFileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
     }
+
+    #[cfg(windows)]
+    {
+    "sun/nio/ch/FileDispatcherImpl": static fn allocationGranularity0() -> long => sn::platform_file_dispatcher::allocation_granularity0;
+    "sun/nio/ch/FileDispatcherImpl": static fn maxDirectTransferSize0() -> int => sn::platform_file_dispatcher::win::max_direct_transfer_size0; // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
+    "sun/nio/ch/FileDispatcherImpl": static fn write0(fd: file_descriptor, address: long, len: int, append: boolean) -> int => sn::platform_file_dispatcher::win::write0;
+    "sun/nio/ch/FileDispatcherImpl": static fn read0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::win::read0;
+    "sun/nio/ch/FileDispatcherImpl": static fn pread0(fd: file_descriptor, address: long, len: int, offset: long) -> int => sn::platform_file_dispatcher::win::pread0;
+    "sun/nio/ch/FileDispatcherImpl": static fn size0(fd: file_descriptor) -> long => sn::platform_file_dispatcher::win::size0;
+    "sun/nio/ch/FileDispatcherImpl": static fn truncate0(fd: file_descriptor, size: long) -> int => sn::platform_file_dispatcher::win::truncate0;
+    "sun/nio/ch/FileDispatcherImpl": static fn map0(fd: file_descriptor, prot: int, pos: long, len: long, is_sync: boolean) -> long => sn::platform_file_dispatcher::map0;
+    "sun/nio/ch/FileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
+    "sun/nio/ch/FileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
+    "sun/nio/ch/FileDispatcherImpl": static fn duplicateHandle(handle: long) -> long => sn::platform_file_dispatcher::win::duplicate_handle;
+    }
 }
 
 fn build_descriptor(params: &[&str], ret: &str) -> String {

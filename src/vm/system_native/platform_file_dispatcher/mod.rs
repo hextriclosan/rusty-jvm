@@ -5,8 +5,6 @@ use std::io::Seek;
 
 #[cfg(windows)]
 pub mod win;
-#[cfg(windows)]
-use win::truncate0;
 
 mod mmap_registry;
 #[cfg(unix)]
