@@ -527,6 +527,11 @@ builtin_natives! {
     "sun/nio/ch/FileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
     "sun/nio/ch/FileDispatcherImpl": static fn duplicateHandle(handle: long) -> long => sn::platform_file_dispatcher::win::duplicate_handle;
     }
+
+    #[cfg(target_os = "linux")]
+    {
+    "sun/nio/ch/FileDispatcherImpl": static fn init0() -> void => sn::platform_file_dispatcher::linux::init0;
+    }
 }
 
 fn build_descriptor(params: &[&str], ret: &str) -> String {

@@ -390,11 +390,6 @@ fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
             WithMutStackFrames(mapped_memory_utils_force0_wrp),
         );
     }
-
-    #[cfg(target_os = "linux")]
-    {
-        table.insert("sun/nio/ch/FileDispatcherImpl:init0:()V", Basic(void_stub));
-    }
 }
 
 pub(crate) fn invoke_native_method(
