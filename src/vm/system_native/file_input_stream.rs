@@ -147,7 +147,7 @@ pub(crate) fn read0(obj_ref: i32) -> Result<i32> {
 
 /// `java.io.FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z`
 pub(crate) fn is_regular_file0(_this: i32, fd_ref: i32) -> Result<bool> {
-    let Some(file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
+    let Some(file) = PlatformFile::get_by_fd(fd_ref)? else {
         return Ok(false);
     };
     let metadata = match file.metadata() {

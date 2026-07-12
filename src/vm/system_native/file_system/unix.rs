@@ -22,6 +22,7 @@ pub(super) fn check_access_unix_impl(path: &Path, mode: Access) -> bool {
     access(path, flags).is_ok()
 }
 
+/// `java.io.UnixFileSystem.getNameMax0(Ljava/lang/String;)J`
 pub(crate) fn get_name_max0(_this: i32, string_ref: i32) -> Result<i64> {
     const NAME_MAX_FALLBACK: i64 = 255;
 

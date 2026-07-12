@@ -20,11 +20,13 @@ pub(crate) mod unix;
 #[cfg(windows)]
 pub(crate) mod winnt;
 
+/// `java.io.WinNTFileSystem.initIDs()V`
 pub(crate) fn init_ids() -> Result<()> {
     // todo: implement me
     Ok(()) // this method is for caching `path` field from java/io/File for faster access in other native methods
 }
 
+/// `java.io.WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;`
 pub(crate) fn canonicalize0(_this: i32, path_ref: i32) -> Result<i32> {
     let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
@@ -48,6 +50,7 @@ pub(crate) fn canonicalize0(_this: i32, path_ref: i32) -> Result<i32> {
     Ok(canonical_name_ref)
 }
 
+/// `java.io.WinNTFileSystem.createFileExclusively0(Ljava/lang/String;)Z`
 pub(crate) fn create_file_exclusively0(_this: i32, path_ref: i32) -> Result<bool> {
     let path = get_utf8_string_by_ref(path_ref)?;
     let path = Path::new(&path);
@@ -71,6 +74,7 @@ bitflags! {
         const BA_HIDDEN = 0x08;
     }
 }
+/// `java.io.WinNTFileSystem.getBooleanAttributes0(Ljava/io/File;)I`
 pub(crate) fn get_boolean_attributes0(_this: i32, file_ref: i32) -> Result<i32> {
     let path_ref = extract_path(file_ref)?;
 
@@ -110,6 +114,7 @@ bitflags! {
         const ACCESS_READ = 0x04;
     }
 }
+/// `java.io.WinNTFileSystem.checkAccess0(Ljava/io/File;I)Z`
 pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bool> {
     let path_ref = extract_path(file_ref)?;
 
@@ -124,6 +129,7 @@ pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bo
     Ok(check_access(path, access_flags))
 }
 
+/// `java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z`
 pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
     let path_ref = extract_path(file_ref)?;
 
@@ -144,6 +150,8 @@ pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
 ///
 /// Return 0 if metadata cannot be retrieved (e.g., file not found, permission denied, I/O error).
 /// This matches Java's File.length() behavior, which returns 0 for non-existent files or on error.
+/// `java.io.WinNTFileSystem.getLength0(Ljava/io/File;)J`
+/// `java.io.UnixFileSystem.getLength0(Ljava/io/File;)J`
 pub(crate) fn get_length0(_this: i32, file_ref: i32) -> Result<i64> {
     let path_ref = extract_path(file_ref)?;
 

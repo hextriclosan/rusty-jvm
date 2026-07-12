@@ -44,6 +44,7 @@ pub(super) fn check_access_winnt_impl(path: &Path, mode: Access) -> bool {
     }
 }
 
+/// `java.io.WinNTFileSystem.getFinalPath0(Ljava/lang/String;)Ljava/lang/String;`
 pub(crate) fn get_final_path0(_this: i32, path_ref: i32) -> Result<i32> {
     if path_ref == 0 {
         set_pending_null_pointer_exception_with_message("Path is null")?;
@@ -114,6 +115,7 @@ fn get_final_path0_impl(path: &WideCString) -> Result<String> {
     Ok(result)
 }
 
+/// `java.io.WinNTFileSystem.delete0(Ljava/io/File;Z)Z`
 pub(crate) fn delete0(this: i32, file_ref: i32, allow_delete_readonly: bool) -> Result<bool> {
     if allow_delete_readonly {
         return Err(Error::new_native(
@@ -125,6 +127,7 @@ pub(crate) fn delete0(this: i32, file_ref: i32, allow_delete_readonly: bool) -> 
     Ok(deleted)
 }
 
+/// `java.io.WinNTFileSystem.getNameMax0(Ljava/lang/String;)I`
 pub(crate) fn get_name_max0(_this: i32, path_ref: i32) -> Result<i32> {
     let path_storage;
     let path = if path_ref == 0 {

@@ -76,7 +76,7 @@ fn force0(_fd_ref: i32, address: i64, length: i64, stack_frames: &mut StackFrame
 /// `sun.nio.ch.UnixFileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
 /// `sun.nio.ch.FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z`
 pub(crate) fn is_other0(fd_ref: i32) -> Result<bool> {
-    let Some(file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
+    let Some(file) = PlatformFile::get_by_fd(fd_ref)? else {
         return Ok(false);
     };
 
@@ -94,7 +94,7 @@ pub(crate) fn is_other0(fd_ref: i32) -> Result<bool> {
 /// `sun.nio.ch.UnixFileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J`
 /// `sun.nio.ch.FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J`
 pub(crate) fn seek0(fd_ref: i32, offset: i64) -> Result<i64> {
-    let Some(mut file) = PlatformFile::get_by_fd_pending(fd_ref)? else {
+    let Some(mut file) = PlatformFile::get_by_fd(fd_ref)? else {
         return Ok(0);
     };
 
