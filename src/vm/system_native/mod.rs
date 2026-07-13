@@ -23,7 +23,6 @@ pub(crate) mod perf;
 mod platform_file;
 pub(crate) mod platform_file_dispatcher;
 pub(crate) mod platform_native_dispatcher;
-pub(crate) mod platform_specific_files;
 pub(crate) mod properties_provider;
 pub(crate) mod random_access_file;
 pub(crate) mod reflect_array;
@@ -39,4 +38,6 @@ pub(crate) mod throwable;
 pub(crate) mod time_zone;
 pub(crate) mod unsafe_;
 pub(crate) mod vm;
+#[cfg(windows)]
+pub(crate) mod win_util;
 pub(crate) mod zip;
