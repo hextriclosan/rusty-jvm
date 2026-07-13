@@ -449,7 +449,7 @@ builtin_natives! {
     "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
     "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
     "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
-    "java/lang/Thread": static fn start0() -> void => sn::thread::start0; // todo: implement me
+    "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
     }

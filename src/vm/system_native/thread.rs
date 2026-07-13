@@ -1,4 +1,5 @@
 use crate::vm::error::Result;
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
 use crate::vm::method_area::method_area::with_method_area;
 
 /// `java/lang/Thread.registerNatives()V`
@@ -20,7 +21,12 @@ pub(crate) fn current_carrier_thread() -> Result<i32> {
 }
 
 /// `java/lang/Thread.holdsLock(Ljava/lang/Object;)Z`
-pub(crate) fn holds_lock(_object_ref: i32) -> Result<bool> {
+pub(crate) fn holds_lock(object_ref: i32) -> Result<bool> {
+    if object_ref == 0 {
+        set_pending_null_pointer_exception()?;
+        return Ok(false);
+    }
+
     Ok(true) // todo: implement me
 }
 
@@ -36,6 +42,6 @@ pub(crate) fn set_priority0(_this: i32, _new_priority: i32) -> Result<()> {
 }
 
 /// `java/lang/Thread.start0()V`
-pub(crate) fn start0() -> Result<()> {
+pub(crate) fn start0(_this: i32) -> Result<()> {
     Ok(()) // todo: implement me
 }
