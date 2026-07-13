@@ -11,12 +11,8 @@ use crate::vm::system_native::dispatcher::invoke::invoke;
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
-    method_handle_natives_get_member_vm_info_wrp, method_handle_natives_get_named_con_wrp,
-    method_handle_natives_init_wrp, method_handle_natives_object_field_offset_wrp,
-    method_handle_natives_resolve_wrp, method_handle_natives_static_field_base_wrp,
-    method_handle_natives_static_field_offset_wrp, native_accessor_invoke0_wrp,
-    native_accessor_newinstance0_wrp, set_call_site_target_normal_wrp,
-    var_handle_compare_and_set_wrp, var_handle_get_wrp, var_handle_set_wrp,
+    native_accessor_invoke0_wrp, native_accessor_newinstance0_wrp, var_handle_compare_and_set_wrp,
+    var_handle_get_wrp, var_handle_set_wrp,
 };
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
@@ -126,42 +122,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/reflect/Array:newArray:(Ljava/lang/Class;I)Ljava/lang/Object;",
         Basic(new_array_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:init:(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
-        Basic(method_handle_natives_init_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:resolve:(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
-        Basic(method_handle_natives_resolve_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:registerNatives:()V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:objectFieldOffset:(Ljava/lang/invoke/MemberName;)J",
-        Basic(method_handle_natives_object_field_offset_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:staticFieldOffset:(Ljava/lang/invoke/MemberName;)J",
-        Basic(method_handle_natives_static_field_offset_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:staticFieldBase:(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
-        Basic(method_handle_natives_static_field_base_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:getNamedCon:(I[Ljava/lang/Object;)I",
-        Basic(method_handle_natives_get_named_con_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:getMemberVMInfo:(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
-        Basic(method_handle_natives_get_member_vm_info_wrp),
-    );
-    table.insert(
-        "java/lang/invoke/MethodHandleNatives:setCallSiteTargetNormal:(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
-        Basic(set_call_site_target_normal_wrp),
     );
     table.insert(
         "java/lang/invoke/MethodHandle:invokeExact", // this is a normalized polymorphic signature
