@@ -244,10 +244,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // todo: implement this (by 0 we say that the platform can not signal native threads)
     );
     table.insert(
-        "java/nio/MappedMemoryUtils:registerNatives:()V",
-        Basic(void_stub),
-    );
-    table.insert(
         "java/lang/Throwable:fillInStackTrace:(I)Ljava/lang/Throwable;",
         WithStackFrames(fill_in_stack_trace_wrp),
     );
