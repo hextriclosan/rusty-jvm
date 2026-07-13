@@ -28,7 +28,6 @@ use crate::vm::system_native::reflecton::{
     reflection_get_class_access_flags_wrp,
 };
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
-use crate::vm::system_native::thread::{current_thread_wrp, get_next_threadid_offset_wrp};
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
 use crate::vm::system_native::zip::deflater::{
@@ -85,25 +84,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "jdk/internal/perf/Perf:createByteArray:(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
         WithMutStackFrames(perf_create_byte_array_wrp),
     );
-    table.insert(
-        "java/lang/Thread:currentThread:()Ljava/lang/Thread;",
-        Basic(current_thread_wrp),
-    );
-    table.insert(
-        "java/lang/Thread:currentCarrierThread:()Ljava/lang/Thread;",
-        Basic(current_thread_wrp), //todo: use current carrier thread here (no matter what it is)
-    );
-    table.insert("java/lang/Thread:registerNatives:()V", Basic(void_stub));
-    table.insert(
-        "java/lang/Thread:holdsLock:(Ljava/lang/Object;)Z",
-        Basic(|_args: &[i32]| Ok(vec![1])),
-    ); // todo: implement this properly
-    table.insert(
-        "java/lang/Thread:getNextThreadIdOffset:()J",
-        Basic(get_next_threadid_offset_wrp),
-    );
-    table.insert("java/lang/Thread:setPriority0:(I)V", Basic(void_stub));
-    table.insert("java/lang/Thread:start0:()V", Basic(void_stub));
     table.insert(
         "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
         Basic(|_args: &[i32]| {
