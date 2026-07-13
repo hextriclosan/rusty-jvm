@@ -7,8 +7,8 @@ use crate::vm::system_native::file_system::{delete0 as delete_impl, Access};
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     get_last_error, strip_string,
 };
-use crate::vm::system_native::platform_specific_files::wide_cstring::WideCString;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
+use crate::vm::system_native::win_util::wide_cstring::WideCString;
 use std::path::Path;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{DWORD, MAX_PATH};

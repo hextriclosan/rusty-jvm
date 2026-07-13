@@ -357,26 +357,8 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(get_system_time_zone_id_wrp),
     );
 
-    #[cfg(windows)]
-    platform_specific(&mut table);
-
     table
 });
-
-#[cfg(windows)]
-fn platform_specific(table: &mut HashMap<&'static str, NativeMethod>) {
-    use crate::vm::system_native::native_seed_generator::native_generate_seed_wrp;
-    use crate::vm::system_native::platform_specific_files::win32_error_mode::set_error_mode_wrp;
-
-    table.insert(
-        "sun/io/Win32ErrorMode:setErrorMode:(J)J",
-        Basic(set_error_mode_wrp),
-    );
-    table.insert(
-        "sun/security/provider/NativeSeedGenerator:nativeGenerateSeed:([B)Z",
-        Basic(native_generate_seed_wrp),
-    );
-}
 
 pub(crate) fn invoke_native_method(
     method_signature: &str,

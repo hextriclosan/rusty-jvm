@@ -534,6 +534,12 @@ builtin_natives! {
     {
     "sun/nio/ch/FileDispatcherImpl": static fn init0() -> void => sn::platform_file_dispatcher::linux::init0;
     }
+
+    #[cfg(windows)]
+    {
+    "sun/io/Win32ErrorMode": static fn setErrorMode(mode: long) -> long => sn::win32_error_mode::set_error_mode;
+    "sun/security/provider/NativeSeedGenerator": static fn nativeGenerateSeed(bytes: byte_array) -> boolean => sn::native_seed_generator::native_generate_seed;
+    }
 }
 
 fn build_descriptor(params: &[&str], ret: &str) -> String {
