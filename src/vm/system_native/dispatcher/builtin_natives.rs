@@ -159,7 +159,6 @@ jni_types! {
     unix_file_attrs           : ref   | i32  | jobject      | "Lsun/nio/fs/UnixFileAttributes;";
     volume_info               : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;";
     first_file                : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$FirstFile;";
-    class_loader              : ref   | i32  | jobject      | "Ljava/lang/ClassLoader;";
     protection_domain         : ref   | i32  | jobject      | "Ljava/security/ProtectionDomain;";
     void                      : void  | ()   | ()           | "V";
 }
@@ -400,7 +399,7 @@ builtin_natives! {
     "jdk/internal/misc/VM": static fn initialize() -> void => sn::vm::initialize; // todo: implement me
 
     "java/lang/ClassLoader": static fn registerNatives() -> void => sn::class_loader::register_natives; // todo: implement me
-    "java/lang/ClassLoader": static fn defineClass0(cl: class_loader, lookup: class, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, init: boolean, fags: int, class_data: object) -> class => sn::class_loader::define_class0;
+    "java/lang/ClassLoader": static fn defineClass0(cl: class_loader, lookup: class, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, init: boolean, flags: int, class_data: object) -> class => sn::class_loader::define_class0;
     "java/lang/ClassLoader": static fn defineClass1(cl: class_loader, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class1;
     "java/lang/ClassLoader": static fn defineClass2(cl: class_loader, name: string, buf: byte_buffer, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class2;
     "java/lang/ClassLoader": static fn findBootstrapClass(name: string) -> class => sn::class_loader::find_bootstrap_class;
