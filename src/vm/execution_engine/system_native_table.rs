@@ -26,10 +26,6 @@ use crate::vm::system_native::reflecton::{
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
-use crate::vm::system_native::zip::deflater::{
-    java_util_zip_deflater_deflate_bytes_bytes_wrp, java_util_zip_deflater_end_wrp,
-    java_util_zip_deflater_init_wrp,
-};
 use crate::vm::system_native::zip::inflater::{
     java_util_zip_inflater_end_wrp, java_util_zip_inflater_inflate_bytes_bytes_wrp,
     java_util_zip_inflater_init_wrp, java_util_zip_inflater_initids_wrp,
@@ -202,18 +198,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/vm/ContinuationSupport:isSupported0:()Z",
         Basic(|_args: &[i32]| Ok(vec![0])), // We do not support Loom continuations (yet)
-    );
-    table.insert(
-        "java/util/zip/Deflater:init:(IIZ)J",
-        Basic(java_util_zip_deflater_init_wrp),
-    );
-    table.insert(
-        "java/util/zip/Deflater:deflateBytesBytes:(J[BII[BIIII)J",
-        Basic(java_util_zip_deflater_deflate_bytes_bytes_wrp),
-    );
-    table.insert(
-        "java/util/zip/Deflater:end:(J)V",
-        Basic(java_util_zip_deflater_end_wrp),
     );
     table.insert(
         "java/util/zip/Inflater:initIDs:()V",

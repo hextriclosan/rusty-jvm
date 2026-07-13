@@ -464,6 +464,10 @@ builtin_natives! {
     "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
     "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
 
+    "java/util/zip/Deflater": static fn init(level: int, strategy: int, nowrap: boolean) -> long => sn::zip::deflater::init;
+    "java/util/zip/Deflater": instance fn deflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int, flush: int, params: int) -> long => sn::zip::deflater::deflate_bytes_bytes;
+    "java/util/zip/Deflater": static fn end(addr: long) -> void => sn::zip::deflater::end;
+
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
     }
 

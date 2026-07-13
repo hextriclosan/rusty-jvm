@@ -2,7 +2,6 @@ use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i64::AutoDashMapI64;
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::system_native::zip::common::DEFAULT_WINDOW_BITS;
 use miniz_oxide::deflate::core::{create_comp_flags_from_zip_params, CompressorOxide};
 use miniz_oxide::deflate::stream::deflate;
@@ -12,15 +11,8 @@ use std::sync::LazyLock;
 static REGISTRY: LazyLock<AutoDashMapI64<CompressorOxide>> =
     LazyLock::new(|| AutoDashMapI64::new(1));
 
-pub(crate) fn java_util_zip_deflater_init_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let level = args[0];
-    let strategy = args[1];
-    let nowrap = args[2] != 0;
-    let addr = deflater_init(level, strategy, nowrap)?;
-
-    Ok(i64_to_vec(addr))
-}
-fn deflater_init(level: i32, strategy: i32, nowrap: bool) -> Result<i64> {
+/// `java.util.zip.Deflater.init(IIZ)J`
+pub(crate) fn init(level: i32, strategy: i32, nowrap: bool) -> Result<i64> {
     let deflate_flags = create_comp_flags_from_zip_params(
         level,
         if nowrap {
@@ -36,33 +28,9 @@ fn deflater_init(level: i32, strategy: i32, nowrap: bool) -> Result<i64> {
     Ok(inserted_key)
 }
 
-pub(crate) fn java_util_zip_deflater_deflate_bytes_bytes_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _this_obj_ref = args[0];
-    let addr = i32toi64(args[2], args[1]);
-    let input_array_ref = args[3];
-    let input_off = args[4];
-    let input_len = args[5];
-    let output_array_ref = args[6];
-    let output_off = args[7];
-    let output_len = args[8];
-    let flush = args[9];
-    let _params = args[10]; // carries the compression level and strategy, not used here
-
-    let res = deflater_deflate_bytes_bytes(
-        addr,
-        input_array_ref,
-        input_off,
-        input_len,
-        output_array_ref,
-        output_off,
-        output_len,
-        flush,
-    )?;
-
-    Ok(i64_to_vec(res))
-}
-
-fn deflater_deflate_bytes_bytes(
+/// `java.util.zip.Deflater.deflateBytesBytes(J[BII[BIIII)J`
+pub(crate) fn deflate_bytes_bytes(
+    _this: i32,
     addr: i64,
     input_array_ref: i32,
     input_off: i32,
@@ -71,6 +39,7 @@ fn deflater_deflate_bytes_bytes(
     output_off: i32,
     output_len: i32,
     flush: i32,
+    _params: i32, // carries the compression level and strategy, not used here
 ) -> Result<i64> {
     let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
         Error::new_execution(&format!(
@@ -131,13 +100,8 @@ fn check_deflate_status(stream_result: StreamResult) -> Result<i64> {
         | ((finished as i64) << 62))
 }
 
-pub(crate) fn java_util_zip_deflater_end_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let addr = i32toi64(args[1], args[0]);
-    deflater_end(addr)?;
-
-    Ok(vec![])
-}
-fn deflater_end(addr: i64) -> Result<()> {
+/// `java.util.zip.Deflater.end(J)V`
+pub(crate) fn end(addr: i64) -> Result<()> {
     REGISTRY.remove(addr).ok_or_else(|| {
         Error::new_execution(&format!("Address {addr} does not exist in REGISTRY"))
     })?;
