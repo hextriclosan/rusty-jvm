@@ -412,13 +412,13 @@ builtin_natives! {
     "jdk/internal/jimage/NativeImageBuffer": instance fn getNativeMap(name: string) -> byte_buffer => sn::native_image_buffer::get_native_map;
 
     "java/lang/invoke/MethodHandleNatives": static fn registerNatives() -> void => sn::method_handle_natives::register_natives; // todo: implement me
-    "java/lang/invoke/MethodHandleNatives": static fn init(this: member_name, obj_ref: object) -> void => sn::method_handle_natives::init;
-    "java/lang/invoke/MethodHandleNatives": static fn resolve(this: member_name, caller: class, lookup_mode: int, speculative_resolve: boolean) -> member_name => sn::method_handle_natives::resolve;
-    "java/lang/invoke/MethodHandleNatives": static fn objectFieldOffset(this: member_name) -> long => sn::method_handle_natives::object_field_offset;
-    "java/lang/invoke/MethodHandleNatives": static fn staticFieldOffset(this: member_name) -> long => sn::method_handle_natives::static_field_offset;
-    "java/lang/invoke/MethodHandleNatives": static fn staticFieldBase(this: member_name) -> object => sn::method_handle_natives::static_field_base;
+    "java/lang/invoke/MethodHandleNatives": static fn init(mn: member_name, obj_ref: object) -> void => sn::method_handle_natives::init;
+    "java/lang/invoke/MethodHandleNatives": static fn resolve(mn: member_name, caller: class, lookup_mode: int, speculative_resolve: boolean) -> member_name => sn::method_handle_natives::resolve;
+    "java/lang/invoke/MethodHandleNatives": static fn objectFieldOffset(mn: member_name) -> long => sn::method_handle_natives::object_field_offset;
+    "java/lang/invoke/MethodHandleNatives": static fn staticFieldOffset(mn: member_name) -> long => sn::method_handle_natives::static_field_offset;
+    "java/lang/invoke/MethodHandleNatives": static fn staticFieldBase(mn: member_name) -> object => sn::method_handle_natives::static_field_base;
     "java/lang/invoke/MethodHandleNatives": static fn getNamedCon(which: int, name: object_array) -> int => sn::method_handle_natives::get_named_con; // todo: implement me
-    "java/lang/invoke/MethodHandleNatives": static fn getMemberVMInfo(this: member_name) -> object => sn::method_handle_natives::get_member_vm_info;
+    "java/lang/invoke/MethodHandleNatives": static fn getMemberVMInfo(mn: member_name) -> object => sn::method_handle_natives::get_member_vm_info;
     "java/lang/invoke/MethodHandleNatives": static fn setCallSiteTargetNormal(site: call_site, target: method_handle) -> void => sn::method_handle_natives::set_call_site_target_normal;
 
     "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
