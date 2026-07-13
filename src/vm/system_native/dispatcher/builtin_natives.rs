@@ -160,6 +160,7 @@ jni_types! {
     volume_info               : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;";
     first_file                : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$FirstFile;";
     protection_domain         : ref   | i32  | jobject      | "Ljava/security/ProtectionDomain;";
+    thread                    : ref   | i32  | jobject      | "Ljava/lang/Thread;";
     void                      : void  | ()   | ()           | "V";
 }
 
@@ -441,6 +442,14 @@ builtin_natives! {
 
     "java/nio/MappedMemoryUtils": static fn registerNatives() -> void => sn::mapped_memory_utils::register_natives; // todo: implement me
     "java/nio/MappedMemoryUtils": static fn force0(fd: file_descriptor, addr: long, len: long) -> void => sn::mapped_memory_utils::force0;
+
+    "java/lang/Thread": static fn registerNatives() -> void => sn::thread::register_natives;
+    "java/lang/Thread": static fn currentThread() -> thread => sn::thread::current_thread;
+    "java/lang/Thread": static fn currentCarrierThread() -> thread => sn::thread::current_carrier_thread;  //todo: use current carrier thread here (no matter what it is)
+    "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
+    "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
+    "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
+    "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
     }
