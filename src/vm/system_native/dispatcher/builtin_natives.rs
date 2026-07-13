@@ -537,7 +537,7 @@ builtin_natives! {
 
     #[cfg(windows)]
     {
-    "sun/io/Win32ErrorMode:": static fn setErrorMode(mode: long) -> long => sn::win32_error_mode::set_error_mode;
+    "sun/io/Win32ErrorMode": static fn setErrorMode(mode: long) -> long => sn::win32_error_mode::set_error_mode;
     "sun/security/provider/NativeSeedGenerator": static fn nativeGenerateSeed(bytes: byte_array) -> boolean => sn::native_seed_generator::native_generate_seed;
     }
 }

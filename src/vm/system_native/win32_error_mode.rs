@@ -1,6 +1,6 @@
+use crate::vm::error::Result;
 use winapi::shared::minwindef::UINT;
 use winapi::um::errhandlingapi::SetErrorMode;
-use crate::vm::error::Result;
 
 /// `sun.io.Win32ErrorMode.setErrorMode(J)J`
 pub(crate) fn set_error_mode(mode: i64) -> Result<i64> {

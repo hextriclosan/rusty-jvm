@@ -39,5 +39,7 @@ pub(crate) mod time_zone;
 pub(crate) mod unsafe_;
 pub(crate) mod vm;
 #[cfg(windows)]
+pub(crate) mod win32_error_mode;
+#[cfg(windows)]
 pub(crate) mod win_util;
 pub(crate) mod zip;
