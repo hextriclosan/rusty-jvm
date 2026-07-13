@@ -4,10 +4,6 @@ use crate::vm::execution_engine::system_native_table::NativeMethod::{
 };
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::class_loader::{
-    define_class0_wrp, define_class1_wrp, define_class2_wrp, find_bootstrap_class_wrp,
-    find_loaded_class_wrp,
-};
 use crate::vm::system_native::constant_pool::{
     constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
 };
@@ -210,30 +206,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/invoke/VarHandle:compareAndSet", // this is a normalized polymorphic signature
         Basic(var_handle_compare_and_set_wrp),
-    );
-    table.insert(
-        "java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
-        Basic(define_class0_wrp),
-    );
-    table.insert(
-        "java/lang/ClassLoader:defineClass1:(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(define_class1_wrp),
-    );
-    table.insert(
-        "java/lang/ClassLoader:defineClass2:(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(define_class2_wrp),
-    );
-    table.insert(
-        "java/lang/ClassLoader:registerNatives:()V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "java/lang/ClassLoader:findBootstrapClass:(Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(find_bootstrap_class_wrp),
-    );
-    table.insert(
-        "java/lang/ClassLoader:findLoadedClass0:(Ljava/lang/String;)Ljava/lang/Class;",
-        Basic(find_loaded_class_wrp),
     );
     table.insert(
         "jdk/internal/reflect/ConstantPool:getUTF8At0:(Ljava/lang/Object;I)Ljava/lang/String;",
