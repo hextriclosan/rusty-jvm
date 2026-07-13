@@ -469,6 +469,12 @@ builtin_natives! {
     "java/util/zip/Deflater": static fn end(addr: long) -> void => sn::zip::deflater::end;
 
     "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
+
+    "java/util/zip/Inflater": static fn initIDs() -> void => sn::zip::inflater::init_ids; // todo: implement me
+    "java/util/zip/Inflater": static fn init(nowrap: boolean) -> long => sn::zip::inflater::init;
+    "java/util/zip/Inflater": instance fn inflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int) -> long => sn::zip::inflater::inflate_bytes_bytes;
+    "java/util/zip/Inflater": static fn end(addr: long) -> void => sn::zip::inflater::end;
+    "java/util/zip/Inflater": static fn reset(addr: long) -> void => sn::zip::inflater::reset;
     }
 
     #[cfg(unix)]

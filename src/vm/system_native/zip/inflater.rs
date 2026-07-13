@@ -2,7 +2,6 @@ use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
 use crate::vm::commons::auto_dash_map::auto_dash_map_i64::AutoDashMapI64;
 use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i32toi64, i64_to_vec};
 use crate::vm::system_native::zip::common::DEFAULT_WINDOW_BITS;
 use miniz_oxide::inflate::stream::{inflate, InflateState};
 use miniz_oxide::{DataFormat, MZError, MZFlush, MZStatus, StreamResult};
@@ -12,16 +11,13 @@ static REGISTRY: LazyLock<AutoDashMapI64<InflateValue>> = LazyLock::new(|| AutoD
 
 struct InflateValue(InflateState, DataFormat);
 
-pub(crate) fn java_util_zip_inflater_initids_wrp(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(vec![])
+/// `java.util.zip.Inflater.initIDs()V`
+pub(crate) fn init_ids() -> Result<()> {
+    Ok(()) // todo: implement me
 }
 
-pub(crate) fn java_util_zip_inflater_init_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let nowrap = args[0] != 0;
-    let addr = inflater_init(nowrap);
-    Ok(i64_to_vec(addr))
-}
-fn inflater_init(nowrap: bool) -> i64 {
+/// `java.util.zip.Inflater.init(Z)J`
+pub(crate) fn init(nowrap: bool) -> Result<i64> {
     let data_format = DataFormat::from_window_bits(if nowrap {
         -DEFAULT_WINDOW_BITS
     } else {
@@ -30,33 +26,12 @@ fn inflater_init(nowrap: bool) -> i64 {
     let inflate_state = InflateState::new(data_format);
 
     let addr = REGISTRY.insert_auto(InflateValue(inflate_state, data_format));
-    addr
+    Ok(addr)
 }
 
-pub(crate) fn java_util_zip_inflater_inflate_bytes_bytes_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _this_obj_ref = args[0];
-    let addr = i32toi64(args[2], args[1]);
-    let input_array_ref = args[3];
-    let input_off = args[4];
-    let input_len = args[5];
-    let output_array_ref = args[6];
-    let output_off = args[7];
-    let output_len = args[8];
-
-    let res = inflater_inflate_bytes_bytes(
-        addr,
-        input_array_ref,
-        input_off,
-        input_len,
-        output_array_ref,
-        output_off,
-        output_len,
-    )?;
-
-    Ok(i64_to_vec(res))
-}
-
-fn inflater_inflate_bytes_bytes(
+/// `java.util.zip.Inflater.inflateBytesBytes(J[BII[BII)J`
+pub(crate) fn inflate_bytes_bytes(
+    _this: i32,
     addr: i64,
     input_array_ref: i32,
     input_off: i32,
@@ -144,13 +119,8 @@ fn check_inflate_status(stream_result: StreamResult) -> Result<i64> {
         | ((need_dict as i64) << 63))
 }
 
-pub(crate) fn java_util_zip_inflater_end_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let addr = i32toi64(args[1], args[0]);
-    inflater_end(addr)?;
-
-    Ok(vec![])
-}
-fn inflater_end(addr: i64) -> Result<()> {
+/// `java.util.zip.Inflater.end(J)V`
+pub(crate) fn end(addr: i64) -> Result<()> {
     REGISTRY.remove(addr).ok_or_else(|| {
         Error::new_execution(&format!("Address {addr} does not exist in REGISTRY"))
     })?;
@@ -158,13 +128,8 @@ fn inflater_end(addr: i64) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn java_util_zip_inflater_reset_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let addr = i32toi64(args[1], args[0]);
-    inflater_reset(addr)?;
-
-    Ok(vec![])
-}
-fn inflater_reset(addr: i64) -> Result<()> {
+/// `java.util.zip.Inflater.reset(J)V`
+pub(crate) fn reset(addr: i64) -> Result<()> {
     let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
         Error::new_execution(&format!(
             "Inflater not found in registry for address: {}",

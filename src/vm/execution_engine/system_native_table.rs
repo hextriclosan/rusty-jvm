@@ -26,11 +26,6 @@ use crate::vm::system_native::reflecton::{
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
-use crate::vm::system_native::zip::inflater::{
-    java_util_zip_inflater_end_wrp, java_util_zip_inflater_inflate_bytes_bytes_wrp,
-    java_util_zip_inflater_init_wrp, java_util_zip_inflater_initids_wrp,
-    java_util_zip_inflater_reset_wrp,
-};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
@@ -198,26 +193,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "jdk/internal/vm/ContinuationSupport:isSupported0:()Z",
         Basic(|_args: &[i32]| Ok(vec![0])), // We do not support Loom continuations (yet)
-    );
-    table.insert(
-        "java/util/zip/Inflater:initIDs:()V",
-        Basic(java_util_zip_inflater_initids_wrp),
-    );
-    table.insert(
-        "java/util/zip/Inflater:init:(Z)J",
-        Basic(java_util_zip_inflater_init_wrp),
-    );
-    table.insert(
-        "java/util/zip/Inflater:inflateBytesBytes:(J[BII[BII)J",
-        Basic(java_util_zip_inflater_inflate_bytes_bytes_wrp),
-    );
-    table.insert(
-        "java/util/zip/Inflater:end:(J)V",
-        Basic(java_util_zip_inflater_end_wrp),
-    );
-    table.insert(
-        "java/util/zip/Inflater:reset:(J)V",
-        Basic(java_util_zip_inflater_reset_wrp),
     );
     table.insert(
         "java/lang/NullPointerException:getExtendedNPEMessage:()Ljava/lang/String;",
