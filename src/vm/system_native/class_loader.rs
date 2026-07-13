@@ -10,33 +10,13 @@ use tracing::trace;
 pub(crate) const SYNTH_CLASS_DELIM: char = '#';
 static COUNTER: AtomicU32 = AtomicU32::new(1);
 
-pub(crate) fn define_class0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_loader_ref = args[0];
-    let lookup_ref = args[1];
-    let name_ref = args[2];
-    let buf_ref = args[3];
-    let off = args[4];
-    let len = args[5];
-    let protection_domain_ref = args[6];
-    let initialize = args[7] != 0;
-    let flags = args[8];
-    let class_data_ref = args[9];
-    let class_ref = define_class0(
-        class_loader_ref,
-        lookup_ref,
-        name_ref,
-        buf_ref,
-        off,
-        len,
-        protection_domain_ref,
-        initialize,
-        flags,
-        class_data_ref,
-    )?;
-
-    Ok(vec![class_ref])
+/// `java/lang/ClassLoader:registerNatives:()V`
+pub(crate) fn register_natives() -> Result<()> {
+    Ok(()) // todo: implement me
 }
-fn define_class0(
+
+/// `java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;`
+pub(crate) fn define_class0(
     class_loader_ref: i32,
     _lookup_ref: i32,
     name_ref: i32,
@@ -70,27 +50,8 @@ fn define_class0(
     clazz_ref(&internal_name)
 }
 
-pub(crate) fn define_class1_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_loader_ref = args[0];
-    let name_ref = args[1];
-    let byte_buf_ref = args[2];
-    let off = args[3];
-    let len = args[4];
-    let protection_domain_ref = args[5];
-    let source_ref = args[6];
-    let class_ref = define_class1(
-        class_loader_ref,
-        name_ref,
-        byte_buf_ref,
-        off,
-        len,
-        protection_domain_ref,
-        source_ref,
-    )?;
-
-    Ok(vec![class_ref])
-}
-fn define_class1(
+/// `java/lang/ClassLoader:defineClass1:(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;`
+pub(crate) fn define_class1(
     class_loader_ref: i32,
     name_ref: i32,
     buf_ref: i32,
@@ -117,27 +78,8 @@ fn define_class1(
     clazz_ref(&name)
 }
 
-pub(crate) fn define_class2_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let class_loader_ref = args[0];
-    let name_ref = args[1];
-    let nio_byte_buf_ref = args[2];
-    let off = args[3];
-    let len = args[4];
-    let protection_domain_ref = args[5];
-    let source_ref = args[6];
-    let class_ref = define_class2(
-        class_loader_ref,
-        name_ref,
-        nio_byte_buf_ref,
-        off,
-        len,
-        protection_domain_ref,
-        source_ref,
-    )?;
-
-    Ok(vec![class_ref])
-}
-fn define_class2(
+/// `java/lang/ClassLoader:defineClass2:(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;`
+pub(crate) fn define_class2(
     class_loader_ref: i32,
     name_ref: i32,
     nio_byte_buf_ref: i32,
@@ -166,13 +108,8 @@ fn define_class2(
     clazz_ref(&name)
 }
 
-pub(crate) fn find_bootstrap_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let name_ref = args[0];
-    let clazz_ref = find_bootstrap_class(name_ref)?;
-
-    Ok(vec![clazz_ref])
-}
-fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
+/// `java/lang/ClassLoader:findBootstrapClass:(Ljava/lang/String;)Ljava/lang/Class;`
+pub(crate) fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = &name.replace('.', "/");
 
@@ -208,14 +145,8 @@ fn find_bootstrap_class(name_ref: i32) -> Result<i32> {
     clazz_ref(internal_name)
 }
 
-pub(crate) fn find_loaded_class_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _class_loader_ref = args[0];
-    let name_ref = args[1];
-    let clazz_ref = find_loaded_class(name_ref)?;
-
-    Ok(vec![clazz_ref])
-}
-fn find_loaded_class(name_ref: i32) -> Result<i32> {
+/// `java/lang/ClassLoader:findLoadedClass0:(Ljava/lang/String;)Ljava/lang/Class;`
+pub(crate) fn find_loaded_class0(_this: i32, name_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = &name.replace('.', "/");
     if CLASSES.is_loaded(internal_name) {
