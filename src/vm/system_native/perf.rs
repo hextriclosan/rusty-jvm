@@ -49,11 +49,7 @@ pub(crate) fn create_long(
             set_pending_illegal_argument_exception(&e.to_string())?;
             return Ok(0);
         }
-        Err(e) => {
-            return Err(Error::new_execution(&format!(
-                "Failed to create long in perf file: {e}"
-            )))
-        }
+        Err(e) => return Err(Error::new_execution(&e.to_string())),
     };
     let ptr = ptr as i64;
     let len = len as i64;
@@ -110,11 +106,7 @@ pub(crate) fn create_byte_array(
             set_pending_illegal_argument_exception(&e.to_string())?;
             return Ok(0);
         }
-        Err(e) => {
-            return Err(Error::new_execution(&format!(
-                "Failed to create byte array in perf file: {e}"
-            )))
-        }
+        Err(e) => return Err(Error::new_execution(&e.to_string())),
     };
 
     let ptr = ptr as i64;
