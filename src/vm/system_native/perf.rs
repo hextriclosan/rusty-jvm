@@ -1,4 +1,4 @@
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::exception::pending_helpers::{
     set_pending_illegal_argument_exception, set_pending_null_pointer_exception,
 };
@@ -7,7 +7,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::perf_data::Units::{UHertz, UString};
 use crate::vm::perf_data::Variability::{VConstant, VMonotonic, VVariable};
 use crate::vm::perf_data::{
-    contains_name, create_byte_array_in_perf_file, create_long_in_perf_file,
+    create_byte_array_in_perf_file, create_long_in_perf_file, PerfDataError,
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
@@ -43,14 +43,18 @@ pub(crate) fn create_long(
     }
 
     let name = get_utf8_string_by_ref(name_ref)?;
-    if contains_name(&name)? {
-        set_pending_illegal_argument_exception(&format!(
-            "A perf data entry with name '{name}' already exists"
-        ))?;
-        return Ok(0);
-    }
-
-    let (ptr, len) = create_long_in_perf_file(&name, variability as u8, units as u8, value)?;
+    let (ptr, len) = match create_long_in_perf_file(&name, variability as u8, units as u8, value) {
+        Ok((ptr, len)) => (ptr, len),
+        Err(e) if matches!(e, PerfDataError::AlreadyExists(_)) => {
+            set_pending_illegal_argument_exception(&e.to_string())?;
+            return Ok(0);
+        }
+        Err(e) => {
+            return Err(Error::new_execution(&format!(
+                "Failed to create long in perf file: {e}"
+            )))
+        }
+    };
     let ptr = ptr as i64;
     let len = len as i64;
 
@@ -89,24 +93,29 @@ pub(crate) fn create_byte_array(
     }
 
     let name = get_utf8_string_by_ref(name_ref)?;
-    if contains_name(&name)? {
-        set_pending_illegal_argument_exception(&format!(
-            "A perf data entry with name '{name}' already exists"
-        ))?;
-        return Ok(0);
-    }
 
     let byte_array_data = {
         let guard = HEAP.get_entire_raw_data(byte_arr_ref)?;
         guard.to_vec()
     };
-    let (ptr, len) = create_byte_array_in_perf_file(
+    let (ptr, len) = match create_byte_array_in_perf_file(
         &name,
         variability as u8,
         units as u8,
         &byte_array_data,
         max_len as usize,
-    )?;
+    ) {
+        Ok((ptr, len)) => (ptr, len),
+        Err(e) if matches!(e, PerfDataError::AlreadyExists(_)) => {
+            set_pending_illegal_argument_exception(&e.to_string())?;
+            return Ok(0);
+        }
+        Err(e) => {
+            return Err(Error::new_execution(&format!(
+                "Failed to create byte array in perf file: {e}"
+            )))
+        }
+    };
 
     let ptr = ptr as i64;
     let len = len as i64;
