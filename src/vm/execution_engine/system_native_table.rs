@@ -17,7 +17,6 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
-use crate::vm::system_native::perf::{perf_create_byte_array_wrp, perf_create_long_wrp};
 use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::reflecton::{
     reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
@@ -58,18 +57,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
             let _fd = args[0];
             Ok(vec![0, 0])
         }),
-    );
-    table.insert(
-        "jdk/internal/perf/Perf:registerNatives:()V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "jdk/internal/perf/Perf:createLong:(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
-        WithMutStackFrames(perf_create_long_wrp),
-    );
-    table.insert(
-        "jdk/internal/perf/Perf:createByteArray:(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
-        WithMutStackFrames(perf_create_byte_array_wrp),
     );
     table.insert(
         "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
