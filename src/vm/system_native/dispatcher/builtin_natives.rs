@@ -475,6 +475,10 @@ builtin_natives! {
     "java/util/zip/Inflater": instance fn inflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int) -> long => sn::zip::inflater::inflate_bytes_bytes;
     "java/util/zip/Inflater": static fn end(addr: long) -> void => sn::zip::inflater::end;
     "java/util/zip/Inflater": static fn reset(addr: long) -> void => sn::zip::inflater::reset;
+
+    "jdk/internal/perf/Perf": static fn registerNatives() -> void => sn::perf::register_natives; // todo: implement me
+    "jdk/internal/perf/Perf": instance fn createLong(name: string, var: int, units: int, value: long) -> byte_buffer => sn::perf::create_long;
+    "jdk/internal/perf/Perf": instance fn createByteArray(name: string, var: int, units: int, value: byte_array, mlen: int) -> byte_buffer => sn::perf::create_byte_array;
     }
 
     #[cfg(unix)]

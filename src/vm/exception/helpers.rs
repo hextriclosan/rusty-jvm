@@ -10,17 +10,6 @@ use crate::vm::jni::set_pending_internal_error;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 
-pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()> {
-    construct_exception_and_throw(
-        "java/lang/NullPointerException",
-        "<init>:()V",
-        &[],
-        stack_frames,
-    )?;
-
-    Ok(())
-}
-
 pub fn throw_null_pointer_exception_with_message(
     message: &str,
     stack_frames: &mut StackFrames,
@@ -56,13 +45,6 @@ pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
 
 pub fn throw_unsatisfied_link_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
     throw_exception_with_message("java/lang/UnsatisfiedLinkError", message, stack_frames)
-}
-
-pub fn throw_illegal_argument_exception(
-    message: &str,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    throw_exception_with_message("java/lang/IllegalArgumentException", message, stack_frames)
 }
 
 fn throw_exception_with_message(

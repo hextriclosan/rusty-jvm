@@ -1,73 +1,56 @@
-use crate::bail_thrown;
 use crate::vm::error::Result;
-use crate::vm::exception::helpers::{
-    throw_illegal_argument_exception, throw_null_pointer_exception,
+use crate::vm::exception::pending_helpers::{
+    set_pending_illegal_argument_exception, set_pending_null_pointer_exception,
 };
-use crate::vm::exception::pending::Throws;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::i32toi64;
 use crate::vm::perf_data::Units::{UHertz, UString};
 use crate::vm::perf_data::Variability::{VConstant, VMonotonic, VVariable};
-use crate::vm::perf_data::{contains_name, create_byte_array, create_long};
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::perf_data::{
+    contains_name, create_byte_array_in_perf_file, create_long_in_perf_file,
+};
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 
-pub(crate) fn perf_create_long_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let perf_ref = args[0];
-    let name_ref = args[1];
-    let variability = args[2];
-    let units = args[3];
-    let value = i32toi64(args[5], args[4]);
-
-    let Some(class_ref) =
-        perf_create_long(perf_ref, name_ref, variability, units, value, stack_frames)?
-    else {
-        return Ok(vec![]);
-    };
-    Ok(vec![class_ref])
+/// `jdk.internal.perf.Perf.registerNatives()V`
+pub(crate) fn register_natives() -> Result<()> {
+    Ok(()) // todo: implement me
 }
-fn perf_create_long(
+
+/// `jdk.internal.perf.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;`
+pub(crate) fn create_long(
     _perf_ref: i32,
     name_ref: i32,
     variability: i32,
     units: i32,
     value: i64,
-    stack_frames: &mut StackFrames,
-) -> Throws<i32> {
+) -> Result<i32> {
     if name_ref == 0 {
-        bail_thrown!(throw_null_pointer_exception(stack_frames));
+        set_pending_null_pointer_exception()?;
+        return Ok(0);
     }
 
     if units <= 0 || units > UHertz as i32 {
-        bail_thrown!(throw_illegal_argument_exception(
-            &format!("Invalid units: {units}"),
-            stack_frames
-        ));
+        set_pending_illegal_argument_exception(&format!("Invalid units: {units}"))?;
+        return Ok(0);
     }
 
     if variability != VConstant as i32
         && variability != VMonotonic as i32
         && variability != VVariable as i32
     {
-        bail_thrown!(throw_illegal_argument_exception(
-            &format!("Invalid variability: {variability}"),
-            stack_frames
-        ))
+        set_pending_illegal_argument_exception(&format!("Invalid variability: {variability}"))?;
+        return Ok(0);
     }
 
     let name = get_utf8_string_by_ref(name_ref)?;
     if contains_name(&name)? {
-        bail_thrown!(throw_illegal_argument_exception(
-            &format!("A perf data entry with name '{name}' already exists"),
-            stack_frames
-        ))
+        set_pending_illegal_argument_exception(&format!(
+            "A perf data entry with name '{name}' already exists"
+        ))?;
+        return Ok(0);
     }
 
-    let (ptr, len) = create_long(&name, variability as u8, units as u8, value)?;
+    let (ptr, len) = create_long_in_perf_file(&name, variability as u8, units as u8, value)?;
     let ptr = ptr as i64;
     let len = len as i64;
 
@@ -78,75 +61,46 @@ fn perf_create_long(
         Some("native image buffer creation"),
     )?;
 
-    Ok(Some(byte_buffer_ref))
+    Ok(byte_buffer_ref)
 }
 
-pub(crate) fn perf_create_byte_array_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let perf_ref = args[0];
-    let name_ref = args[1];
-    let variability = args[2];
-    let units = args[3];
-    let byte_arr_ref = args[4];
-    let max_len = args[5];
-
-    let Some(class_ref) = perf_create_byte_array(
-        perf_ref,
-        name_ref,
-        variability,
-        units,
-        byte_arr_ref,
-        max_len,
-        stack_frames,
-    )?
-    else {
-        return Ok(vec![]);
-    };
-
-    Ok(vec![class_ref])
-}
-fn perf_create_byte_array(
+/// `jdk.internal.perf.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;`
+pub(crate) fn create_byte_array(
     _perf_ref: i32,
     name_ref: i32,
     variability: i32,
     units: i32,
     byte_arr_ref: i32,
     max_len: i32,
-    stack_frames: &mut StackFrames,
-) -> Throws<i32> {
+) -> Result<i32> {
     if name_ref == 0 || byte_arr_ref == 0 {
-        bail_thrown!(throw_null_pointer_exception(stack_frames));
+        set_pending_null_pointer_exception()?;
+        return Ok(0);
     }
 
     if variability != VConstant as i32 && variability != VVariable as i32 {
-        bail_thrown!(throw_illegal_argument_exception(
-            &format!("Invalid variability: {variability}"),
-            stack_frames
-        ));
+        set_pending_illegal_argument_exception(&format!("Invalid variability: {variability}"))?;
+        return Ok(0);
     }
 
     if units != UString as i32 {
-        bail_thrown!(throw_illegal_argument_exception(
-            &format!("Invalid units: {units}"),
-            stack_frames
-        ));
+        set_pending_illegal_argument_exception(&format!("Invalid units: {units}"))?;
+        return Ok(0);
     }
 
     let name = get_utf8_string_by_ref(name_ref)?;
     if contains_name(&name)? {
-        bail_thrown!(throw_illegal_argument_exception(
-            &format!("A perf data entry with name '{name}' already exists"),
-            stack_frames
-        ));
+        set_pending_illegal_argument_exception(&format!(
+            "A perf data entry with name '{name}' already exists"
+        ))?;
+        return Ok(0);
     }
 
     let byte_array_data = {
         let guard = HEAP.get_entire_raw_data(byte_arr_ref)?;
         guard.to_vec()
     };
-    let (ptr, len) = create_byte_array(
+    let (ptr, len) = create_byte_array_in_perf_file(
         &name,
         variability as u8,
         units as u8,
@@ -164,5 +118,5 @@ fn perf_create_byte_array(
         Some("native image buffer creation"),
     )?;
 
-    Ok(Some(byte_buffer_ref))
+    Ok(byte_buffer_ref)
 }

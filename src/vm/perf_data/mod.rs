@@ -34,7 +34,7 @@ pub(crate) fn init_perf_file(arguments: &Arguments) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn create_long(
+pub(crate) fn create_long_in_perf_file(
     name: &str,
     variability: u8,
     units: u8,
@@ -48,7 +48,7 @@ pub(crate) fn create_long(
     guard.create_long(name, variability, units, value)
 }
 
-pub(crate) fn create_byte_array(
+pub(crate) fn create_byte_array_in_perf_file(
     name: &str,
     variability: u8,
     units: u8,
