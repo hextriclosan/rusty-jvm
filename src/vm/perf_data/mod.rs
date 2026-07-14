@@ -78,9 +78,9 @@ pub(crate) fn create_long_in_perf_file(
 
     match guard.create_long(name, variability, units, value) {
         Ok(result) => Ok(result),
-        Err(_) => Err(PerfDataError::NonRecoverable(
-            "Failed to create long in perf file".to_string(),
-        )),
+        Err(e) => Err(PerfDataError::NonRecoverable(format!(
+            "Failed to create long in perf file: {e}"
+        ))),
     }
 }
 
@@ -112,8 +112,8 @@ pub(crate) fn create_byte_array_in_perf_file(
 
     match guard.create_byte_array(name, variability, units, value, max_len) {
         Ok(result) => Ok(result),
-        Err(_) => Err(PerfDataError::NonRecoverable(
-            "Failed to create byte array in perf file".to_string(),
-        )),
+        Err(e) => Err(PerfDataError::NonRecoverable(format!(
+            "Failed to create byte array in perf file: {e}"
+        ))),
     }
 }
