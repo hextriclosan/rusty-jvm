@@ -65,10 +65,10 @@ pub(crate) fn create_long_in_perf_file(
 
     let mut guard = match mutex.lock() {
         Ok(guard) => guard,
-        Err(_) => {
-            return Err(PerfDataError::NonRecoverable(
-                "Failed to acquire lock".to_string(),
-            ))
+        Err(e) => {
+            return Err(PerfDataError::NonRecoverable(format!(
+                "Failed to acquire lock: {e}"
+            )));
         }
     };
 
@@ -99,10 +99,10 @@ pub(crate) fn create_byte_array_in_perf_file(
 
     let mut guard = match mutex.lock() {
         Ok(guard) => guard,
-        Err(_) => {
-            return Err(PerfDataError::NonRecoverable(
-                "Failed to acquire lock".to_string(),
-            ))
+        Err(e) => {
+            return Err(PerfDataError::NonRecoverable(format!(
+                "Failed to acquire lock: {e}"
+            )))
         }
     };
 
