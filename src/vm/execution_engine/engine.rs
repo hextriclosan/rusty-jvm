@@ -4,6 +4,7 @@ use crate::vm::execution_engine::{
     ops_conversion_processor, ops_extended_processor, ops_load_processor, ops_math_processor,
     ops_reference_processor, ops_stack_processor, ops_store_processor,
 };
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use tracing::{span, trace, Level};
@@ -15,6 +16,10 @@ impl Engine {
         trace!("@@@ Entering execute: {reason}");
 
         let mut stack_frames = StackFrames::new(vec![initial_stack_frame]);
+        // Register this segment on the thread's stack chain for the whole interpreter loop so
+        // stack-walking natives can traverse it (and older segments) without a parameter. The
+        // guard pops it on return/unwind, keeping the chain correct across native re-entries.
+        let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
         let mut last_value = vec![];
         while !stack_frames.is_empty() {
             let (class, code, pc, line_numbers) = {

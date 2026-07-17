@@ -18,10 +18,6 @@ use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
 use crate::vm::system_native::reflect_array::new_array_wrp;
-use crate::vm::system_native::reflecton::{
-    reflection_are_nest_mates_wrp, reflection_get_caller_class_wrp,
-    reflection_get_class_access_flags_wrp,
-};
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
@@ -80,18 +76,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/ref/PhantomReference:clear0:()V",
         Basic(void_stub), // todo: this should be implemented with GC
-    );
-    table.insert(
-        "jdk/internal/reflect/Reflection:getCallerClass:()Ljava/lang/Class;",
-        WithStackFrames(reflection_get_caller_class_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/Reflection:getClassAccessFlags:(Ljava/lang/Class;)I",
-        Basic(reflection_get_class_access_flags_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/Reflection:areNestMates:(Ljava/lang/Class;Ljava/lang/Class;)Z",
-        Basic(reflection_are_nest_mates_wrp),
     );
     table.insert(
         "java/security/AccessController:ensureMaterializedForStackWalk:(Ljava/lang/Object;)V",
