@@ -28,7 +28,7 @@ pub(crate) fn get_size0(_this: i32, oop_ref: i32) -> Result<i32> {
 }
 
 /// `jdk.internal.reflect.ConstantPool.getTagAt0(Ljava/lang/Object;I)B`
-pub(crate) fn get_tag_at0(_this: i32, oop_ref: i32, index: i32) -> Result<u8> {
+pub(crate) fn get_tag_at0(_this: i32, oop_ref: i32, index: i32) -> Result<i8> {
     let klass = extract_java_class(oop_ref)?;
     let raw_pool = klass.cpool_helper().raw_cpool();
 
