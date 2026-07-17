@@ -482,7 +482,7 @@ builtin_natives! {
 
     "jdk/internal/reflect/Reflection": static fn getCallerClass() -> class => sn::reflecton::get_caller_class;
     "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags;
-    "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, memeber: class) -> boolean => sn::reflecton::are_nest_mates;
+    "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, member: class) -> boolean => sn::reflecton::are_nest_mates;
     }
 
     #[cfg(unix)]
