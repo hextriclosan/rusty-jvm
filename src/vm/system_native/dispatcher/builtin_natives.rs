@@ -483,6 +483,10 @@ builtin_natives! {
     "jdk/internal/reflect/Reflection": static fn getCallerClass() -> class => sn::reflecton::get_caller_class;
     "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags;
     "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, member: class) -> boolean => sn::reflecton::are_nest_mates;
+
+    "jdk/internal/reflect/ConstantPool": instance fn getUTF8At0(cp: object, index: int) -> string => sn::constant_pool::get_utf8_at0;
+    "jdk/internal/reflect/ConstantPool": instance fn getSize0(cp: object) -> int => sn::constant_pool::get_size0;
+    "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(cp: object, index: int) -> byte => sn::constant_pool::get_tag_at0;
     }
 
     #[cfg(unix)]
