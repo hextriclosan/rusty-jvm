@@ -479,6 +479,10 @@ builtin_natives! {
     "jdk/internal/perf/Perf": static fn registerNatives() -> void => sn::perf::register_natives; // todo: implement me
     "jdk/internal/perf/Perf": instance fn createLong(name: string, var: int, units: int, value: long) -> byte_buffer => sn::perf::create_long;
     "jdk/internal/perf/Perf": instance fn createByteArray(name: string, var: int, units: int, value: byte_array, mlen: int) -> byte_buffer => sn::perf::create_byte_array;
+
+    "jdk/internal/reflect/Reflection": static fn getCallerClass() -> class => sn::reflecton::get_caller_class;
+    "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags;
+    "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, member: class) -> boolean => sn::reflecton::are_nest_mates;
     }
 
     #[cfg(unix)]

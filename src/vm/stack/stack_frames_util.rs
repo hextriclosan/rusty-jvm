@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::StackFrames;
 use derive_new::new;
@@ -18,27 +19,23 @@ pub struct StackElement {
 }
 
 impl StackFramesUtil {
-    pub fn get_caller_class_name(stack_frames: &StackFrames) -> Result<String> {
-        let nearest_class_name = stack_frames
-            .last()
-            .ok_or_else(|| Error::new_execution("stack frames is empty"))?
-            .current_class_name();
+    pub fn get_caller_class_name() -> Result<String> {
+        JavaThread::with_frames(|frames| {
+            // `frames` yields every live frame newest → oldest, across all segments.
+            let mut class_names = frames.map(|frame| frame.current_class_name());
 
-        let class_name = stack_frames
-            .iter()
-            .rev()
-            .skip(1)
-            .map(|frame| frame.current_class_name())
-            .find_map(|current_class_name| {
-                if current_class_name != nearest_class_name {
-                    Some(current_class_name)
-                } else {
-                    None // Continue searching
-                }
-            })
-            .unwrap_or(nearest_class_name);
+            let nearest_class_name = class_names
+                .next()
+                .ok_or_else(|| Error::new_execution("stack frames is empty"))?;
 
-        Ok(class_name.to_string())
+            // Skip frames belonging to the nearest class, returning the first differing caller;
+            // fall back to the nearest class when the whole stack is a single class.
+            let class_name = class_names
+                .find(|current_class_name| *current_class_name != nearest_class_name)
+                .unwrap_or(nearest_class_name);
+
+            Ok(class_name.to_string())
+        })?
     }
 
     pub fn collect_stack_trace(

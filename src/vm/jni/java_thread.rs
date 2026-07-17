@@ -1,8 +1,9 @@
 use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::jni_env::jni_native_interface;
+use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jni_sys::{JNIEnv, JNINativeInterface_};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 /// Represents a JVM thread for JNI purposes.
 ///
@@ -17,13 +18,48 @@ pub(crate) struct JavaThread {
     env: *const JNINativeInterface_,
     /// Heap reference to the currently-pending exception, or `None` if no exception is pending.
     exception_pending: Cell<Option<i32>>,
+    /// Chain of live [`StackFrames`] *segments* for the calling thread, ordered oldest → newest.
+    ///
+    /// Each `Engine::execute` invocation owns one `StackFrames` and registers a pointer to it here
+    /// via [`JavaThread::register_stack_frames`] for its whole duration. Because a native method
+    /// can re-enter the interpreter (`native → Executor → Engine::execute`), a single logical
+    /// thread stack is physically split into several segments interleaved on the real call stack;
+    /// this chain lets stack-walking natives (e.g. `Reflection.getCallerClass`) traverse *all* of
+    /// them, newest first — the reified analogue of HotSpot's `last_Java_frame` anchor chain.
+    ///
+    /// Only the newest (top) segment is being mutated by the running interpreter; every older
+    /// segment is suspended in a native call and therefore safe to read.
+    stack_frames: RefCell<Vec<*mut StackFrames>>,
 }
 
 thread_local! {
     static JAVA_THREAD: JavaThread = JavaThread {
         env: jni_native_interface(),
         exception_pending: Cell::new(None),
+        stack_frames: RefCell::new(Vec::new()),
     };
+}
+
+/// RAII guard returned by [`JavaThread::register_stack_frames`]; pops its segment off the
+/// thread-local chain on drop.
+///
+/// Guards are held as locals by nested `Engine::execute` calls, so they drop in strict LIFO
+/// order (matching push order) and are exception-safe on unwind.
+pub(crate) struct StackFramesGuard {
+    segment: *mut StackFrames,
+}
+
+impl Drop for StackFramesGuard {
+    fn drop(&mut self) {
+        JAVA_THREAD.with(|t| {
+            let popped = t.stack_frames.borrow_mut().pop();
+            debug_assert_eq!(
+                popped,
+                Some(self.segment),
+                "StackFrames chain popped out of LIFO order"
+            );
+        });
+    }
 }
 
 impl JavaThread {
@@ -67,6 +103,47 @@ impl JavaThread {
     /// replacing any previously-pending exception. This is spec-compliant.
     pub(super) fn force_set_pending_exception(throwable_ref: i32) {
         JAVA_THREAD.with(|t| t.exception_pending.set(Some(throwable_ref)));
+    }
+
+    /// Registers `stack_frames` as the newest segment of the calling thread's stack chain for
+    /// the lifetime of the returned guard, so stack-walking natives can traverse it via
+    /// [`JavaThread::with_frames`] without receiving it as a parameter.
+    ///
+    /// Call this once per `Engine::execute` invocation (each owns one `StackFrames`). The guard
+    /// pops the segment on drop, keeping the chain correct across native re-entries and unwinding.
+    pub(crate) fn register_stack_frames(stack_frames: &mut StackFrames) -> StackFramesGuard {
+        let segment = stack_frames as *mut StackFrames;
+        JAVA_THREAD.with(|t| t.stack_frames.borrow_mut().push(segment));
+        StackFramesGuard { segment }
+    }
+
+    /// Invokes `f` with an iterator over **all** live Java frames of the calling thread, newest
+    /// first, walking across every registered `StackFrames` segment (i.e. across interpreter
+    /// re-entries through native code).
+    ///
+    /// Returns an execution error when no segment is registered (i.e. outside any interpreter
+    /// invocation), which should never happen for a native dispatched through the interpreter.
+    pub(crate) fn with_frames<R>(
+        f: impl FnOnce(&mut dyn Iterator<Item = &StackFrame>) -> R,
+    ) -> Result<R> {
+        JAVA_THREAD.with(|t| {
+            let segments = t.stack_frames.borrow();
+            if segments.is_empty() {
+                return Err(Error::new_execution(
+                    "no stack frames registered for the current thread",
+                ));
+            }
+            // SAFETY: every pointer was installed by `register_stack_frames` from a live
+            // `StackFrames` owned by an `Engine::execute` frame currently on the call stack, and
+            // is removed by that frame's guard before the `StackFrames` is dropped. All segments
+            // except the newest are suspended in a native call, so shared reads are sound; the
+            // newest is only read here while the interpreter is paused in the calling native.
+            let mut iter = segments
+                .iter()
+                .rev()
+                .flat_map(|&segment| unsafe { (*segment).iter().rev() });
+            Ok(f(&mut iter))
+        })
     }
 }
 
