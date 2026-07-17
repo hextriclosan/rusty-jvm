@@ -4,9 +4,6 @@ use crate::vm::execution_engine::system_native_table::NativeMethod::{
 };
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::system_native::constant_pool::{
-    constant_pool_get_size0_wrp, constant_pool_get_tag_at0_wrp, constant_pool_get_utf8_at0_wrp,
-};
 use crate::vm::system_native::dispatcher::invoke::invoke;
 use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
@@ -108,18 +105,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
     table.insert(
         "java/lang/invoke/VarHandle:compareAndSet", // this is a normalized polymorphic signature
         Basic(var_handle_compare_and_set_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/ConstantPool:getUTF8At0:(Ljava/lang/Object;I)Ljava/lang/String;",
-        Basic(constant_pool_get_utf8_at0_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/ConstantPool:getSize0:(Ljava/lang/Object;)I",
-        Basic(constant_pool_get_size0_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/ConstantPool:getTagAt0:(Ljava/lang/Object;I)B",
-        Basic(constant_pool_get_tag_at0_wrp),
     );
     table.insert(
         "jdk/internal/loader/BootLoader:setBootLoaderUnnamedModule0:(Ljava/lang/Module;)V",

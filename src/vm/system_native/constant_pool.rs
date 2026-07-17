@@ -6,15 +6,8 @@ use crate::vm::method_area::java_class::JavaClass;
 use jclassfile::constant_pool::ConstantPool;
 use std::sync::Arc;
 
-pub(crate) fn constant_pool_get_utf8_at0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _constant_pool_ref = args[0];
-    let constant_pool_oop_ref = args[1];
-    let constant_pool_index = args[2];
-
-    let string_ref = get_utf8(constant_pool_oop_ref, constant_pool_index)?;
-    Ok(vec![string_ref])
-}
-fn get_utf8(oop_ref: i32, index: i32) -> Result<i32> {
+/// `jdk.internal.reflect.ConstantPool.getUTF8At0(Ljava/lang/Object;I)Ljava/lang/String;`
+pub(crate) fn get_utf8_at0(_this: i32, oop_ref: i32, index: i32) -> Result<i32> {
     let klass = extract_java_class(oop_ref)?;
     let cpool_helper = klass.cpool_helper();
     let utf8 = cpool_helper.get_utf8(index as u16).ok_or_else(|| {
@@ -28,27 +21,14 @@ fn get_utf8(oop_ref: i32, index: i32) -> Result<i32> {
     Ok(string_ref)
 }
 
-pub(crate) fn constant_pool_get_size0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _constant_pool_ref = args[0];
-    let constant_pool_oop_ref = args[1];
-
-    let size = get_size0(constant_pool_oop_ref)?;
-    Ok(vec![size])
-}
-fn get_size0(oop_ref: i32) -> Result<i32> {
+/// `jdk.internal.reflect.ConstantPool.getSize0(Ljava/lang/Object;)I`
+pub(crate) fn get_size0(_this: i32, oop_ref: i32) -> Result<i32> {
     let klass = extract_java_class(oop_ref)?;
     Ok(klass.cpool_helper().raw_cpool().len() as i32)
 }
 
-pub(crate) fn constant_pool_get_tag_at0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let _constant_pool_ref = args[0];
-    let constant_pool_oop_ref = args[1];
-    let constant_pool_index = args[2];
-
-    let tag_byte_value = get_tag_at0(constant_pool_oop_ref, constant_pool_index)?;
-    Ok(vec![tag_byte_value as i32])
-}
-fn get_tag_at0(oop_ref: i32, index: i32) -> Result<u8> {
+/// `jdk.internal.reflect.ConstantPool.getTagAt0(Ljava/lang/Object;I)B`
+pub(crate) fn get_tag_at0(_this: i32, oop_ref: i32, index: i32) -> Result<i8> {
     let klass = extract_java_class(oop_ref)?;
     let raw_pool = klass.cpool_helper().raw_cpool();
 
