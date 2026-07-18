@@ -488,9 +488,23 @@ builtin_natives! {
     "jdk/internal/reflect/ConstantPool": instance fn getSize0(cp: object) -> int => sn::constant_pool::get_size0;
     "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(cp: object, index: int) -> byte => sn::constant_pool::get_tag_at0;
 
-    "sun/nio/ch/IOUtil": static fn initIDs() -> void => sn::io_util::init_ids;
+    "sun/nio/ch/IOUtil": static fn initIDs() -> void => sn::io_util::init_ids; // todo: implement me
     "sun/nio/ch/IOUtil": static fn iovMax() -> int => sn::io_util::iov_max;
     "sun/nio/ch/IOUtil": static fn writevMax() -> long => sn::io_util::writev_max;
+
+    "jdk/internal/misc/ScopedMemoryAccess": static fn registerNatives() -> void => sn::scoped_memory_access::init_ids; // todo: implement me
+
+    "jdk/internal/misc/Signal": static fn findSignal0(sig_name: string) -> int => sn::signal::find_signal0; // todo: implement me
+    "jdk/internal/misc/Signal": static fn handle0(sig: int, native_h: long) -> long => sn::signal::handle0; // todo: implement me
+
+    "java/lang/ref/Finalizer": static fn isFinalizationEnabled() -> boolean => sn::finalizer::is_finalization_enabled; // todo: this should be implemented with GC
+
+    "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0; // todo: this should be implemented with GC
+    "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0; // todo: this should be implemented with GC
+
+    "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0; // todo: this should be implemented with GC
+
+    "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
     }
 
     #[cfg(unix)]
