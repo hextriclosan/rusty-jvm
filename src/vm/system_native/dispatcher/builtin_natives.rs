@@ -492,7 +492,7 @@ builtin_natives! {
     "sun/nio/ch/IOUtil": static fn iovMax() -> int => sn::io_util::iov_max;
     "sun/nio/ch/IOUtil": static fn writevMax() -> long => sn::io_util::writev_max;
 
-    "jdk/internal/misc/ScopedMemoryAccess": static fn registerNatives() -> void => sn::scoped_memory_access::init_ids; // todo: implement me
+    "jdk/internal/misc/ScopedMemoryAccess": static fn registerNatives() -> void => sn::scoped_memory_access::register_natives; // todo: implement me
 
     "jdk/internal/misc/Signal": static fn findSignal0(sig_name: string) -> int => sn::signal::find_signal0; // todo: implement me
     "jdk/internal/misc/Signal": static fn handle0(sig: int, native_h: long) -> long => sn::signal::handle0; // todo: implement me
