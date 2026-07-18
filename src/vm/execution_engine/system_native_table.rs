@@ -13,7 +13,6 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
 use crate::vm::system_native::native_libraries::{
     find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
 };
-use crate::vm::system_native::reflect_array::new_array_wrp;
 use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
 use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
@@ -32,55 +31,6 @@ enum NativeMethod {
 
 static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::new(|| {
     let mut table = HashMap::new();
-    table.insert(
-        "jdk/internal/misc/ScopedMemoryAccess:registerNatives:()V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "jdk/internal/misc/Signal:findSignal0:(Ljava/lang/String;)I",
-        Basic(|args: &[i32]| {
-            let _fd = args[0];
-            Ok(vec![0])
-        }),
-    );
-    table.insert(
-        "jdk/internal/misc/Signal:handle0:(IJ)J",
-        Basic(|args: &[i32]| {
-            let _fd = args[0];
-            Ok(vec![0, 0])
-        }),
-    );
-    table.insert(
-        "java/lang/ref/Finalizer:isFinalizationEnabled:()Z",
-        Basic(|_args: &[i32]| {
-            Ok(vec![0]) // false
-        }),
-    );
-    table.insert(
-        "java/security/AccessController:getStackAccessControlContext:()Ljava/security/AccessControlContext;",
-        Basic(|_args: &[i32]| {
-            Ok(vec![0]) // null
-        }
-    ));
-    table.insert("java/lang/ref/Reference:clear0:()V", Basic(void_stub));
-    table.insert(
-        "java/lang/ref/Reference:refersTo0:(Ljava/lang/Object;)Z",
-        Basic(|_args: &[i32]| {
-            Ok(vec![0]) // todo: this should be implemented with GC
-        }),
-    );
-    table.insert(
-        "java/lang/ref/PhantomReference:clear0:()V",
-        Basic(void_stub), // todo: this should be implemented with GC
-    );
-    table.insert(
-        "java/security/AccessController:ensureMaterializedForStackWalk:(Ljava/lang/Object;)V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "java/lang/reflect/Array:newArray:(Ljava/lang/Class;I)Ljava/lang/Object;",
-        Basic(new_array_wrp),
-    );
     table.insert(
         "java/lang/invoke/MethodHandle:invokeExact", // this is a normalized polymorphic signature
         WithMutStackFrames(method_handle_invoke_exact_wrp),
