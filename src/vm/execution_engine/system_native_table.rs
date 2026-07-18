@@ -5,7 +5,6 @@ use crate::vm::execution_engine::system_native_table::NativeMethod::{
 use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::dispatcher::invoke::invoke;
-use crate::vm::system_native::io_util::{iov_max_wrp, writev_max_wrp};
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
     native_accessor_invoke0_wrp, native_accessor_newinstance0_wrp, var_handle_compare_and_set_wrp,
@@ -122,9 +121,6 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         "jdk/internal/loader/NativeLibraries$NativeLibraryImpl:findEntry0:(JLjava/lang/String;)J",
         Basic(native_libraries_find_entry0_wrp),
     );
-    table.insert("sun/nio/ch/IOUtil:initIDs:()V", Basic(void_stub));
-    table.insert("sun/nio/ch/IOUtil:iovMax:()I", Basic(iov_max_wrp));
-    table.insert("sun/nio/ch/IOUtil:writevMax:()J", Basic(writev_max_wrp));
     table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
     table.insert(
         "sun/nio/ch/NativeThread:current0:()J",
