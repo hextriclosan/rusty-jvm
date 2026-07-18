@@ -487,6 +487,10 @@ builtin_natives! {
     "jdk/internal/reflect/ConstantPool": instance fn getUTF8At0(cp: object, index: int) -> string => sn::constant_pool::get_utf8_at0;
     "jdk/internal/reflect/ConstantPool": instance fn getSize0(cp: object) -> int => sn::constant_pool::get_size0;
     "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(cp: object, index: int) -> byte => sn::constant_pool::get_tag_at0;
+
+    "sun/nio/ch/IOUtil": static fn initIDs() -> void => sn::io_util::init_ids;
+    "sun/nio/ch/IOUtil": static fn iovMax() -> int => sn::io_util::iov_max;
+    "sun/nio/ch/IOUtil": static fn writevMax() -> long => sn::io_util::writev_max;
     }
 
     #[cfg(unix)]
