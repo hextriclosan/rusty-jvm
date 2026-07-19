@@ -7,7 +7,8 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::stack::stack_value::{StackValue, StackValueKind};
 use std::sync::Arc;
 
-pub fn native_accessor_invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> Result<i32> {
+/// `jdk.internal.reflect.DirectMethodHandleAccessor$NativeAccessor.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;`
+pub(crate) fn invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> Result<i32> {
     let (method, args) = resolve_method_and_args(method_ref, args_ref)?;
 
     let ret = if obj_ref == 0 {
@@ -43,7 +44,8 @@ pub fn native_accessor_invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> 
     Ok(ret)
 }
 
-pub fn native_accessor_newinstance0(constructor_ref: i32, args_ref: i32) -> Result<i32> {
+/// `jdk.internal.reflect.DirectConstructorHandleAccessor$NativeAccessor.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;`
+pub(crate) fn new_instance0(constructor_ref: i32, args_ref: i32) -> Result<i32> {
     let (method, args) = resolve_method_and_args(constructor_ref, args_ref)?;
 
     Executor::invoke_args_constructor(

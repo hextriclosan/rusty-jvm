@@ -2,20 +2,13 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::system_native_table::NativeMethod::{
     Basic, WithMutStackFrames, WithStackFrames,
 };
-use crate::vm::helper::i64_to_vec;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::dispatcher::invoke::invoke;
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
-    native_accessor_invoke0_wrp, native_accessor_newinstance0_wrp, var_handle_compare_and_set_wrp,
-    var_handle_get_wrp, var_handle_set_wrp,
+    var_handle_compare_and_set_wrp, var_handle_get_wrp, var_handle_set_wrp,
 };
-use crate::vm::system_native::native_libraries::{
-    find_builtin_lib_wrp, native_libraries_find_entry0_wrp, native_libraries_load_wrp,
-};
-use crate::vm::system_native::stack_trace_element::init_stack_trace_elements_wrp;
 use crate::vm::system_native::throwable::fill_in_stack_trace_wrp;
-use crate::vm::system_native::time_zone::get_system_time_zone_id_wrp;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
@@ -56,74 +49,8 @@ static SYSTEM_NATIVE_TABLE: Lazy<HashMap<&'static str, NativeMethod>> = Lazy::ne
         Basic(var_handle_compare_and_set_wrp),
     );
     table.insert(
-        "jdk/internal/loader/BootLoader:setBootLoaderUnnamedModule0:(Ljava/lang/Module;)V",
-        Basic(void_stub),
-    );
-    table.insert(
-        "jdk/internal/loader/NativeLibraries:findBuiltinLib:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(find_builtin_lib_wrp),
-    );
-    table.insert(
-        "jdk/internal/loader/NativeLibraries:load:(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
-        WithMutStackFrames(native_libraries_load_wrp),
-    );
-    table.insert(
-        "jdk/internal/loader/NativeLibraries$NativeLibraryImpl:findEntry0:(JLjava/lang/String;)J",
-        Basic(native_libraries_find_entry0_wrp),
-    );
-    table.insert("sun/nio/ch/NativeThread:init:()V", Basic(void_stub));
-    table.insert(
-        "sun/nio/ch/NativeThread:current0:()J",
-        Basic(|_args: &[i32]| Ok(i64_to_vec(0))), // todo: implement this (by 0 we say that the platform can not signal native threads)
-    );
-    table.insert(
         "java/lang/Throwable:fillInStackTrace:(I)Ljava/lang/Throwable;",
         WithStackFrames(fill_in_stack_trace_wrp),
-    );
-    table.insert(
-        "java/lang/StackTraceElement:initStackTraceElements:([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
-        Basic(init_stack_trace_elements_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor:invoke0:(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
-        Basic(native_accessor_invoke0_wrp),
-    );
-    table.insert(
-        "jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor:newInstance0:(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
-        Basic(native_accessor_newinstance0_wrp),
-    );
-    table.insert(
-        "jdk/internal/vm/ContinuationSupport:isSupported0:()Z",
-        Basic(|_args: &[i32]| Ok(vec![0])), // We do not support Loom continuations (yet)
-    );
-    table.insert(
-        "java/lang/NullPointerException:getExtendedNPEMessage:()Ljava/lang/String;",
-        Basic(|_args: &[i32]| Ok(vec![0])), // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
-    );
-    table.insert(
-        "java/io/Console:istty:()Z",
-        Basic(|_args: &[i32]| Ok(vec![1])), // todo implement me
-    );
-    table.insert("java/net/NetworkInterface:init:()V", Basic(void_stub));
-    table.insert(
-        "java/net/NetworkInterface:getAll:()[Ljava/net/NetworkInterface;",
-        Basic(|_args: &[i32]| Ok(vec![0])), // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
-    );
-    table.insert(
-        "java/lang/Runtime:totalMemory:()J",
-        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // todo implement me with GC
-    );
-    table.insert(
-        "java/lang/Runtime:freeMemory:()J",
-        Basic(|_args: &[i32]| Ok(i64_to_vec(i64::MAX))), // todo implement me with GC
-    );
-    table.insert(
-        "jdk/internal/misc/PreviewFeatures:isPreviewEnabled:()Z",
-        Basic(|_args: &[i32]| Ok(vec![0])),
-    );
-    table.insert(
-        "java/util/TimeZone:getSystemTimeZoneID:(Ljava/lang/String;)Ljava/lang/String;",
-        Basic(get_system_time_zone_id_wrp),
     );
 
     table
@@ -145,8 +72,4 @@ pub(crate) fn invoke_native_method(
         WithStackFrames(method) => method(args, stack_frames),
         WithMutStackFrames(method) => method(args, stack_frames),
     }
-}
-
-fn void_stub(_args: &[i32]) -> Result<Vec<i32>> {
-    Ok(vec![])
 }

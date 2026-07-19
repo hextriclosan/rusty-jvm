@@ -1,9 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::invocation::invoke_exact;
-use crate::vm::system_native::method_handle_natives::native_accessor::{
-    native_accessor_invoke0, native_accessor_newinstance0,
-};
 use crate::vm::system_native::method_handle_natives::var_handle::{
     var_handle_compare_and_set, var_handle_get, var_handle_set,
 };
@@ -33,23 +30,6 @@ pub(crate) fn method_handle_invoke_wrp(
     // making this a temporary placeholder that could cause incorrect behavior.
     // TODO: implement real invoke
     method_handle_invoke_exact_wrp(args, stack_frames)
-}
-
-pub(crate) fn native_accessor_invoke0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let method_ref = args[0];
-    let obj_ref = args[1];
-    let args_ref = args[2];
-    let ret_obj_ref = native_accessor_invoke0(method_ref, obj_ref, args_ref)?;
-
-    Ok(vec![ret_obj_ref])
-}
-
-pub(crate) fn native_accessor_newinstance0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let constructor_ref = args[0];
-    let args_ref = args[1];
-    let ret_obj_ref = native_accessor_newinstance0(constructor_ref, args_ref)?;
-
-    Ok(vec![ret_obj_ref])
 }
 
 pub(crate) fn var_handle_set_wrp(args: &[i32]) -> Result<Vec<i32>> {

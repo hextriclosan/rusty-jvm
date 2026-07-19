@@ -8,15 +8,8 @@ use crate::vm::system_native::throwable::NATIVE_METHOD;
 const NATIVE_MARKER: i32 = -2;
 const CLASS_NAME: &str = "java/lang/StackTraceElement";
 
-pub(crate) fn init_stack_trace_elements_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let element_array_ref = args[0];
-    let backtrace_ref = args[1];
-    let depth = args[2];
-
-    init_stack_trace_elements(element_array_ref, backtrace_ref, depth)?;
-    Ok(vec![])
-}
-fn init_stack_trace_elements(
+/// `java.lang.StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V`
+pub(crate) fn init_stack_trace_elements(
     element_array_ref: i32,
     backtrace_ref: i32,
     depth: i32,
