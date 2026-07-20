@@ -2442,6 +2442,17 @@ This is another error output.
 }
 
 #[test]
+fn should_start_trace_at_call_site_when_fill_in_stack_trace_called_explicitly() {
+    // Regression: calling `Throwable.fillInStackTrace()` directly on an already-constructed
+    // throwable must produce a trace starting at the call site, not at the synthetic native
+    // `fillInStackTrace` frames (there is no `<init>` frame on the stack to skip past).
+    assert_success(
+        "samples.exceptions.proper.handling.of.fillinstacktrace.FillInStackTraceExplicit",
+        "[samples.exceptions.proper.handling.of.fillinstacktrace.FillInStackTraceExplicit.refill(FillInStackTraceExplicit.java:13), samples.exceptions.proper.handling.of.fillinstacktrace.FillInStackTraceExplicit.main(FillInStackTraceExplicit.java:8)]\n",
+    );
+}
+
+#[test]
 fn should_print_info_about_unhandled_exception() {
     utils::assert_failure_with_stderr(
         "samples.javacore.unhandledexception.UnhandledExceptionExample",

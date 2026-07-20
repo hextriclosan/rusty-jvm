@@ -46,12 +46,30 @@ impl StackFramesUtil {
         max_stack_size: usize,
     ) -> Result<Vec<StackElement>> {
         let mut stack_trace = JavaThread::with_frames(|frames| {
-            // `with_frames` yields frames newest → oldest. Reverse to oldest → newest so the
-            // throwable-skip stops at the throwable's own constructor, excluding it together with
-            // its superclass `<init>` frames sitting above it.
+            // `with_frames` yields frames newest → oldest.
             let newest_to_oldest: Vec<_> = frames.collect();
-            let eligible: Vec<_> = newest_to_oldest
-                .into_iter()
+
+            // Drop the `fillInStackTrace` machinery sitting at the top of the stack: the synthetic
+            // native `fillInStackTrace(int)` frame plus the `Throwable.fillInStackTrace()` wrapper
+            // that called it. They are always the newest frames while this native runs, and the JVM
+            // never records them — the trace must start at the throw / `fillInStackTrace()` call
+            // site. This matters when `fillInStackTrace()` is invoked directly on an already
+            // constructed throwable: there is then no `<init>` frame for the `throwable_name` skip
+            // below to stop at, so without this the synthetic frames would leak in as the top
+            // elements. In the normal construction path these same frames sit above the `<init>`
+            // frames and are already excluded by the `throwable_name` skip, so this is a no-op there.
+            // `method_name()` carries the `name:descriptor` form, so match on the bare name.
+            let after_fill = newest_to_oldest
+                .iter()
+                .position(|frame| {
+                    frame.method_name().split(':').next() != Some("fillInStackTrace")
+                })
+                .unwrap_or(newest_to_oldest.len());
+
+            // Reverse to oldest → newest so the throwable-skip stops at the throwable's own
+            // constructor, excluding it together with its superclass `<init>` frames sitting above.
+            let eligible: Vec<_> = newest_to_oldest[after_fill..]
+                .iter()
                 .rev()
                 .take_while(|frame| frame.current_class_name() != throwable_name)
                 .collect();
