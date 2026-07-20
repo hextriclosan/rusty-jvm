@@ -115,7 +115,7 @@ impl StackFramesUtil {
             .range(..=&(pc as u16))
             .next_back()
             .map(|(_pc, line)| *line)
-            .unwrap_or_default();
+            .unwrap();
         instruction_line_num
     }
 }
