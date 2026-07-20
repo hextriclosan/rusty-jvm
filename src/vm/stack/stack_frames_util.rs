@@ -62,7 +62,9 @@ impl StackFramesUtil {
             let after_fill = newest_to_oldest
                 .iter()
                 .position(|frame| {
-                    frame.method_name().split(':').next() != Some("fillInStackTrace")
+                    let name = frame.method_name().split(':').next();
+                    !(frame.current_class_name() == "java/lang/Throwable"
+                        && name == Some("fillInStackTrace"))
                 })
                 .unwrap_or(newest_to_oldest.len());
 
