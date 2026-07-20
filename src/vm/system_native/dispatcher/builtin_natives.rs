@@ -144,6 +144,8 @@ jni_types! {
     method_object_array       : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Method;";
     constructor_object_array  : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Constructor;";
     string_array              : ref   | i32  | jobjectArray | "[Ljava/lang/String;";
+    stack_trace_element_array : ref   | i32  | jobjectArray | "[Ljava/lang/StackTraceElement;";
+    network_interface_array   : ref   | i32  | jobjectArray | "[Ljava/net/NetworkInterface;";
     object                    : ref   | i32  | jobject      | "Ljava/lang/Object;";
     class                     : ref   | i32  | jclass       | "Ljava/lang/Class;";
     input_stream              : ref   | i32  | jobject      | "Ljava/io/InputStream;";
@@ -164,6 +166,10 @@ jni_types! {
     member_name               : ref   | i32  | jobject      | "Ljava/lang/invoke/MemberName;";
     method_handle             : ref   | i32  | jobject      | "Ljava/lang/invoke/MethodHandle;";
     call_site                 : ref   | i32  | jobject      | "Ljava/lang/invoke/CallSite;";
+    native_library_impl       : ref   | i32  | jobject      | "Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;";
+    throwable                 : ref   | i32  | jobject      | "Ljava/lang/Throwable;";
+    method                    : ref   | i32  | jobject      | "Ljava/lang/reflect/Method;";
+    constructor               : ref   | i32  | jobject      | "Ljava/lang/reflect/Constructor;";
     void                      : void  | ()   | ()           | "V";
 }
 
@@ -423,6 +429,8 @@ builtin_natives! {
 
     "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
     "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;
+    "java/lang/Runtime": instance fn totalMemory() -> long => sn::runtime::total_memory; // todo: implement me with GC
+    "java/lang/Runtime": instance fn freeMemory() -> long => sn::runtime::free_memory; // todo: implement me with GC
 
     "jdk/internal/util/SystemProps$Raw": static fn platformProperties() -> string_array => sn::system_props_raw::platform_properties;
     "jdk/internal/util/SystemProps$Raw": static fn vmProperties() -> string_array => sn::system_props_raw::vm_properties;
@@ -505,6 +513,27 @@ builtin_natives! {
     "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0; // todo: this should be implemented with GC
 
     "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
+
+    "jdk/internal/loader/NativeLibraries": static fn findBuiltinLib(name: string) -> string => sn::native_libraries::find_builtin_lib;
+    "jdk/internal/loader/NativeLibraries": static fn load(imp: native_library_impl, name: string, builtin: boolean, throw: boolean) -> boolean => sn::native_libraries::load;
+    "jdk/internal/loader/NativeLibraries$NativeLibraryImpl": static fn findEntry0(handle: long, name: string) -> long => sn::native_libraries::find_entry0;
+
+    "jdk/internal/loader/BootLoader": static fn setBootLoaderUnnamedModule0(m: module) -> void => sn::bootloader::set_bootloader_unnamed_module0;
+
+    "java/lang/StackTraceElement": static fn initStackTraceElements(elements: stack_trace_element_array, x: object, depth: int) -> void => sn::stack_trace_element::init_stack_trace_elements;
+
+    "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor": static fn invoke0(m: method, obj: object, args: object_array) -> object => sn::method_handle_natives::native_accessor::invoke0;
+    "jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor": static fn newInstance0(c: constructor, args: object_array) -> object => sn::method_handle_natives::native_accessor::new_instance0;
+
+    "jdk/internal/vm/ContinuationSupport": static fn isSupported0() -> boolean => sn::continuation_support::is_supported0; // We do not support Loom continuations (yet)
+
+    "java/lang/NullPointerException": instance fn getExtendedNPEMessage() -> string => sn::null_pointer_exception::get_extended_npe_message; // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
+
+    "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
+    "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
+
+    "jdk/internal/misc/PreviewFeatures": static fn isPreviewEnabled() -> boolean => sn::preview_features::is_preview_enabled;  // todo: implement me
+    "java/util/TimeZone": static fn getSystemTimeZoneID(java_home: string) -> string => sn::time_zone::get_system_time_zone_id;
     }
 
     #[cfg(unix)]
@@ -610,6 +639,12 @@ builtin_natives! {
     {
     "sun/io/Win32ErrorMode": static fn setErrorMode(mode: long) -> long => sn::win32_error_mode::set_error_mode;
     "sun/security/provider/NativeSeedGenerator": static fn nativeGenerateSeed(bytes: byte_array) -> boolean => sn::native_seed_generator::native_generate_seed;
+    }
+
+    #[cfg(unix)]
+    {
+    "sun/nio/ch/NativeThread": static fn current0() -> long => sn::native_thread::current0; // todo: implement this (by 0 we say that the platform can not signal native threads)
+    "sun/nio/ch/NativeThread": static fn init() -> void => sn::native_thread::init;  // todo: implement me
     }
 }
 

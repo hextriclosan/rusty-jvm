@@ -1,10 +1,7 @@
-use crate::bail_thrown;
 use crate::vm::error::Result;
-use crate::vm::exception::helpers::throw_unsatisfied_link_error;
-use crate::vm::exception::pending::Throws;
+use crate::vm::exception::pending_helpers::set_pending_unsatisfied_link_error;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i32toi64, i64_to_vec};
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::helper::i64_to_vec;
 use crate::vm::system_native::properties_provider::properties::sun_boot_library_path;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use dashmap::DashMap;
@@ -28,44 +25,23 @@ struct LibraryEntry {
     symbols: DashMap<String, usize>,
 }
 
-pub(crate) fn find_builtin_lib_wrp(args: &[i32]) -> Result<Vec<i32>> {
+/// `jdk.internal.loader.NativeLibraries.findBuiltinLib(Ljava/lang/String;)Ljava/lang/String;`
+pub(crate) fn find_builtin_lib(name_ref: i32) -> Result<i32> {
     if enabled!(tracing::Level::TRACE) {
-        let name_ref = args[0];
         let name = get_utf8_string_by_ref(name_ref)?;
         trace!("findBuiltinLib: {name}");
     }
 
-    Ok(vec![0]) // we don't have static libraries, so we always return null
+    Ok(0) // we don't have static libraries, so we always return null
 }
 
-pub(crate) fn native_libraries_load_wrp(
-    args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
-    let native_lib_impl_ref = args[0];
-    let name_ref = args[1];
-    let builtin = args[2] != 0;
-    let throw_exception_if_fail = args[3] != 0;
-
-    let Some(result) = native_libraries_load(
-        native_lib_impl_ref,
-        name_ref,
-        builtin,
-        throw_exception_if_fail,
-        stack_frames,
-    )?
-    else {
-        return Ok(vec![]);
-    };
-    Ok(vec![if result { 1 } else { 0 }])
-}
-fn native_libraries_load(
+/// `jdk.internal.loader.NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z`
+pub(crate) fn load(
     native_lib_impl_ref: i32,
     name_ref: i32,
     _builtin: bool,
     throw_exception_if_fail: bool,
-    stack_frames: &mut StackFrames,
-) -> Throws<bool> {
+) -> Result<bool> {
     let name = get_utf8_string_by_ref(name_ref)?;
 
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
@@ -82,7 +58,7 @@ fn native_libraries_load(
                     .and_then(|s| extract_lib_name(s))
                     .is_some_and(|lib_name| ["nio", "jimage", "zip", "net"].contains(&lib_name))
                 {
-                    return Ok(Some(true));
+                    return Ok(true);
                 }
             }
         }
@@ -104,17 +80,13 @@ fn native_libraries_load(
                 i64_to_vec(*entry.key() as i64),
             )?;
 
-            Ok(Some(true))
+            Ok(true)
         }
-        Err(_) => {
+        Err(e) => {
             if throw_exception_if_fail {
-                bail_thrown!(throw_unsatisfied_link_error(
-                    &format!("Failed to load {name}"),
-                    stack_frames
-                ));
-            } else {
-                Ok(Some(false))
+                set_pending_unsatisfied_link_error(&format!("Failed to load {name}: {e}"))?;
             }
+            Ok(false)
         }
     }
 }
@@ -124,15 +96,8 @@ fn extract_lib_name(s: &str) -> Option<&str> {
     Some(s.rsplit_once('.')?.0)
 }
 
-pub(crate) fn native_libraries_find_entry0_wrp(args: &[i32]) -> Result<Vec<i32>> {
-    let handle = i32toi64(args[1], args[0]);
-    let name_ref = args[2];
-
-    let entry_id = native_libraries_find_entry0(handle, name_ref)?;
-    Ok(i64_to_vec(entry_id))
-}
-
-fn native_libraries_find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
+/// `jdk.internal.loader.NativeLibraries$NativeLibraryImpl.findEntry0(JLjava/lang/String;)J`
+pub(crate) fn find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
     let lib = match REGISTRY.get(&(handle as usize)) {
         Some(lib) => lib,
         None => {

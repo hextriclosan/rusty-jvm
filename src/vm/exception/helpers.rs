@@ -43,10 +43,6 @@ pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
     Ok(true)
 }
 
-pub fn throw_unsatisfied_link_error(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
-    throw_exception_with_message("java/lang/UnsatisfiedLinkError", message, stack_frames)
-}
-
 fn throw_exception_with_message(
     class_name: &str,
     message: &str,

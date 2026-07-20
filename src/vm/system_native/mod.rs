@@ -1,7 +1,9 @@
+mod bootloader;
 pub(crate) mod cds;
 pub(crate) mod class;
 pub(crate) mod class_loader;
 pub(crate) mod constant_pool;
+mod continuation_support;
 pub(crate) mod dispatcher;
 pub(crate) mod double;
 pub(crate) mod file_descriptor;
@@ -18,6 +20,10 @@ pub(crate) mod native_image_buffer;
 pub(crate) mod native_libraries;
 #[cfg(windows)]
 pub(crate) mod native_seed_generator;
+#[cfg(unix)]
+mod native_thread;
+mod network_interface;
+mod null_pointer_exception;
 pub(crate) mod object;
 mod object_offset;
 pub(crate) mod perf;
@@ -25,6 +31,7 @@ mod phantom_reference;
 mod platform_file;
 pub(crate) mod platform_file_dispatcher;
 pub(crate) mod platform_native_dispatcher;
+mod preview_features;
 pub(crate) mod properties_provider;
 pub(crate) mod random_access_file;
 mod reference;
