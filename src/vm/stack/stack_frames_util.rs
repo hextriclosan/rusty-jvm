@@ -46,23 +46,24 @@ impl StackFramesUtil {
         max_stack_size: usize,
     ) -> Result<Vec<StackElement>> {
         let mut stack_trace = JavaThread::with_frames(|frames| {
-            // `with_frames` yields frames newest → oldest, but the throwable-skip `break` below
-            // (and the trailing `reverse()`) require oldest → newest order: we must collect user
-            // frames from the bottom and stop as soon as we reach the throwable's own constructor,
-            // which excludes it together with its superclass `<init>` frames sitting above it.
+            // `with_frames` yields frames newest → oldest. Reverse to oldest → newest so the
+            // throwable-skip stops at the throwable's own constructor, excluding it together with
+            // its superclass `<init>` frames sitting above it.
             let newest_to_oldest: Vec<_> = frames.collect();
-            let mut stack_trace = Vec::new();
-            for frame in newest_to_oldest.into_iter().rev() {
-                if stack_trace.len() >= max_stack_size {
-                    break;
-                }
-                let class_name = frame.current_class_name().to_string();
-                // If we reached the throwable class, stop collecting because we don't want to include it and its superclasses in the stack trace
-                if class_name == throwable_name {
-                    break;
-                }
+            let eligible: Vec<_> = newest_to_oldest
+                .into_iter()
+                .rev()
+                .take_while(|frame| frame.current_class_name() != throwable_name)
+                .collect();
 
-                let klass = CLASSES.get(&class_name)?;
+            // When the stack is deeper than `max_stack_size`, the JVM keeps the *newest* frames
+            // (the throw site and its nearest callers) and truncates the oldest, so take the tail
+            // of this oldest → newest slice. Resolving elements only for the retained frames avoids
+            // wasted lookups — and error propagation — for frames that would be dropped.
+            let start = eligible.len().saturating_sub(max_stack_size);
+            let mut stack_trace = Vec::with_capacity(eligible.len() - start);
+            for frame in &eligible[start..] {
+                let klass = CLASSES.get(frame.current_class_name())?;
                 let method_name = frame.method_name();
                 let method = klass.get_method(method_name)?;
                 let method_raw = Arc::as_ptr(&method) as i64;
