@@ -1,7 +1,6 @@
 use crate::vm::error::Result;
 
 /// `sun.nio.ch.NativeThread.init()V`
-#[cfg(unix)]
 pub(crate) fn init() -> Result<()> {
     Ok(()) // todo: implement me
 }

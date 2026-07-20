@@ -20,6 +20,7 @@ pub(crate) mod native_image_buffer;
 pub(crate) mod native_libraries;
 #[cfg(windows)]
 pub(crate) mod native_seed_generator;
+#[cfg(unix)]
 mod native_thread;
 mod network_interface;
 mod null_pointer_exception;
