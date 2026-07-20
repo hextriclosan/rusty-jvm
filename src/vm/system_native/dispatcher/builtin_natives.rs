@@ -514,7 +514,6 @@ builtin_natives! {
 
     "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
 
-    "sun/nio/ch/NativeThread": static fn init() -> void => sn::native_thread::init;  // todo: implement me
     "sun/nio/ch/NativeThread": static fn current0() -> long => sn::native_thread::current0; // todo: implement this (by 0 we say that the platform can not signal native threads)
 
     "jdk/internal/loader/NativeLibraries": static fn findBuiltinLib(name: string) -> string => sn::native_libraries::find_builtin_lib;
@@ -642,6 +641,10 @@ builtin_natives! {
     {
     "sun/io/Win32ErrorMode": static fn setErrorMode(mode: long) -> long => sn::win32_error_mode::set_error_mode;
     "sun/security/provider/NativeSeedGenerator": static fn nativeGenerateSeed(bytes: byte_array) -> boolean => sn::native_seed_generator::native_generate_seed;
+    }
+
+    #[cfg(unix)] {
+    "sun/nio/ch/NativeThread": static fn init() -> void => sn::native_thread::init;  // todo: implement me
     }
 }
 
