@@ -95,6 +95,15 @@ impl JavaMethod {
         }
     }
 
+    /// Builds a synthetic stack frame for this native method so it appears on the thread's stack
+    /// chain while it executes (native methods carry no `code_context`, hence no `new_stack_frame`).
+    pub fn new_native_stack_frame(&self) -> StackFrame {
+        StackFrame::new_native(
+            Arc::clone(&self.name_signature),
+            Arc::clone(&self.class_name),
+        )
+    }
+
     pub fn get_method_descriptor(&self) -> &MethodDescriptor {
         &self.method_descriptor
     }
