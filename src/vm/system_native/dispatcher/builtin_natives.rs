@@ -394,7 +394,7 @@ builtin_natives! {
     "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
     "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
 
-    "java/lang/Throwable": instance fn fillInStackTrace(depth: int) -> throwable => sn::throwable::fill_in_stack_trace;
+    "java/lang/Throwable": instance fn fillInStackTrace(dummy: int) -> throwable => sn::throwable::fill_in_stack_trace;
 
     "java/lang/invoke/MethodHandleNatives": static fn registerNatives() -> void => sn::method_handle_natives::register_natives; // todo: implement me
     "java/lang/invoke/MethodHandleNatives": static fn init(mn: member_name, obj_ref: object) -> void => sn::method_handle_natives::init;
