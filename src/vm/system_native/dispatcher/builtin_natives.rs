@@ -129,48 +129,53 @@ macro_rules! jni_types {
 // Single source of truth: `token : kind | vm-rust-type | ffi-type | descriptor`.
 jni_types! {
     $
+    // primitives
     boolean                   : bool  | bool | jboolean     | "Z";
     byte                      : int   | i8   | jbyte        | "B";
     char                      : int   | u16  | jchar        | "C";
-    short                     : int   | i16  | jshort       | "S";
+    double                    : float | f64  | jdouble      | "D";
+    float                     : float | f32  | jfloat       | "F";
     int                       : int   | i32  | jint         | "I";
     long                      : int   | i64  | jlong        | "J";
-    float                     : float | f32  | jfloat       | "F";
-    double                    : float | f64  | jdouble      | "D";
-    byte_array                : ref   | i32  | jbyteArray   | "[B";
-    object_array              : ref   | i32  | jobjectArray | "[Ljava/lang/Object;";
-    class_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/Class;";
-    field_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Field;";
-    method_object_array       : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Method;";
-    constructor_object_array  : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Constructor;";
-    string_array              : ref   | i32  | jobjectArray | "[Ljava/lang/String;";
-    stack_trace_element_array : ref   | i32  | jobjectArray | "[Ljava/lang/StackTraceElement;";
-    network_interface_array   : ref   | i32  | jobjectArray | "[Ljava/net/NetworkInterface;";
-    object                    : ref   | i32  | jobject      | "Ljava/lang/Object;";
+    short                     : int   | i16  | jshort       | "S";
+    void                      : void  | ()   | ()           | "V";
+
+    // objects
     class                     : ref   | i32  | jclass       | "Ljava/lang/Class;";
-    input_stream              : ref   | i32  | jobject      | "Ljava/io/InputStream;";
-    print_stream              : ref   | i32  | jobject      | "Ljava/io/PrintStream;";
-    string                    : ref   | i32  | jstring      | "Ljava/lang/String;";
     class_loader              : ref   | i32  | jobject      | "Ljava/lang/ClassLoader;";
-    constant_pool             : ref   | i32  | jobject      | "Ljdk/internal/reflect/ConstantPool;";
     module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
-    field                     : ref   | i32  | jobject      | "Ljava/lang/reflect/Field;";
-    byte_buffer               : ref   | i32  | jobject      | "Ljava/nio/ByteBuffer;";
-    file_descriptor           : ref   | i32  | jobject      | "Ljava/io/FileDescriptor;";
-    file                      : ref   | i32  | jobject      | "Ljava/io/File;";
-    unix_file_attrs           : ref   | i32  | jobject      | "Lsun/nio/fs/UnixFileAttributes;";
-    volume_info               : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;";
-    first_file                : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$FirstFile;";
-    protection_domain         : ref   | i32  | jobject      | "Ljava/security/ProtectionDomain;";
+    object                    : ref   | i32  | jobject      | "Ljava/lang/Object;";
+    string                    : ref   | i32  | jstring      | "Ljava/lang/String;";
     thread                    : ref   | i32  | jobject      | "Ljava/lang/Thread;";
-    member_name               : ref   | i32  | jobject      | "Ljava/lang/invoke/MemberName;";
+    throwable                 : ref   | i32  | jobject      | "Ljava/lang/Throwable;";
     method_handle             : ref   | i32  | jobject      | "Ljava/lang/invoke/MethodHandle;";
     call_site                 : ref   | i32  | jobject      | "Ljava/lang/invoke/CallSite;";
-    native_library_impl       : ref   | i32  | jobject      | "Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;";
-    throwable                 : ref   | i32  | jobject      | "Ljava/lang/Throwable;";
-    method                    : ref   | i32  | jobject      | "Ljava/lang/reflect/Method;";
+    member_name               : ref   | i32  | jobject      | "Ljava/lang/invoke/MemberName;";
     constructor               : ref   | i32  | jobject      | "Ljava/lang/reflect/Constructor;";
-    void                      : void  | ()   | ()           | "V";
+    field                     : ref   | i32  | jobject      | "Ljava/lang/reflect/Field;";
+    method                    : ref   | i32  | jobject      | "Ljava/lang/reflect/Method;";
+    input_stream              : ref   | i32  | jobject      | "Ljava/io/InputStream;";
+    file                      : ref   | i32  | jobject      | "Ljava/io/File;";
+    file_descriptor           : ref   | i32  | jobject      | "Ljava/io/FileDescriptor;";
+    print_stream              : ref   | i32  | jobject      | "Ljava/io/PrintStream;";
+    byte_buffer               : ref   | i32  | jobject      | "Ljava/nio/ByteBuffer;";
+    protection_domain         : ref   | i32  | jobject      | "Ljava/security/ProtectionDomain;";
+    native_library_impl       : ref   | i32  | jobject      | "Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;";
+    constant_pool             : ref   | i32  | jobject      | "Ljdk/internal/reflect/ConstantPool;";
+    unix_file_attrs           : ref   | i32  | jobject      | "Lsun/nio/fs/UnixFileAttributes;";
+    first_file                : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$FirstFile;";
+    volume_info               : ref   | i32  | jobject      | "Lsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;";
+
+    // arrays
+    byte_array                : ref   | i32  | jbyteArray   | "[B";
+    class_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/Class;";
+    object_array              : ref   | i32  | jobjectArray | "[Ljava/lang/Object;";
+    stack_trace_element_array : ref   | i32  | jobjectArray | "[Ljava/lang/StackTraceElement;";
+    string_array              : ref   | i32  | jobjectArray | "[Ljava/lang/String;";
+    constructor_object_array  : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Constructor;";
+    field_object_array        : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Field;";
+    method_object_array       : ref   | i32  | jobjectArray | "[Ljava/lang/reflect/Method;";
+    network_interface_array   : ref   | i32  | jobjectArray | "[Ljava/net/NetworkInterface;";
 }
 
 /// Generates a single `extern "system"` wrapper that adapts a pure impl to JNI.
@@ -314,21 +319,6 @@ macro_rules! builtin_natives {
 // C-name and resolving to the function address invoked via libffi.
 builtin_natives! {
     {
-    "java/lang/System": static fn currentTimeMillis() -> long => sn::system::current_time_millis;
-    "java/lang/System": static fn nanoTime() -> long => sn::system::nano_time;
-    "java/lang/System": static fn arraycopy(src: object, src_pos: int, dest: object, dest_pos: int, length: int) -> void => sn::system::arraycopy;
-    "java/lang/System": static fn setIn0(input_stream: input_stream) -> void => sn::system::set_in0; // todo: implement me
-    "java/lang/System": static fn setOut0(print_stream: print_stream) -> void => sn::system::set_out0;
-    "java/lang/System": static fn setErr0(print_stream: print_stream) -> void => sn::system::set_err0;
-    "java/lang/System": static fn identityHashCode(obj: object) -> int => sn::object::identity_hashcode;
-    "java/lang/System": static fn mapLibraryName(lib: string) -> string => sn::system::map_library_name;
-    "java/lang/System": static fn registerNatives() -> void => sn::system::register_natives; // todo: implement me
-
-    "java/lang/Object": instance fn hashCode() -> int => sn::object::identity_hashcode;
-    "java/lang/Object": instance fn getClass() -> class => sn::object::get_class;
-    "java/lang/Object": instance fn clone() -> object => sn::object::clone;
-    "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all; // todo: implement me
-
     "java/lang/Class": instance fn getSuperclass() -> class => sn::class::get_superclass;
     "java/lang/Class": static fn getPrimitiveClass(content: string) -> class => sn::class::get_primitive_class;
     "java/lang/Class": static fn desiredAssertionStatus0(clazz: class) -> boolean => sn::class::desired_assertion_status0; // setting all classes to have assertions enabled. todo: implement -ea and -da flags
@@ -350,13 +340,143 @@ builtin_natives! {
     "java/lang/Class": instance fn getNestHost0() -> class => sn::class::get_nest_host0;
     "java/lang/Class": instance fn isRecord0() -> boolean => sn::class::is_record0;
 
+    "java/lang/ClassLoader": static fn registerNatives() -> void => sn::class_loader::register_natives; // todo: implement me
+    "java/lang/ClassLoader": static fn defineClass0(cl: class_loader, lookup: class, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, init: boolean, flags: int, class_data: object) -> class => sn::class_loader::define_class0;
+    "java/lang/ClassLoader": static fn defineClass1(cl: class_loader, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class1;
+    "java/lang/ClassLoader": static fn defineClass2(cl: class_loader, name: string, buf: byte_buffer, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class2;
+    "java/lang/ClassLoader": static fn findBootstrapClass(name: string) -> class => sn::class_loader::find_bootstrap_class;
+    "java/lang/ClassLoader": instance fn findLoadedClass0(name: string) -> class => sn::class_loader::find_loaded_class0;
+
+    "java/lang/Double": static fn doubleToRawLongBits(d: double) -> long => sn::double::double_to_raw_long_bits;
+    "java/lang/Double": static fn longBitsToDouble(l: long) -> double => sn::double::long_bits_to_double;
+
+    "java/lang/Float": static fn floatToRawIntBits(f: float) -> int => sn::float::float_to_raw_int_bits;
+
     "java/lang/Module": static fn addReads0(from: module, to: module) -> void => sn::module::add_reads0; // todo: implement me?
     "java/lang/Module": static fn defineModule0(module: module, is_open: boolean, version: string, location: string, pns: object_array) -> void => sn::module::define_module0;
     "java/lang/Module": static fn addExportsToAll0(from: module, pn: string) -> void => sn::module::add_exports_to_all0; // todo: implement me?
     "java/lang/Module": static fn addExports0(from: module, pn: string, to: module) -> void => sn::module::add_exports0; // todo: implement me?
 
+    "java/lang/NullPointerException": instance fn getExtendedNPEMessage() -> string => sn::null_pointer_exception::get_extended_npe_message; // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
+
+    "java/lang/Object": instance fn hashCode() -> int => sn::object::identity_hashcode;
+    "java/lang/Object": instance fn getClass() -> class => sn::object::get_class;
+    "java/lang/Object": instance fn clone() -> object => sn::object::clone;
+    "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all; // todo: implement me
+
+    "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
+    "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;
+    "java/lang/Runtime": instance fn totalMemory() -> long => sn::runtime::total_memory; // todo: implement me with GC
+    "java/lang/Runtime": instance fn freeMemory() -> long => sn::runtime::free_memory; // todo: implement me with GC
+
     "java/lang/Shutdown": static fn beforeHalt() -> void => sn::shutdown::before_halt; // todo: implement me
     "java/lang/Shutdown": static fn halt0(status: int) -> void => sn::shutdown::halt0; // fixme: by doing this we skip destructors and other shutdown hooks, later it might be an issue
+
+    "java/lang/StackTraceElement": static fn initStackTraceElements(elements: stack_trace_element_array, x: object, depth: int) -> void => sn::stack_trace_element::init_stack_trace_elements;
+
+    "java/lang/String": instance fn intern() -> string => sn::string::intern;
+
+    "java/lang/System": static fn currentTimeMillis() -> long => sn::system::current_time_millis;
+    "java/lang/System": static fn nanoTime() -> long => sn::system::nano_time;
+    "java/lang/System": static fn arraycopy(src: object, src_pos: int, dest: object, dest_pos: int, length: int) -> void => sn::system::arraycopy;
+    "java/lang/System": static fn setIn0(input_stream: input_stream) -> void => sn::system::set_in0; // todo: implement me
+    "java/lang/System": static fn setOut0(print_stream: print_stream) -> void => sn::system::set_out0;
+    "java/lang/System": static fn setErr0(print_stream: print_stream) -> void => sn::system::set_err0;
+    "java/lang/System": static fn identityHashCode(obj: object) -> int => sn::object::identity_hashcode;
+    "java/lang/System": static fn mapLibraryName(lib: string) -> string => sn::system::map_library_name;
+    "java/lang/System": static fn registerNatives() -> void => sn::system::register_natives; // todo: implement me
+
+    "java/lang/Thread": static fn registerNatives() -> void => sn::thread::register_natives;
+    "java/lang/Thread": static fn currentThread() -> thread => sn::thread::current_thread;
+    "java/lang/Thread": static fn currentCarrierThread() -> thread => sn::thread::current_carrier_thread;  //todo: use current carrier thread here (no matter what it is)
+    "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
+    "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
+    "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
+    "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
+
+    "java/lang/invoke/MethodHandleNatives": static fn registerNatives() -> void => sn::method_handle_natives::register_natives; // todo: implement me
+    "java/lang/invoke/MethodHandleNatives": static fn init(mn: member_name, obj_ref: object) -> void => sn::method_handle_natives::init;
+    "java/lang/invoke/MethodHandleNatives": static fn resolve(mn: member_name, caller: class, lookup_mode: int, speculative_resolve: boolean) -> member_name => sn::method_handle_natives::resolve;
+    "java/lang/invoke/MethodHandleNatives": static fn objectFieldOffset(mn: member_name) -> long => sn::method_handle_natives::object_field_offset;
+    "java/lang/invoke/MethodHandleNatives": static fn staticFieldOffset(mn: member_name) -> long => sn::method_handle_natives::static_field_offset;
+    "java/lang/invoke/MethodHandleNatives": static fn staticFieldBase(mn: member_name) -> object => sn::method_handle_natives::static_field_base;
+    "java/lang/invoke/MethodHandleNatives": static fn getNamedCon(which: int, name: object_array) -> int => sn::method_handle_natives::get_named_con; // todo: implement me
+    "java/lang/invoke/MethodHandleNatives": static fn getMemberVMInfo(mn: member_name) -> object => sn::method_handle_natives::get_member_vm_info;
+    "java/lang/invoke/MethodHandleNatives": static fn setCallSiteTargetNormal(site: call_site, target: method_handle) -> void => sn::method_handle_natives::set_call_site_target_normal;
+
+    "java/lang/ref/Finalizer": static fn isFinalizationEnabled() -> boolean => sn::finalizer::is_finalization_enabled; // todo: this should be implemented with GC
+
+    "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0; // todo: this should be implemented with GC
+
+    "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0; // todo: this should be implemented with GC
+    "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0; // todo: this should be implemented with GC
+
+    "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
+
+    "java/io/FileDescriptor": static fn initIDs() -> void => sn::file_descriptor::init_ids; // todo: implement me
+    "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => sn::file_descriptor::get_handle;
+    "java/io/FileDescriptor": static fn getAppend(fd: int) -> boolean => sn::file_descriptor::get_append;
+    "java/io/FileDescriptor": instance fn close0() -> void => sn::file_descriptor::close0;
+
+    "java/io/FileInputStream": static fn initIDs() -> void => sn::file_input_stream::init_ids;
+    "java/io/FileInputStream": instance fn open0(name: string) -> void => sn::file_input_stream::open0;
+    "java/io/FileInputStream": instance fn length0() -> long => sn::file_input_stream::length0;
+    "java/io/FileInputStream": instance fn position0() -> long => sn::file_input_stream::position0;
+    "java/io/FileInputStream": instance fn available0() -> int => sn::file_input_stream::available0;
+    "java/io/FileInputStream": instance fn readBytes(b: byte_array, off: int, len: int) -> int => sn::file_input_stream::read_bytes;
+    "java/io/FileInputStream": instance fn read0() -> int => sn::file_input_stream::read0;
+    "java/io/FileInputStream": instance fn isRegularFile0(fd: file_descriptor) -> boolean => sn::file_input_stream::is_regular_file0;
+
+    "java/io/FileOutputStream": static fn initIDs() -> void => sn::file_output_stream::init_ids;
+    "java/io/FileOutputStream": instance fn open0(name: string, append: boolean) -> void => sn::file_output_stream::open0;
+    "java/io/FileOutputStream": instance fn write(byte: int, append: boolean) -> void => sn::file_output_stream::write;
+    "java/io/FileOutputStream": instance fn writeBytes(b: byte_array, off: int, len: int, append: boolean) -> void => sn::file_output_stream::write_bytes;
+
+    "java/io/RandomAccessFile": static fn initIDs() -> void => sn::random_access_file::init_ids;
+    "java/io/RandomAccessFile": instance fn open0(name: string, mode: int) -> void => sn::random_access_file::open0;
+    "java/io/RandomAccessFile": instance fn seek0(offset: long) -> void => sn::random_access_file::seek0;
+    "java/io/RandomAccessFile": instance fn writeBytes0(b: byte_array, off: int, len: int) -> void => sn::random_access_file::write_bytes0;
+    "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => sn::random_access_file::read_bytes0;
+    "java/io/RandomAccessFile": instance fn length0() -> long => sn::random_access_file::length0;
+
+    "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
+    "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
+
+    "java/nio/MappedMemoryUtils": static fn registerNatives() -> void => sn::mapped_memory_utils::register_natives; // todo: implement me
+    "java/nio/MappedMemoryUtils": static fn force0(fd: file_descriptor, addr: long, len: long) -> void => sn::mapped_memory_utils::force0;
+
+    "java/util/TimeZone": static fn getSystemTimeZoneID(java_home: string) -> string => sn::time_zone::get_system_time_zone_id;
+
+    "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
+
+    "java/util/zip/Deflater": static fn init(level: int, strategy: int, nowrap: boolean) -> long => sn::zip::deflater::init;
+    "java/util/zip/Deflater": instance fn deflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int, flush: int, params: int) -> long => sn::zip::deflater::deflate_bytes_bytes;
+    "java/util/zip/Deflater": static fn end(addr: long) -> void => sn::zip::deflater::end;
+
+    "java/util/zip/Inflater": static fn initIDs() -> void => sn::zip::inflater::init_ids; // todo: implement me
+    "java/util/zip/Inflater": static fn init(nowrap: boolean) -> long => sn::zip::inflater::init;
+    "java/util/zip/Inflater": instance fn inflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int) -> long => sn::zip::inflater::inflate_bytes_bytes;
+    "java/util/zip/Inflater": static fn end(addr: long) -> void => sn::zip::inflater::end;
+    "java/util/zip/Inflater": static fn reset(addr: long) -> void => sn::zip::inflater::reset;
+
+    "jdk/internal/jimage/NativeImageBuffer": instance fn getNativeMap(name: string) -> byte_buffer => sn::native_image_buffer::get_native_map;
+
+    "jdk/internal/loader/BootLoader": static fn setBootLoaderUnnamedModule0(m: module) -> void => sn::bootloader::set_bootloader_unnamed_module0;
+
+    "jdk/internal/loader/NativeLibraries": static fn findBuiltinLib(name: string) -> string => sn::native_libraries::find_builtin_lib;
+    "jdk/internal/loader/NativeLibraries": static fn load(imp: native_library_impl, name: string, builtin: boolean, throw: boolean) -> boolean => sn::native_libraries::load;
+    "jdk/internal/loader/NativeLibraries$NativeLibraryImpl": static fn findEntry0(handle: long, name: string) -> long => sn::native_libraries::find_entry0;
+
+    "jdk/internal/misc/CDS": static fn initializeFromArchive(clazz: class) -> void => sn::cds::initialize_from_archive; // todo: implement me
+    "jdk/internal/misc/CDS": static fn getRandomSeedForDumping() -> long => sn::cds::get_random_seed_for_dumping; // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
+    "jdk/internal/misc/CDS": static fn getCDSConfigStatus() -> int => sn::cds::get_cds_config_status;  // Class Data Sharing (CDS) is disabled
+
+    "jdk/internal/misc/PreviewFeatures": static fn isPreviewEnabled() -> boolean => sn::preview_features::is_preview_enabled;  // todo: implement me
+
+    "jdk/internal/misc/ScopedMemoryAccess": static fn registerNatives() -> void => sn::scoped_memory_access::register_natives; // todo: implement me
+
+    "jdk/internal/misc/Signal": static fn findSignal0(sig_name: string) -> int => sn::signal::find_signal0; // todo: implement me
+    "jdk/internal/misc/Signal": static fn handle0(sig: int, native_h: long) -> long => sn::signal::handle0; // todo: implement me
 
     "jdk/internal/misc/Unsafe": static fn registerNatives() -> void => sn::unsafe_::register_natives; // todo: implement me
     "jdk/internal/misc/Unsafe": instance fn arrayBaseOffset0(array_class: class) -> int => sn::unsafe_::array_base_offset0;
@@ -395,145 +515,31 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn setMemory0(obj: object, offset: long, bytes: long, value: byte) -> void => sn::unsafe_::set_memory0;
     "jdk/internal/misc/Unsafe": instance fn allocateMemory0(bytes: long) -> long => sn::unsafe_::allocate_memory0;
 
-    "java/lang/String": instance fn intern() -> string => sn::string::intern;
-
-    "java/lang/Float": static fn floatToRawIntBits(f: float) -> int => sn::float::float_to_raw_int_bits;
-
-    "java/lang/Double": static fn doubleToRawLongBits(d: double) -> long => sn::double::double_to_raw_long_bits;
-    "java/lang/Double": static fn longBitsToDouble(l: long) -> double => sn::double::long_bits_to_double;
-
-    "jdk/internal/misc/CDS": static fn initializeFromArchive(clazz: class) -> void => sn::cds::initialize_from_archive; // todo: implement me
-    "jdk/internal/misc/CDS": static fn getRandomSeedForDumping() -> long => sn::cds::get_random_seed_for_dumping; // Should return a predictable "random" seed derived from the VM's build ID and version, we return constant value for now
-    "jdk/internal/misc/CDS": static fn getCDSConfigStatus() -> int => sn::cds::get_cds_config_status;  // Class Data Sharing (CDS) is disabled
-
     "jdk/internal/misc/VM": static fn initialize() -> void => sn::vm::initialize; // todo: implement me
-
-    "java/lang/ClassLoader": static fn registerNatives() -> void => sn::class_loader::register_natives; // todo: implement me
-    "java/lang/ClassLoader": static fn defineClass0(cl: class_loader, lookup: class, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, init: boolean, flags: int, class_data: object) -> class => sn::class_loader::define_class0;
-    "java/lang/ClassLoader": static fn defineClass1(cl: class_loader, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class1;
-    "java/lang/ClassLoader": static fn defineClass2(cl: class_loader, name: string, buf: byte_buffer, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class2;
-    "java/lang/ClassLoader": static fn findBootstrapClass(name: string) -> class => sn::class_loader::find_bootstrap_class;
-    "java/lang/ClassLoader": instance fn findLoadedClass0(name: string) -> class => sn::class_loader::find_loaded_class0;
-
-    "jdk/internal/jimage/NativeImageBuffer": instance fn getNativeMap(name: string) -> byte_buffer => sn::native_image_buffer::get_native_map;
-
-    "java/lang/invoke/MethodHandleNatives": static fn registerNatives() -> void => sn::method_handle_natives::register_natives; // todo: implement me
-    "java/lang/invoke/MethodHandleNatives": static fn init(mn: member_name, obj_ref: object) -> void => sn::method_handle_natives::init;
-    "java/lang/invoke/MethodHandleNatives": static fn resolve(mn: member_name, caller: class, lookup_mode: int, speculative_resolve: boolean) -> member_name => sn::method_handle_natives::resolve;
-    "java/lang/invoke/MethodHandleNatives": static fn objectFieldOffset(mn: member_name) -> long => sn::method_handle_natives::object_field_offset;
-    "java/lang/invoke/MethodHandleNatives": static fn staticFieldOffset(mn: member_name) -> long => sn::method_handle_natives::static_field_offset;
-    "java/lang/invoke/MethodHandleNatives": static fn staticFieldBase(mn: member_name) -> object => sn::method_handle_natives::static_field_base;
-    "java/lang/invoke/MethodHandleNatives": static fn getNamedCon(which: int, name: object_array) -> int => sn::method_handle_natives::get_named_con; // todo: implement me
-    "java/lang/invoke/MethodHandleNatives": static fn getMemberVMInfo(mn: member_name) -> object => sn::method_handle_natives::get_member_vm_info;
-    "java/lang/invoke/MethodHandleNatives": static fn setCallSiteTargetNormal(site: call_site, target: method_handle) -> void => sn::method_handle_natives::set_call_site_target_normal;
-
-    "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
-    "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;
-    "java/lang/Runtime": instance fn totalMemory() -> long => sn::runtime::total_memory; // todo: implement me with GC
-    "java/lang/Runtime": instance fn freeMemory() -> long => sn::runtime::free_memory; // todo: implement me with GC
-
-    "jdk/internal/util/SystemProps$Raw": static fn platformProperties() -> string_array => sn::system_props_raw::platform_properties;
-    "jdk/internal/util/SystemProps$Raw": static fn vmProperties() -> string_array => sn::system_props_raw::vm_properties;
-
-    "java/io/FileDescriptor": static fn initIDs() -> void => sn::file_descriptor::init_ids; // todo: implement me
-    "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => sn::file_descriptor::get_handle;
-    "java/io/FileDescriptor": static fn getAppend(fd: int) -> boolean => sn::file_descriptor::get_append;
-    "java/io/FileDescriptor": instance fn close0() -> void => sn::file_descriptor::close0;
-
-    "java/io/FileInputStream": static fn initIDs() -> void => sn::file_input_stream::init_ids;
-    "java/io/FileInputStream": instance fn open0(name: string) -> void => sn::file_input_stream::open0;
-    "java/io/FileInputStream": instance fn length0() -> long => sn::file_input_stream::length0;
-    "java/io/FileInputStream": instance fn position0() -> long => sn::file_input_stream::position0;
-    "java/io/FileInputStream": instance fn available0() -> int => sn::file_input_stream::available0;
-    "java/io/FileInputStream": instance fn readBytes(b: byte_array, off: int, len: int) -> int => sn::file_input_stream::read_bytes;
-    "java/io/FileInputStream": instance fn read0() -> int => sn::file_input_stream::read0;
-    "java/io/FileInputStream": instance fn isRegularFile0(fd: file_descriptor) -> boolean => sn::file_input_stream::is_regular_file0;
-
-    "java/io/FileOutputStream": static fn initIDs() -> void => sn::file_output_stream::init_ids;
-    "java/io/FileOutputStream": instance fn open0(name: string, append: boolean) -> void => sn::file_output_stream::open0;
-    "java/io/FileOutputStream": instance fn write(byte: int, append: boolean) -> void => sn::file_output_stream::write;
-    "java/io/FileOutputStream": instance fn writeBytes(b: byte_array, off: int, len: int, append: boolean) -> void => sn::file_output_stream::write_bytes;
-
-    "java/io/RandomAccessFile": static fn initIDs() -> void => sn::random_access_file::init_ids;
-    "java/io/RandomAccessFile": instance fn open0(name: string, mode: int) -> void => sn::random_access_file::open0;
-    "java/io/RandomAccessFile": instance fn seek0(offset: long) -> void => sn::random_access_file::seek0;
-    "java/io/RandomAccessFile": instance fn writeBytes0(b: byte_array, off: int, len: int) -> void => sn::random_access_file::write_bytes0;
-    "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => sn::random_access_file::read_bytes0;
-    "java/io/RandomAccessFile": instance fn length0() -> long => sn::random_access_file::length0;
-
-    "java/nio/MappedMemoryUtils": static fn registerNatives() -> void => sn::mapped_memory_utils::register_natives; // todo: implement me
-    "java/nio/MappedMemoryUtils": static fn force0(fd: file_descriptor, addr: long, len: long) -> void => sn::mapped_memory_utils::force0;
-
-    "java/lang/Thread": static fn registerNatives() -> void => sn::thread::register_natives;
-    "java/lang/Thread": static fn currentThread() -> thread => sn::thread::current_thread;
-    "java/lang/Thread": static fn currentCarrierThread() -> thread => sn::thread::current_carrier_thread;  //todo: use current carrier thread here (no matter what it is)
-    "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
-    "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
-    "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
-    "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
-
-    "java/util/zip/Deflater": static fn init(level: int, strategy: int, nowrap: boolean) -> long => sn::zip::deflater::init;
-    "java/util/zip/Deflater": instance fn deflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int, flush: int, params: int) -> long => sn::zip::deflater::deflate_bytes_bytes;
-    "java/util/zip/Deflater": static fn end(addr: long) -> void => sn::zip::deflater::end;
-
-    "java/util/zip/CRC32": static fn updateBytes0(crc: int, b: byte_array, off: int, len: int) -> int => sn::zip::crc32::updatebytes0;
-
-    "java/util/zip/Inflater": static fn initIDs() -> void => sn::zip::inflater::init_ids; // todo: implement me
-    "java/util/zip/Inflater": static fn init(nowrap: boolean) -> long => sn::zip::inflater::init;
-    "java/util/zip/Inflater": instance fn inflateBytesBytes(addr: long, inpt: byte_array, ioff: int, ilen: int, outpt: byte_array, ooff: int, olen: int) -> long => sn::zip::inflater::inflate_bytes_bytes;
-    "java/util/zip/Inflater": static fn end(addr: long) -> void => sn::zip::inflater::end;
-    "java/util/zip/Inflater": static fn reset(addr: long) -> void => sn::zip::inflater::reset;
 
     "jdk/internal/perf/Perf": static fn registerNatives() -> void => sn::perf::register_natives; // todo: implement me
     "jdk/internal/perf/Perf": instance fn createLong(name: string, var: int, units: int, value: long) -> byte_buffer => sn::perf::create_long;
     "jdk/internal/perf/Perf": instance fn createByteArray(name: string, var: int, units: int, value: byte_array, mlen: int) -> byte_buffer => sn::perf::create_byte_array;
 
-    "jdk/internal/reflect/Reflection": static fn getCallerClass() -> class => sn::reflecton::get_caller_class;
-    "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags;
-    "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, member: class) -> boolean => sn::reflecton::are_nest_mates;
-
     "jdk/internal/reflect/ConstantPool": instance fn getUTF8At0(cp: object, index: int) -> string => sn::constant_pool::get_utf8_at0;
     "jdk/internal/reflect/ConstantPool": instance fn getSize0(cp: object) -> int => sn::constant_pool::get_size0;
     "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(cp: object, index: int) -> byte => sn::constant_pool::get_tag_at0;
 
-    "sun/nio/ch/IOUtil": static fn initIDs() -> void => sn::io_util::init_ids; // todo: implement me
-    "sun/nio/ch/IOUtil": static fn iovMax() -> int => sn::io_util::iov_max;
-    "sun/nio/ch/IOUtil": static fn writevMax() -> long => sn::io_util::writev_max;
-
-    "jdk/internal/misc/ScopedMemoryAccess": static fn registerNatives() -> void => sn::scoped_memory_access::register_natives; // todo: implement me
-
-    "jdk/internal/misc/Signal": static fn findSignal0(sig_name: string) -> int => sn::signal::find_signal0; // todo: implement me
-    "jdk/internal/misc/Signal": static fn handle0(sig: int, native_h: long) -> long => sn::signal::handle0; // todo: implement me
-
-    "java/lang/ref/Finalizer": static fn isFinalizationEnabled() -> boolean => sn::finalizer::is_finalization_enabled; // todo: this should be implemented with GC
-
-    "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0; // todo: this should be implemented with GC
-    "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0; // todo: this should be implemented with GC
-
-    "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0; // todo: this should be implemented with GC
-
-    "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
-
-    "jdk/internal/loader/NativeLibraries": static fn findBuiltinLib(name: string) -> string => sn::native_libraries::find_builtin_lib;
-    "jdk/internal/loader/NativeLibraries": static fn load(imp: native_library_impl, name: string, builtin: boolean, throw: boolean) -> boolean => sn::native_libraries::load;
-    "jdk/internal/loader/NativeLibraries$NativeLibraryImpl": static fn findEntry0(handle: long, name: string) -> long => sn::native_libraries::find_entry0;
-
-    "jdk/internal/loader/BootLoader": static fn setBootLoaderUnnamedModule0(m: module) -> void => sn::bootloader::set_bootloader_unnamed_module0;
-
-    "java/lang/StackTraceElement": static fn initStackTraceElements(elements: stack_trace_element_array, x: object, depth: int) -> void => sn::stack_trace_element::init_stack_trace_elements;
-
-    "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor": static fn invoke0(m: method, obj: object, args: object_array) -> object => sn::method_handle_natives::native_accessor::invoke0;
     "jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor": static fn newInstance0(c: constructor, args: object_array) -> object => sn::method_handle_natives::native_accessor::new_instance0;
+    "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor": static fn invoke0(m: method, obj: object, args: object_array) -> object => sn::method_handle_natives::native_accessor::invoke0;
+
+    "jdk/internal/reflect/Reflection": static fn getCallerClass() -> class => sn::reflecton::get_caller_class;
+    "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags;
+    "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, member: class) -> boolean => sn::reflecton::are_nest_mates;
+
+    "jdk/internal/util/SystemProps$Raw": static fn platformProperties() -> string_array => sn::system_props_raw::platform_properties;
+    "jdk/internal/util/SystemProps$Raw": static fn vmProperties() -> string_array => sn::system_props_raw::vm_properties;
 
     "jdk/internal/vm/ContinuationSupport": static fn isSupported0() -> boolean => sn::continuation_support::is_supported0; // We do not support Loom continuations (yet)
 
-    "java/lang/NullPointerException": instance fn getExtendedNPEMessage() -> string => sn::null_pointer_exception::get_extended_npe_message; // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
-
-    "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
-    "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
-
-    "jdk/internal/misc/PreviewFeatures": static fn isPreviewEnabled() -> boolean => sn::preview_features::is_preview_enabled;  // todo: implement me
-    "java/util/TimeZone": static fn getSystemTimeZoneID(java_home: string) -> string => sn::time_zone::get_system_time_zone_id;
+    "sun/nio/ch/IOUtil": static fn initIDs() -> void => sn::io_util::init_ids; // todo: implement me
+    "sun/nio/ch/IOUtil": static fn iovMax() -> int => sn::io_util::iov_max;
+    "sun/nio/ch/IOUtil": static fn writevMax() -> long => sn::io_util::writev_max;
     }
 
     #[cfg(unix)]
@@ -559,6 +565,34 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::delete0;
     "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => sn::file_system::winnt::get_name_max0;
     "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
+    }
+
+    #[cfg(unix)]
+    {
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn write0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::unix::write0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn read0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::unix::read0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn pread0(fd: file_descriptor, address: long, len: int, pos: long) -> int => sn::platform_file_dispatcher::unix::pread0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn size0(fd: file_descriptor) -> long => sn::platform_file_dispatcher::unix::size0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn allocationGranularity0() -> long => sn::platform_file_dispatcher::allocation_granularity0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn truncate0(fd: file_descriptor, size: long) -> int => sn::platform_file_dispatcher::unix::truncate0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn map0(fd: file_descriptor, prot: int, pos: long, len: long, is_sync: boolean) -> long => sn::platform_file_dispatcher::map0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
+    "sun/nio/ch/UnixFileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
+    }
+
+    #[cfg(windows)]
+    {
+    "sun/nio/ch/FileDispatcherImpl": static fn allocationGranularity0() -> long => sn::platform_file_dispatcher::allocation_granularity0;
+    "sun/nio/ch/FileDispatcherImpl": static fn maxDirectTransferSize0() -> int => sn::platform_file_dispatcher::win::max_direct_transfer_size0; // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
+    "sun/nio/ch/FileDispatcherImpl": static fn write0(fd: file_descriptor, address: long, len: int, append: boolean) -> int => sn::platform_file_dispatcher::win::write0;
+    "sun/nio/ch/FileDispatcherImpl": static fn read0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::win::read0;
+    "sun/nio/ch/FileDispatcherImpl": static fn pread0(fd: file_descriptor, address: long, len: int, offset: long) -> int => sn::platform_file_dispatcher::win::pread0;
+    "sun/nio/ch/FileDispatcherImpl": static fn size0(fd: file_descriptor) -> long => sn::platform_file_dispatcher::win::size0;
+    "sun/nio/ch/FileDispatcherImpl": static fn truncate0(fd: file_descriptor, size: long) -> int => sn::platform_file_dispatcher::win::truncate0;
+    "sun/nio/ch/FileDispatcherImpl": static fn map0(fd: file_descriptor, prot: int, pos: long, len: long, is_sync: boolean) -> long => sn::platform_file_dispatcher::map0;
+    "sun/nio/ch/FileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
+    "sun/nio/ch/FileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
+    "sun/nio/ch/FileDispatcherImpl": static fn duplicateHandle(handle: long) -> long => sn::platform_file_dispatcher::win::duplicate_handle;
     }
 
     #[cfg(unix)]
@@ -604,30 +638,8 @@ builtin_natives! {
 
     #[cfg(unix)]
     {
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn write0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::unix::write0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn read0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::unix::read0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn pread0(fd: file_descriptor, address: long, len: int, pos: long) -> int => sn::platform_file_dispatcher::unix::pread0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn size0(fd: file_descriptor) -> long => sn::platform_file_dispatcher::unix::size0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn allocationGranularity0() -> long => sn::platform_file_dispatcher::allocation_granularity0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn truncate0(fd: file_descriptor, size: long) -> int => sn::platform_file_dispatcher::unix::truncate0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn map0(fd: file_descriptor, prot: int, pos: long, len: long, is_sync: boolean) -> long => sn::platform_file_dispatcher::map0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
-    "sun/nio/ch/UnixFileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
-    }
-
-    #[cfg(windows)]
-    {
-    "sun/nio/ch/FileDispatcherImpl": static fn allocationGranularity0() -> long => sn::platform_file_dispatcher::allocation_granularity0;
-    "sun/nio/ch/FileDispatcherImpl": static fn maxDirectTransferSize0() -> int => sn::platform_file_dispatcher::win::max_direct_transfer_size0; // Integer.MAX_VALUE - 1 is the maximum transfer size for TransmitFile()
-    "sun/nio/ch/FileDispatcherImpl": static fn write0(fd: file_descriptor, address: long, len: int, append: boolean) -> int => sn::platform_file_dispatcher::win::write0;
-    "sun/nio/ch/FileDispatcherImpl": static fn read0(fd: file_descriptor, address: long, len: int) -> int => sn::platform_file_dispatcher::win::read0;
-    "sun/nio/ch/FileDispatcherImpl": static fn pread0(fd: file_descriptor, address: long, len: int, offset: long) -> int => sn::platform_file_dispatcher::win::pread0;
-    "sun/nio/ch/FileDispatcherImpl": static fn size0(fd: file_descriptor) -> long => sn::platform_file_dispatcher::win::size0;
-    "sun/nio/ch/FileDispatcherImpl": static fn truncate0(fd: file_descriptor, size: long) -> int => sn::platform_file_dispatcher::win::truncate0;
-    "sun/nio/ch/FileDispatcherImpl": static fn map0(fd: file_descriptor, prot: int, pos: long, len: long, is_sync: boolean) -> long => sn::platform_file_dispatcher::map0;
-    "sun/nio/ch/FileDispatcherImpl": static fn isOther0(fd: file_descriptor) -> boolean => sn::platform_file_dispatcher::is_other0;
-    "sun/nio/ch/FileDispatcherImpl": static fn seek0(fd: file_descriptor, off: long) -> long => sn::platform_file_dispatcher::seek0;
-    "sun/nio/ch/FileDispatcherImpl": static fn duplicateHandle(handle: long) -> long => sn::platform_file_dispatcher::win::duplicate_handle;
+    "sun/nio/ch/NativeThread": static fn current0() -> long => sn::native_thread::current0; // todo: implement this (by 0 we say that the platform can not signal native threads)
+    "sun/nio/ch/NativeThread": static fn init() -> void => sn::native_thread::init;  // todo: implement me
     }
 
     #[cfg(target_os = "linux")]
@@ -639,12 +651,6 @@ builtin_natives! {
     {
     "sun/io/Win32ErrorMode": static fn setErrorMode(mode: long) -> long => sn::win32_error_mode::set_error_mode;
     "sun/security/provider/NativeSeedGenerator": static fn nativeGenerateSeed(bytes: byte_array) -> boolean => sn::native_seed_generator::native_generate_seed;
-    }
-
-    #[cfg(unix)]
-    {
-    "sun/nio/ch/NativeThread": static fn current0() -> long => sn::native_thread::current0; // todo: implement this (by 0 we say that the platform can not signal native threads)
-    "sun/nio/ch/NativeThread": static fn init() -> void => sn::native_thread::init;  // todo: implement me
     }
 }
 
