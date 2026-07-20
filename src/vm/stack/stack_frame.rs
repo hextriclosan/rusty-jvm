@@ -26,6 +26,10 @@ pub(crate) struct StackFrame {
     current_class_name: Arc<String>,
     line_numbers: Arc<BTreeMap<u16, u16>>,
     exception_table: Arc<ExceptionTable>,
+    /// `true` for the synthetic frame of a currently executing native method (see
+    /// [`StackFrame::new_native`]). Such frames carry no bytecode and are skipped by stack walks
+    /// that only care about interpreted frames (e.g. caller-class resolution).
+    is_native: bool,
 }
 
 #[derive(Debug, new, PartialEq)]
@@ -145,7 +149,34 @@ impl StackFrame {
             current_class_name,
             line_numbers,
             exception_table,
+            is_native: false,
         }
+    }
+
+    /// Builds a synthetic frame representing a native method that is currently executing.
+    ///
+    /// Native methods have no bytecode, locals, line numbers or exception handlers, so those are
+    /// left empty. The frame is never run by the interpreter loop; it exists purely so that a
+    /// native method appears on the thread's stack chain (e.g. as `(Native Method)` in stack
+    /// traces) while it runs, including when it calls back into Java.
+    pub fn new_native(method_name: Arc<String>, current_class_name: Arc<String>) -> Self {
+        StackFrame {
+            index: COUNTER.fetch_add(1, SeqCst),
+            method_name,
+            pc: 0,
+            ex_pc: None,
+            locals: Box::new([]),
+            operand_stack: Stack::with_capacity(0),
+            bytecode_ref: Arc::new(Vec::new()),
+            current_class_name,
+            line_numbers: Arc::new(BTreeMap::new()),
+            exception_table: Arc::new(ExceptionTable::new(Vec::new())),
+            is_native: true,
+        }
+    }
+
+    pub fn is_native(&self) -> bool {
+        self.is_native
     }
 
     pub fn pc(&self) -> usize {

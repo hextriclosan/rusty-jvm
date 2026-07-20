@@ -1,22 +1,9 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 
 const MAX_DEPTH: usize = 32;
-
-pub(crate) fn fill_in_stack_trace_wrp(
-    args: &[i32],
-    stack_frames: &StackFrames,
-) -> Result<Vec<i32>> {
-    let throwable_ref = args[0];
-    let _dummy = args[1];
-
-    let throwable_ref = fill_in_stack_trace(throwable_ref, stack_frames)?;
-
-    Ok(vec![throwable_ref])
-}
 
 const INTERPRETED_METHOD: i32 = 1;
 pub const NATIVE_METHOD: i32 = 2;
@@ -29,10 +16,9 @@ pub const NATIVE_METHOD: i32 = 2;
 ///       - backtrace[2]: int[] holds line number
 ///       - backtrace[3]: int[] holds method tag code: 1 - interpreted method, 2 - native method
 ///   - Throwable.depth: size of the stack trace
-fn fill_in_stack_trace(throwable_ref: i32, stack_frames: &StackFrames) -> Result<i32> {
+pub(crate) fn fill_in_stack_trace(throwable_ref: i32, _dummy: i32) -> Result<i32> {
     let throwable_name = HEAP.get_instance_name(throwable_ref)?;
-    let stack_elements =
-        StackFramesUtil::collect_stack_trace(stack_frames, &throwable_name, MAX_DEPTH)?;
+    let stack_elements = StackFramesUtil::collect_stack_trace(&throwable_name, MAX_DEPTH)?;
     let depth = stack_elements.len() as i32;
 
     let backtrace_ref = HEAP.create_array("[Ljava/lang/Object;", 4);

@@ -1,7 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::loaded_classes::CLASSES;
-use crate::vm::stack::stack_frame::StackFrames;
 use derive_new::new;
 use getset::CopyGetters;
 use std::collections::BTreeMap;
@@ -21,8 +20,12 @@ pub struct StackElement {
 impl StackFramesUtil {
     pub fn get_caller_class_name() -> Result<String> {
         JavaThread::with_frames(|frames| {
-            // `frames` yields every live frame newest → oldest, across all segments.
-            let mut class_names = frames.map(|frame| frame.current_class_name());
+            // `frames` yields every live frame newest → oldest, across all segments. Skip synthetic
+            // native frames (e.g. `Reflection.getCallerClass` itself) so caller resolution walks
+            // only interpreted frames, matching the behavior before native frames were recorded.
+            let mut class_names = frames
+                .filter(|frame| !frame.is_native())
+                .map(|frame| frame.current_class_name());
 
             let nearest_class_name = class_names
                 .next()
@@ -39,40 +42,48 @@ impl StackFramesUtil {
     }
 
     pub fn collect_stack_trace(
-        stack_frames: &StackFrames,
         throwable_name: &str,
         max_stack_size: usize,
     ) -> Result<Vec<StackElement>> {
-        let mut stack_trace = Vec::new();
-        for frame in stack_frames.iter() {
-            if stack_trace.len() >= max_stack_size {
-                break;
+        let mut stack_trace = JavaThread::with_frames(|frames| {
+            // `with_frames` yields frames newest → oldest, but the throwable-skip `break` below
+            // (and the trailing `reverse()`) require oldest → newest order: we must collect user
+            // frames from the bottom and stop as soon as we reach the throwable's own constructor,
+            // which excludes it together with its superclass `<init>` frames sitting above it.
+            let newest_to_oldest: Vec<_> = frames.collect();
+            let mut stack_trace = Vec::new();
+            for frame in newest_to_oldest.into_iter().rev() {
+                if stack_trace.len() >= max_stack_size {
+                    break;
+                }
+                let class_name = frame.current_class_name().to_string();
+                // If we reached the throwable class, stop collecting because we don't want to include it and its superclasses in the stack trace
+                if class_name == throwable_name {
+                    break;
+                }
+
+                let klass = CLASSES.get(&class_name)?;
+                let method_name = frame.method_name();
+                let method = klass.get_method(method_name)?;
+                let method_raw = Arc::as_ptr(&method) as i64;
+
+                let pc = frame.ex_pc();
+                let line_numbers = frame.line_numbers();
+                let instruction_line_num = Self::extract_line_number(line_numbers, pc);
+
+                let class_ref = klass.mirror_clazz_ref()?;
+                let native = method.is_native();
+
+                stack_trace.push(StackElement::new(
+                    class_ref,
+                    method_raw,
+                    instruction_line_num,
+                    native,
+                ));
             }
-            let class_name = frame.current_class_name().to_string();
-            // If we reached the throwable class, stop collecting because we don't want to include it and its superclasses in the stack trace
-            if class_name == throwable_name {
-                break;
-            }
 
-            let klass = CLASSES.get(&class_name)?;
-            let method_name = frame.method_name();
-            let method = klass.get_method(method_name)?;
-            let method_raw = Arc::as_ptr(&method) as i64;
-
-            let pc = frame.ex_pc();
-            let line_numbers = frame.line_numbers();
-            let instruction_line_num = Self::extract_line_number(line_numbers, pc);
-
-            let class_ref = klass.mirror_clazz_ref()?;
-            let native = method.is_native();
-
-            stack_trace.push(StackElement::new(
-                class_ref,
-                method_raw,
-                instruction_line_num,
-                native,
-            ));
-        }
+            Ok::<_, Error>(stack_trace)
+        })??;
 
         stack_trace.reverse();
         Ok(stack_trace)

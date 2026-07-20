@@ -2361,7 +2361,6 @@ fn should_support_file_dispatcher_for_various_os() {
 }
 
 #[test]
-// todo: https://github.com/hextriclosan/rusty-jvm/issues/317
 fn should_support_exceptions() {
     let expected_error_text = if cfg!(windows) {
         "non_existing\\non_existing.txt (The system cannot find the path specified. (os error 3))"
@@ -2423,7 +2422,7 @@ Caught as Throwable: java.lang.RuntimeException: Exception in try. cause=null st
 Uncaught exception in try, finally still executes: try-finally
 
 Running case: ExceptionFromNativeMethod
-Caught as IOException: java.io.FileNotFoundException: {ERROR_TEXT}. cause=null stackTrace=[] suppressed=[]
+Caught as IOException: java.io.FileNotFoundException: {ERROR_TEXT}. cause=null stackTrace=[java.io.FileOutputStream.open0(Native Method), java.io.FileOutputStream.open(FileOutputStream.java:255), java.io.FileOutputStream.<init>(FileOutputStream.java:210), java.io.FileOutputStream.<init>(FileOutputStream.java:120), java.io.FileWriter.<init>(FileWriter.java:67), samples.javacore.exceptionexample.ExceptionFromNativeMethod.open(ExceptionExample.java:231), samples.javacore.exceptionexample.ExceptionFromNativeMethod.runImpl(ExceptionExample.java:224), samples.javacore.exceptionexample.Case.run(ExceptionExample.java:32), samples.javacore.exceptionexample.ExceptionExample.main(ExceptionExample.java:21)] suppressed=[]
 
 "#.replace("{ERROR_TEXT}", expected_error_text).as_str(),
     );
@@ -3721,7 +3720,11 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 
 Exception in thread "system" java.lang.IllegalStateException: from throwingCallback
 	at samples.javacore.loadlibrary.example.ExceptionDemo.throwingCallback(LoadLibraryExample.java:1521)
-"#, // fixme ^^^ stacktrace truncated https://github.com/hextriclosan/rusty-jvm/issues/317
+	at samples.javacore.loadlibrary.example.ExceptionDemo.DescribeAndClearDemo(Native Method)
+	at samples.javacore.loadlibrary.example.ExceptionDemo.DescribeAndClearDemoCase(LoadLibraryExample.java:1514)
+	at samples.javacore.loadlibrary.example.ExceptionDemo.runDemo(LoadLibraryExample.java:1474)
+	at samples.javacore.loadlibrary.example.LoadLibraryExample.main(LoadLibraryExample.java:104)
+"#,
         Success,
         0,
         HashMap::default(),
