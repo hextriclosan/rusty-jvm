@@ -2,7 +2,6 @@ mod bootloader;
 pub(crate) mod cds;
 pub(crate) mod class;
 pub(crate) mod class_loader;
-mod console;
 pub(crate) mod constant_pool;
 mod continuation_support;
 pub(crate) mod dispatcher;

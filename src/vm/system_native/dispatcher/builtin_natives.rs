@@ -532,8 +532,6 @@ builtin_natives! {
 
     "java/lang/NullPointerException": instance fn getExtendedNPEMessage() -> string => sn::null_pointer_exception::get_extended_npe_message; // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
 
-    "java/io/Console": static fn istty() -> boolean => sn::console::istty; // todo: implement me
-
     "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
     "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
 

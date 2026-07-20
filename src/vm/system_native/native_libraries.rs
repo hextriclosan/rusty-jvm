@@ -82,9 +82,9 @@ pub(crate) fn load(
 
             Ok(true)
         }
-        Err(_) => {
+        Err(e) => {
             if throw_exception_if_fail {
-                set_pending_unsatisfied_link_error(&format!("Failed to load {name}"))?;
+                set_pending_unsatisfied_link_error(&format!("Failed to load {name}: {e}"))?;
             }
             Ok(false)
         }
