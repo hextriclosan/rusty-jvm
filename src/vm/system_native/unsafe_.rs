@@ -9,8 +9,10 @@ use crate::vm::system_native::object_offset::offset_utils::{
     object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
+use crate::vm::threads;
 use std::alloc::{alloc, Layout};
 use std::ptr;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 enum PutValue {
     I64(i64),
@@ -635,6 +637,44 @@ pub(crate) fn copy_swap_memory0(
         byte_index += elem_size;
     }
 
+    Ok(())
+}
+
+/// `jdk.internal.misc.Unsafe.park(ZJ)V`
+///
+/// Blocks the calling thread until it is unparked, interrupted, or the (optional) timeout elapses —
+/// the primitive behind `LockSupport.park`. `time == 0 && !is_absolute` means "no timeout"; a
+/// relative `time` is in nanoseconds; an absolute `time` is a deadline in milliseconds since the
+/// epoch. Backed by `std::thread` park, whose permit semantics match `LockSupport` (a prior
+/// `unpark` makes the next park return immediately). Spurious wakeups are allowed by the contract.
+pub(crate) fn park(_this: i32, is_absolute: bool, time: i64) -> Result<()> {
+    if !is_absolute {
+        if time == 0 {
+            std::thread::park();
+        } else {
+            std::thread::park_timeout(Duration::from_nanos(time as u64));
+        }
+    } else {
+        let now_millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        let deadline_millis = time.max(0) as u128;
+        if deadline_millis > now_millis {
+            std::thread::park_timeout(Duration::from_millis((deadline_millis - now_millis) as u64));
+        }
+    }
+    Ok(())
+}
+
+/// `jdk.internal.misc.Unsafe.unpark(Ljava/lang/Object;)V`
+///
+/// Grants a parking permit to `thread_ref`, waking it if it is parked — the primitive behind
+/// `LockSupport.unpark`. A null or unregistered target is ignored, per `LockSupport` semantics.
+pub(crate) fn unpark(_this: i32, thread_ref: i32) -> Result<()> {
+    if thread_ref != 0 {
+        threads::unpark(thread_ref);
+    }
     Ok(())
 }
 

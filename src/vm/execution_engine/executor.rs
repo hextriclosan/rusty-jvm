@@ -1,10 +1,12 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::engine::Engine;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrame;
+use crate::vm::threads;
 use crate::vm::stack::stack_value::StackValueKind;
 use std::sync::Arc;
 
@@ -110,6 +112,11 @@ impl Executor {
 
         let thread_obj_ref = HEAP.create_instance(instance_with_default_fields);
         with_method_area(|area| area.set_system_thread_id(thread_obj_ref))?; //save primordial thread id
+        // Bind this OS thread's identity before `<init>` runs, since `Thread.<init>` calls
+        // `currentThread()` (and relies on `parent == this` to recognize the primordial thread).
+        JavaThread::set_current_thread(thread_obj_ref);
+        // Register the main thread so it can be unparked (e.g. LockSupport) by other threads.
+        threads::register_parker(thread_obj_ref, std::thread::current());
 
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(thread_obj_ref.into());

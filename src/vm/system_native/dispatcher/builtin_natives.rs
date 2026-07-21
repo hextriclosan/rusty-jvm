@@ -363,6 +363,7 @@ builtin_natives! {
     "java/lang/Object": instance fn getClass() -> class => sn::object::get_class;
     "java/lang/Object": instance fn clone() -> object => sn::object::clone;
     "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all; // todo: implement me
+    "java/lang/Object": instance fn wait0(timeout_millis: long) -> void => sn::object::wait0; // todo: real monitor wait in Phase 3; currently just blocks
 
     "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
     "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;
@@ -392,7 +393,8 @@ builtin_natives! {
     "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
     "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
     "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
-    "java/lang/Thread": instance fn start0() -> void => sn::thread::start0; // todo: implement me
+    "java/lang/Thread": static fn ensureMaterializedForStackWalk(o: object) -> void => sn::thread::ensure_materialized_for_stack_walk;
+    "java/lang/Thread": instance fn start0() -> void => sn::thread::start0;
 
     "java/lang/Throwable": instance fn fillInStackTrace(dummy: int) -> throwable => sn::throwable::fill_in_stack_trace;
 
@@ -412,6 +414,7 @@ builtin_natives! {
 
     "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0; // todo: this should be implemented with GC
     "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0; // todo: this should be implemented with GC
+    "java/lang/ref/Reference": static fn waitForReferencePendingList() -> void => sn::reference::wait_for_reference_pending_list; // no GC: the Reference Handler daemon parks here forever
 
     "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
 
@@ -501,6 +504,8 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn getLongVolatile(obj: object, offset: long) -> long => sn::unsafe_::get_long_volatile;
     "jdk/internal/misc/Unsafe": instance fn arrayIndexScale0(clazz: class) -> int => sn::unsafe_::array_index_scale0;
     "jdk/internal/misc/Unsafe": instance fn fullFence() -> void => sn::unsafe_::full_fence; // todo: implement me
+    "jdk/internal/misc/Unsafe": instance fn park(is_absolute: boolean, time: long) -> void => sn::unsafe_::park; // LockSupport.park
+    "jdk/internal/misc/Unsafe": instance fn unpark(thread: object) -> void => sn::unsafe_::unpark; // LockSupport.unpark
     "jdk/internal/misc/Unsafe": instance fn getReference(obj: object, offset: long) -> object => sn::unsafe_::get_reference;
     "jdk/internal/misc/Unsafe": instance fn putReference(obj: object, offset: long, x: object) -> void => sn::unsafe_::put_reference;
     "jdk/internal/misc/Unsafe": instance fn putReferenceVolatile(obj: object, offset: long, x: object) -> void => sn::unsafe_::put_reference_volatile;

@@ -11,12 +11,14 @@ mod perf_data;
 mod properties;
 mod stack;
 mod system_native;
+mod threads;
 mod validation;
 
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::launcher::resolve_and_execute_main_method;
 use crate::vm::launcher::LaunchMode::{LmClass, LmJar};
 use crate::vm::method_area::java_class::JavaClass;
@@ -66,7 +68,14 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
         } else {
             LmClass
         };
-        resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args())?;
+        let main_result =
+            resolve_and_execute_main_method(entry_point, launch_mode, arguments.program_args());
+
+        // The VM stays alive until the last non-daemon thread dies (JVMS), so wait for every
+        // spawned non-daemon thread before shutting down — regardless of how `main` itself finished.
+        threads::join_all_non_daemon();
+
+        main_result?;
 
         invoke_shutdown_hooks()?;
 
@@ -91,14 +100,19 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 }
 
 pub(crate) fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {
-    // Dispatch exactly as HotSpot does for an uncaught exception: hand it to the thread's own
-    // `dispatchUncaughtException`, which routes to `getUncaughtExceptionHandler()` (defaulting to the
-    // thread's group) and prints `Exception in thread "<name>" ...` using the thread's name.
-    let main_thread_ref = with_method_area(|area| area.system_thread_id())?;
+    // Dispatch exactly as HotSpot does for an uncaught exception: hand it to the *offending* thread's
+    // own `dispatchUncaughtException`, which routes to `getUncaughtExceptionHandler()` (defaulting to
+    // the thread's group) and prints `Exception in thread "<name>" ...` using that thread's name.
+    // Works for both the main thread and spawned threads via the per-thread identity; the main thread
+    // ref is used as a fallback for any early path that has no thread-local identity yet.
+    let thread_ref = match JavaThread::current_thread() {
+        Some(thread_ref) => thread_ref,
+        None => with_method_area(|area| area.system_thread_id())?,
+    };
     Executor::invoke_non_static_method(
         "java/lang/Thread",
         "dispatchUncaughtException:(Ljava/lang/Throwable;)V",
-        main_thread_ref,
+        thread_ref,
         &[throwable_ref.into()],
     )?;
     Ok(())
