@@ -2537,6 +2537,30 @@ fn should_wake_all_waiters_with_notify_all() {
 }
 
 #[test]
+fn should_sleep_for_the_requested_duration() {
+    // Thread.sleep(200) must actually block ~200ms (sleepNanos0), not return immediately.
+    assert_success("samples.concurrency.threads.SleepDemo", "slept\n");
+}
+
+#[test]
+fn should_interrupt_a_sleeping_thread() {
+    // interrupt() while the worker is in Thread.sleep wakes it with InterruptedException.
+    assert_success(
+        "samples.concurrency.threads.InterruptSleepDemo",
+        "sleep interrupted\n",
+    );
+}
+
+#[test]
+fn should_interrupt_a_waiting_thread() {
+    // interrupt() while the worker is in Object.wait wakes it with InterruptedException.
+    assert_success(
+        "samples.concurrency.threads.InterruptWaitDemo",
+        "wait interrupted\n",
+    );
+}
+
+#[test]
 fn should_print_help_message() {
     let expected_stdout = r#"Usage: rusty-jvm [options] <mainclass> [args...]
 

@@ -13,7 +13,11 @@
 //! inefficient, never incorrect. Spurious wakeups are permitted by the `Object.wait` contract.
 
 use crate::vm::error::Result;
-use crate::vm::exception::pending_helpers::set_pending_illegal_monitor_state_exception;
+use crate::vm::exception::pending_helpers::{
+    set_pending_illegal_monitor_state_exception, set_pending_interrupted_exception,
+};
+use crate::vm::heap::heap::HEAP;
+use crate::vm::jni::java_thread::JavaThread;
 use dashmap::DashMap;
 use parking_lot::{Condvar, Mutex};
 use std::sync::{Arc, LazyLock};
@@ -37,6 +41,26 @@ struct ObjectMonitor {
 }
 
 static MONITORS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(DashMap::new);
+
+/// The monitor each currently-waiting thread (by `java.lang.Thread` ref) is blocked on, so
+/// [`interrupt_waiter`] can wake exactly that thread's `Object.wait`.
+static WAIT_TARGETS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(DashMap::new);
+
+/// Reads and clears the calling thread's `Thread.interrupted` flag, returning its prior value.
+/// `Thread.interrupt()` sets this Java field before asking the VM to wake the thread, so a blocked
+/// `wait`/`sleep` observes it here and reacts by throwing `InterruptedException`.
+pub(crate) fn take_current_interrupt() -> bool {
+    let Some(thread_ref) = JavaThread::current_thread() else {
+        return false;
+    };
+    match HEAP.get_object_field_value(thread_ref, "java/lang/Thread", "interrupted") {
+        Ok(v) if v.first() == Some(&1) => {
+            let _ = HEAP.set_object_field_value(thread_ref, "java/lang/Thread", "interrupted", vec![0]);
+            true
+        }
+        _ => false,
+    }
+}
 
 fn monitor_for(obj_ref: i32) -> Arc<ObjectMonitor> {
     MONITORS
@@ -105,6 +129,11 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
             "current thread is not the owner of the monitor",
         );
     }
+    // Already interrupted on entry: throw without ever releasing the monitor (per spec).
+    if take_current_interrupt() {
+        drop(s);
+        return set_pending_interrupted_exception();
+    }
 
     // Fully release the monitor, remembering the recursion depth to restore on re-acquire.
     let saved_count = s.count;
@@ -113,11 +142,22 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
     s.waiters += 1;
     m.cv.notify_all(); // hand the monitor to the entry set
 
+    // Publish which monitor we wait on so interrupt0 can target it. Registered/unregistered under
+    // the state lock so it pairs with `interrupt_waiter`'s locked notify (no lost interrupt).
+    if let Some(thread_ref) = JavaThread::current_thread() {
+        WAIT_TARGETS.insert(thread_ref, Arc::clone(&m));
+    }
+
     let deadline = (timeout_millis > 0)
         .then(|| Instant::now() + Duration::from_millis(timeout_millis as u64));
+    let mut interrupted = false;
     loop {
         if s.to_wake > 0 {
             s.to_wake -= 1;
+            break;
+        }
+        if take_current_interrupt() {
+            interrupted = true;
             break;
         }
         match deadline {
@@ -136,14 +176,32 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
         }
     }
     s.waiters -= 1;
+    if let Some(thread_ref) = JavaThread::current_thread() {
+        WAIT_TARGETS.remove(&thread_ref);
+    }
 
-    // Re-acquire ownership before returning to the synchronized region.
+    // Re-acquire ownership before returning to (or throwing back into) the synchronized region.
     while s.owner.is_some() && s.owner != Some(tid) {
         m.cv.wait(&mut s);
     }
     s.owner = Some(tid);
     s.count = saved_count;
+
+    if interrupted {
+        drop(s);
+        return set_pending_interrupted_exception();
+    }
     Ok(())
+}
+
+/// Wakes the given thread if it is currently in `Object.wait`, so it re-checks its interrupt status.
+/// Locking the monitor's state around the notify pairs with the waiter's under-lock interrupt check,
+/// preventing a lost wakeup when the interrupt lands between the waiter's check and its `wait`.
+pub(crate) fn interrupt_waiter(thread_ref: i32) {
+    if let Some(m) = WAIT_TARGETS.get(&thread_ref) {
+        let _guard = m.state.lock();
+        m.cv.notify_all();
+    }
 }
 
 /// `Object.notify`: release at most one waiter. Must be called by the monitor's owner.

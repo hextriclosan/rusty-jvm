@@ -75,6 +75,12 @@ pub(crate) fn set_pending_illegal_monitor_state_exception(message: &str) -> Resu
     set_pending_exception_with_message("java/lang/IllegalMonitorStateException", message)
 }
 
+/// Sets a pending `InterruptedException` — raised by `Object.wait`/`Thread.sleep` when the blocked
+/// thread is interrupted (the interrupt status has already been cleared by the caller).
+pub(crate) fn set_pending_interrupted_exception() -> Result<()> {
+    set_pending_exception("java/lang/InterruptedException", "<init>:()V", &[])
+}
+
 fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result<()> {
     let message_ref = StringPoolHelper::get_string(message)?;
     set_pending_exception(
