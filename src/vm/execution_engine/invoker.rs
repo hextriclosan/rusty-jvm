@@ -30,7 +30,7 @@ pub(crate) fn invoke(
             // manipulate the caller's top frame directly, so they must remain on top of the current
             // segment (no synthetic native frame is pushed) and are dispatched by their normalized
             // `class:method` key rather than through the libffi-backed built-in native table.
-            let method_name = full_signature.split(':').next().ok_or_else(|| {
+            let (method_name, _descriptor) = full_signature.split_once(':').ok_or_else(|| {
                 crate::vm::error::Error::new_execution(&format!(
                     "full_signature {full_signature} must contain ':'"
                 ))
