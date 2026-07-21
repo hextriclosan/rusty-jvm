@@ -43,6 +43,21 @@ impl FieldValue {
         let guard = self.value.read()?;
         Ok(guard.clone())
     }
+
+    /// Atomically compares the raw value against `expected` and, if equal, stores `new` — all under
+    /// a single write lock, so it is a genuine compare-and-swap. Returns `(old_value, swapped)`.
+    /// Using this instead of a separate [`Self::raw_value`] + [`Self::set_raw_value`] is what keeps
+    /// `Unsafe.compareAndSet*` on a static field race-free (two threads cannot both observe the same
+    /// old value and both store).
+    pub fn compare_and_exchange(&self, expected: &[i32], new: &[i32]) -> Result<(Vec<i32>, bool)> {
+        let mut guard = self.value.write()?;
+        let swapped = guard.as_slice() == expected;
+        let old = guard.clone();
+        if swapped {
+            *guard = new.to_vec();
+        }
+        Ok((old, swapped))
+    }
 }
 
 impl Clone for FieldValue {

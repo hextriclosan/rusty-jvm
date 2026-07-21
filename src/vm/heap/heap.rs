@@ -63,6 +63,74 @@ impl Heap {
             .ok_or_else(|| Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
     }
 
+    /// Atomically compares an object field's raw value against `expected` and, if they match, stores
+    /// `new`. Returns `(old_value, swapped)`. The read-compare-write executes under a single entry
+    /// lock, so this is a genuine compare-and-swap with respect to other threads — unlike a separate
+    /// get followed by set, which races. Both `compareAndSet*` (uses `swapped`) and
+    /// `compareAndExchange*` (uses `old_value`) are built on this.
+    pub fn compare_and_exchange_object_field(
+        &self,
+        objectref: i32,
+        class_name: &str,
+        field_name_type: &str,
+        expected: &[i32],
+        new: &[i32],
+    ) -> Result<(Vec<i32>, bool)> {
+        if objectref == 0 {
+            return Err(Error::new_execution(&format!(
+                "error CAS field value: {class_name}.{field_name_type} on null-object"
+            )));
+        }
+
+        self.data
+            .get_mut(objectref)
+            .and_then(|mut entry| match entry.value_mut() {
+                Object(instance) => {
+                    let old = instance.get_field_value(class_name, field_name_type).ok()?;
+                    let swapped = old.as_slice() == expected;
+                    if swapped {
+                        instance
+                            .set_field_value(class_name, field_name_type, new.to_vec())
+                            .ok()?;
+                    }
+                    Some((old, swapped))
+                }
+                _ => None,
+            })
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
+                    "error CAS field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}"
+                ))
+            })
+    }
+
+    /// Atomic compare-and-exchange on an array element addressed by raw byte `offset` (width `size`
+    /// bytes). Returns `(old_value, swapped)`; see [`Self::compare_and_exchange_object_field`].
+    pub(crate) fn compare_and_exchange_array_by_raw_offset(
+        &self,
+        arrayref: i32,
+        offset: usize,
+        size: usize,
+        expected: &[i32],
+        new: &[i32],
+    ) -> Result<(Vec<i32>, bool)> {
+        self.data
+            .get_mut(arrayref)
+            .and_then(|mut entry| match entry.value_mut() {
+                Arr(arr) => {
+                    let old = arr.get_value_by_raw_offset(offset, size).ok()?;
+                    let swapped = old.as_slice() == expected;
+                    if swapped {
+                        arr.set_array_value_by_raw_offset(offset, new.to_vec(), size)
+                            .ok()?;
+                    }
+                    Some((old, swapped))
+                }
+                _ => None,
+            })
+            .ok_or_else(|| Error::new_execution("error CAS array value by raw offset"))
+    }
+
     pub fn get_object_field_value(
         &self,
         objectref: i32,

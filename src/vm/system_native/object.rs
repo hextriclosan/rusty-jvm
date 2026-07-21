@@ -1,9 +1,9 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
+use crate::vm::monitor;
 use murmur3::murmur3_32;
 use std::io::Cursor;
-use std::time::Duration;
 
 /// `java.lang.Object.getClass()Ljava/lang/Class;`
 pub(crate) fn get_class(obj_ref: i32) -> Result<i32> {
@@ -32,24 +32,20 @@ pub(crate) fn identity_hashcode(obj_ref: i32) -> Result<i32> {
     Ok(hashcode as i32)
 }
 
+/// `java.lang.Object.notify()V`
+pub(crate) fn notify(obj_ref: i32) -> Result<()> {
+    monitor::notify(obj_ref)
+}
+
 /// `java.lang.Object.notifyAll()V`
-pub(crate) fn notify_all(_obj_ref: i32) -> Result<()> {
-    // todo: implement me
-    Ok(())
+pub(crate) fn notify_all(obj_ref: i32) -> Result<()> {
+    monitor::notify_all(obj_ref)
 }
 
 /// `java.lang.Object.wait0(J)V`
 ///
-/// Placeholder until real object monitors land (Phase 3): it blocks the calling thread rather than
-/// participating in wait/notify. A zero (indefinite) timeout parks forever — correct for the
-/// GC-less system daemons (Finalizer/Cleaner) that wait for work that never arrives — while a
-/// positive timeout parks for that long and returns. `notify`/`notifyAll` do not yet wake it.
-pub(crate) fn wait0(_obj_ref: i32, timeout_millis: i64) -> Result<()> {
-    if timeout_millis == 0 {
-        loop {
-            std::thread::park();
-        }
-    }
-    std::thread::park_timeout(Duration::from_millis(timeout_millis as u64));
-    Ok(())
+/// Releases the object's monitor, blocks until notified or the timeout elapses, then re-acquires —
+/// the primitive behind `Object.wait`. `timeout_millis == 0` waits indefinitely.
+pub(crate) fn wait0(obj_ref: i32, timeout_millis: i64) -> Result<()> {
+    monitor::wait(obj_ref, timeout_millis)
 }

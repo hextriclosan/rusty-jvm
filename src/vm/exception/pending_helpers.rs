@@ -69,6 +69,12 @@ pub(crate) fn set_pending_unsatisfied_link_error(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/UnsatisfiedLinkError", message)
 }
 
+/// Sets a pending `IllegalMonitorStateException` — raised when `wait`/`notify`/`notifyAll` (or
+/// `monitorexit`) is attempted by a thread that does not own the object's monitor.
+pub(crate) fn set_pending_illegal_monitor_state_exception(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/lang/IllegalMonitorStateException", message)
+}
+
 fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result<()> {
     let message_ref = StringPoolHelper::get_string(message)?;
     set_pending_exception(

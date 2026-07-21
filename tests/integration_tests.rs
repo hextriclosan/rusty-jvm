@@ -2503,6 +2503,40 @@ fn should_report_uncaught_exception_against_the_spawning_thread() {
 }
 
 #[test]
+fn should_join_a_thread() {
+    // join() blocks main until the worker terminates, so the two lines are strictly ordered.
+    // Exercises Thread.join -> synchronized(thread) + Object.wait, woken by the VM at thread death.
+    assert_success(
+        "samples.concurrency.threads.JoinDemo",
+        "worker done\nmain after join\n",
+    );
+}
+
+#[test]
+fn should_serialize_shared_state_with_synchronized() {
+    // Two (unnamed) threads each do 100_000 `synchronized(lock) { counter++; }`, joined by main.
+    // The result is exactly 200000 only if the monitor provides real mutual exclusion.
+    assert_success("samples.concurrency.threads.SyncCounterDemo", "200000\n");
+}
+
+#[test]
+fn should_coordinate_with_wait_notify() {
+    // Classic monitor handshake: main waits on `lock` until the producer sets a flag and notifies.
+    assert_success(
+        "samples.concurrency.threads.WaitNotifyDemo",
+        "consumed: true\n",
+    );
+}
+
+#[test]
+fn should_wake_all_waiters_with_notify_all() {
+    // Three workers block in lock.wait(); a single lock.notifyAll() must release every one of them
+    // (were it to wake only one, the two remaining join()s would hang forever). All three then
+    // increment a shared counter under the lock, so the total is exactly 3.
+    assert_success("samples.concurrency.threads.NotifyAllDemo", "awoken: 3\n");
+}
+
+#[test]
 fn should_print_help_message() {
     let expected_stdout = r#"Usage: rusty-jvm [options] <mainclass> [args...]
 
@@ -2761,11 +2795,11 @@ User: Carol
 }
 
 #[test]
-#[ignore = "StreamExamples ends with a parallelStream(): once real threads run (see Thread.start0), \
-ForkJoinPool workers actually execute and intermittently deadlock. Root cause is the Java Memory \
-Model — our Unsafe volatile/CAS ops on heap fields don't yet give cross-thread visibility/ordering, \
-so FJP's lock-free coordination misses wakeups. Re-enable once real volatile/CAS memory semantics \
-land (threads Phase 3)."]
+#[ignore = "StreamExamples ends with a parallelStream(). With atomic Unsafe CAS (threads Phase 3) \
+the results are now correct, but ForkJoinPool over-provisions one worker per core and coordinates \
+by busy-spinning; interpreting that — especially under the test suite's own parallelism (workers x \
+test processes) — is far too slow to run reliably. Re-enable once the interpreter is fast enough \
+and/or ForkJoinPool worker parking is tuned."]
 fn should_support_java_streams() {
     assert_success(
         "samples.javacore.streams.streamexamples.StreamExamples",
