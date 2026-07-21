@@ -1,0 +1,210 @@
+//! Per-object monitors: the runtime behind `synchronized`, `Object.wait/notify/notifyAll`, and
+//! `Thread.holdsLock`.
+//!
+//! Every Java object can act as a monitor. We inflate one lazily on first use and key it by the
+//! object's heap reference in [`MONITORS`] (objects never move — no GC yet — so the `i32` key is
+//! stable). A monitor is a **reentrant** lock (owner OS-thread + recursion count) plus a condition
+//! queue for `wait`/`notify`. One OS thread == one Java platform thread, so the OS `ThreadId`
+//! identifies the owning Java thread.
+//!
+//! `wait`/`notify` use a single `Condvar` shared by the entry set (threads blocked acquiring) and
+//! the wait set (threads in `Object.wait`): notifications are counted in `to_wake`, and every waiter
+//! re-checks its condition on wake, so a broadcast that also disturbs the entry set is merely
+//! inefficient, never incorrect. Spurious wakeups are permitted by the `Object.wait` contract.
+
+use crate::vm::error::Result;
+use crate::vm::exception::pending_helpers::set_pending_illegal_monitor_state_exception;
+use dashmap::DashMap;
+use parking_lot::{Condvar, Mutex};
+use std::sync::{Arc, LazyLock};
+use std::thread::ThreadId;
+use std::time::{Duration, Instant};
+
+struct MonitorState {
+    /// Owning OS thread, or `None` when the monitor is free.
+    owner: Option<ThreadId>,
+    /// Reentrant acquisition count for `owner`.
+    count: u32,
+    /// Number of threads currently in `Object.wait` on this monitor.
+    waiters: u32,
+    /// Outstanding wake tokens produced by `notify`/`notifyAll` and consumed by waiters.
+    to_wake: u32,
+}
+
+struct ObjectMonitor {
+    state: Mutex<MonitorState>,
+    cv: Condvar,
+}
+
+static MONITORS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(DashMap::new);
+
+fn monitor_for(obj_ref: i32) -> Arc<ObjectMonitor> {
+    MONITORS
+        .entry(obj_ref)
+        .or_insert_with(|| {
+            Arc::new(ObjectMonitor {
+                state: Mutex::new(MonitorState {
+                    owner: None,
+                    count: 0,
+                    waiters: 0,
+                    to_wake: 0,
+                }),
+                cv: Condvar::new(),
+            })
+        })
+        .clone()
+}
+
+/// `monitorenter`: acquire the object's monitor, blocking until it is free; reentrant for the
+/// current owner.
+pub(crate) fn enter(obj_ref: i32) {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    while s.owner.is_some() && s.owner != Some(tid) {
+        m.cv.wait(&mut s);
+    }
+    if s.owner == Some(tid) {
+        s.count += 1;
+    } else {
+        s.owner = Some(tid);
+        s.count = 1;
+    }
+}
+
+/// `monitorexit`: release one level of the current thread's ownership. A mismatch (not the owner)
+/// is a broken-bytecode situation; we surface it as `IllegalMonitorStateException` like the spec.
+pub(crate) fn exit(obj_ref: i32) -> Result<()> {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    if s.owner != Some(tid) {
+        drop(s);
+        return set_pending_illegal_monitor_state_exception(
+            "current thread is not the owner of the monitor",
+        );
+    }
+    s.count -= 1;
+    if s.count == 0 {
+        s.owner = None;
+        m.cv.notify_all();
+    }
+    Ok(())
+}
+
+/// `Object.wait(timeout)`: atomically releases the monitor (all reentrant levels), blocks until
+/// notified/timed-out, then re-acquires with the same recursion depth. `timeout_millis == 0` waits
+/// indefinitely. Must be called by the monitor's owner.
+pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    if s.owner != Some(tid) {
+        drop(s);
+        return set_pending_illegal_monitor_state_exception(
+            "current thread is not the owner of the monitor",
+        );
+    }
+
+    // Fully release the monitor, remembering the recursion depth to restore on re-acquire.
+    let saved_count = s.count;
+    s.owner = None;
+    s.count = 0;
+    s.waiters += 1;
+    m.cv.notify_all(); // hand the monitor to the entry set
+
+    let deadline = (timeout_millis > 0)
+        .then(|| Instant::now() + Duration::from_millis(timeout_millis as u64));
+    loop {
+        if s.to_wake > 0 {
+            s.to_wake -= 1;
+            break;
+        }
+        match deadline {
+            None => {
+                m.cv.wait(&mut s);
+            }
+            Some(dl) => {
+                let now = Instant::now();
+                if now >= dl {
+                    break;
+                }
+                if m.cv.wait_for(&mut s, dl - now).timed_out() && s.to_wake == 0 {
+                    break;
+                }
+            }
+        }
+    }
+    s.waiters -= 1;
+
+    // Re-acquire ownership before returning to the synchronized region.
+    while s.owner.is_some() && s.owner != Some(tid) {
+        m.cv.wait(&mut s);
+    }
+    s.owner = Some(tid);
+    s.count = saved_count;
+    Ok(())
+}
+
+/// `Object.notify`: release at most one waiter. Must be called by the monitor's owner.
+pub(crate) fn notify(obj_ref: i32) -> Result<()> {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    if s.owner != Some(tid) {
+        drop(s);
+        return set_pending_illegal_monitor_state_exception(
+            "current thread is not the owner of the monitor",
+        );
+    }
+    if s.to_wake < s.waiters {
+        s.to_wake += 1;
+        m.cv.notify_all();
+    }
+    Ok(())
+}
+
+/// `Object.notifyAll`: release every current waiter. Must be called by the monitor's owner.
+pub(crate) fn notify_all(obj_ref: i32) -> Result<()> {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    if s.owner != Some(tid) {
+        drop(s);
+        return set_pending_illegal_monitor_state_exception(
+            "current thread is not the owner of the monitor",
+        );
+    }
+    s.to_wake = s.waiters;
+    m.cv.notify_all();
+    Ok(())
+}
+
+/// `Thread.holdsLock`: whether the calling thread owns the object's monitor.
+pub(crate) fn holds_lock(obj_ref: i32) -> bool {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let s = m.state.lock();
+    s.owner == Some(tid)
+}
+
+/// VM-internal wake used when a thread terminates: acquires the object's monitor, wakes every
+/// waiter, and releases. This is how a dying thread satisfies `Thread.join`, whose waiters sit in
+/// `synchronized(thread) { while (isAlive()) wait(); }` — mirroring HotSpot's `lock.notify_all` in
+/// `JavaThread::exit`. Call *after* the liveness flag (`eetop`) has been cleared.
+pub(crate) fn wake_all_on_exit(obj_ref: i32) {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    while s.owner.is_some() && s.owner != Some(tid) {
+        m.cv.wait(&mut s);
+    }
+    s.owner = Some(tid);
+    s.count = 1;
+    s.to_wake = s.waiters;
+    m.cv.notify_all();
+    // release
+    s.count = 0;
+    s.owner = None;
+    m.cv.notify_all();
+}

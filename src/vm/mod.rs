@@ -7,6 +7,7 @@ mod helper;
 mod jni;
 mod launcher;
 mod method_area;
+mod monitor;
 mod perf_data;
 mod properties;
 mod stack;

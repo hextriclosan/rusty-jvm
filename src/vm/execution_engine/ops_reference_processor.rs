@@ -12,6 +12,7 @@ use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::monitor;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jdescriptor::MethodDescriptor;
 use std::sync::Arc;
@@ -463,15 +464,23 @@ pub(crate) fn process(
                 return Ok(());
             }
 
-            // todo: implement me
             stack_frame.incr_pc();
+            // Acquire after advancing pc; enter() may block this OS thread until the monitor is free.
+            monitor::enter(objectref);
             trace!("MONITORENTER -> objectref={objectref}");
         }
         MONITOREXIT => {
             let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
-            // todo: implement me
+            if objectref == 0 {
+                throw_null_pointer_exception_with_message(
+                    "Cannot exit synchronized block because \"<VAR_NAME>\" is null",
+                    stack_frames,
+                )?;
+                return Ok(());
+            }
             stack_frame.incr_pc();
+            monitor::exit(objectref)?;
             trace!("MONITOREXIT -> objectref={objectref}");
         }
         _ => {

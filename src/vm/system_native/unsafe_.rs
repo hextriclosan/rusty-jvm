@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{i32toi64, i64_to_vec, klass, vec_to_i64};
+use crate::vm::helper::{i64_to_vec, klass, vec_to_i64};
 use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::java_class::STATIC_FIELDS_START;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -101,7 +101,6 @@ pub(crate) fn static_field_base0(_this: i32, field_ref: i32) -> Result<i32> {
     Ok(class_ref)
 }
 
-// todo: thread-safety - not atomic
 /// `jdk.internal.misc.Unsafe.compareAndSetInt(Ljava/lang/Object;JII)Z`
 pub(crate) fn compare_and_set_int(
     _this: i32,
@@ -111,33 +110,39 @@ pub(crate) fn compare_and_set_int(
     x: i32,
 ) -> Result<bool> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
-    let updated = if class_name.starts_with("[") {
-        let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?[0];
-        if result == expected {
-            HEAP.set_array_value_by_raw_offset(
-                obj_ref,
-                offset as usize,
-                vec![x],
-                size_of::<i32>(),
-            )?;
-            Ok(true)
-        } else {
-            Ok(false)
+    let (_old, swapped) = if class_name.starts_with("[") {
+        HEAP.compare_and_exchange_array_by_raw_offset(
+            obj_ref,
+            offset as usize,
+            size_of::<i32>(),
+            &[expected],
+            &[x],
+        )?
+    } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+        // Static-field CAS. Static storage isn't lock-protected like the heap, so this is
+        // best-effort atomic; callers (e.g. `getAndAddInt`) retry, which suffices under the low
+        // contention where static-field CAS actually occurs.
+        let t_jc = klass(obj_ref)?;
+        let static_field = t_jc.get_static_field_by_offset(offset)?;
+        let old = static_field.raw_value()?;
+        let swapped = old.first() == Some(&expected);
+        if swapped {
+            static_field.set_raw_value(vec![x])?;
         }
+        (old, swapped)
     } else {
         let klass = CLASSES.get(class_name.as_str())?;
         let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-        let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?[0];
-
-        if result == expected {
-            HEAP.set_object_field_value(obj_ref, &class_name, &field_name, vec![x])?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        HEAP.compare_and_exchange_object_field(
+            obj_ref,
+            &class_name,
+            &field_name,
+            &[expected],
+            &[x],
+        )?
     };
 
-    updated
+    Ok(swapped)
 }
 
 /// `jdk.internal.misc.Unsafe.compareAndSetReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z`
@@ -247,11 +252,14 @@ fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
         if class_name.starts_with("[") {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?;
             Ok(result[0])
+        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+            // A `Class<T>` receiver with a static offset is a read of T's static field (e.g.
+            // `Thread$ThreadNumbering` uses `Unsafe.getAndAddInt` on a static counter).
+            let t_jc = klass(obj_ref)?;
+            let static_field = t_jc.get_static_field_by_offset(offset)?;
+            Ok(static_field.raw_value()?[0])
         } else {
-            let class_name = HEAP.get_instance_name(obj_ref)?;
-
             let klass = CLASSES.get(class_name.as_str())?;
-
             let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
 
             let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
@@ -316,7 +324,6 @@ pub(crate) fn compare_and_set_long(
     Ok(updated)
 }
 
-// todo: thread-safety - not atomic
 /// `jdk.internal.misc.Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J`
 pub(crate) fn compare_and_exchange_long(
     this: i32,
@@ -347,20 +354,27 @@ fn compare_and_x_long(
     }
 
     let class_name = HEAP.get_instance_name(obj_ref)?;
-
-    let klass = CLASSES.get(class_name.as_str())?;
-
-    let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
-    let bytes = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
-    let old_value = i32toi64(bytes[0], bytes[1]);
-
-    if old_value == expected {
-        HEAP.set_object_field_value(obj_ref, &class_name, &field_name, i64_to_vec(x))?;
-        Ok((true, old_value))
+    let (old, swapped) = if class_name.starts_with("[") {
+        HEAP.compare_and_exchange_array_by_raw_offset(
+            obj_ref,
+            offset as usize,
+            size_of::<i64>(),
+            &i64_to_vec(expected),
+            &i64_to_vec(x),
+        )?
     } else {
-        Ok((false, old_value))
-    }
+        let klass = CLASSES.get(class_name.as_str())?;
+        let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
+        HEAP.compare_and_exchange_object_field(
+            obj_ref,
+            &class_name,
+            &field_name,
+            &i64_to_vec(expected),
+            &i64_to_vec(x),
+        )?
+    };
+
+    Ok((swapped, vec_to_i64(&old)))
 }
 
 /// `jdk.internal.misc.Unsafe.putReference(Ljava/lang/Object;JLjava/lang/Object;)V`

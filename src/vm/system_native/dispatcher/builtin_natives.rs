@@ -362,8 +362,9 @@ builtin_natives! {
     "java/lang/Object": instance fn hashCode() -> int => sn::object::identity_hashcode;
     "java/lang/Object": instance fn getClass() -> class => sn::object::get_class;
     "java/lang/Object": instance fn clone() -> object => sn::object::clone;
-    "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all; // todo: implement me
-    "java/lang/Object": instance fn wait0(timeout_millis: long) -> void => sn::object::wait0; // todo: real monitor wait in Phase 3; currently just blocks
+    "java/lang/Object": instance fn notify() -> void => sn::object::notify;
+    "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all;
+    "java/lang/Object": instance fn wait0(timeout_millis: long) -> void => sn::object::wait0;
 
     "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
     "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;

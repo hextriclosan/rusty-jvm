@@ -32,7 +32,7 @@ pub(crate) fn holds_lock(object_ref: i32) -> Result<bool> {
         return Ok(false);
     }
 
-    Ok(true) // todo: implement me
+    Ok(crate::vm::monitor::holds_lock(object_ref))
 }
 
 static mut NEXT_TID_OFFSET: i64 = 3; // todo: should have volatile semantics
@@ -113,6 +113,9 @@ fn run_thread(this: i32) {
     if let Err(e) = set_eetop(this, 0) {
         error!("failed to clear eetop on thread exit: {e}");
     }
+    // Wake any joiners: Thread.join sits in `synchronized(thread) { while (isAlive()) wait(); }`,
+    // and isAlive() is now false (eetop cleared above), so a notify lets them observe termination.
+    crate::vm::monitor::wake_all_on_exit(this);
     threads::unregister_parker(this);
 }
 
