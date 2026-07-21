@@ -91,13 +91,15 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
 }
 
 pub(crate) fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {
-    let system_thread_group_ref = with_method_area(|area| area.system_thread_group_id())?;
-    let system_thread_ref = with_method_area(|area| area.system_thread_id())?;
+    // Dispatch exactly as HotSpot does for an uncaught exception: hand it to the thread's own
+    // `dispatchUncaughtException`, which routes to `getUncaughtExceptionHandler()` (defaulting to the
+    // thread's group) and prints `Exception in thread "<name>" ...` using the thread's name.
+    let main_thread_ref = with_method_area(|area| area.system_thread_id())?;
     Executor::invoke_non_static_method(
-        "java/lang/ThreadGroup",
-        "uncaughtException:(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
-        system_thread_group_ref,
-        &[system_thread_ref.into(), throwable_ref.into()],
+        "java/lang/Thread",
+        "dispatchUncaughtException:(Ljava/lang/Throwable;)V",
+        main_thread_ref,
+        &[throwable_ref.into()],
     )?;
     Ok(())
 }
@@ -155,12 +157,21 @@ fn init() -> Result<()> {
     let page_size = lc.static_field("PAGE_SIZE").unwrap();
     page_size.set_raw_value(vec![page_size::get() as i32])?;
 
-    // create primordial ThreadGroup and Thread
-    let tg_obj_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
-    with_method_area(|area| area.set_system_thread_group_id(tg_obj_ref))?;
-    let string_obj_ref = StringPoolHelper::get_string("system")?; // refactor candidate B: introduce and use here common string creator, not string pool one
+    // Create the thread-group hierarchy and the main thread, mirroring OpenJDK: a root "system"
+    // group, a "main" group as its child, and the primordial thread named "main" in that group.
+    // The thread's name is what surfaces as `Exception in thread "main"` on an uncaught exception.
+    let system_tg_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
+    with_method_area(|area| area.set_system_thread_group_id(system_tg_ref))?;
+    let main_name_ref = StringPoolHelper::get_string("main")?; // refactor candidate B: introduce and use here common string creator, not string pool one
+    let main_tg_ref = Executor::invoke_args_constructor(
+        "java/lang/ThreadGroup",
+        "<init>:(Ljava/lang/ThreadGroup;Ljava/lang/String;)V",
+        &[system_tg_ref.into(), main_name_ref.into()],
+        Some("main thread group creation"),
+    )?;
+    with_method_area(|area| area.set_main_thread_group_id(main_tg_ref))?;
     let _thread_obj_ref =
-        Executor::create_primordial_thread(&[tg_obj_ref.into(), string_obj_ref.into()])?;
+        Executor::create_primordial_thread(&[main_tg_ref.into(), main_name_ref.into()])?;
 
     StaticInit::initialize("java/lang/reflect/Method")?;
     Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
