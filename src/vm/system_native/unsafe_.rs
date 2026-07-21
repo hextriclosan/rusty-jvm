@@ -119,17 +119,12 @@ pub(crate) fn compare_and_set_int(
             &[x],
         )?
     } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
-        // Static-field CAS. Static storage isn't lock-protected like the heap, so this is
-        // best-effort atomic; callers (e.g. `getAndAddInt`) retry, which suffices under the low
-        // contention where static-field CAS actually occurs.
+        // A `Class<T>` receiver with a static offset is a CAS on T's static field. Done under the
+        // field's own write lock so the compare-and-swap is atomic (e.g. `getAndAddInt` on
+        // `Thread$ThreadNumbering`'s counter from concurrently-created threads).
         let t_jc = klass(obj_ref)?;
         let static_field = t_jc.get_static_field_by_offset(offset)?;
-        let old = static_field.raw_value()?;
-        let swapped = old.first() == Some(&expected);
-        if swapped {
-            static_field.set_raw_value(vec![x])?;
-        }
-        (old, swapped)
+        static_field.compare_and_exchange(&[expected], &[x])?
     } else {
         let klass = CLASSES.get(class_name.as_str())?;
         let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
@@ -362,6 +357,12 @@ fn compare_and_x_long(
             &i64_to_vec(expected),
             &i64_to_vec(x),
         )?
+    } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+        // A `Class<T>` receiver with a static offset is a CAS on T's static long field. Done under
+        // the field's own write lock so the compare-and-swap is atomic (mirrors the int path).
+        let t_jc = klass(obj_ref)?;
+        let static_field = t_jc.get_static_field_by_offset(offset)?;
+        static_field.compare_and_exchange(&i64_to_vec(expected), &i64_to_vec(x))?
     } else {
         let klass = CLASSES.get(class_name.as_str())?;
         let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
