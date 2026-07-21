@@ -46,20 +46,27 @@ static MONITORS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(Dash
 /// [`interrupt_waiter`] can wake exactly that thread's `Object.wait`.
 static WAIT_TARGETS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(DashMap::new);
 
-/// Reads and clears the calling thread's `Thread.interrupted` flag, returning its prior value.
-/// `Thread.interrupt()` sets this Java field before asking the VM to wake the thread, so a blocked
-/// `wait`/`sleep` observes it here and reacts by throwing `InterruptedException`.
+/// Atomically reads and clears the calling thread's `Thread.interrupted` flag, returning its prior
+/// value (a real `getAndClearInterrupt`). `Thread.interrupt()` sets this Java field before asking the
+/// VM to wake the thread, so a blocked `wait`/`sleep` observes it here and throws
+/// `InterruptedException`.
+///
+/// The test-and-clear is a single compare-and-exchange under the field's entry lock — the same lock
+/// `interrupt()`'s `PUTFIELD` takes — so an interrupt racing the clear cannot be lost (a separate
+/// get-then-set could clear a flag that a concurrent `interrupt()` had just re-raised).
 pub(crate) fn take_current_interrupt() -> bool {
     let Some(thread_ref) = JavaThread::current_thread() else {
         return false;
     };
-    match HEAP.get_object_field_value(thread_ref, "java/lang/Thread", "interrupted") {
-        Ok(v) if v.first() == Some(&1) => {
-            let _ = HEAP.set_object_field_value(thread_ref, "java/lang/Thread", "interrupted", vec![0]);
-            true
-        }
-        _ => false,
-    }
+    HEAP.compare_and_exchange_object_field(
+        thread_ref,
+        "java/lang/Thread",
+        "interrupted",
+        &[1],
+        &[0],
+    )
+    .map(|(_old, swapped)| swapped)
+    .unwrap_or(false)
 }
 
 fn monitor_for(obj_ref: i32) -> Arc<ObjectMonitor> {
@@ -198,7 +205,13 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
 /// Locking the monitor's state around the notify pairs with the waiter's under-lock interrupt check,
 /// preventing a lost wakeup when the interrupt lands between the waiter's check and its `wait`.
 pub(crate) fn interrupt_waiter(thread_ref: i32) {
-    if let Some(m) = WAIT_TARGETS.get(&thread_ref) {
+    // Clone the Arc out and release the DashMap shard lock *before* locking the monitor state:
+    // `wait()` holds the state lock while it insert/removes into WAIT_TARGETS (state -> shard), so
+    // acquiring them here in the opposite order (shard -> state) could deadlock.
+    let monitor = WAIT_TARGETS
+        .get(&thread_ref)
+        .map(|entry| entry.value().clone());
+    if let Some(m) = monitor {
         let _guard = m.state.lock();
         m.cv.notify_all();
     }

@@ -58,16 +58,19 @@ pub(crate) fn sleep_nanos0(nanos: i64) -> Result<()> {
     if nanos <= 0 {
         return Ok(());
     }
-    let deadline = Instant::now() + Duration::from_nanos(nanos as u64);
+    // Track elapsed against a start instant rather than computing `now + duration`: the latter can
+    // panic on `Instant` overflow for the very large `nanos` a Java `long` permits (~292 years).
+    let total = Duration::from_nanos(nanos as u64);
+    let start = Instant::now();
     loop {
         if monitor::take_current_interrupt() {
             return set_pending_interrupted_exception();
         }
-        let now = Instant::now();
-        if now >= deadline {
+        let remaining = total.saturating_sub(start.elapsed());
+        if remaining.is_zero() {
             return Ok(());
         }
-        std::thread::park_timeout(deadline - now);
+        std::thread::park_timeout(remaining);
     }
 }
 
