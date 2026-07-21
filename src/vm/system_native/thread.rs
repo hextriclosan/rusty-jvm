@@ -1,11 +1,14 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
+use crate::vm::exception::pending_helpers::{
+    set_pending_interrupted_exception, set_pending_null_pointer_exception,
+};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::lookup;
-use crate::vm::threads;
+use crate::vm::{monitor, threads};
+use std::time::{Duration, Instant};
 use tracing::error;
 
 /// `java/lang/Thread.registerNatives()V`
@@ -43,7 +46,57 @@ pub(crate) fn get_next_threadid_offset() -> Result<i64> {
 
 /// `java/lang/Thread.setPriority0(I)V`
 pub(crate) fn set_priority0(_this: i32, _new_priority: i32) -> Result<()> {
-    Ok(()) // todo: implement me
+    Ok(()) // priorities are advisory; the OS scheduler decides. No-op.
+}
+
+/// `java/lang/Thread.sleepNanos0(J)V`
+///
+/// Sleeps the current thread for `nanos`, interruptibly: `Thread.interrupt` unparks it, and on wake
+/// it observes the interrupt flag and throws `InterruptedException`. Backed by `park_timeout`, whose
+/// permit also makes an interrupt that arrives just before the park take effect immediately.
+pub(crate) fn sleep_nanos0(nanos: i64) -> Result<()> {
+    if nanos <= 0 {
+        return Ok(());
+    }
+    // Track elapsed against a start instant rather than computing `now + duration`: the latter can
+    // panic on `Instant` overflow for the very large `nanos` a Java `long` permits (~292 years).
+    let total = Duration::from_nanos(nanos as u64);
+    let start = Instant::now();
+    loop {
+        if monitor::take_current_interrupt() {
+            return set_pending_interrupted_exception();
+        }
+        let remaining = total.saturating_sub(start.elapsed());
+        if remaining.is_zero() {
+            return Ok(());
+        }
+        std::thread::park_timeout(remaining);
+    }
+}
+
+/// `java/lang/Thread.yield0()V`
+pub(crate) fn yield0() -> Result<()> {
+    std::thread::yield_now();
+    Ok(())
+}
+
+/// `java/lang/Thread.interrupt0()V`
+///
+/// `Thread.interrupt()` has already set the target's `interrupted` field; this only wakes the target
+/// from a blocking operation so it observes the flag: `unpark` covers `LockSupport.park` and
+/// `Thread.sleep`, and [`monitor::interrupt_waiter`] covers `Object.wait`.
+pub(crate) fn interrupt0(this: i32) -> Result<()> {
+    threads::unpark(this);
+    monitor::interrupt_waiter(this);
+    Ok(())
+}
+
+/// `java/lang/Thread.clearInterruptEvent()V`
+///
+/// Clears any VM-level pending interrupt event. We keep no such event (the `interrupted` field is
+/// the sole source of truth), so this is a no-op.
+pub(crate) fn clear_interrupt_event() -> Result<()> {
+    Ok(())
 }
 
 /// `java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V`

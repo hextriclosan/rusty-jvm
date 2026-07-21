@@ -393,8 +393,12 @@ builtin_natives! {
     "java/lang/Thread": static fn currentCarrierThread() -> thread => sn::thread::current_carrier_thread;  //todo: use current carrier thread here (no matter what it is)
     "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
     "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
-    "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0; // todo: implement me
+    "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0;
     "java/lang/Thread": static fn ensureMaterializedForStackWalk(o: object) -> void => sn::thread::ensure_materialized_for_stack_walk;
+    "java/lang/Thread": static fn sleepNanos0(nanos: long) -> void => sn::thread::sleep_nanos0;
+    "java/lang/Thread": static fn yield0() -> void => sn::thread::yield0;
+    "java/lang/Thread": instance fn interrupt0() -> void => sn::thread::interrupt0;
+    "java/lang/Thread": static fn clearInterruptEvent() -> void => sn::thread::clear_interrupt_event;
     "java/lang/Thread": instance fn start0() -> void => sn::thread::start0;
 
     "java/lang/Throwable": instance fn fillInStackTrace(dummy: int) -> throwable => sn::throwable::fill_in_stack_trace;
