@@ -18,6 +18,11 @@ pub(crate) struct JavaThread {
     env: *const JNINativeInterface_,
     /// Heap reference to the currently-pending exception, or `None` if no exception is pending.
     exception_pending: Cell<Option<i32>>,
+    /// Heap reference to this OS thread's `java.lang.Thread`, or `None` before it is attached.
+    ///
+    /// This is what `Thread.currentThread()` returns, making thread identity a per-OS-thread fact
+    /// rather than a single VM-wide global — the precondition for spawning real threads.
+    current_thread: Cell<Option<i32>>,
     /// Chain of live [`StackFrames`] *segments* for the calling thread, ordered oldest → newest.
     ///
     /// Each `Engine::execute` invocation owns one `StackFrames` and registers a pointer to it here
@@ -36,6 +41,7 @@ thread_local! {
     static JAVA_THREAD: JavaThread = JavaThread {
         env: jni_native_interface(),
         exception_pending: Cell::new(None),
+        current_thread: Cell::new(None),
         stack_frames: RefCell::new(Vec::new()),
     };
 }
@@ -103,6 +109,19 @@ impl JavaThread {
     /// replacing any previously-pending exception. This is spec-compliant.
     pub(super) fn force_set_pending_exception(throwable_ref: i32) {
         JAVA_THREAD.with(|t| t.exception_pending.set(Some(throwable_ref)));
+    }
+
+    /// Returns the `java.lang.Thread` heap reference for the calling OS thread, or `None` if it has
+    /// not been attached yet (i.e. `Thread.currentThread()` has no answer for this thread).
+    pub(crate) fn current_thread() -> Option<i32> {
+        JAVA_THREAD.with(|t| t.current_thread.get())
+    }
+
+    /// Binds `thread_ref` as the `java.lang.Thread` of the calling OS thread. Must be set before any
+    /// code on this thread observes `Thread.currentThread()` — for the main thread this is done at
+    /// VM bootstrap, before `Thread.<init>` (which itself calls `currentThread()`) runs.
+    pub(crate) fn set_current_thread(thread_ref: i32) {
+        JAVA_THREAD.with(|t| t.current_thread.set(Some(thread_ref)));
     }
 
     /// Registers `stack_frames` as the newest segment of the calling thread's stack chain for
