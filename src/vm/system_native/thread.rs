@@ -15,8 +15,9 @@ pub(crate) fn register_natives() -> Result<()> {
 
 /// `java/lang/Thread.currentThread()Ljava/lang/Thread;`
 pub(crate) fn current_thread() -> Result<i32> {
-    JavaThread::current_thread()
-        .ok_or_else(|| Error::new_execution("Thread.currentThread() called before the thread was attached"))
+    JavaThread::current_thread().ok_or_else(|| {
+        Error::new_execution("Thread.currentThread() called before the thread was attached")
+    })
 }
 
 /// `java/lang/Thread.currentCarrierThread()Ljava/lang/Thread;`
@@ -60,13 +61,21 @@ pub(crate) fn ensure_materialized_for_stack_walk(_o: i32) -> Result<()> {
 /// `start()` returns, mirroring HotSpot.
 pub(crate) fn start0(this: i32) -> Result<()> {
     // Daemon status is fixed once a thread is started; read it now, on the starting thread.
-    let is_daemon = Executor::invoke_non_static_method("java/lang/Thread", "isDaemon:()Z", this, &[])?
-        .first()
-        .is_some_and(|&v| v != 0);
+    let is_daemon =
+        Executor::invoke_non_static_method("java/lang/Thread", "isDaemon:()Z", this, &[])?
+            .first()
+            .is_some_and(|&v| v != 0);
 
     set_eetop(this, threads::next_eetop())?;
 
-    let handle = std::thread::spawn(move || run_thread(this));
+    let thread_ref = this;
+    let handle = std::thread::Builder::new()
+        .spawn(move || run_thread(thread_ref))
+        .map_err(|e| {
+            // Best-effort rollback so `isAlive()` doesn't get stuck true if the OS thread can't spawn.
+            let _ = set_eetop(this, 0);
+            Error::new_execution(&format!("failed to spawn OS thread: {e}"))
+        })?;
 
     // Register the parker eagerly, from the parent, before the child can be unparked (race-free).
     threads::register_parker(this, handle.thread().clone());
@@ -86,7 +95,8 @@ fn run_thread(this: i32) {
         Ok(_) => {}
         Err(e) if e.is_uncaught_exception() => {
             if let Some(throwable_ref) = e.throwable_ref() {
-                if let Err(dispatch_err) = crate::vm::invoke_uncaught_exception_handler(throwable_ref)
+                if let Err(dispatch_err) =
+                    crate::vm::invoke_uncaught_exception_handler(throwable_ref)
                 {
                     error!("failed to dispatch uncaught exception on thread: {dispatch_err}");
                 }
@@ -111,7 +121,9 @@ fn run_thread(this: i32) {
 fn invoke_run(this: i32) -> Result<Vec<i32>> {
     let actual_class = HEAP.get_instance_name(this)?;
     let run_method = lookup::lookup_method(&actual_class, "run:()V")?.ok_or_else(|| {
-        Error::new_execution(&format!("run:()V not found for thread class {actual_class}"))
+        Error::new_execution(&format!(
+            "run:()V not found for thread class {actual_class}"
+        ))
     })?;
     Executor::invoke_non_static_method(run_method.class_name(), "run:()V", this, &[])
 }

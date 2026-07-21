@@ -661,7 +661,9 @@ pub(crate) fn park(_this: i32, is_absolute: bool, time: i64) -> Result<()> {
             .unwrap_or(0);
         let deadline_millis = time.max(0) as u128;
         if deadline_millis > now_millis {
-            std::thread::park_timeout(Duration::from_millis((deadline_millis - now_millis) as u64));
+            std::thread::park_timeout(Duration::from_millis(
+                (deadline_millis - now_millis) as u64,
+            ));
         }
     }
     Ok(())
