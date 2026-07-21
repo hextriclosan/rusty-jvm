@@ -18,6 +18,7 @@ use crate::vm::exception::pending_helpers::{
 };
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::threads::{self, thread_status};
 use dashmap::DashMap;
 use parking_lot::{Condvar, Mutex};
 use std::sync::{Arc, LazyLock};
@@ -92,6 +93,10 @@ pub(crate) fn enter(obj_ref: i32) {
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
     let mut s = m.state.lock();
+    let contended = s.owner.is_some() && s.owner != Some(tid);
+    if contended {
+        threads::set_current_thread_status(thread_status::BLOCKED);
+    }
     while s.owner.is_some() && s.owner != Some(tid) {
         m.cv.wait(&mut s);
     }
@@ -100,6 +105,9 @@ pub(crate) fn enter(obj_ref: i32) {
     } else {
         s.owner = Some(tid);
         s.count = 1;
+    }
+    if contended {
+        threads::set_current_thread_status(thread_status::RUNNABLE);
     }
 }
 
@@ -155,6 +163,12 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
         WAIT_TARGETS.insert(thread_ref, Arc::clone(&m));
     }
 
+    threads::set_current_thread_status(if timeout_millis > 0 {
+        thread_status::TIMED_WAITING
+    } else {
+        thread_status::WAITING
+    });
+
     let deadline = (timeout_millis > 0)
         .then(|| Instant::now() + Duration::from_millis(timeout_millis as u64));
     let mut interrupted = false;
@@ -193,6 +207,7 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
     }
     s.owner = Some(tid);
     s.count = saved_count;
+    threads::set_current_thread_status(thread_status::RUNNABLE);
 
     if interrupted {
         drop(s);

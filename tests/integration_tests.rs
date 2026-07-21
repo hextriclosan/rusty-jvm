@@ -2561,6 +2561,16 @@ fn should_interrupt_a_waiting_thread() {
 }
 
 #[test]
+fn should_report_thread_state_transitions() {
+    // getState() reflects the real lifecycle: NEW before start, WAITING while parked in Object.wait,
+    // TERMINATED after the thread finishes (backed by Thread$FieldHolder.threadStatus).
+    assert_success(
+        "samples.concurrency.threads.ThreadStateDemo",
+        "NEW\nWAITING\nTERMINATED\n",
+    );
+}
+
+#[test]
 fn should_print_help_message() {
     let expected_stdout = r#"Usage: rusty-jvm [options] <mainclass> [args...]
 

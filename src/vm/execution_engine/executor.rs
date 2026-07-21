@@ -127,6 +127,8 @@ impl Executor {
             &new_args,
             Some("primordial thread creation"),
         )?;
+        // The main thread is running, not NEW; reflect that in getState().
+        threads::set_thread_status(thread_obj_ref, threads::thread_status::RUNNABLE);
 
         Ok(thread_obj_ref)
     }

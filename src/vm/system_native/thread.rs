@@ -62,16 +62,19 @@ pub(crate) fn sleep_nanos0(nanos: i64) -> Result<()> {
     // panic on `Instant` overflow for the very large `nanos` a Java `long` permits (~292 years).
     let total = Duration::from_nanos(nanos as u64);
     let start = Instant::now();
-    loop {
+    threads::set_current_thread_status(threads::thread_status::TIMED_WAITING);
+    let result = loop {
         if monitor::take_current_interrupt() {
-            return set_pending_interrupted_exception();
+            break set_pending_interrupted_exception();
         }
         let remaining = total.saturating_sub(start.elapsed());
         if remaining.is_zero() {
-            return Ok(());
+            break Ok(());
         }
         std::thread::park_timeout(remaining);
-    }
+    };
+    threads::set_current_thread_status(threads::thread_status::RUNNABLE);
+    result
 }
 
 /// `java/lang/Thread.yield0()V`
@@ -120,6 +123,9 @@ pub(crate) fn start0(this: i32) -> Result<()> {
             .is_some_and(|&v| v != 0);
 
     set_eetop(this, threads::next_eetop())?;
+    // Mark RUNNABLE synchronously, before spawning, so getState() is correct the moment start()
+    // returns and a second start() is rejected (Thread.start checks threadStatus != 0).
+    threads::set_thread_status(this, threads::thread_status::RUNNABLE);
 
     let thread_ref = this;
     let handle = std::thread::Builder::new()
@@ -166,6 +172,7 @@ fn run_thread(this: i32) {
     if let Err(e) = set_eetop(this, 0) {
         error!("failed to clear eetop on thread exit: {e}");
     }
+    threads::set_thread_status(this, threads::thread_status::TERMINATED);
     // Wake any joiners: Thread.join sits in `synchronized(thread) { while (isAlive()) wait(); }`,
     // and isAlive() is now false (eetop cleared above), so a notify lets them observe termination.
     crate::vm::monitor::wake_all_on_exit(this);
