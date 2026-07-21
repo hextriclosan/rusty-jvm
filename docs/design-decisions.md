@@ -87,22 +87,32 @@ that currently holds an `i32` reference.
 
 ---
 
-## 4. Static native method dispatch via a lookup table
+## 4. Native method dispatch: built-ins as JNI-shaped functions
 
-**Decision:** JDK native methods are dispatched through a static `HashMap` in
-`system_native_table.rs` that maps a single string key in the format
-`"java/lang/System:nanoTime:()J"` (that is, `internal/class/Name:methodName:descriptor`) to a
-Rust function pointer.
+**Decision:** JDK native methods are implemented in Rust as `extern "system"`
+JNI functions and dispatched through the **same** `libffi` path as third-party
+native libraries. The VM's built-ins are declared with the `builtin_natives!`
+macro (`system_native/dispatcher/builtin_natives.rs`), which registers each one
+in `BUILTIN_NATIVE_TABLE` keyed by its JNI descriptor-mangled C-name and valued
+by the wrapper's address. On a native call the dispatcher resolves the address
+from that registry first, falling back to `dlsym`/`GetProcAddress` for symbols in
+loaded libraries; both are then invoked identically via a `libffi` CIF.
 
 **Reasoning:**
-The alternative - loading the JDK's own native libraries (`.so`/`.dll`) at runtime - is
-impractical because those libraries call back into a full HotSpot-compatible `JNIEnv`,
-which would require implementing the entire JNI ABI before a single `println` could work.
+Loading the JDK's *own* native libraries at runtime is impractical — they call
+back into a full HotSpot-compatible `JNIEnv`, which would require the entire JNI
+ABI before a single `println` could work. Implementing built-ins in Rust lets us
+bootstrap the standard library by covering only the methods the tests actually
+exercise, adding more incrementally. Making those built-ins JNI-shaped means the
+same argument marshalling, `JNIEnv` bridge, and `libffi` dispatcher serve both
+built-in and third-party natives, instead of maintaining two mechanisms. The
+macro derives each wrapper's ABI signature from the same tokens as its JVM
+descriptor (they cannot drift), and `validate_builtin_natives()` checks every
+declaration against the real JDK bytecode at startup.
 
-The static table lets us bootstrap the standard library by implementing only the native methods
-that are actually exercised by the tests, adding more incrementally.
-For *user-supplied* native libraries (i.e. library code not in the JDK), the `libffi`-based
-dynamic dispatcher is used instead, which does implement the JNI ABI.
+Polymorphic-signature intrinsics (`MethodHandle.invoke*`, `VarHandle.*`) are the
+one exception: their descriptor varies per call site, so they have no C-name and
+are dispatched by a small dedicated matcher (`dispatcher/polymorphic.rs`).
 
 ---
 

@@ -124,11 +124,7 @@ impl InvokeDynamicRunner {
         let method_descriptor = resolved_method.invoke_dynamic_method_type_desc();
         let args_to_invoke_with = prepare_invoke_context(stack_frames, method_descriptor, false)?;
 
-        invoke_exact(
-            method_handle_dynamic_invoked_ref,
-            &args_to_invoke_with,
-            stack_frames,
-        )
+        invoke_exact(method_handle_dynamic_invoked_ref, &args_to_invoke_with)
     }
 
     fn resolve(current_class_name: &str, invokedynamic_index: u16) -> Result<ResolvedMethod> {
