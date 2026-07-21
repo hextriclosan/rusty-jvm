@@ -48,8 +48,9 @@ pub(crate) struct MethodArea {
     modules_mapping: HashMap<String, String>,
     modules: Arc<Modules>,
     ldc_resolution_manager: LdcResolutionManager,
-    system_thread_id: OnceCell<i32>, // initial thread, spawned by VM
-    system_thread_group_id: OnceCell<i32>, // initial thread group, created by VM
+    system_thread_id: OnceCell<i32>, // main thread, spawned by VM
+    system_thread_group_id: OnceCell<i32>, // root "system" thread group, created by VM
+    main_thread_group_id: OnceCell<i32>, // "main" thread group (child of system), holds the main thread
 }
 
 impl MethodArea {
@@ -79,6 +80,7 @@ impl MethodArea {
             ldc_resolution_manager: LdcResolutionManager::default(),
             system_thread_id: OnceCell::new(),
             system_thread_group_id: OnceCell::new(),
+            main_thread_group_id: OnceCell::new(),
         })
     }
 
@@ -469,19 +471,18 @@ impl MethodArea {
         })
     }
 
-    pub fn system_thread_group_id(&self) -> Result<i32> {
-        self.system_thread_group_id
-            .get()
-            .copied()
-            .ok_or_else(|| Error::new_execution("system_thread_group_id wasn't set"))
-    }
-
     pub fn set_system_thread_group_id(&self, thread_group_id: i32) -> Result<()> {
         self.system_thread_group_id
             .set(thread_group_id)
             .map_err(|_| {
                 Error::new_execution("system_thread_group_id was already set, cannot be set again")
             })
+    }
+
+    pub fn set_main_thread_group_id(&self, thread_group_id: i32) -> Result<()> {
+        self.main_thread_group_id.set(thread_group_id).map_err(|_| {
+            Error::new_execution("main_thread_group_id was already set, cannot be set again")
+        })
     }
 
     fn get_declaring_class(

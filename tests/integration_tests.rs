@@ -2457,7 +2457,7 @@ fn should_print_info_about_unhandled_exception() {
     utils::assert_failure_with_stderr(
         "samples.javacore.unhandledexception.UnhandledExceptionExample",
         r#""#,
-        r#"Exception in thread "system" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
+        r#"Exception in thread "main" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
 	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:55)
 	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:52)
 	at jdk.internal.util.Preconditions$4.apply(Preconditions.java:213)
@@ -3729,7 +3729,7 @@ WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadl
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 
-Exception in thread "system" java.lang.IllegalStateException: from throwingCallback
+Exception in thread "main" java.lang.IllegalStateException: from throwingCallback
 	at samples.javacore.loadlibrary.example.ExceptionDemo.throwingCallback(LoadLibraryExample.java:1521)
 	at samples.javacore.loadlibrary.example.ExceptionDemo.DescribeAndClearDemo(Native Method)
 	at samples.javacore.loadlibrary.example.ExceptionDemo.DescribeAndClearDemoCase(LoadLibraryExample.java:1514)
