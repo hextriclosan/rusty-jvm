@@ -117,6 +117,35 @@ impl JavaThread {
         StackFramesGuard { segment }
     }
 
+    /// Invokes `f` with a mutable reference to the **newest** (top) `StackFrames` segment of the
+    /// calling thread — the one owned by the interpreter loop currently paused in this native call.
+    ///
+    /// This is the mutable, top-only counterpart of [`JavaThread::with_frames`]: polymorphic
+    /// intrinsics (`MethodHandle.invoke*`) reach the caller's operand stack through it without
+    /// receiving `&mut StackFrames` as a parameter, which keeps native dispatch free of interpreter
+    /// stack plumbing.
+    ///
+    /// Returns an execution error when no segment is registered (i.e. outside any interpreter
+    /// invocation), which should never happen for a native dispatched through the interpreter.
+    ///
+    /// The borrow handed to `f` **must not** be held across code that re-enters native dispatch on
+    /// the same segment (keep `f` a minimal, non-nesting leaf), otherwise two `&mut` to the same
+    /// `StackFrames` would alias.
+    pub(crate) fn with_top_frames_mut<R>(f: impl FnOnce(&mut StackFrames) -> R) -> Result<R> {
+        let segment = JAVA_THREAD.with(|t| {
+            // Copy the pointer out and drop the chain borrow before calling `f`, so `f` may consult
+            // the chain again (e.g. via `with_frames`) without a `RefCell` double-borrow.
+            t.stack_frames.borrow().last().copied().ok_or_else(|| {
+                Error::new_execution("no stack frames registered for the current thread")
+            })
+        })?;
+        // SAFETY: `segment` is the newest pointer installed by `register_stack_frames` from a live
+        // `StackFrames` owned by the `Engine::execute` frame currently on the call stack, removed by
+        // that frame's guard before the `StackFrames` is dropped. The interpreter that owns it is
+        // paused in this native call, so no other `&mut` to it is active for the duration of `f`.
+        Ok(f(unsafe { &mut *segment }))
+    }
+
     /// Invokes `f` with an iterator over **all** live Java frames of the calling thread, newest
     /// first, walking across every registered `StackFrames` segment (i.e. across interpreter
     /// re-entries through native code).

@@ -173,27 +173,38 @@ flowchart TD
 
 ## 6. JNI Bridge
 
-Native methods declared in Java class files are dispatched through a two-layer bridge:
-a static lookup table that maps JVM internal method names to Rust function pointers,
-and a `libffi`-based dynamic dispatcher for methods loaded from external `.so`/`.dll` libraries.
+Native methods declared in Java class files are all dispatched through **one**
+`libffi`-based path: they look like JNI functions (`extern "system" fn(env,
+class_or_this, args…)`) and differ only in how the function *address* is found —
+a hand-maintained registry for the VM's own built-ins, `dlsym`/`GetProcAddress`
+for symbols in external `.so`/`.dll` libraries. Polymorphic-signature intrinsics
+(`MethodHandle.invoke*`, `VarHandle.*`) have no fixed descriptor and are handled
+by a separate dispatcher instead.
 
 ```mermaid
 sequenceDiagram
     participant EE as ExecutionEngine
-    participant SNT as system_native_table (static map)
+    participant POLY as polymorphic dispatcher
     participant DISP as libffi Dispatcher
+    participant REG as BUILTIN_NATIVE_TABLE (C-name → addr)
     participant NLIB as Native .so / .dll
     participant JNI as JNI ABI layer
 
-    EE->>SNT: invoke_native(class, method, args)
-    alt found in static table
-        SNT-->>EE: call Rust fn directly
-    else dynamic native
-        EE->>DISP: build_args (i32 refs → *mut c_void)
-        DISP->>NLIB: ffi_call(native_fn, args)
+    EE->>EE: invoke_native(class, method, descriptor, args)
+    alt @PolymorphicSignature (MethodHandle/VarHandle)
+        EE->>POLY: invoke_polymorphic(class, method, args)
+        POLY-->>EE: Vec<i32>
+    else JNI-shaped native
+        EE->>DISP: invoke(class:method:descriptor, args, is_static)
+        DISP->>REG: find_builtin_native(c_name)
+        alt built-in
+            REG-->>DISP: Rust wrapper address
+        else third-party
+            DISP->>NLIB: resolve symbol (dlsym / GetProcAddress)
+            NLIB-->>DISP: address
+        end
+        DISP->>DISP: build_args + libffi CIF call
         NLIB->>JNI: JNIEnv* callbacks (FindClass, GetMethodID, …)
-        JNI-->>NLIB: results
-        NLIB-->>DISP: return value
         DISP-->>EE: Vec<i32>
     end
 ```

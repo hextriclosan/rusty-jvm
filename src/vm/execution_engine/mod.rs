@@ -17,4 +17,3 @@ mod ops_stack_processor;
 mod ops_store_processor;
 pub(crate) mod static_init;
 pub(crate) mod string_pool_helper;
-mod system_native_table;

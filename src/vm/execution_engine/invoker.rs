@@ -1,10 +1,11 @@
 use crate::vm::error::Result;
 use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::execution_engine::common::last_frame_mut;
-use crate::vm::execution_engine::system_native_table::invoke_native_method;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::system_native::dispatcher::invoke::invoke as invoke_native;
+use crate::vm::system_native::dispatcher::polymorphic::invoke_polymorphic;
 use jclassfile::methods::MethodFlags;
 use std::sync::Arc;
 use tracing::trace;
@@ -20,38 +21,36 @@ pub(crate) fn invoke(
         let is_polymorphic = java_method
             .runtime_visible_annotations()
             .contains("Ljava/lang/invoke/MethodHandle$PolymorphicSignature;");
-        let full_signature = if is_polymorphic {
-            // we heed normalize the signature for PolymorphicSignature annotated methods
-            full_signature.split(':').next().ok_or_else(|| {
-                crate::vm::error::Error::new_execution(&format!(
-                    "full_signature {full_signature} must contain ':'"
-                ))
-            })?
-        } else {
-            full_signature
-        };
-
-        let full_native_signature = format!("{class_name}:{full_signature}");
-        trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
 
         let method_flags = MethodFlags::from_bits_truncate(java_method.access_flags() as u16);
         let is_static = method_flags.contains(MethodFlags::ACC_STATIC);
 
-        // Push a synthetic frame so the native method shows up on the thread's stack chain while it
-        // runs (e.g. as `(Native Method)` in a stack trace captured from a Java callback it makes).
-        // Polymorphic natives (MethodHandle/VarHandle intrinsics) are excluded: they manipulate the
-        // caller's top frame directly and must remain on top of the current segment.
-        let push_native_frame = !is_polymorphic;
-        if push_native_frame {
+        let result = if is_polymorphic {
+            // Polymorphic intrinsics (MethodHandle/VarHandle) have no fixed descriptor and
+            // manipulate the caller's top frame directly, so they must remain on top of the current
+            // segment (no synthetic native frame is pushed) and are dispatched by their normalized
+            // `class:method` key rather than through the libffi-backed built-in native table.
+            let method_name = full_signature.split(':').next().ok_or_else(|| {
+                crate::vm::error::Error::new_execution(&format!(
+                    "full_signature {full_signature} must contain ':'"
+                ))
+            })?;
+            trace!("<Calling polymorphic native method> -> {class_name}:{method_name} ({method_args:?})");
+            invoke_polymorphic(class_name, method_name, method_args)
+        } else {
+            let full_native_signature = format!("{class_name}:{full_signature}");
+            trace!("<Calling native method> -> {full_native_signature} ({method_args:?})");
+
+            // Push a synthetic frame so the native method shows up on the thread's stack chain while
+            // it runs (e.g. as `(Native Method)` in a stack trace captured from a Java callback it
+            // makes).
             stack_frames.new_frame(java_method.new_native_stack_frame());
-        }
-        let result =
-            invoke_native_method(&full_native_signature, method_args, is_static, stack_frames);
-        if push_native_frame {
+            let result = invoke_native(&full_native_signature, method_args, is_static);
             // Plain pop (no ex_pc reset) leaves the caller frame exactly as the native call found
             // it, so pending-exception dispatch below is unaffected by the synthetic frame.
             stack_frames.propagate_exception();
-        }
+            result
+        };
         let result = result?;
 
         // JNI spec: if the native method set a pending exception, immediately throw it in Java.

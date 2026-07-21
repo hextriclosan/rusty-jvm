@@ -5,12 +5,12 @@ use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{klass, vec_to_i64};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
 use crate::vm::system_native::method_handle_natives::method_type::MethodType;
 use crate::vm::system_native::method_handle_natives::offsets::{
@@ -31,33 +31,19 @@ const SIMPLE_METHOD_HANDLE: &str = "java/lang/invoke/SimpleMethodHandle";
 static DEBUG_SPECIES_PRINTING: Lazy<bool> =
     Lazy::new(|| env::var("DEBUG_SPECIES_PRINTING").is_ok());
 
-pub fn invoke_exact(
-    handle_ref: i32,
-    method_args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
+pub fn invoke_exact(handle_ref: i32, method_args: &[i32]) -> Result<()> {
     let handle_name = HEAP.get_instance_name(handle_ref)?;
     if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
-        return direct_method_handle_invocation(
-            handle_ref,
-            method_args,
-            stack_frames,
-            &handle_name,
-        );
+        return direct_method_handle_invocation(handle_ref, method_args, &handle_name);
     } else if handle_name.starts_with(BOUND_METHOD_HANDLE)
         || handle_name == AS_VARARGS_COLLECTOR
         || handle_name == SIMPLE_METHOD_HANDLE
         || handle_name == COUNTING_WRAPPER
     {
-        return bound_method_handle_invocation(
-            handle_ref,
-            method_args,
-            stack_frames,
-            &handle_name,
-        );
+        return bound_method_handle_invocation(handle_ref, method_args, &handle_name);
     } else if handle_name == MUTABLE_CALL_SITE {
         // todo: ends with CallSite?
-        return mutable_call_site_invocation(handle_ref, method_args, stack_frames, &handle_name);
+        return mutable_call_site_invocation(handle_ref, method_args, &handle_name);
     }
 
     unimplemented!("invoke_exact: handle: {} is not supported", handle_name)
@@ -66,7 +52,6 @@ pub fn invoke_exact(
 fn direct_method_handle_invocation(
     handle_ref: i32,
     method_args: &[i32],
-    stack_frames: &mut StackFrames,
     handle_name: &String,
 ) -> Result<()> {
     let member_name_ref = HEAP.get_object_field_value(handle_ref, handle_name, "member")?[0];
@@ -82,11 +67,11 @@ fn direct_method_handle_invocation(
 
     match reference_kind {
         REF_invokeVirtual | REF_invokeStatic | REF_invokeSpecial | REF_newInvokeSpecial => {
-            invoke_exact_method(&member_name, method_args, stack_frames)
+            invoke_exact_method(&member_name, method_args)
         }
-        REF_getField => invoke_exact_get_field(&member_name, method_args, stack_frames),
+        REF_getField => invoke_exact_get_field(&member_name, method_args),
         REF_putField => invoke_exact_put_field(&member_name, method_args),
-        REF_getStatic => invoke_exact_get_static_field(&member_name, method_args, stack_frames),
+        REF_getStatic => invoke_exact_get_static_field(&member_name, method_args),
         REF_putStatic => invoke_exact_put_static_field(&member_name, method_args),
         REF_invokeInterface => unimplemented!("reference_kind: {:?}", reference_kind),
     }
@@ -95,7 +80,6 @@ fn direct_method_handle_invocation(
 fn bound_method_handle_invocation(
     handle_ref: i32,
     method_args: &[i32],
-    stack_frames: &mut StackFrames,
     handle_name: &String,
 ) -> Result<()> {
     if *DEBUG_SPECIES_PRINTING {
@@ -130,13 +114,18 @@ fn bound_method_handle_invocation(
     new_args.push(handle_ref);
     new_args.extend_from_slice(method_args);
 
-    invoke(
-        stack_frames,
-        method_to_invoke.name_signature(),
-        &new_args,
-        Arc::clone(&method_to_invoke),
-        class_name_to_load,
-    )
+    // Re-enter the interpreter on the current top segment. The borrow is released as soon as
+    // `invoke` pushes the target's frame (for a Java target it does not resume the loop), so it
+    // never nests with another top-segment borrow.
+    JavaThread::with_top_frames_mut(|stack_frames| {
+        invoke(
+            stack_frames,
+            method_to_invoke.name_signature(),
+            &new_args,
+            Arc::clone(&method_to_invoke),
+            class_name_to_load,
+        )
+    })?
 }
 
 fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
@@ -196,20 +185,15 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
 fn mutable_call_site_invocation(
     mutable_call_site_ref: i32,
     method_args: &[i32],
-    stack_frames: &mut StackFrames,
     handle_name: &str,
 ) -> Result<()> {
     let target_ref =
         Executor::invoke_non_static_method(handle_name, "getTarget", mutable_call_site_ref, &[])?
             [0];
-    invoke_exact(target_ref, method_args, stack_frames)
+    invoke_exact(target_ref, method_args)
 }
 
-fn invoke_exact_method(
-    member_name: &MemberName,
-    method_args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
+fn invoke_exact_method(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
     let (resolved_class_name, resolved_method_to_invoke) = extract_resolved(member_name)?;
 
     let reference_kind = member_name.reference_kind();
@@ -252,7 +236,7 @@ fn invoke_exact_method(
         }
         REF_newInvokeSpecial => (
             Arc::clone(&resolved_method_to_invoke),
-            mimic_new(&resolved_class_name, method_args, stack_frames)?,
+            mimic_new(&resolved_class_name, method_args)?,
         ),
         REF_getField | REF_putField | REF_getStatic | REF_putStatic => {
             unreachable!(
@@ -262,13 +246,17 @@ fn invoke_exact_method(
         }
     };
 
-    invoke(
-        stack_frames,
-        method_to_invoke.name_signature(),
-        method_args.as_slice(),
-        Arc::clone(&method_to_invoke),
-        method_to_invoke.class_name(),
-    )
+    // Re-enter the interpreter on the current top segment; the borrow lasts only for the frame
+    // push (see `bound_method_handle_invocation`).
+    JavaThread::with_top_frames_mut(|stack_frames| {
+        invoke(
+            stack_frames,
+            method_to_invoke.name_signature(),
+            method_args.as_slice(),
+            Arc::clone(&method_to_invoke),
+            method_to_invoke.class_name(),
+        )
+    })?
 }
 
 /// Extracts the resolved method name and its class from the `MemberName`.
@@ -295,11 +283,7 @@ fn extract_resolved(member_name: &MemberName) -> Result<(String, Arc<JavaMethod>
     Ok((class_name, method_to_invoke))
 }
 
-fn mimic_new(
-    class_name: &str,
-    method_args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<Vec<i32>> {
+fn mimic_new(class_name: &str, method_args: &[i32]) -> Result<Vec<i32>> {
     // bellow we mimic the behavior of the NEW opcode
     let instance_with_default_fields = with_method_area(|method_area| {
         method_area.create_instance_with_default_fields(class_name)
@@ -307,8 +291,9 @@ fn mimic_new(
 
     let instanceref = HEAP.create_instance(instance_with_default_fields);
 
-    let stack_frame = last_frame_mut(stack_frames)?;
-    stack_frame.push(instanceref)?; // NEW opcode
+    JavaThread::with_top_frames_mut(|stack_frames| {
+        last_frame_mut(stack_frames)?.push(instanceref)
+    })??; // NEW opcode
 
     let method_args = std::iter::once(instanceref)
         .chain(method_args.iter().cloned())
@@ -317,18 +302,14 @@ fn mimic_new(
     Ok(method_args)
 }
 
-fn invoke_exact_get_field(
-    member_name: &MemberName,
-    method_args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
+fn invoke_exact_get_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
     let (instance_ref, class_name, field_name, _) = prepare_field(member_name, method_args)?;
 
     let value = HEAP.get_object_field_value(instance_ref, &class_name, &field_name)?;
-    let last_frame = last_frame_mut(stack_frames)?;
-    value.iter().try_for_each(|val| last_frame.push(*val))?;
-
-    Ok(())
+    JavaThread::with_top_frames_mut(|stack_frames| {
+        let last_frame = last_frame_mut(stack_frames)?;
+        value.iter().try_for_each(|val| last_frame.push(*val))
+    })?
 }
 
 fn invoke_exact_put_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
@@ -337,17 +318,13 @@ fn invoke_exact_put_field(member_name: &MemberName, method_args: &[i32]) -> Resu
     HEAP.set_object_field_value(instance_ref, &class_name, &field_name, args)
 }
 
-fn invoke_exact_get_static_field(
-    member_name: &MemberName,
-    method_args: &[i32],
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
+fn invoke_exact_get_static_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
     let (field, _args) = prepare_static_field(member_name, method_args)?;
     let value = field.raw_value()?;
-    let last_frame = last_frame_mut(stack_frames)?;
-    value.iter().try_for_each(|val| last_frame.push(*val))?;
-
-    Ok(())
+    JavaThread::with_top_frames_mut(|stack_frames| {
+        let last_frame = last_frame_mut(stack_frames)?;
+        value.iter().try_for_each(|val| last_frame.push(*val))
+    })?
 }
 
 fn invoke_exact_put_static_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
