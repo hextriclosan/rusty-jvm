@@ -2561,6 +2561,33 @@ fn should_interrupt_a_waiting_thread() {
 }
 
 #[test]
+fn should_report_thread_state_transitions() {
+    // getState() reflects the real lifecycle: NEW before start, WAITING while parked in Object.wait,
+    // TERMINATED after the thread finishes (backed by Thread$FieldHolder.threadStatus).
+    assert_success(
+        "samples.concurrency.threads.ThreadStateDemo",
+        "NEW\nWAITING\nTERMINATED\n",
+    );
+}
+
+#[test]
+fn should_handle_advanced_thread_edge_cases() {
+    // One orchestrated program stressing the tricky corners of the whole threading milestone, each
+    // scenario deterministic and bounded (throws on regression instead of hanging):
+    //   1. Object.wait from nested (reentrant) synchronized releases ALL levels and restores depth
+    //   2. interrupt status: isInterrupted() non-clearing, static interrupted() clearing, an
+    //      interrupt preset before wait() throws immediately and clears the flag
+    //   3. timed wait returns on timeout with no notifier
+    //   4. a thread contending for a held monitor reports Thread.State.BLOCKED
+    //   5. starting an already-run thread throws IllegalThreadStateException (threadStatus set)
+    //   6. AtomicInteger incremented by many threads loses no updates (atomic Unsafe CAS)
+    assert_success(
+        "samples.concurrency.threads.ThreadEdgeCasesDemo",
+        "1 reentrant-wait ok\n2 interrupt-semantics ok\n3 timed-wait ok\n4 blocked-state ok\n5 double-start ok\n6 atomic-cas ok\nall edge cases passed\n",
+    );
+}
+
+#[test]
 fn should_print_help_message() {
     let expected_stdout = r#"Usage: rusty-jvm [options] <mainclass> [args...]
 
