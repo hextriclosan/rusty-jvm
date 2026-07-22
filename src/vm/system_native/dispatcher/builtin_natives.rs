@@ -526,6 +526,7 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn copySwapMemory0(src: object, srcOffset: long, dest: object, destOffset: long, bytes: long, swap: long) -> void => sn::unsafe_::copy_swap_memory0;
     "jdk/internal/misc/Unsafe": instance fn setMemory0(obj: object, offset: long, bytes: long, value: byte) -> void => sn::unsafe_::set_memory0;
     "jdk/internal/misc/Unsafe": instance fn allocateMemory0(bytes: long) -> long => sn::unsafe_::allocate_memory0;
+    "jdk/internal/misc/Unsafe": instance fn freeMemory0(address: long) -> void => sn::unsafe_::free_memory0;
 
     "jdk/internal/misc/VM": static fn initialize() -> void => sn::vm::initialize; // todo: implement me
 

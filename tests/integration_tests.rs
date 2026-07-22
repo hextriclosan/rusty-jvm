@@ -2571,6 +2571,29 @@ fn should_report_thread_state_transitions() {
 }
 
 #[test]
+fn should_isolate_thread_local_state() {
+    // ThreadLocal is per-thread: a worker's value doesn't leak into main, both differ from the
+    // initial value, and remove() restores the initial. Exercises Reference.refersTo0 (how
+    // ThreadLocalMap matches keys) and clear0 (remove).
+    assert_success(
+        "samples.concurrency.threads.ThreadLocalDemo",
+        "main-set=100\nmain-after-worker=100\nmain-after-remove=0\n",
+    );
+}
+
+#[test]
+fn should_capture_current_thread_stack_trace() {
+    // Thread.currentThread().getStackTrace() walks this thread's live frame chain, innermost first.
+    assert_success(
+        "samples.concurrency.threads.CurrentStackTraceDemo",
+        "java.lang.Thread.getStackTrace\n\
+         samples.concurrency.threads.CurrentStackTraceDemo.level2\n\
+         samples.concurrency.threads.CurrentStackTraceDemo.level1\n\
+         samples.concurrency.threads.CurrentStackTraceDemo.main\n",
+    );
+}
+
+#[test]
 fn should_handle_advanced_thread_edge_cases() {
     // One orchestrated program stressing the tricky corners of the whole threading milestone, each
     // scenario deterministic and bounded (throws on regression instead of hanging):

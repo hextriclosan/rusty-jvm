@@ -10,9 +10,15 @@ use crate::vm::system_native::object_offset::offset_utils::{
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::threads;
-use std::alloc::{alloc, Layout};
+use dashmap::DashMap;
+use std::alloc::{alloc, dealloc, Layout};
 use std::ptr;
+use std::sync::LazyLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+/// Sizes of live off-heap blocks from `Unsafe.allocateMemory0`, keyed by address. `dealloc` needs
+/// the original `Layout`, but `freeMemory0` only receives the address, so we remember the size here.
+static ALLOCATIONS: LazyLock<DashMap<i64, usize>> = LazyLock::new(DashMap::new);
 
 enum PutValue {
     I64(i64),
@@ -522,16 +528,35 @@ pub(crate) fn should_be_initialized0(_this: i32, class_ref: i32) -> Result<bool>
 
 /// `jdk.internal.misc.Unsafe.allocateMemory0(J)J`
 pub(crate) fn allocate_memory0(_this: i32, bytes: i64) -> Result<i64> {
-    let layout = Layout::array::<u8>(bytes as usize)
-        .map_err(|_| Error::new_native("Invalid memory allocation"))?;
+    let size = bytes as usize;
+    let layout =
+        Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory allocation"))?;
     let ptr = unsafe { alloc(layout) };
     if ptr.is_null() {
         return Err(Error::new_native("Failed to allocate memory"));
     }
 
     let address = ptr as usize as i64;
-
+    ALLOCATIONS.insert(address, size);
     Ok(address)
+}
+
+/// `jdk.internal.misc.Unsafe.freeMemory0(J)V`
+///
+/// Frees a block previously returned by [`allocate_memory0`]. Now reachable because `Reference`
+/// semantics work (a `Cleaner` freeing native memory, e.g. a mapped buffer, calls this). `free(0)`
+/// is a no-op; an untracked address (never allocated here, or already freed) is ignored rather than
+/// risking a bad `dealloc`.
+pub(crate) fn free_memory0(_this: i32, address: i64) -> Result<()> {
+    if address == 0 {
+        return Ok(());
+    }
+    if let Some((_, size)) = ALLOCATIONS.remove(&address) {
+        let layout =
+            Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory free"))?;
+        unsafe { dealloc(address as usize as *mut u8, layout) };
+    }
+    Ok(())
 }
 
 // Todo: for all *_ref/offset pairs:
