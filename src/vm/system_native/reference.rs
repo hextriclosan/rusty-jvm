@@ -1,13 +1,26 @@
 use crate::vm::error::Result;
+use crate::vm::heap::heap::HEAP;
+
+const REFERENCE: &str = "java/lang/ref/Reference";
+const REFERENT: &str = "referent";
 
 /// `java.lang.ref.Reference.clear0()V`
-pub(crate) fn clear0(_this: i32) -> Result<()> {
-    Ok(()) // todo: this should be implemented with GC
+///
+/// Breaks the reference by nulling its `referent`. This is the explicit `Reference.clear()` path
+/// (also used by `ThreadLocalMap.remove`/`WeakReference.clear`); it needs no GC — after it, `get()`
+/// yields null and `refersTo0` yields false.
+pub(crate) fn clear0(this: i32) -> Result<()> {
+    HEAP.set_object_field_value(this, REFERENCE, REFERENT, vec![0])
 }
 
 /// `java.lang.ref.Reference.refersTo0(Ljava/lang/Object;)Z`
-pub(crate) fn refers_to0(_this: i32, _o: i32) -> Result<bool> {
-    Ok(false) // todo: this should be implemented with GC
+///
+/// True when this reference still points at `o`. Reading the `referent` field directly is correct
+/// without GC (the referent only changes via `clear`); this is what `ThreadLocalMap.getEntry` uses
+/// to match a key, so a correct answer here is what makes `ThreadLocal` work.
+pub(crate) fn refers_to0(this: i32, o: i32) -> Result<bool> {
+    let referent = HEAP.get_object_field_value(this, REFERENCE, REFERENT)?[0];
+    Ok(referent == o)
 }
 
 /// `java.lang.ref.Reference.waitForReferencePendingList()V`
