@@ -202,6 +202,11 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
     }
 
     // Re-acquire ownership before returning to (or throwing back into) the synchronized region.
+    // While contending to re-enter, the thread is BLOCKED, not WAITING (Thread.State semantics) —
+    // and since notify() is usually issued while still holding the lock, this window is common.
+    if s.owner.is_some() && s.owner != Some(tid) {
+        threads::set_current_thread_status(thread_status::BLOCKED);
+    }
     while s.owner.is_some() && s.owner != Some(tid) {
         m.cv.wait(&mut s);
     }

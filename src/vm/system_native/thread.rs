@@ -131,8 +131,11 @@ pub(crate) fn start0(this: i32) -> Result<()> {
     let handle = std::thread::Builder::new()
         .spawn(move || run_thread(thread_ref))
         .map_err(|e| {
-            // Best-effort rollback so `isAlive()` doesn't get stuck true if the OS thread can't spawn.
+            // Roll back the "started" markers so a thread that never launched is left back in NEW:
+            // eetop cleared so isAlive() is false, and threadStatus reset so getState() reads NEW and
+            // Thread.start() can be retried (it rejects threadStatus != 0).
             let _ = set_eetop(this, 0);
+            threads::set_thread_status(this, threads::thread_status::NEW);
             Error::new_execution(&format!("failed to spawn OS thread: {e}"))
         })?;
 

@@ -11,6 +11,7 @@ use tracing::error;
 /// layout that `jdk.internal.misc.VM.toThreadState` decodes (`getState()` reads it). `ALIVE` (1) is
 /// set for every live state so `isAlive`-style checks see it; `NEW` is the field's default of 0.
 pub(crate) mod thread_status {
+    pub(crate) const NEW: i32 = 0x00; // no bits set (the field's default)
     pub(crate) const RUNNABLE: i32 = 0x05; // ALIVE | RUNNABLE(4)
     pub(crate) const BLOCKED: i32 = 0x401; // ALIVE | BLOCKED_ON_MONITOR_ENTER(1024)
     pub(crate) const WAITING: i32 = 0x11; // ALIVE | WAITING_INDEFINITELY(16)
