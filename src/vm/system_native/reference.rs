@@ -8,7 +8,8 @@ const REFERENT: &str = "referent";
 ///
 /// Breaks the reference by nulling its `referent`. This is the explicit `Reference.clear()` path
 /// (also used by `ThreadLocalMap.remove`/`WeakReference.clear`); it needs no GC — after it, `get()`
-/// yields null and `refersTo0` yields false.
+/// yields null and `refersTo0` no longer matches the former referent (it then matches only a null
+/// argument, as `refersTo(null)` on a cleared reference does).
 pub(crate) fn clear0(this: i32) -> Result<()> {
     HEAP.set_object_field_value(this, REFERENCE, REFERENT, vec![0])
 }
