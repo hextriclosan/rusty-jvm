@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::LazyLock;
 use std::thread::JoinHandle;
-use tracing::error;
+use tracing::{debug, error};
 
 /// `Thread.State` encodings written to `Thread$FieldHolder.threadStatus`, using the JVMTI bit
 /// layout that `jdk.internal.misc.VM.toThreadState` decodes (`getState()` reads it). `ALIVE` (1) is
@@ -51,14 +51,22 @@ pub(crate) fn next_eetop() -> i64 {
 /// which is what `Thread.getState()` reports. Best-effort: any failure to reach the field is ignored
 /// (thread state is observational and must never break the operation that updates it).
 pub(crate) fn set_thread_status(thread_ref: i32, status: i32) {
-    if let Ok(holder) = HEAP.get_object_field_value(thread_ref, "java/lang/Thread", "holder") {
-        if let Some(&holder_ref) = holder.first() {
+    let Ok(holder) = HEAP.get_object_field_value(thread_ref, "java/lang/Thread", "holder") else {
+        return;
+    };
+    match holder.first() {
+        // A live thread always has its FieldHolder; only write when it's actually present so we
+        // don't push a null ref through `set_object_field_value`'s error path on every update.
+        Some(&holder_ref) if holder_ref != 0 => {
             let _ = HEAP.set_object_field_value(
                 holder_ref,
                 "java/lang/Thread$FieldHolder",
                 "threadStatus",
                 vec![status],
             );
+        }
+        _ => {
+            debug!("set_thread_status: thread {thread_ref} has no holder; skipping status update")
         }
     }
 }

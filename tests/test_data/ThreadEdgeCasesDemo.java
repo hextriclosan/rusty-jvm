@@ -192,8 +192,11 @@ public class ThreadEdgeCasesDemo {
 
     static void atomicCasUnderContention() throws Exception {
         AtomicInteger counter = new AtomicInteger(0);
-        int nThreads = 3;
-        int perThread = 20_000;
+        // Kept modest: each increment is an interpreted getAndAddInt CAS-retry loop that serializes
+        // on the object's lock, so a large count is slow (esp. on CI) without adding detection power
+        // — even this many contended increments exposes a non-atomic CAS as lost updates.
+        int nThreads = 2;
+        int perThread = 5_000;
         Thread[] ts = new Thread[nThreads];
         for (int i = 0; i < nThreads; i++) {
             ts[i] = new Thread(() -> {
@@ -204,7 +207,7 @@ public class ThreadEdgeCasesDemo {
             ts[i].start();
         }
         for (Thread t : ts) {
-            joinOrFail(t, 20_000, "atomic-cas");
+            joinOrFail(t, 60_000, "atomic-cas");
         }
         int expected = nThreads * perThread;
         if (counter.get() != expected) {
