@@ -7,9 +7,16 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::lookup;
+use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::safepoint;
+use crate::vm::stack::stack_frames_util::StackFramesUtil;
+use crate::vm::system_native::{stack_trace_element, throwable};
 use crate::vm::{monitor, threads};
 use std::time::{Duration, Instant};
 use tracing::error;
+
+/// Cap on frames captured by `getStackTrace0` (matches the safepoint dump cap).
+const MAX_STACK_DEPTH: usize = 1024;
 
 /// `java/lang/Thread.registerNatives()V`
 pub(crate) fn register_natives() -> Result<()> {
@@ -92,6 +99,38 @@ pub(crate) fn interrupt0(this: i32) -> Result<()> {
     threads::unpark(this);
     monitor::interrupt_waiter(this);
     Ok(())
+}
+
+/// `java/lang/Thread.getStackTrace0()Ljava/lang/Object;`
+///
+/// Returns this thread's stack as a `StackTraceElement[]` (or null → the caller reports an empty
+/// trace). For another thread, the stack is snapshotted by driving it to a [`safepoint`]; a thread
+/// that never reaches one within the timeout (e.g. blocked in a native) yields null. The collected
+/// frames are turned into `StackTraceElement`s via the same backtrace path as `fillInStackTrace`.
+pub(crate) fn get_stack_trace0(this: i32) -> Result<i32> {
+    let frames = if JavaThread::current_thread() == Some(this) {
+        StackFramesUtil::collect_current_stack(MAX_STACK_DEPTH)?
+    } else {
+        match safepoint::dump_stack(this) {
+            Some(frames) => frames,
+            None => return Ok(0), // null: the thread didn't reach a safepoint (or isn't registered)
+        }
+    };
+
+    let depth = frames.len() as i32;
+    let backtrace_ref = throwable::build_backtrace(&frames)?;
+
+    let elements_ref = HEAP.create_array("[Ljava/lang/StackTraceElement;", depth);
+    for index in 0..depth {
+        let element = with_method_area(|method_area| {
+            method_area.create_instance_with_default_fields("java/lang/StackTraceElement")
+        })?;
+        let element_ref = HEAP.create_instance(element);
+        HEAP.set_array_value(elements_ref, index, vec![element_ref])?;
+    }
+    stack_trace_element::init_stack_trace_elements(elements_ref, backtrace_ref, depth)?;
+
+    Ok(elements_ref)
 }
 
 /// `java/lang/Thread.clearInterruptEvent()V`
@@ -180,6 +219,7 @@ fn run_thread(this: i32) {
     // and isAlive() is now false (eetop cleared above), so a notify lets them observe termination.
     crate::vm::monitor::wake_all_on_exit(this);
     threads::unregister_parker(this);
+    safepoint::unregister(this);
 }
 
 /// Resolves `run:()V` on the thread object's actual class (virtual dispatch, honoring subclass

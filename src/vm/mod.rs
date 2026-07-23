@@ -8,6 +8,7 @@ mod jni;
 mod launcher;
 mod method_area;
 mod monitor;
+mod safepoint;
 mod perf_data;
 mod properties;
 mod stack;

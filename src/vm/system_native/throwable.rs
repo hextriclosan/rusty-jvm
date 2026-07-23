@@ -1,7 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
-use crate::vm::stack::stack_frames_util::StackFramesUtil;
+use crate::vm::stack::stack_frames_util::{StackElement, StackFramesUtil};
 
 const MAX_DEPTH: usize = 32;
 
@@ -19,6 +19,26 @@ pub const NATIVE_METHOD: i32 = 2;
 pub(crate) fn fill_in_stack_trace(throwable_ref: i32, _dummy: i32) -> Result<i32> {
     let throwable_name = HEAP.get_instance_name(throwable_ref)?;
     let stack_elements = StackFramesUtil::collect_stack_trace(&throwable_name, MAX_DEPTH)?;
+    let depth = stack_elements.len() as i32;
+
+    let backtrace_ref = build_backtrace(&stack_elements)?;
+
+    HEAP.set_object_field_value(
+        throwable_ref,
+        &throwable_name,
+        "backtrace",
+        vec![backtrace_ref],
+    )?;
+    HEAP.set_object_field_value(throwable_ref, &throwable_name, "depth", vec![depth])?;
+
+    Ok(throwable_ref)
+}
+
+/// Builds the internal `Throwable.backtrace` object (`Object[4]` of parallel `Class[]`, `long[]`
+/// method pointers, `int[]` lines, and `int[]` tags) from collected frames. Shared by
+/// `fillInStackTrace` and `Thread.getStackTrace0` (which snapshots another thread at a safepoint),
+/// so both feed the same `StackTraceElement` construction path.
+pub(crate) fn build_backtrace(stack_elements: &[StackElement]) -> Result<i32> {
     let depth = stack_elements.len() as i32;
 
     let backtrace_ref = HEAP.create_array("[Ljava/lang/Object;", 4);
@@ -60,13 +80,5 @@ pub(crate) fn fill_in_stack_trace(throwable_ref: i32, _dummy: i32) -> Result<i32
         )?;
     }
 
-    HEAP.set_object_field_value(
-        throwable_ref,
-        &throwable_name,
-        "backtrace",
-        vec![backtrace_ref],
-    )?;
-    HEAP.set_object_field_value(throwable_ref, &throwable_name, "depth", vec![depth])?;
-
-    Ok(throwable_ref)
+    Ok(backtrace_ref)
 }

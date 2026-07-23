@@ -110,6 +110,34 @@ impl StackFramesUtil {
         Ok(stack_trace)
     }
 
+    /// Collects the calling thread's full stack, newest frame first (index 0 = the currently
+    /// executing method), up to `max_stack_size` frames. Unlike [`Self::collect_stack_trace`] this
+    /// applies no throwable-specific frame skipping — it is used to snapshot an arbitrary thread's
+    /// stack (e.g. `Thread.getStackTrace`) at a safepoint, where the newest frame is wherever the
+    /// thread was paused.
+    pub fn collect_current_stack(max_stack_size: usize) -> Result<Vec<StackElement>> {
+        JavaThread::with_frames(|frames| {
+            let mut elements = Vec::new();
+            for frame in frames {
+                if elements.len() >= max_stack_size {
+                    break;
+                }
+                let klass = CLASSES.get(frame.current_class_name())?;
+                let method = klass.get_method(frame.method_name())?;
+                let method_raw = Arc::as_ptr(&method) as i64;
+                let line = Self::extract_line_number(frame.line_numbers(), frame.pc());
+                let class_ref = klass.mirror_clazz_ref()?;
+                elements.push(StackElement::new(
+                    class_ref,
+                    method_raw,
+                    line,
+                    method.is_native(),
+                ));
+            }
+            Ok::<_, Error>(elements)
+        })?
+    }
+
     pub fn extract_line_number(line_numbers: &BTreeMap<u16, u16>, pc: usize) -> u16 {
         let instruction_line_num = line_numbers
             .range(..=&(pc as u16))

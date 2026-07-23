@@ -209,4 +209,20 @@ sequenceDiagram
     end
 ```
 
+---
+
+## 7. Threading and Concurrency
+
+Each Java platform thread is backed by one OS thread. Per-thread state (the
+`JNIEnv`, pending exception, current `Thread`, and the live `StackFrames` chain)
+lives in a `thread_local!` `JavaThread`, while shared state (`HEAP`, `CLASSES`,
+`METHOD_AREA`) is behind concurrent maps and per-class init locks. Object
+monitors back `synchronized`/`wait`/`notify`/`join`; interrupts, `sleep`,
+`LockSupport`, atomic `Unsafe` CAS, `ThreadLocal`, and `Thread.getState()` are all
+implemented. A cooperative safepoint (polled by the interpreter loop) lets one
+thread pause another to snapshot its stack for `Thread.getStackTrace()` — the same
+primitive a future stop-the-world GC would use to pause threads for root scanning.
+
+See [threading.md](threading.md) for the full design.
+
 [jvms-5.4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5
