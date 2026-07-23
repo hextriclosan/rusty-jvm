@@ -2880,11 +2880,6 @@ User: Carol
 }
 
 #[test]
-#[ignore = "StreamExamples ends with a parallelStream(). With atomic Unsafe CAS (threads Phase 3) \
-the results are now correct, but ForkJoinPool over-provisions one worker per core and coordinates \
-by busy-spinning; interpreting that — especially under the test suite's own parallelism (workers x \
-test processes) — is far too slow to run reliably. Re-enable once the interpreter is fast enough \
-and/or ForkJoinPool worker parking is tuned."]
 fn should_support_java_streams() {
     assert_success(
         "samples.javacore.streams.streamexamples.StreamExamples",
