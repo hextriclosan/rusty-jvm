@@ -125,7 +125,10 @@ impl StackFramesUtil {
                 let klass = CLASSES.get(frame.current_class_name())?;
                 let method = klass.get_method(frame.method_name())?;
                 let method_raw = Arc::as_ptr(&method) as i64;
-                let line = Self::extract_line_number(frame.line_numbers(), frame.pc());
+                // Use the call-site PC (`ex_pc`), like `collect_stack_trace`: for a caller frame the
+                // live `pc` has already advanced past the invoke, so it would report the line after
+                // the call rather than the call site.
+                let line = Self::extract_line_number(frame.line_numbers(), frame.ex_pc());
                 let class_ref = klass.mirror_clazz_ref()?;
                 elements.push(StackElement::new(
                     class_ref,

@@ -100,8 +100,16 @@ pub(crate) fn dump_stack(thread_ref: i32) -> Option<Vec<StackElement>> {
     let safepoint = REGISTRY.get(&thread_ref).map(|e| Arc::clone(e.value()))?;
     let _gate = DUMP_GATE.lock();
 
-    safepoint.requested.store(true, Ordering::Relaxed);
     let mut r = safepoint.rendezvous.lock();
+    // Start each dump from a clean rendezvous. A previous request that timed out (the target was
+    // blocked in a native and never reached the poll) leaves `release == true`; if the target later
+    // reaches the poll it would then see `release` already set, immediately clear `collected`, and
+    // skip parking — so this dumper would miss the published stack and time out as well. Resetting
+    // here (before raising `requested`) guarantees the target parks until *this* dumper releases it.
+    r.release = false;
+    r.collected = None;
+    safepoint.requested.store(true, Ordering::Relaxed);
+
     let start = Instant::now();
     while r.collected.is_none() {
         let elapsed = start.elapsed();
