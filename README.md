@@ -12,7 +12,7 @@
 This project is a Java Virtual Machine (JVM) implemented in Rust, built to run Java programs independently of existing JVMs.
 Everything related to Java is implemented from scratch.
 The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone.
-The next major objectives include the integration of garbage collection and support for multithreading.
+The next major objectives include the integration of garbage collection.
 
 ## Implemented Key Features
 
@@ -26,6 +26,7 @@ The next major objectives include the integration of garbage collection and supp
 - Type casting ([JLS §5.5][jls-5.5])
 - Program arguments ([JLS §12.1.4][jls-12.1.4])
 - Assertions ([JLS §14.10][jls-14.10])
+- [Multithreading][java.lang.thread-api]
 - [Dynamic Language Support][java.lang.invoke-api] (partially)
 - [Stream API][java.util.stream-api] (partially)
 - [Reflection][java.lang.reflect-api] (some features)
@@ -90,11 +91,8 @@ graph TD
 
 ## Roadmap
 
-The following milestones are planned in order:
-
 1. **Garbage Collection** — a tracing GC to reclaim unreachable heap objects.
-2. **Multithreading** — `java.lang.Thread`, `synchronized`, and the Java Memory Model.
-3. **JIT Compilation** — profile-guided native code generation for hot methods.
+2. **JIT Compilation** — profile-guided native code generation for hot methods.
 
 ## Java Standard Library Classes
 
@@ -181,6 +179,7 @@ and implement new native methods.
 [java.nio-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/nio/package-summary.html
 [java.lang.invoke-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/package-summary.html
 [java.lang.reflect-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/reflect/package-summary.html
+[java.lang.thread-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Thread.html
 [java.util.zip-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/zip/package-summary.html
 [java.lang.system-api]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/System.html
 [jar]: https://docs.oracle.com/en/java/javase/25/docs/specs/jar/jar.html

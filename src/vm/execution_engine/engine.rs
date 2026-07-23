@@ -9,6 +9,10 @@ use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use tracing::{span, trace, Level};
 
+/// How often (in bytecodes) the interpreter polls its safepoint. A power of two so the modulo is a
+/// cheap mask; small enough that a dump request is serviced within microseconds.
+const SAFEPOINT_POLL_INTERVAL: u32 = 4096;
+
 pub(crate) struct Engine {}
 
 impl Engine {
@@ -20,8 +24,18 @@ impl Engine {
         // stack-walking natives can traverse it (and older segments) without a parameter. The
         // guard pops it on return/unwind, keeping the chain correct across native re-entries.
         let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
+        // Grabbed once per invocation, not per instruction. The safepoint is polled only every
+        // `SAFEPOINT_POLL_INTERVAL` bytecodes (a cheap local-counter test each iteration); that
+        // bounds time-to-safepoint to a few microseconds while keeping the hot loop's overhead to a
+        // register increment, not an atomic load, on every instruction.
+        let safepoint = JavaThread::safepoint();
+        let mut poll_counter: u32 = 0;
         let mut last_value = vec![];
         while !stack_frames.is_empty() {
+            poll_counter = poll_counter.wrapping_add(1);
+            if poll_counter % SAFEPOINT_POLL_INTERVAL == 0 {
+                safepoint.poll();
+            }
             let (class, code, pc, line_numbers) = {
                 let frame = stack_frames
                     .last()

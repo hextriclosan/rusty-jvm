@@ -132,5 +132,37 @@ Publishing them separately:
 - Gives the components their own versioning, so breaking changes in the parser do not force a
   major bump of the main crate.
 
+---
+
+## 6. One OS thread per Java thread; monitors as a side-table
+
+**Decision:** Each Java platform thread is backed by one `std::thread`. Per-thread
+runtime state lives in a `thread_local!` `JavaThread`; object monitors are kept in a
+global `DashMap<i32, ObjectMonitor>` keyed by the object's heap reference, inflated
+lazily, rather than embedded in the object header.
+
+**Reasoning:**
+Mapping one Java thread to one OS thread lets each thread run the existing interpreter
+loop unchanged — the loop already owns its `StackFrames`, and making the `JNIEnv`,
+pending exception, current `Thread`, and stack chain thread-local is all that per-thread
+execution needs. The OS `ThreadId` then doubles as the identity of a monitor's owner and
+an unpark target, so no separate thread-id scheme is required.
+
+Keeping monitors in a side-table keyed by the `i32` reference (see decision #1) mirrors
+HotSpot's lazily-inflated monitors and avoids widening every heap object with lock words;
+because there is no GC yet, the reference key is stable for the object's lifetime. The
+monitor itself is a reentrant `parking_lot::Mutex` + `Condvar` tracking owner/recursion,
+which gives `synchronized`, `wait`/`notify`, and `join` directly.
+
+The shared runtime (`HEAP`, `CLASSES`, `METHOD_AREA`) was already behind concurrent maps
+and per-class init locks, so the main correctness addition for lock-free code is a genuinely
+atomic compare-and-swap (read-compare-write under a single entry lock).
+
+Pausing a thread to read its stack (`Thread.getStackTrace`, and later stop-the-world GC) uses a
+**cooperative safepoint** — the interpreter polls a per-thread flag and stops itself — rather than
+OS-level thread suspension. Cooperative polling keeps the mechanism portable and lets a paused
+thread read its *own* frames (so no thread ever touches another's live stack), at the cost of not
+being able to pause a thread blocked in a native. Full details are in [threading.md](threading.md).
+
 [jvms-2.6.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.2
 [jvms-5.4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5

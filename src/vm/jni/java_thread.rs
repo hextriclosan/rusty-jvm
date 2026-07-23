@@ -1,9 +1,11 @@
 use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::jni_env::jni_native_interface;
+use crate::vm::safepoint::{self, Safepoint};
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jni_sys::{JNIEnv, JNINativeInterface_};
 use std::cell::{Cell, RefCell};
+use std::sync::Arc;
 
 /// Represents a JVM thread for JNI purposes.
 ///
@@ -35,6 +37,10 @@ pub(crate) struct JavaThread {
     /// Only the newest (top) segment is being mutated by the running interpreter; every older
     /// segment is suspended in a native call and therefore safe to read.
     stack_frames: RefCell<Vec<*mut StackFrames>>,
+    /// This thread's cooperative safepoint, polled by the interpreter loop. Shared (by `Arc`) with
+    /// the global registry once the thread is attached, so another thread can drive it to a
+    /// safepoint to snapshot its stack. See [`crate::vm::safepoint`].
+    safepoint: Arc<Safepoint>,
 }
 
 thread_local! {
@@ -43,6 +49,7 @@ thread_local! {
         exception_pending: Cell::new(None),
         current_thread: Cell::new(None),
         stack_frames: RefCell::new(Vec::new()),
+        safepoint: Safepoint::new(),
     };
 }
 
@@ -121,7 +128,17 @@ impl JavaThread {
     /// code on this thread observes `Thread.currentThread()` — for the main thread this is done at
     /// VM bootstrap, before `Thread.<init>` (which itself calls `currentThread()`) runs.
     pub(crate) fn set_current_thread(thread_ref: i32) {
-        JAVA_THREAD.with(|t| t.current_thread.set(Some(thread_ref)));
+        JAVA_THREAD.with(|t| {
+            t.current_thread.set(Some(thread_ref));
+            // Publish this thread's safepoint under its identity so it can be targeted for a stack dump.
+            safepoint::register(thread_ref, Arc::clone(&t.safepoint));
+        });
+    }
+
+    /// Returns a clone of the calling thread's safepoint. `Engine::execute` grabs it once and polls
+    /// it every iteration (a cheap flag check).
+    pub(crate) fn safepoint() -> Arc<Safepoint> {
+        JAVA_THREAD.with(|t| Arc::clone(&t.safepoint))
     }
 
     /// Registers `stack_frames` as the newest segment of the calling thread's stack chain for

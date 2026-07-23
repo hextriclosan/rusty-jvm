@@ -2594,6 +2594,17 @@ fn should_capture_current_thread_stack_trace() {
 }
 
 #[test]
+fn should_capture_another_thread_stack_trace_via_safepoint() {
+    // main dumps a *running* worker's stack with worker.getStackTrace(). This drives the worker to
+    // a cooperative safepoint (the interpreter polls each iteration), where it snapshots its own
+    // frames; main then sees the method the worker is looping in.
+    assert_success(
+        "samples.concurrency.threads.ThreadDumpDemo",
+        "top=samples.concurrency.threads.ThreadDumpDemo$Spinner.spin\n",
+    );
+}
+
+#[test]
 fn should_handle_advanced_thread_edge_cases() {
     // One orchestrated program stressing the tricky corners of the whole threading milestone, each
     // scenario deterministic and bounded (throws on regression instead of hanging):

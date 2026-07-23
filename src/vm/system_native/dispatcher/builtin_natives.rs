@@ -398,6 +398,7 @@ builtin_natives! {
     "java/lang/Thread": static fn sleepNanos0(nanos: long) -> void => sn::thread::sleep_nanos0;
     "java/lang/Thread": static fn yield0() -> void => sn::thread::yield0;
     "java/lang/Thread": instance fn interrupt0() -> void => sn::thread::interrupt0;
+    "java/lang/Thread": instance fn getStackTrace0() -> object => sn::thread::get_stack_trace0;
     "java/lang/Thread": static fn clearInterruptEvent() -> void => sn::thread::clear_interrupt_event;
     "java/lang/Thread": instance fn start0() -> void => sn::thread::start0;
 
