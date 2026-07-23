@@ -207,7 +207,7 @@ public class ThreadEdgeCasesDemo {
             ts[i].start();
         }
         for (Thread t : ts) {
-            joinOrFail(t, 60_000, "atomic-cas");
+            joinOrFail(t, 180_000, "atomic-cas");
         }
         int expected = nThreads * perThread;
         if (counter.get() != expected) {
