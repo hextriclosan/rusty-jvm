@@ -8,10 +8,9 @@ use crate::vm::helper::i64_to_vec;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
-use crate::vm::safepoint;
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use crate::vm::system_native::{stack_trace_element, throwable};
-use crate::vm::{monitor, threads};
+use crate::vm::{monitor, safepoint, threads};
 use std::time::{Duration, Instant};
 use tracing::error;
 

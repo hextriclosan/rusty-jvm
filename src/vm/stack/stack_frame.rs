@@ -18,6 +18,11 @@ pub(crate) struct StackFrame {
     index: u32, // this field is only for debugging, it isn't involved in any program logic
     method_name: Arc<String>, // this field is only for debugging, it isn't involved in any program logic
     pc: usize,
+    /// Start pc of the instruction currently being dispatched, stamped by the interpreter loop
+    /// before the opcode's operands are decoded. Unlike `pc` (which the handler advances while
+    /// reading operands) this stays put at the opcode boundary, so it is the reliable bytecode index
+    /// of the faulting instruction for helpful `NullPointerException` messages (JEP 358).
+    bci: usize,
     /// Stores the current program counter (pc) in `ex_pc` before invoking a method. This value is later used as the current `pc` if an exception is thrown.
     ex_pc: Option<usize>,
     locals: Box<[i32]>,
@@ -142,6 +147,7 @@ impl StackFrame {
             index: COUNTER.fetch_add(1, SeqCst),
             method_name,
             pc: 0,
+            bci: 0,
             ex_pc: None,
             locals: vec![0i32; locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
@@ -164,6 +170,7 @@ impl StackFrame {
             index: COUNTER.fetch_add(1, SeqCst),
             method_name,
             pc: 0,
+            bci: 0,
             ex_pc: None,
             locals: Box::new([]),
             operand_stack: Stack::with_capacity(0),
@@ -181,6 +188,17 @@ impl StackFrame {
 
     pub fn pc(&self) -> usize {
         self.pc
+    }
+
+    /// Start pc of the instruction currently being dispatched. See the `bci` field.
+    pub fn bci(&self) -> usize {
+        self.bci
+    }
+
+    /// Records the start pc of the instruction about to be dispatched. Called by the interpreter
+    /// loop before the opcode's operands are read.
+    pub fn set_bci(&mut self, bci: usize) {
+        self.bci = bci;
     }
 
     pub fn current_class_name(&self) -> &str {

@@ -3,6 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, undecorate};
+use crate::vm::method_area::attributes_helper::LocalVariableInfo;
 use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
@@ -43,6 +44,10 @@ pub(crate) struct CodeContext {
     line_numbers: Arc<BTreeMap<u16, u16>>,
     #[get = "pub"]
     exception_table: Arc<ExceptionTable>,
+    /// `LocalVariableTable` entries (empty unless compiled with `javac -g`), used to render source
+    /// variable names in helpful `NullPointerException` messages (JEP 358).
+    #[get = "pub"]
+    local_variable_table: Arc<Vec<LocalVariableInfo>>,
 }
 
 impl JavaMethod {
@@ -106,6 +111,11 @@ impl JavaMethod {
 
     pub fn get_method_descriptor(&self) -> &MethodDescriptor {
         &self.method_descriptor
+    }
+
+    /// The method's code (bytecode, local-variable table, …), or `None` for native/abstract methods.
+    pub fn code_context(&self) -> Option<&CodeContext> {
+        self.code_context.as_ref()
     }
 
     pub fn is_native(&self) -> bool {

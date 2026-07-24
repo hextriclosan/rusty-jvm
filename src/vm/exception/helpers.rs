@@ -4,17 +4,21 @@ use crate::vm::exception::pending_helpers::{
     set_pending_array_index_out_of_bounds_exception,
     set_pending_null_pointer_exception_with_message,
 };
-use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::stack::stack_value::StackValueKind;
 
-pub fn throw_null_pointer_exception_with_message(
-    message: &str,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    throw_exception_with_message("java/lang/NullPointerException", message, stack_frames)
+/// Throws an implicit (VM-raised) `NullPointerException` with **no** detail message. The helpful
+/// message describing the null reference (JEP 358) is computed lazily by
+/// `NullPointerException.getExtendedNPEMessage()`, which the JDK's `getMessage()` invokes only when
+/// the detail message is null — so VM-thrown NPEs must be constructed message-less.
+pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()> {
+    construct_exception_and_throw(
+        "java/lang/NullPointerException",
+        "<init>:()V",
+        &[],
+        stack_frames,
+    )
 }
 
 pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
@@ -41,21 +45,4 @@ pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
     }
 
     Ok(true)
-}
-
-fn throw_exception_with_message(
-    class_name: &str,
-    message: &str,
-    stack_frames: &mut StackFrames,
-) -> Result<()> {
-    let message_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![StackValueKind::from(message_ref)];
-    construct_exception_and_throw(
-        class_name,
-        "<init>:(Ljava/lang/String;)V",
-        &args,
-        stack_frames,
-    )?;
-
-    Ok(())
 }

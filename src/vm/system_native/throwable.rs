@@ -15,6 +15,7 @@ pub const NATIVE_METHOD: i32 = 2;
 ///       - backtrace[1]: long[] holds method reference (raw pointer address)
 ///       - backtrace[2]: int[] holds line number
 ///       - backtrace[3]: int[] holds method tag code: 1 - interpreted method, 2 - native method
+///       - backtrace[4]: int[] holds the bytecode index of the executing instruction (JEP 358)
 ///   - Throwable.depth: size of the stack trace
 pub(crate) fn fill_in_stack_trace(throwable_ref: i32, _dummy: i32) -> Result<i32> {
     let throwable_name = HEAP.get_instance_name(throwable_ref)?;
@@ -34,24 +35,26 @@ pub(crate) fn fill_in_stack_trace(throwable_ref: i32, _dummy: i32) -> Result<i32
     Ok(throwable_ref)
 }
 
-/// Builds the internal `Throwable.backtrace` object (`Object[4]` of parallel `Class[]`, `long[]`
-/// method pointers, `int[]` lines, and `int[]` tags) from collected frames. Shared by
-/// `fillInStackTrace` and `Thread.getStackTrace0` (which snapshots another thread at a safepoint),
-/// so both feed the same `StackTraceElement` construction path.
+/// Builds the internal `Throwable.backtrace` object (`Object[5]` of parallel `Class[]`, `long[]`
+/// method pointers, `int[]` lines, `int[]` tags, and `int[]` bytecode indices) from collected
+/// frames. Shared by `fillInStackTrace` and `Thread.getStackTrace0` (which snapshots another thread
+/// at a safepoint), so both feed the same `StackTraceElement` construction path.
 pub(crate) fn build_backtrace(stack_elements: &[StackElement]) -> Result<i32> {
     let depth = stack_elements.len() as i32;
 
-    let backtrace_ref = HEAP.create_array("[Ljava/lang/Object;", 4);
+    let backtrace_ref = HEAP.create_array("[Ljava/lang/Object;", 5);
 
     let class_array_ref = HEAP.create_array("[Ljava/lang/Class;", depth);
     let method_array_ref = HEAP.create_array("[J", depth);
     let line_array_ref = HEAP.create_array("[I", depth);
     let tag_array_ref = HEAP.create_array("[I", depth);
+    let bci_array_ref = HEAP.create_array("[I", depth);
 
     HEAP.set_array_value(backtrace_ref, 0, vec![class_array_ref])?;
     HEAP.set_array_value(backtrace_ref, 1, vec![method_array_ref])?;
     HEAP.set_array_value(backtrace_ref, 2, vec![line_array_ref])?;
     HEAP.set_array_value(backtrace_ref, 3, vec![tag_array_ref])?;
+    HEAP.set_array_value(backtrace_ref, 4, vec![bci_array_ref])?;
 
     for (index, stack_element) in stack_elements.iter().enumerate() {
         HEAP.set_array_value(
@@ -77,6 +80,11 @@ pub(crate) fn build_backtrace(stack_elements: &[StackElement]) -> Result<i32> {
             } else {
                 INTERPRETED_METHOD
             }],
+        )?;
+        HEAP.set_array_value(
+            bci_array_ref,
+            index as i32,
+            vec![stack_element.bci() as i32],
         )?;
     }
 

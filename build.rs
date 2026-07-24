@@ -83,6 +83,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafePutReferenceVolatileExample.java",
         "UserPerfCounterExample.java",
         "ClasspathDemo.java",
+        "HelpfulNpeDebugInfo.java",
     ];
 
     let mut normal_files = Vec::new();
@@ -133,6 +134,9 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
     }
 
     let special_cmds: &[(&[&str], &str)] = &[
+        // Compiled with `-g` so it carries a LocalVariableTable, exercising the JEP 358 message
+        // builder's source-name path (`should_produce_helpful_npe_messages_with_debug_info`).
+        (&["-g", "-d"], "HelpfulNpeDebugInfo.java"),
         (&["-XDstringConcat=inline", "-d"], "StringConcatInline.java"),
         (
             &["--patch-module", "java.base=.", "-d"],

@@ -357,7 +357,7 @@ builtin_natives! {
     "java/lang/Module": static fn addExportsToAll0(from: module, pn: string) -> void => sn::module::add_exports_to_all0; // todo: implement me?
     "java/lang/Module": static fn addExports0(from: module, pn: string, to: module) -> void => sn::module::add_exports0; // todo: implement me?
 
-    "java/lang/NullPointerException": instance fn getExtendedNPEMessage() -> string => sn::null_pointer_exception::get_extended_npe_message; // todo: https://github.com/hextriclosan/rusty-jvm/issues/521
+    "java/lang/NullPointerException": instance fn getExtendedNPEMessage() -> string => sn::null_pointer_exception::get_extended_npe_message;
 
     "java/lang/Object": instance fn hashCode() -> int => sn::object::identity_hashcode;
     "java/lang/Object": instance fn getClass() -> class => sn::object::get_class;

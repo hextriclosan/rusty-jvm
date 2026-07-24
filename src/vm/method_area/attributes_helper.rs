@@ -44,6 +44,21 @@ pub enum AttributeType {
     PermittedSubclasses,
 }
 
+/// A resolved `LocalVariableTable` entry: the slot's live bytecode range plus its source name.
+/// Produced from [`LocalVariableTableRecord`](jclassfile::attributes::LocalVariableTableRecord) with
+/// the `name_index` already resolved against the constant pool.
+#[derive(Debug, Clone, PartialEq, Getters, CopyGetters)]
+pub(crate) struct LocalVariableInfo {
+    #[get_copy = "pub"]
+    pub start_pc: u16,
+    #[get_copy = "pub"]
+    pub length: u16,
+    #[get_copy = "pub"]
+    pub slot: u16,
+    #[get = "pub"]
+    pub name: String,
+}
+
 #[derive(Debug, PartialEq, new, Getters, CopyGetters)]
 pub(crate) struct BootstrapMethodInfo {
     #[get_copy = "pub"]
@@ -130,6 +145,7 @@ impl AttributesHelper {
         Vec<u8>,
         Vec<LineNumberRecord>,
         Vec<ExceptionTableRecord>,
+        Vec<LocalVariableInfo>,
     )> {
         match self.data.get(&AttributeType::Code)? {
             Attribute::Code {
@@ -141,6 +157,8 @@ impl AttributesHelper {
             } => {
                 let attributes_helper = AttributesHelper::new(attributes);
                 let line_numbers = attributes_helper.get_line_number_table();
+                let local_variable_table =
+                    attributes_helper.get_local_variable_table(cpool_helper);
 
                 let exception_table = exception_table
                     .iter()
@@ -167,6 +185,7 @@ impl AttributesHelper {
                     code.clone(),
                     line_numbers,
                     exception_table,
+                    local_variable_table,
                 ))
             }
             _ => None,
@@ -176,6 +195,32 @@ impl AttributesHelper {
     fn get_line_number_table(&self) -> Vec<LineNumberRecord> {
         match self.data.get(&AttributeType::LineNumberTable) {
             Some(Attribute::LineNumberTable { line_number_table }) => line_number_table.clone(),
+            _ => vec![],
+        }
+    }
+
+    /// Resolves the `LocalVariableTable` (present only when compiled with `javac -g`) into records
+    /// carrying the variable's source name, used to render helpful `NullPointerException` messages
+    /// (JEP 358). Returns an empty vector when the attribute is absent.
+    fn get_local_variable_table<T: CPoolHelperTrait>(
+        &self,
+        cpool_helper: &T,
+    ) -> Vec<LocalVariableInfo> {
+        match self.data.get(&AttributeType::LocalVariableTable) {
+            Some(Attribute::LocalVariableTable {
+                local_variable_table,
+            }) => local_variable_table
+                .iter()
+                .filter_map(|record| {
+                    let name = cpool_helper.get_utf8(record.name_index())?;
+                    Some(LocalVariableInfo {
+                        start_pc: record.start_pc(),
+                        length: record.length(),
+                        slot: record.index(),
+                        name,
+                    })
+                })
+                .collect(),
             _ => vec![],
         }
     }
@@ -364,7 +409,8 @@ mod tests {
                     2,
                     3,
                     "java/lang/Exception".to_string()
-                )]
+                )],
+                vec![]
             )),
             attributes_helper.get_code(&mock)
         );

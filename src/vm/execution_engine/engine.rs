@@ -36,6 +36,16 @@ impl Engine {
             if poll_counter % SAFEPOINT_POLL_INTERVAL == 0 {
                 safepoint.poll();
             }
+            // Stamp the instruction's start pc so that, if this opcode raises an implicit
+            // NullPointerException, the throwable's backtrace records the faulting bytecode index
+            // (JEP 358) even though the handler advances `pc` while reading operands.
+            {
+                let frame = stack_frames
+                    .last_mut()
+                    .ok_or(Error::new_execution("Error getting stack frame"))?;
+                let pc = frame.pc();
+                frame.set_bci(pc);
+            }
             let (class, code, pc, line_numbers) = {
                 let frame = stack_frames
                     .last()

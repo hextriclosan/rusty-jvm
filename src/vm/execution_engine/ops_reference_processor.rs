@@ -1,6 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
-use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
+use crate::vm::exception::helpers::throw_null_pointer_exception;
 use crate::vm::execution_engine::common::{last_frame_mut, store_ex_pc};
 use crate::vm::execution_engine::invoker::invoke;
 use crate::vm::execution_engine::opcode::*;
@@ -144,7 +144,7 @@ pub(crate) fn process(
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
 
             if *reference == 0 {
-                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name_by_ref_type}.{full_signature}\" because \"<VAR_NAME>\" is null"), stack_frames)?;
+                throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
 
@@ -228,7 +228,7 @@ pub(crate) fn process(
                 )));
             }
 
-            let (class_name, full_signature, _) = get_class_name_and_signature_by_index(
+            let (_, full_signature, _) = get_class_name_and_signature_by_index(
                 current_class_name,
                 CPoolHelper::get_full_interfacemethodref_info,
                 index,
@@ -238,7 +238,7 @@ pub(crate) fn process(
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
 
             if *reference == 0 {
-                throw_null_pointer_exception_with_message(&format!("Cannot invoke \"{class_name}.{full_signature}\" because \"<VAR_NAME>\" is null"), stack_frames)?;
+                throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
 
@@ -383,10 +383,7 @@ pub(crate) fn process(
             };
 
             if throwable_ref == 0 {
-                throw_null_pointer_exception_with_message(
-                    "Cannot throw exception because \"<VAR_NAME>\" is null",
-                    stack_frames,
-                )?;
+                throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
 
@@ -457,10 +454,7 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
             if objectref == 0 {
-                throw_null_pointer_exception_with_message(
-                    "Cannot enter synchronized block because \"<VAR_NAME>\" is null",
-                    stack_frames,
-                )?;
+                throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
 
@@ -473,10 +467,7 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let objectref: i32 = stack_frame.pop();
             if objectref == 0 {
-                throw_null_pointer_exception_with_message(
-                    "Cannot exit synchronized block because \"<VAR_NAME>\" is null",
-                    stack_frames,
-                )?;
+                throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
             stack_frame.incr_pc();

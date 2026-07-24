@@ -2987,22 +2987,42 @@ fn should_perform_lookup_in_interfaces_during_invokespecial_call() {
 fn should_handle_null_pointer_exceptions() {
     assert_success(
         "samples.npe.allnpeexamples.AllNPEExamples",
-        r#"Field access: Cannot read field "x" because "<VAR_NAME>" is null
-Method call (invokevirtual): Cannot invoke "java/lang/String.length:()I" because "<VAR_NAME>" is null
-Method call (invokeinterface): Cannot invoke "java/lang/Runnable.run:()V" because "<VAR_NAME>" is null
-Method call on param: Cannot invoke "java/lang/String.length:()I" because "<VAR_NAME>" is null
-Array length: Cannot read the array length because "<VAR_NAME>" is null
-Array access: Cannot load from object array because "<VAR_NAME>" is null
-Synchronization on null: Cannot enter synchronized block because "<VAR_NAME>" is null
-Unboxing: Cannot invoke "java/lang/Integer.intValue:()I" because "<VAR_NAME>" is null
-Throw null: Cannot throw exception because "<VAR_NAME>" is null
-Var args: Cannot read the array length because "<VAR_NAME>" is null
-Switch on null: Cannot invoke "java/lang/String.hashCode:()I" because "<VAR_NAME>" is null
+        // JEP 358 helpful messages. This fixture is compiled without `-g` (no LocalVariableTable),
+        // so its own variables render as `<localN>`/`<parameterN>`. The two reflection lines fault
+        // inside `java.lang.reflect.Field`/`Method`, which the JDK ships with a LocalVariableTable,
+        // so those name the source parameter (`obj`). Output matches real `java` verbatim.
+        r#"Field access: Cannot read field "x" because "<local4>" is null
+Method call (invokevirtual): Cannot invoke "String.length()" because "<local1>" is null
+Method call (invokeinterface): Cannot invoke "java.lang.Runnable.run()" because "<local1>" is null
+Method call on param: Cannot invoke "String.length()" because "<parameter2>" is null
+Array length: Cannot read the array length because "<local1>" is null
+Array access: Cannot load from object array because "<local1>" is null
+Synchronization on null: Cannot enter synchronized block because "<local1>" is null
+Unboxing: Cannot invoke "java.lang.Integer.intValue()" because "<local1>" is null
+Throw null: Cannot throw exception because "<local1>" is null
+Var args: Cannot read the array length because "<parameter1>" is null
+Switch on null: Cannot invoke "String.hashCode()" because "<local2>" is null
 Objects.requireNonNull: null
 Objects.requireNonNull with message: Object must not be null
 Method reference bound to null: null
-Reflection field get: java.lang.NullPointerException: Cannot invoke "java/lang/Object.getClass:()Ljava/lang/Class;" because "<VAR_NAME>" is null
-Reflection method invoke: java.lang.NullPointerException: Cannot invoke "java/lang/Object.getClass:()Ljava/lang/Class;" because "<VAR_NAME>" is null
+Reflection field get: java.lang.NullPointerException: Cannot invoke "Object.getClass()" because "obj" is null
+Reflection method invoke: java.lang.NullPointerException: Cannot invoke "Object.getClass()" because "obj" is null
+"#,
+    );
+}
+
+#[test]
+fn should_produce_helpful_npe_messages_with_debug_info() {
+    // Fixture compiled with `-g` (see build.rs), so its LocalVariableTable lets JEP 358 messages
+    // name the null variable as written in source. Output matches real `java` verbatim.
+    assert_success(
+        "samples.npe.helpfulnpedebuginfo.HelpfulNpeDebugInfo",
+        r#"invokeVirtualOnLocal: Cannot invoke "String.length()" because "greeting" is null
+readFieldOnParam: Cannot read field "value" because "node" is null
+readArrayLengthOnLocal: Cannot read the array length because "numbers" is null
+loadFromArrayLocal: Cannot load from object array because "names" is null
+invokeWithArgsReceiver: Cannot invoke "String.concat(String)" because "target" is null
+invokeAfterCast: Cannot invoke "java.lang.CharSequence.length()" because "raw" is null
 "#,
     );
 }
