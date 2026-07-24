@@ -14,6 +14,9 @@ pub struct StackElement {
     class_ref: i32,
     method_ref: i64,
     line_number: u16,
+    /// Start bytecode index of the instruction this frame was executing, used to build helpful
+    /// `NullPointerException` messages (JEP 358). Zero for native frames.
+    bci: u16,
     is_native: bool,
 }
 
@@ -99,6 +102,7 @@ impl StackFramesUtil {
                     class_ref,
                     method_raw,
                     instruction_line_num,
+                    frame.bci() as u16,
                     native,
                 ));
             }
@@ -134,6 +138,7 @@ impl StackFramesUtil {
                     class_ref,
                     method_raw,
                     line,
+                    frame.bci() as u16,
                     method.is_native(),
                 ));
             }

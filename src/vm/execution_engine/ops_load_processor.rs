@@ -1,5 +1,5 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::throw_null_pointer_exception_with_message;
+use crate::vm::exception::helpers::throw_null_pointer_exception;
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::heap::heap::HEAP;
@@ -76,11 +76,7 @@ fn handle_array_load<T: StackValue + Display + Copy>(
     let index: i32 = stack_frame.pop();
     let arrayref: i32 = stack_frame.pop();
     if arrayref == 0 {
-        let array_type = type_by_aload(name_starts)?;
-        throw_null_pointer_exception_with_message(
-            &format!("Cannot load from {array_type} array because \"<VAR_NAME>\" is null"),
-            stack_frames,
-        )?;
+        throw_null_pointer_exception(stack_frames)?;
         return Ok(());
     }
     let raw_value = HEAP.get_array_value(arrayref, index)?;
@@ -91,20 +87,4 @@ fn handle_array_load<T: StackValue + Display + Copy>(
     trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");
 
     Ok(())
-}
-
-fn type_by_aload(aload: &str) -> Result<&str> {
-    match aload {
-        "IALOAD" => Ok("int"),
-        "LALOAD" => Ok("long"),
-        "FALOAD" => Ok("float"),
-        "DALOAD" => Ok("double"),
-        "AALOAD" => Ok("object"),
-        "BALOAD" => Ok("byte"),
-        "CALOAD" => Ok("char"),
-        "SALOAD" => Ok("short"),
-        _ => Err(Error::new_execution(&format!(
-            "Unknown array load type: {aload}"
-        ))),
-    }
 }

@@ -285,7 +285,14 @@ impl MethodArea {
                 attributes_helper
                     .get_code(helper)
                     .map(
-                        |(max_stack, max_locals, code, line_numbers, exception_table)| {
+                        |(
+                            max_stack,
+                            max_locals,
+                            code,
+                            line_numbers,
+                            exception_table,
+                            local_variable_table,
+                        )| {
                             let line_numbers = line_numbers
                                 .iter()
                                 .map(|record| (record.start_pc(), record.line_number()))
@@ -296,6 +303,7 @@ impl MethodArea {
                                 Arc::new(code),
                                 Arc::new(line_numbers),
                                 Arc::new(stack::stack_frame::ExceptionTable::new(exception_table)),
+                                Arc::new(local_variable_table),
                             ))
                         },
                     )
