@@ -3480,7 +3480,6 @@ Date Format:     sábado, 24 de agosto de 1991
 }
 
 #[test]
-#[ignore] // https://github.com/hextriclosan/rusty-jvm/issues/677
 fn should_print_error_and_exit_if_no_main_method() {
     assert_failure(
         "samples.nomainmethod.NoMainMethod",
