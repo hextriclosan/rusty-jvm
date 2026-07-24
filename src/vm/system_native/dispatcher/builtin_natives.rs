@@ -499,6 +499,8 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn compareAndSetReference(obj: object, offset: long, expected: object, x: object) -> boolean => sn::unsafe_::compare_and_set_reference;
     "jdk/internal/misc/Unsafe": instance fn compareAndSetLong(obj: object, offset: long, expected: long, x: long) -> boolean => sn::unsafe_::compare_and_set_long;
     "jdk/internal/misc/Unsafe": instance fn compareAndExchangeLong(obj: object, offset: long, expected: long, x: long) -> long => sn::unsafe_::compare_and_exchange_long;
+    "jdk/internal/misc/Unsafe": instance fn compareAndExchangeInt(obj: object, offset: long, expected: int, x: int) -> int => sn::unsafe_::compare_and_exchange_int;
+    "jdk/internal/misc/Unsafe": instance fn compareAndExchangeReference(obj: object, offset: long, expected: object, x: object) -> object => sn::unsafe_::compare_and_exchange_reference;
     "jdk/internal/misc/Unsafe": instance fn getReferenceVolatile(obj: object, offset: long) -> object => sn::unsafe_::get_reference_volatile;
     "jdk/internal/misc/Unsafe": instance fn getByte(obj: object, offset: long) -> byte => sn::unsafe_::get_byte;
     "jdk/internal/misc/Unsafe": instance fn getShort(obj: object, offset: long) -> short => sn::unsafe_::get_short;

@@ -2900,6 +2900,82 @@ Product (parallel): 362880
 }
 
 #[test]
+fn should_support_fork_join_framework() {
+    // Exercises the ForkJoin framework (RecursiveTask/RecursiveAction/custom & common pools,
+    // fork/join, invokeAll) and parallel streams, including nested parallelism and a stress loop
+    // that keeps many pool workers parking and being woken. A regression in pool worker wake-up
+    // (or the Unsafe/VarHandle CAS primitives the pool coordinates through) deadlocks the pool, so
+    // this test would hang instead of producing the deterministic output below.
+    assert_success(
+        "samples.concurrency.forkjoin.ForkJoinExamples",
+        r#"RecursiveTask sum 1..10000 = 50005000
+RecursiveAction doubled sum = 16000
+Custom pool sum = 5000, parallelism = 3
+invokeAll sum = 12000
+parallel LongStream sum = 5000050000
+parallel product 1..12 = 479001600
+parallel evens: count = 10000, first = 0, last = 19998
+parallel partition %3: divisible = 3334, rest = 6666
+nested parallel total = 25025000
+stress loop 40 iterations consistent = true
+DONE
+"#,
+    );
+}
+
+#[test]
+fn should_support_atomic_compare_and_exchange() {
+    // Focused guard for the `compareAndExchange`/`compareAndSet` primitives that ForkJoin coordinates
+    // through: AtomicInteger/AtomicLong route to `Unsafe.compareAndExchangeInt/Long`, AtomicReference
+    // to the reference CAS. `compareAndExchange` returns the witness (prior) value.
+    assert_success(
+        "samples.concurrency.atomics.AtomicCasExamples",
+        r#"int witness on success = 10
+int witness on failure = 20
+int value = 20
+int compareAndSet fail = false
+int compareAndSet ok = true
+int getAndAdd = 40 -> 42
+long witness on success = 5000000000
+long compareAndSet ok = true
+long value = 7000000000
+ref witness on success = a
+ref witness on failure = b
+ref compareAndSet ok = true
+ref value = c
+ref updateAndGet = c!
+"#,
+    );
+}
+
+#[test]
+fn should_support_var_handle_compare_and_exchange() {
+    // Directly drives VarHandle compareAndSet / compareAndExchange / weakCompareAndSet on int and
+    // reference instance fields (the field-instance CAS branches, incl. the witness-returning
+    // compareAndExchange). Boolean fields are excluded on purpose: this VM's slot-index field
+    // offsets are incompatible with the JDK's word-masked compareAndSetByte path.
+    assert_success(
+        "samples.concurrency.varhandle.VarHandleCasExamples",
+        r#"int compareAndSet ok = true
+int compareAndExchange witness = 20
+int compareAndExchange fail witness = 30
+int compareAndExchangeAcquire witness = 30
+int compareAndExchangeRelease witness = 40
+int weakCompareAndSet = true
+int weakCompareAndSetPlain = true
+int weakCompareAndSetAcquire = true
+int weakCompareAndSetRelease = true
+int value = 90
+ref compareAndSet ok = true
+ref compareAndExchange witness = b
+ref compareAndExchange fail witness = c
+ref weakCompareAndSet = true
+ref value = d
+"#,
+    );
+}
+
+#[test]
 fn should_rethrow_an_exception() {
     assert_success(
         "samples.javacore.rethrowloopexample.RethrowExample",

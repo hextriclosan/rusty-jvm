@@ -119,9 +119,68 @@ pub(crate) fn var_handle_compare_and_set(
             &all_args,
         )?;
         Ok(ret)
+    } else if name == "java/lang/invoke/VarHandleInts$FieldInstanceReadWrite" {
+        // e.g. `ForkJoinTask.status`, updated via `STATUS.compareAndSet(this, s, s | flags)`.
+        let ret = Executor::invoke_static_method(
+            &name,
+            "compareAndSet:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)Z",
+            &all_args,
+        )?;
+        Ok(ret)
+    } else if name == "java/lang/invoke/VarHandleBooleans$FieldInstanceReadWrite" {
+        // NOTE: boolean CAS is only reliable when the field sits alone in its word. The JDK routes
+        // `compareAndSetBoolean` through `compareAndSetByte`, which word-aligns the offset
+        // (`offset & ~3`) and masks in a byte. Because this VM's field offsets are dense slot indices
+        // (0,1,2,...) rather than byte addresses, a boolean whose index is not a multiple of 4 aliases
+        // a neighbouring field. `ForkJoinPool` relies on this path and its boolean field happens to be
+        // safe; general boolean-field CAS is not. See [[unsafe-subword-cas-offset-limitation]].
+        let ret = Executor::invoke_static_method(
+            &name,
+            "compareAndSet:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;ZZ)Z",
+            &all_args,
+        )?;
+        Ok(ret)
     } else {
         Err(crate::vm::error::Error::new_execution(&format!(
             "var_handle_compare_and_set - Unsupported VarHandle type: {name}"
+        )))
+    }
+}
+
+/// Backs the signature-polymorphic `VarHandle.compareAndExchange`. Like
+/// [`var_handle_compare_and_set`] but the guard method returns the *witness* value (the value found
+/// in the field, equal to `expected` on success) instead of a boolean. Used by e.g.
+/// `AtomicReference.compareAndExchange` / `updateAndGet`.
+pub(crate) fn var_handle_compare_and_exchange(
+    handle_ref: i32,
+    args_to_process: &[i32],
+) -> Result<Vec<i32>> {
+    let name = HEAP.get_instance_name(handle_ref)?;
+
+    let mut all_args = vec![handle_ref];
+    all_args.extend_from_slice(args_to_process);
+    let all_args = all_args
+        .into_iter()
+        .map(|a| a.into())
+        .collect::<Vec<StackValueKind>>();
+    if name == "java/lang/invoke/VarHandleReferences$FieldInstanceReadWrite" {
+        Executor::invoke_static_method(
+            &name,
+            "compareAndExchange:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            &all_args,
+        )
+    } else if name == "java/lang/invoke/VarHandleInts$FieldInstanceReadWrite" {
+        Executor::invoke_static_method(
+            &name,
+            "compareAndExchange:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)I",
+            &all_args,
+        )
+    } else {
+        // Booleans are intentionally omitted: boolean-field CAS corrupts neighbouring fields under
+        // this VM's slot-index offset model (see the note on the compareAndSet boolean branch and
+        // [[unsafe-subword-cas-offset-limitation]]). Failing fast is better than silent corruption.
+        Err(crate::vm::error::Error::new_execution(&format!(
+            "var_handle_compare_and_exchange - Unsupported VarHandle type: {name}"
         )))
     }
 }

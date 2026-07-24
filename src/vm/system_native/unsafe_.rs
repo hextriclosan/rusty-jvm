@@ -109,14 +109,42 @@ pub(crate) fn static_field_base0(_this: i32, field_ref: i32) -> Result<i32> {
 
 /// `jdk.internal.misc.Unsafe.compareAndSetInt(Ljava/lang/Object;JII)Z`
 pub(crate) fn compare_and_set_int(
-    _this: i32,
+    this: i32,
     obj_ref: i32,
     offset: i64,
     expected: i32,
     x: i32,
 ) -> Result<bool> {
+    let (swapped, _witness) = compare_and_x_int(this, obj_ref, offset, expected, x)?;
+    Ok(swapped)
+}
+
+/// `jdk.internal.misc.Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I`
+///
+/// Like `compareAndSetInt` but returns the *witness* value (the value found in the field), which
+/// equals `expected` on success. `ForkJoinPool` uses this to advance task/queue status words.
+pub(crate) fn compare_and_exchange_int(
+    this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i32,
+    x: i32,
+) -> Result<i32> {
+    let (_swapped, witness) = compare_and_x_int(this, obj_ref, offset, expected, x)?;
+    Ok(witness)
+}
+
+/// Shared compare-and-swap for 32-bit slots (`int` and object references alike). Returns
+/// `(swapped, witness)` where `witness` is the value the field held before the attempt.
+fn compare_and_x_int(
+    _this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i32,
+    x: i32,
+) -> Result<(bool, i32)> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
-    let (_old, swapped) = if class_name.starts_with("[") {
+    let (old, swapped) = if class_name.starts_with("[") {
         HEAP.compare_and_exchange_array_by_raw_offset(
             obj_ref,
             offset as usize,
@@ -143,7 +171,15 @@ pub(crate) fn compare_and_set_int(
         )?
     };
 
-    Ok(swapped)
+    // The witness is the field's prior value; `compareAndExchange*` returns it and witness-loops
+    // (e.g. `updateAndGet`, ForkJoin) depend on it being accurate. An empty `old` means the heap
+    // returned an unexpected shape, so error out rather than fabricate a `0` witness.
+    let witness = *old.first().ok_or_else(|| {
+        Error::new_execution(&format!(
+            "compare-and-exchange returned no prior value for offset {offset} on {class_name}"
+        ))
+    })?;
+    Ok((swapped, witness))
 }
 
 /// `jdk.internal.misc.Unsafe.compareAndSetReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z`
@@ -155,6 +191,20 @@ pub(crate) fn compare_and_set_reference(
     x: i32,
 ) -> Result<bool> {
     compare_and_set_int(this, obj_ref, offset, expected, x)
+}
+
+/// `jdk.internal.misc.Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;`
+///
+/// Reference-typed sibling of [`compare_and_exchange_int`]; returns the witness reference. Used by
+/// `ForkJoinPool`'s work-queue slot updates.
+pub(crate) fn compare_and_exchange_reference(
+    this: i32,
+    obj_ref: i32,
+    offset: i64,
+    expected: i32,
+    x: i32,
+) -> Result<i32> {
+    compare_and_exchange_int(this, obj_ref, offset, expected, x)
 }
 
 /// `jdk.internal.misc.Unsafe.getReference(Ljava/lang/Object;J)Ljava/lang/Object;`
