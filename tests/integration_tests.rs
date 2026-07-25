@@ -2900,7 +2900,7 @@ Product (parallel): 362880
 }
 
 #[test]
-fn should_support_fork_join_framework() {
+fn should_support_fork_join_framework_slowtest() {
     // Exercises the ForkJoin framework (RecursiveTask/RecursiveAction/custom & common pools,
     // fork/join, invokeAll) and parallel streams, including nested parallelism and a stress loop
     // that keeps many pool workers parking and being woken. A regression in pool worker wake-up
@@ -3617,7 +3617,7 @@ fn ensure_jni_test_lib_is_built() {
 }
 
 #[test]
-fn should_load_native_library_and_call_native_method() {
+fn should_load_native_library_and_call_native_method_slowtest() {
     let null = "\0";
     let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
     utils::assert_with_all_args(
