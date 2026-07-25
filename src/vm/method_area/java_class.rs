@@ -17,6 +17,13 @@ use std::sync::{Arc, OnceLock};
 
 pub const STATIC_FIELDS_START: i64 = i32::MAX as i64;
 
+/// Instance-field offsets are the field's slot index scaled to a 4-byte-aligned byte offset
+/// (`index * 4`). Each field therefore owns its own aligned word, so the JDK's sub-word Unsafe ops
+/// (`compareAndSetBoolean`/`Byte`/`Short`/`Char`, which word-align the offset via `offset & ~3` and
+/// mask in a byte) operate on the intended field instead of aliasing a neighbour. Must divide the
+/// offset back out in [`JavaClass::get_field_name_by_offset`].
+const FIELD_OFFSET_SCALE: i64 = 4;
+
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
 #[derive(Debug, Getters, CopyGetters)]
@@ -180,7 +187,7 @@ impl JavaClass {
                     "Failed to get offset by name {fully_qualified_field_name}"
                 ))
             })?;
-        Ok(offset as i64)
+        Ok(offset as i64 * FIELD_OFFSET_SCALE)
     }
 
     pub fn get_static_field_offset(&self, field_name: &str) -> Result<i64> {
@@ -205,9 +212,11 @@ impl JavaClass {
     }
 
     pub fn get_field_name_by_offset(&self, offset: i64) -> Result<(String, String)> {
+        // `offset` is a 4-byte-scaled slot index (see [`FIELD_OFFSET_SCALE`]); a sub-word Unsafe op
+        // may pass a word-aligned offset (`offset & ~3`), which still divides back to the right slot.
         let result = self
             .fields_offset_mapping()?
-            .get_index(offset as usize)
+            .get_index((offset / FIELD_OFFSET_SCALE) as usize)
             .ok_or_else(|| {
                 Error::new_execution(&format!(
                     "Failed to get field name by offset {offset} from fields_offset_mapping"

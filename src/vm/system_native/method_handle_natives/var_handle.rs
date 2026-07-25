@@ -128,12 +128,10 @@ pub(crate) fn var_handle_compare_and_set(
         )?;
         Ok(ret)
     } else if name == "java/lang/invoke/VarHandleBooleans$FieldInstanceReadWrite" {
-        // NOTE: boolean CAS is only reliable when the field sits alone in its word. The JDK routes
-        // `compareAndSetBoolean` through `compareAndSetByte`, which word-aligns the offset
-        // (`offset & ~3`) and masks in a byte. Because this VM's field offsets are dense slot indices
-        // (0,1,2,...) rather than byte addresses, a boolean whose index is not a multiple of 4 aliases
-        // a neighbouring field. `ForkJoinPool` relies on this path and its boolean field happens to be
-        // safe; general boolean-field CAS is not. See [[unsafe-subword-cas-offset-limitation]].
+        // `ForkJoinPool` relies on this path. The JDK routes `compareAndSetBoolean` through
+        // `compareAndSetByte`, which word-aligns the offset (`offset & ~3`) and masks in a byte; this
+        // is correct because field offsets are 4-byte aligned per slot (see `FIELD_OFFSET_SCALE`), so
+        // each field owns its word and a sub-word CAS never aliases a neighbour.
         let ret = Executor::invoke_static_method(
             &name,
             "compareAndSet:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;ZZ)Z",
@@ -176,9 +174,8 @@ pub(crate) fn var_handle_compare_and_exchange(
             &all_args,
         )
     } else {
-        // Booleans are intentionally omitted: boolean-field CAS corrupts neighbouring fields under
-        // this VM's slot-index offset model (see the note on the compareAndSet boolean branch and
-        // [[unsafe-subword-cas-offset-limitation]]). Failing fast is better than silent corruption.
+        // Booleans are omitted only because nothing currently reaches this path; the aligned-offset
+        // layout (`FIELD_OFFSET_SCALE`) makes a boolean branch safe to add here like the ones above.
         Err(crate::vm::error::Error::new_execution(&format!(
             "var_handle_compare_and_exchange - Unsupported VarHandle type: {name}"
         )))
