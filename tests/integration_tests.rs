@@ -4143,3 +4143,32 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
         HashMap::default(),
     );
 }
+
+#[test]
+fn should_support_thread_pool_executor() {
+    assert_success(
+        "samples.concurrency.advancedpooldemo.AdvancedPoolDemo",
+        r#"=== Submission trace (deterministic: nothing completes yet) ===
+core=2  max=4  queueCapacity=5  -> capacity before reject = 9
+
+Task  1  ->  SPAWN THREAD   (poolSize 0 -> 1, queued=0)
+Task  2  ->  SPAWN THREAD   (poolSize 1 -> 2, queued=0)
+Task  3  ->  ENQUEUE        (poolSize=2, queued 0 -> 1)
+Task  4  ->  ENQUEUE        (poolSize=2, queued 1 -> 2)
+Task  5  ->  ENQUEUE        (poolSize=2, queued 2 -> 3)
+Task  6  ->  ENQUEUE        (poolSize=2, queued 3 -> 4)
+Task  7  ->  ENQUEUE        (poolSize=2, queued 4 -> 5)
+Task  8  ->  SPAWN THREAD   (poolSize 2 -> 3, queued=5)
+Task  9  ->  SPAWN THREAD   (poolSize 3 -> 4, queued=5)
+Task 10  ->  REJECTED       (poolSize=4 at max, queue full)
+Task 11  ->  REJECTED       (poolSize=4 at max, queue full)
+Task 12  ->  REJECTED       (poolSize=4 at max, queue full)
+
+=== Final summary (stable) ===
+Executed tasks : [1, 2, 3, 4, 5, 6, 7, 8, 9]
+Rejected tasks : [10, 11, 12]
+Completed count: 9
+Largest pool   : 4
+"#,
+    );
+}
