@@ -14,7 +14,7 @@ license = "MIT"
 exclude = [".*", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
 
 [workspace]
-members = ["jclassfile", "jdescriptor", "jimage-rs", "jniname", "tests/jni_test_lib"]
+members = ["jclassfile", "jclassmodel", "jdescriptor", "jimage-rs", "jniname", "tests/jni_test_lib"]
 
 [dependencies]
 clap = "4.6.1"
