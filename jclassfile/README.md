@@ -78,6 +78,36 @@ pub fn main() {
 }
 ```
 
+## Looking for resolved values? See `jclassmodel`
+
+This crate is deliberately a *faithful* parser: its output mirrors JVMS §4 one-for-one. Constant
+pool entries hold raw `u16` indexes into each other, attributes come back as an untyped
+`Vec<Attribute>`, and a name is reachable only by following an index to a `Utf8` entry. That is the
+right shape for a parser, because it neither loses information nor makes decisions on your behalf.
+
+It is not the shape most consumers want. Reading a method's name means resolving `name_index`;
+finding its `Code` means scanning a list of attributes; interpreting an exception handler means
+resolving `catch_type` and knowing that zero is the catch-all. Every project that uses class files
+ends up writing that same layer.
+
+[jclassmodel][jclassmodel] is that layer, built on this crate:
+
+| | `jclassfile` | `jclassmodel` |
+| --- | --- | --- |
+| Shape | 1:1 with JVMS §4 | organized for lookup |
+| Constant pool | `Vec` of raw entries, indexes unresolved | typed accessors returning resolved values |
+| Attributes | flat `Vec<Attribute>` | grouped by kind |
+| Cross-references | `u16` indexes | resolved names and descriptors |
+| Descriptors | `String` | parsed via [jdescriptor][jdescriptor] |
+
+Reach for `jclassfile` when you want the file exactly as the spec describes it: writing a
+disassembler, a verifier, a class file rewriter, or anything that must not lose a byte. Reach for
+`jclassmodel` when you want to *use* the class: a JVM, a static analyser, a reflection layer.
+
+`jclassmodel` keeps this crate as a private dependency, so it does not appear in `jclassmodel`'s
+public API and the two version independently. Nothing here depends on `jclassmodel`; the reference
+is one-way.
+
 ## Contributing
 Contributions are welcome! Feel free to open an issue or submit a pull request.
 
@@ -148,3 +178,5 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 [jvms-4.10]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10
 
 [rusty-jvm]: https://github.com/hextriclosan/rusty-jvm
+[jclassmodel]: https://crates.io/crates/jclassmodel
+[jdescriptor]: https://crates.io/crates/jdescriptor
