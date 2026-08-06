@@ -33,7 +33,7 @@
 //!   reflection layer.
 //!
 //! `jclassmodel` keeps this crate as a private dependency, so it does not appear in that crate's
-//! public API and the two version independently. Nothing here depends on `jclassmodel`; the
+//! public API and the two version can evolve independently. Nothing here depends on `jclassmodel`; the
 //! reference is one-way.
 //!
 //! [jvms-4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
