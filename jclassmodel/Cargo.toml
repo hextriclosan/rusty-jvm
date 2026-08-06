@@ -1,0 +1,27 @@
+[package]
+name = "jclassmodel"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+authors = ["Igor Rudenko <iostream64@gmail.com>"]
+description = "Runtime-friendly view over parsed Java class files"
+license = "MIT"
+homepage = "https://github.com/hextriclosan/rusty-jvm/tree/main/jclassmodel"
+repository = "https://github.com/hextriclosan/rusty-jvm/tree/main/jclassmodel"
+documentation = "https://docs.rs/jclassmodel"
+readme = "README.md"
+keywords = ["jvm", "java", "bytecode", "classfile", "parser"]
+categories = ["parser-implementations", "parsing", "development-tools::ffi"]
+exclude = ["tests/**"]
+
+workspace = ".."
+
+[dependencies]
+jclassfile = "0.6.1"
+jdescriptor = "0.2.0"
+bitflags = "2.13.1"
+derive-new = "0.7.0"
+getset = "0.1.7"
+
+[dev-dependencies]
+mockall = "0.15.0"
