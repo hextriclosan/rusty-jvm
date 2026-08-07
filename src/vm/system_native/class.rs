@@ -205,27 +205,23 @@ pub(crate) fn get_declared_constructors0(class_ref: i32, public_only: bool) -> R
 /// `java.lang.Class.getEnclosingMethod0()[Ljava/lang/Object;`
 pub(crate) fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
-
-    // JVMS §4.7.7 allows the attribute to name an enclosing class without an enclosing method,
-    // for a class declared in an initializer. `Class.getEnclosingMethod()` is null in that case,
-    // so there is nothing to hand back even though the attribute is present.
-    let Some(method) = klass
-        .enclosing_method()
-        .as_ref()
-        .and_then(|enclosing_method| {
-            enclosing_method
-                .method
-                .as_ref()
-                .map(|method| (&enclosing_method.class_name, method))
-        })
-    else {
+    let Some(enclosing_method) = klass.enclosing_method() else {
         return Ok(0);
     };
-    let (class_name, method) = method;
 
-    let class_name_ref = clazz_ref(class_name)?;
-    let name_ref = StringPoolHelper::get_string(&method.name)?;
-    let descriptor_ref = StringPoolHelper::get_string(&method.descriptor)?;
+    let class_name_ref = clazz_ref(&enclosing_method.class_name)?;
+
+    // JVMS §4.7.7 allows the attribute to name an enclosing class without an enclosing method,
+    // for a class declared in an initializer. `Class.EnclosingMethodInfo` accepts a null name and
+    // descriptor (they must be null together), and `getEnclosingClass()` still reads element 0, so
+    // the enclosing class has to be reported even when there is no method to go with it.
+    let (name_ref, descriptor_ref) = match &enclosing_method.method {
+        Some(method) => (
+            StringPoolHelper::get_string(&method.name)?,
+            StringPoolHelper::get_string(&method.descriptor)?,
+        ),
+        None => (0, 0),
+    };
 
     let array_ref = HEAP.create_array_with_values(
         "[Ljava/lang/reflect/Method;",
