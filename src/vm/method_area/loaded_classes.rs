@@ -9,7 +9,6 @@ use crate::vm::UNNAMED_MODULE_REF;
 use dashmap::DashMap;
 use derive_new::new;
 use indexmap::IndexSet;
-use jclassmodel::modifiers::ClassModifier;
 use jdescriptor::TypeDescriptor;
 use std::ops::DerefMut;
 use std::sync::atomic::{AtomicI8, AtomicUsize, Ordering};
@@ -249,14 +248,7 @@ impl LoadedClasses {
                 },
             ],
         )?;
-        // `Class.getModifiers()` reports `java.lang.reflect.Modifier` bits, which are not the class
-        // file's `access_flags`: HotSpot's `compute_modifier_flags` masks with
-        // `~JVM_ACC_SUPER & JVM_ACC_WRITTEN_FLAGS`, dropping ACC_SUPER (set on virtually every
-        // class) and ACC_MODULE. `ClassModifier` is faithful to the file, so strip them here.
-        let class_modifiers = klass
-            .class_modifiers()
-            .difference(ClassModifier::Super | ClassModifier::Module)
-            .bits();
+        let class_modifiers = klass.reflection_modifiers();
         class_instance.set_field_value(CLASS, "modifiers", vec![class_modifiers as i32])?;
 
         class_instance.set_field_value(

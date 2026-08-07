@@ -9,6 +9,21 @@ public class TrivialReflection {
         print(Rcd.class);
         print(Enm.class);
         print(int.class);
+
+        // Nested classes record private/protected/static only in the InnerClasses attribute,
+        // never in their own ClassFile access_flags.
+        print(PrivateStaticNested.class);
+        print(ProtectedInner.class);
+        print(PackagePrivateStaticNested.class);
+    }
+
+    private static class PrivateStaticNested {
+    }
+
+    protected class ProtectedInner {
+    }
+
+    static final class PackagePrivateStaticNested {
     }
 
     private static void print(Class<?> clazz) {

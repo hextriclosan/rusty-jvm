@@ -9,7 +9,7 @@ use getset::{CopyGetters, Getters};
 use indexmap::{IndexMap, IndexSet};
 use jclassmodel::attributes::Attributes;
 use jclassmodel::constant_pool::ConstantPool;
-use jclassmodel::modifiers::ClassModifier;
+use jclassmodel::modifiers::{ClassModifier, NestedClassModifier};
 use jclassmodel::{ClassModel, EnclosingMethodInfo, FieldModel, MethodModel};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
@@ -56,6 +56,11 @@ pub(crate) struct JavaClass {
     interfaces: IndexSet<String>,
     #[get_copy = "pub"]
     class_modifiers: ClassModifier,
+    /// Modifiers from this class's own `InnerClasses` record, present only when it is nested.
+    /// The only place `private`, `protected` and `static` are recorded for a nested class; the
+    /// `ClassFile`'s own `access_flags` structurally cannot express them.
+    #[get_copy = "pub"]
+    nested_class_modifiers: Option<NestedClassModifier>,
 
     #[get = "pub"]
     static_fields_init_state: Arc<ReentrantMutex<InitState>>,
@@ -104,10 +109,10 @@ impl JavaClass {
     /// initialization state, vtable and offset caches) that the class file itself cannot describe.
     pub fn from_model(model: ClassModel) -> Result<Self> {
         let ClassModel {
-            // The class file version and the nested-class modifiers are not used by the runtime
-            // yet; bound explicitly rather than with `..` so a new model field still breaks here.
+            // The class file version is not used by the runtime yet; bound explicitly rather than
+            // with `..` so a new model field still breaks here.
             version: _,
-            nested_class_modifiers: _,
+            nested_class_modifiers,
             name,
             external_name,
             super_class_name,
@@ -137,6 +142,7 @@ impl JavaClass {
             super_class_name,
             interfaces.into_iter().collect(),
             modifiers,
+            nested_class_modifiers,
             declaring_class,
             annotations_raw,
             enclosing_method,
@@ -165,6 +171,7 @@ impl JavaClass {
             parent,
             interfaces,
             ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
+            None,
             None,
             None,
             None,
@@ -264,6 +271,7 @@ impl JavaClass {
         parent: Option<String>,
         interfaces: IndexSet<String>,
         class_modifiers: ClassModifier,
+        nested_class_modifiers: Option<NestedClassModifier>,
         declaring_class: Option<String>,
         annotations_raw: Option<Vec<u8>>,
         enclosing_method: Option<EnclosingMethodInfo>,
@@ -281,6 +289,7 @@ impl JavaClass {
             parent,
             interfaces,
             class_modifiers,
+            nested_class_modifiers,
             static_fields_init_state: Arc::default(),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
@@ -296,6 +305,25 @@ impl JavaClass {
 
     pub fn is_interface(&self) -> bool {
         self.class_modifiers.contains(ClassModifier::Interface)
+    }
+
+    /// Modifiers as `Class.getModifiers()` reports them, which are `java.lang.reflect.Modifier`
+    /// bits rather than the class file's `access_flags`.
+    ///
+    /// A nested class records its real `private`, `protected` and `static` only in the
+    /// `InnerClasses` entry describing it, so those flags *replace* the class file's own when
+    /// present, matching HotSpot's `InstanceKlass::compute_modifier_flags`. ACC_SUPER and
+    /// ACC_MODULE are then stripped, since neither is a `Modifier` bit.
+    pub fn reflection_modifiers(&self) -> u16 {
+        /// `JVM_ACC_WRITTEN_FLAGS`: everything below ACC_MODULE (0x8000).
+        const WRITTEN_FLAGS: u16 = 0x7FFF;
+
+        let bits = self
+            .nested_class_modifiers
+            .map(|modifiers| modifiers.bits())
+            .unwrap_or_else(|| self.class_modifiers.bits());
+
+        bits & !ClassModifier::Super.bits() & WRITTEN_FLAGS
     }
 
     pub fn static_field(&self, field_name: &str) -> Option<Arc<FieldValue>> {

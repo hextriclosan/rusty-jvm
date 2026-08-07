@@ -614,6 +614,36 @@ Class: int
   isSynthetic: false
   isRecord: false
   isEnumeration: false
+Class: class samples.reflection.trivial.TrivialReflection$PrivateStaticNested
+  modifiers: 10
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.TrivialReflection$ProtectedInner
+  modifiers: 4
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.TrivialReflection$PackagePrivateStaticNested
+  modifiers: 24
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
 "#,
     );
 }
