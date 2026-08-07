@@ -1499,7 +1499,7 @@ dependencies = [
  "iana-time-zone",
  "indexmap",
  "itertools",
- "jclassfile 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jclassmodel",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "jni-sys",

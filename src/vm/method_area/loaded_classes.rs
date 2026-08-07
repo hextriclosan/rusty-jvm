@@ -2,16 +2,14 @@ use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
 use crate::vm::heap::java_instance::{JavaInstance, JavaInstanceBase, JavaInstanceClass};
 use crate::vm::helper::undecorate;
-use crate::vm::method_area::attributes_helper::AttributesHelper;
-use crate::vm::method_area::class_modifiers::ClassModifier;
-use crate::vm::method_area::cpool_helper::CPoolHelper;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::UNNAMED_MODULE_REF;
 use dashmap::DashMap;
 use derive_new::new;
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexSet;
+use jclassmodel::modifiers::ClassModifier;
 use jdescriptor::TypeDescriptor;
 use std::ops::DerefMut;
 use std::sync::atomic::{AtomicI8, AtomicUsize, Ordering};
@@ -251,7 +249,14 @@ impl LoadedClasses {
                 },
             ],
         )?;
-        let class_modifiers = klass.class_modifiers().bits();
+        // `Class.getModifiers()` reports `java.lang.reflect.Modifier` bits, which are not the class
+        // file's `access_flags`: HotSpot's `compute_modifier_flags` masks with
+        // `~JVM_ACC_SUPER & JVM_ACC_WRITTEN_FLAGS`, dropping ACC_SUPER (set on virtually every
+        // class) and ACC_MODULE. `ClassModifier` is faithful to the file, so strip them here.
+        let class_modifiers = klass
+            .class_modifiers()
+            .difference(ClassModifier::Super | ClassModifier::Module)
+            .bits();
         class_instance.set_field_value(CLASS, "modifiers", vec![class_modifiers as i32])?;
 
         class_instance.set_field_value(
@@ -359,13 +364,7 @@ impl LoadedClasses {
 
     fn generate_synthetic_array_class(array_class_name_internal: &str) -> Arc<JavaClass> {
         let array_class_name_external = array_class_name_internal.replace('/', ".");
-        Arc::new(JavaClass::new(
-            IndexMap::new(),
-            IndexMap::new(),
-            IndexMap::new(),
-            IndexMap::new(),
-            CPoolHelper::new(&Vec::new()),
-            AttributesHelper::new(&Vec::new()),
+        Arc::new(JavaClass::synthetic(
             array_class_name_internal.to_string(),
             array_class_name_external,
             Some(OBJECT.to_string()),
@@ -373,11 +372,6 @@ impl LoadedClasses {
                 "java/lang/Cloneable".to_string(),
                 "java/io/Serializable".to_string(),
             ]),
-            ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
-            None,
-            None,
-            None,
-            None,
         ))
     }
 }

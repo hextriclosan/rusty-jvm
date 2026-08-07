@@ -3,9 +3,9 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, i64_to_vec, vec_to_i64};
-use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
+use jclassmodel::constant_pool::ConstantPoolLookup;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -29,20 +29,20 @@ impl LdcResolutionManager {
         }
 
         let java_class = CLASSES.get(current_class_name)?;
-        let cpool_helper = java_class.cpool_helper();
+        let constant_pool = java_class.constant_pool();
 
-        let result = if let Some(value) = cpool_helper.get_integer(cpoolindex) {
+        let result = if let Some(value) = constant_pool.get_integer(cpoolindex) {
             value
-        } else if let Some(value) = cpool_helper.get_float(cpoolindex) {
+        } else if let Some(value) = constant_pool.get_float(cpoolindex) {
             Self::float_to_int(value)
-        } else if let Some(value) = cpool_helper.get_string(cpoolindex) {
+        } else if let Some(value) = constant_pool.get_string(cpoolindex) {
             StringPoolHelper::get_string(&value)?
-        } else if let Some(class_name) = cpool_helper.get_class_name(cpoolindex) {
+        } else if let Some(class_name) = constant_pool.get_class_name(cpoolindex) {
             clazz_ref(&class_name)?
-        } else if let Some(method_type) = cpool_helper.get_method_type(cpoolindex) {
+        } else if let Some(method_type) = constant_pool.get_method_type(cpoolindex) {
             build_methodtype_ref(&method_type)?
         } else if let Some((reference_kind, class_name, name, descriptor)) =
-            cpool_helper.get_method_handle(cpoolindex)
+            constant_pool.get_method_handle(cpoolindex)
         {
             resolve_method_handle(
                 current_class_name,
@@ -78,11 +78,11 @@ impl LdcResolutionManager {
         }
 
         let java_class = CLASSES.get(current_class_name)?;
-        let cpool_helper = java_class.cpool_helper();
+        let constant_pool = java_class.constant_pool();
 
-        let result = if let Some(value) = cpool_helper.get_long(cpoolindex) {
+        let result = if let Some(value) = constant_pool.get_long(cpoolindex) {
             value
-        } else if let Some(value) = cpool_helper.get_double(cpoolindex) {
+        } else if let Some(value) = constant_pool.get_double(cpoolindex) {
             Self::double_to_int(value)
         } else {
             return Err(Error::new_constant_pool(&format!(

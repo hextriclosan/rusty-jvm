@@ -7,13 +7,13 @@ use crate::vm::execution_engine::opcode::*;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{argument_length, get_length};
-use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::monitor;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
+use jclassmodel::constant_pool::{ConstantPool, ConstantPoolLookup};
 use jdescriptor::MethodDescriptor;
 use std::sync::Arc;
 use tracing::trace;
@@ -135,7 +135,7 @@ pub(crate) fn process(
                 get_class_name_and_signature(
                     stack_frames,
                     current_class_name,
-                    CPoolHelper::get_full_method_info,
+                    ConstantPool::get_full_method_info,
                 )?;
             let method_descriptor = method_signature.parse()?;
             let method_args = prepare_invoke_context(stack_frames, &method_descriptor, true)?;
@@ -175,7 +175,7 @@ pub(crate) fn process(
                 get_class_name_and_signature(
                     stack_frames,
                     current_class_name,
-                    CPoolHelper::get_full_method_info,
+                    ConstantPool::get_full_method_info,
                 )?;
             let java_method = lookup::lookup_method(&class_name_to_start_lookup_from, &full_signature)?
                 .ok_or_else(|| Error::new_constant_pool(&format!("Error getting instance type JavaMethod by class name {class_name_to_start_lookup_from} and full signature {full_signature} calling invokespecial")))?;
@@ -197,7 +197,7 @@ pub(crate) fn process(
                 get_class_name_and_signature(
                     stack_frames,
                     current_class_name,
-                    CPoolHelper::get_full_method_info,
+                    ConstantPool::get_full_method_info,
                 )?;
             let klass = CLASSES.get(&class_name_to_start_lookup_from)?;
             StaticInit::initialize_java_class(&klass)?;
@@ -230,7 +230,7 @@ pub(crate) fn process(
 
             let (_, full_signature, _) = get_class_name_and_signature_by_index(
                 current_class_name,
-                CPoolHelper::get_full_interfacemethodref_info,
+                ConstantPool::get_full_interfacemethodref_info,
                 index,
             )?;
             let reference = method_args
@@ -283,9 +283,9 @@ pub(crate) fn process(
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
 
             let klass = CLASSES.get(current_class_name)?;
-            let cpool_helper = klass.cpool_helper();
+            let constant_pool = klass.constant_pool();
 
-            let class_to_invoke_new_for = cpool_helper
+            let class_to_invoke_new_for = constant_pool
                 .get_class_name(class_constpool_index)
                 .ok_or_else(|| {
                     Error::new_constant_pool(&format!(
@@ -339,9 +339,9 @@ pub(crate) fn process(
 
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             let klass = CLASSES.get(current_class_name)?;
-            let cpool_helper = klass.cpool_helper();
+            let constant_pool = klass.constant_pool();
 
-            let class_of_array = cpool_helper
+            let class_of_array = constant_pool
                 .get_class_name(class_constpool_index)
                 .ok_or_else(|| {
                     Error::new_constant_pool(&format!(
@@ -399,8 +399,8 @@ pub(crate) fn process(
 
             if objectref != 0 {
                 let klass = CLASSES.get(current_class_name)?;
-                let cpool_helper = klass.cpool_helper();
-                let class_name = cpool_helper
+                let constant_pool = klass.constant_pool();
+                let class_name = constant_pool
                     .get_class_name(class_constpool_index)
                     .ok_or_else(|| {
                         Error::new_constant_pool(&format!(
@@ -431,8 +431,8 @@ pub(crate) fn process(
 
             if objectref != 0 {
                 let klass = CLASSES.get(current_class_name)?;
-                let cpool_helper = klass.cpool_helper();
-                let class_name = cpool_helper
+                let constant_pool = klass.constant_pool();
+                let class_name = constant_pool
                     .get_class_name(class_constpool_index)
                     .ok_or_else(|| {
                         Error::new_constant_pool(&format!(
@@ -513,7 +513,7 @@ fn get_class_name_and_signature<F>(
     cpool_getter: F,
 ) -> Result<(String, String, String)>
 where
-    F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>,
+    F: Fn(&ConstantPool, u16) -> Option<(String, String, String)>,
 {
     let stack_frame = last_frame_mut(stack_frames)?;
     let index = stack_frame.extract_two_bytes() as u16;
@@ -528,11 +528,11 @@ fn get_class_name_and_signature_by_index<F>(
     index: u16,
 ) -> Result<(String, String, String)>
 where
-    F: Fn(&CPoolHelper, u16) -> Option<(String, String, String)>,
+    F: Fn(&ConstantPool, u16) -> Option<(String, String, String)>,
 {
     let klass = CLASSES.get(current_class_name)?;
-    let cpool_helper = klass.cpool_helper();
-    let (class_name, method_name, method_descriptor) = cpool_getter(cpool_helper, index)
+    let constant_pool = klass.constant_pool();
+    let (class_name, method_name, method_descriptor) = cpool_getter(constant_pool, index)
         .ok_or_else(|| {
             Error::new_constant_pool(&format!(
                 "Error getting full method info by index {index} in {current_class_name}"
@@ -549,14 +549,14 @@ fn get_field_info(
     let fieldref_constpool_index = stack_frame.extract_two_bytes() as u16;
 
     let klass = CLASSES.get(current_class_name)?;
-    let cpool_helper = klass.cpool_helper();
+    let constant_pool = klass.constant_pool();
 
-    let (class_name, field_name, _) = cpool_helper
+    let (class_name, field_name, _) = constant_pool
         .get_full_field_info(fieldref_constpool_index)
         .ok_or_else(|| {
-        Error::new_constant_pool(&format!(
-            "Error getting full field info by index {fieldref_constpool_index}"
-        ))
-    })?;
+            Error::new_constant_pool(&format!(
+                "Error getting full field info by index {fieldref_constpool_index}"
+            ))
+        })?;
     Ok((class_name, field_name))
 }

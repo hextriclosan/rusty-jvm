@@ -1,14 +1,16 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::invoke_dynamic_runner::InvokeDynamicRunner;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType};
-use crate::vm::method_area::attributes_helper::AttributesHelper;
-use crate::vm::method_area::class_modifiers::ClassModifier;
-use crate::vm::method_area::cpool_helper::CPoolHelper;
 use crate::vm::method_area::field::{FieldInfo, FieldValue};
-use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
 use crate::vm::method_area::lookup;
+use crate::vm::stack::stack_frame::ExceptionTable;
 use getset::{CopyGetters, Getters};
 use indexmap::{IndexMap, IndexSet};
+use jclassmodel::attributes::Attributes;
+use jclassmodel::constant_pool::ConstantPool;
+use jclassmodel::modifiers::ClassModifier;
+use jclassmodel::{ClassModel, EnclosingMethodInfo, FieldModel, MethodModel};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
 use parking_lot::ReentrantMutex;
@@ -26,6 +28,14 @@ const FIELD_OFFSET_SCALE: i64 = 4;
 
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
+/// A class's fields, split the three ways [`JavaClass`] stores them: metadata for every field,
+/// values for the static ones, and the template instances are created from.
+struct BuiltFields {
+    info: IndexMap<String, Arc<FieldInfo>>,
+    static_values: IndexMap<String, Arc<FieldValue>>,
+    instance_template: IndexMap<String, FieldValue>,
+}
+
 #[derive(Debug, Getters, CopyGetters)]
 pub(crate) struct JavaClass {
     methods: IndexMap<String, Arc<JavaMethod>>,
@@ -33,9 +43,9 @@ pub(crate) struct JavaClass {
     static_fields: IndexMap<String, Arc<FieldValue>>,
     instance_fields_template: IndexMap<String, FieldValue>,
     #[get = "pub"]
-    cpool_helper: CPoolHelper,
+    constant_pool: ConstantPool,
     #[get = "pub"]
-    attributes_helper: AttributesHelper,
+    attributes: Attributes,
     #[get = "pub"]
     this_class_name: String,
     #[get = "pub"]
@@ -58,7 +68,7 @@ pub(crate) struct JavaClass {
     #[get = "pub"]
     annotations_raw: Option<Vec<u8>>,
     #[get = "pub"]
-    enclosing_method: Option<(String, String, String)>,
+    enclosing_method: Option<EnclosingMethodInfo>,
     #[get = "pub"]
     source_file: Option<String>,
     #[get = "pub"]
@@ -90,13 +100,165 @@ pub enum InnerState {
 }
 
 impl JavaClass {
-    pub fn new(
+    /// Builds a class from its resolved class-file view, adding the runtime state (field values,
+    /// initialization state, vtable and offset caches) that the class file itself cannot describe.
+    pub fn from_model(model: ClassModel) -> Result<Self> {
+        let ClassModel {
+            // The class file version and the nested-class modifiers are not used by the runtime
+            // yet; bound explicitly rather than with `..` so a new model field still breaks here.
+            version: _,
+            nested_class_modifiers: _,
+            name,
+            external_name,
+            super_class_name,
+            interfaces,
+            modifiers,
+            methods,
+            fields,
+            declaring_class,
+            annotations_raw,
+            enclosing_method,
+            source_file,
+            constant_pool,
+            attributes,
+        } = model;
+
+        let built_fields = Self::build_fields(fields, &name)?;
+
+        Ok(Self::assemble(
+            Self::build_methods(methods, &name),
+            built_fields.info,
+            built_fields.static_values,
+            built_fields.instance_template,
+            constant_pool,
+            attributes,
+            name,
+            external_name,
+            super_class_name,
+            interfaces.into_iter().collect(),
+            modifiers,
+            declaring_class,
+            annotations_raw,
+            enclosing_method,
+            source_file,
+        ))
+    }
+
+    /// Builds a class the VM invents rather than loads: primitives (`int`, `void`, …) and array
+    /// classes. They have no class file, so they carry no methods, fields, constant pool or
+    /// attributes.
+    pub fn synthetic(
+        this_class_name: String,
+        external_name: String,
+        parent: Option<String>,
+        interfaces: IndexSet<String>,
+    ) -> Self {
+        Self::assemble(
+            IndexMap::new(),
+            IndexMap::new(),
+            IndexMap::new(),
+            IndexMap::new(),
+            ConstantPool::empty(),
+            Attributes::empty(),
+            this_class_name,
+            external_name,
+            parent,
+            interfaces,
+            ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    fn build_methods(
+        methods: Vec<MethodModel>,
+        class_name: &str,
+    ) -> IndexMap<String, Arc<JavaMethod>> {
+        let mut method_by_signature = IndexMap::new();
+
+        for method in methods {
+            // Polymorphic-signature natives have no fixed descriptor, so they are keyed by bare name.
+            let key = if method.is_polymorphic_signature() {
+                method.name.clone()
+            } else {
+                method.name_signature.clone()
+            };
+
+            // Read before `code` is moved out of `method` below.
+            let is_native = method.is_native();
+
+            let code_context = method.code.map(|code| {
+                CodeContext::new(
+                    code.max_stack,
+                    code.max_locals,
+                    Arc::new(code.bytecode),
+                    Arc::new(code.line_numbers),
+                    Arc::new(ExceptionTable::new(code.exception_table)),
+                    Arc::new(code.local_variable_table),
+                )
+            });
+
+            method_by_signature.insert(
+                key,
+                Arc::new(JavaMethod::new(
+                    method.descriptor,
+                    class_name,
+                    &method.name_signature,
+                    code_context,
+                    is_native,
+                    method.exceptions,
+                    method.modifiers.bits() as i32,
+                    &method.name,
+                    method.annotation_default_raw,
+                    method.annotations_raw,
+                    method.runtime_visible_annotations,
+                    method_by_signature.len() as i32, // God, forgive me, this is a hack to get the method index
+                )),
+            );
+        }
+
+        method_by_signature
+    }
+
+    fn build_fields(fields: Vec<FieldModel>, class_name: &str) -> Result<BuiltFields> {
+        let mut info = IndexMap::new();
+        let mut instance_template = IndexMap::new();
+        let mut static_values = IndexMap::new();
+        for field in fields {
+            let is_static = field.is_static();
+            info.insert(
+                field.name.clone(),
+                Arc::new(FieldInfo::new(
+                    field.descriptor.clone(),
+                    field.modifiers.bits(),
+                    class_name.to_string(),
+                    field.name.clone(),
+                )),
+            );
+            if is_static {
+                static_values.insert(field.name, Arc::new(FieldValue::new(field.descriptor)?));
+            } else {
+                instance_template.insert(field.name, FieldValue::new(field.descriptor)?);
+            }
+        }
+
+        Ok(BuiltFields {
+            info,
+            static_values,
+            instance_template,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn assemble(
         methods: IndexMap<String, Arc<JavaMethod>>,
         fields_info: IndexMap<String, Arc<FieldInfo>>,
         static_fields: IndexMap<String, Arc<FieldValue>>,
         instance_fields_template: IndexMap<String, FieldValue>,
-        cpool_helper: CPoolHelper,
-        attributes_helper: AttributesHelper,
+        constant_pool: ConstantPool,
+        attributes: Attributes,
         this_class_name: String,
         external_name: String,
         parent: Option<String>,
@@ -104,7 +266,7 @@ impl JavaClass {
         class_modifiers: ClassModifier,
         declaring_class: Option<String>,
         annotations_raw: Option<Vec<u8>>,
-        enclosing_method: Option<(String, String, String)>,
+        enclosing_method: Option<EnclosingMethodInfo>,
         source_file: Option<String>,
     ) -> Self {
         Self {
@@ -112,8 +274,8 @@ impl JavaClass {
             fields_info,
             static_fields,
             instance_fields_template,
-            cpool_helper,
-            attributes_helper,
+            constant_pool,
+            attributes,
             this_class_name,
             external_name,
             parent,

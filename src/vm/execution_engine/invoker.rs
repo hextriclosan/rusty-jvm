@@ -6,7 +6,7 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::system_native::dispatcher::invoke::invoke as invoke_native;
 use crate::vm::system_native::dispatcher::polymorphic::invoke_polymorphic;
-use jclassfile::methods::MethodFlags;
+use jclassmodel::modifiers::MethodModifier;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -22,8 +22,8 @@ pub(crate) fn invoke(
             .runtime_visible_annotations()
             .contains("Ljava/lang/invoke/MethodHandle$PolymorphicSignature;");
 
-        let method_flags = MethodFlags::from_bits_truncate(java_method.access_flags() as u16);
-        let is_static = method_flags.contains(MethodFlags::ACC_STATIC);
+        let method_flags = MethodModifier::from_bits_truncate(java_method.access_flags() as u16);
+        let is_static = method_flags.contains(MethodModifier::Static);
 
         let result = if is_polymorphic {
             // Polymorphic intrinsics (MethodHandle/VarHandle) have no fixed descriptor and

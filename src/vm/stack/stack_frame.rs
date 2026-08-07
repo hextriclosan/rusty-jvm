@@ -3,6 +3,8 @@ use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::stack::stack::Stack;
 use crate::vm::stack::stack_value::StackValue;
 use derive_new::new;
+use jclassmodel::exception_table::ExceptionTableRecord;
+use jclassmodel::CatchType;
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::sync::atomic::AtomicU32;
@@ -37,15 +39,6 @@ pub(crate) struct StackFrame {
     is_native: bool,
 }
 
-#[derive(Debug, new, PartialEq)]
-pub struct ExceptionTableRecord {
-    start_pc: u16,
-    end_pc: u16,
-    handler_pc: u16,
-    /// The type of exception to catch. Use "any" to represent a catch-all handler.
-    catch_type: String,
-}
-
 #[derive(Debug, new)]
 pub struct ExceptionTable {
     table: Vec<ExceptionTableRecord>,
@@ -62,17 +55,20 @@ impl ExceptionTable {
         if self.table.is_empty() {
             trace!("ATHROW -> exception table is empty: at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
         }
-        const FINALLY_MARK: &str = "any";
         for record in self.table.iter() {
             trace!("ATHROW -> checking exception table record: {record:?} at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
-            if pc < record.start_pc || pc >= record.end_pc {
+            if pc < record.start_pc() || pc >= record.end_pc() {
                 continue;
             }
-            let eligible = record.catch_type == FINALLY_MARK
-                || InstanceChecker::checkcast(exception_name, &record.catch_type)?;
+            let eligible = match record.catch_type() {
+                CatchType::Any => true,
+                CatchType::Class(catch_type) => {
+                    InstanceChecker::checkcast(exception_name, catch_type)?
+                }
+            };
             if eligible {
                 trace!("ATHROW -> found exception handler: {record:?} at pc={pc} for exception {exception_name} in method {current_class_name}.{method_name}");
-                return Ok(Some(record.handler_pc));
+                return Ok(Some(record.handler_pc()));
             }
         }
 
