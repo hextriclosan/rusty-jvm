@@ -72,20 +72,27 @@ Components with well-defined, reusable APIs are published as independent crates:
 
 | Crate | Description |
 |---|---|
-| [`jclassfile`](jclassfile/) | `.class` file parser |
+| [`jclassfile`](jclassfile/) | `.class` file parser, mirroring [JVMS §4][jvms-4] |
+| [`jclassmodel`](jclassmodel/) | Runtime-friendly view over a parsed class file |
 | [`jdescriptor`](jdescriptor/) | JVM type-descriptor and method-signature parser |
 | [`jimage-rs`](jimage-rs/) | Reader for JDK `.jimage` archive files |
 | [`jniname`](jniname/) | JNI name-mangling utilities |
 
+The VM consumes class files through `jclassmodel`, which resolves constant-pool indexes, keys
+methods by name and descriptor, and groups attributes by kind. `jclassfile` is its private
+dependency and is not used by the VM directly.
+
 ```mermaid
 graph TD
     JVM["rusty-jvm"]
+    JCM["jclassmodel\n- runtime class view"]
     JCF["jclassfile\n- class-file parser"]
     JD["jdescriptor\n- type-descriptor parser"]
     JI["jimage-rs\n- jimage-archive reader"]
     JN["jniname\n- JNI name-mangling"]
 
-    JVM --> JCF & JD & JI & JN
+    JVM --> JCM & JD & JI & JN
+    JCM --> JCF & JD
     JN --> JD
 ```
 
@@ -164,6 +171,7 @@ and implement new native methods.
 [dep-status-image]: https://deps.rs/repo/github/hextriclosan/rusty-jvm/status.svg
 [dep-status-link]: https://deps.rs/repo/github/hextriclosan/rusty-jvm
 
+[jvms-4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
 [jvms-5.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
 [jvms-6]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html
 [jls-5.5]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-5.html#jls-5.5

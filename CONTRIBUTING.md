@@ -119,6 +119,7 @@ rusty-jvm/
 │   ├── integration_tests.rs  # Main integration test suite
 │   └── utils.rs              # Test helpers (assert_success, etc.)
 ├── jclassfile/               # Sub-crate: .class file parser
+├── jclassmodel/              # Sub-crate: runtime-friendly view over a parsed class file
 ├── jdescriptor/              # Sub-crate: JVM type descriptor parser
 ├── jimage-rs/                # Sub-crate: JDK jimage archive reader
 ├── jniname/                  # Sub-crate: JNI name mangling utilities

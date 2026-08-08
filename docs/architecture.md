@@ -68,14 +68,31 @@ sequenceDiagram
             MA->>FS: open("com/example/Foo.class")
             FS-->>MA: raw bytes
         end
-        MA->>MA: parse (jclassfile), build JavaClass
+        MA->>MA: parse (jclassmodel), build JavaClass
         MA->>CL: insert Arc<JavaClass>
         CL-->>MA: Arc<JavaClass>
     end
     MA-->>EE: Arc<JavaClass>
 ```
 
-### 2.1 Class Static Initialization
+### 2.1 From bytes to `JavaClass`
+
+Parsing is a two-stage pipeline provided by the [`jclassmodel`](../jclassmodel/) sub-crate:
+
+1. `jclassmodel::parse(bytes)` returns a `ParsedClass` - the raw JVMS §4 structure, with
+   constant-pool entries still referring to each other by `u16` index.
+2. `ParsedClass::into_model(internal_name, external_name)` resolves those indexes into a
+   `ClassModel`: names and descriptors as strings, methods keyed by name + descriptor, attributes
+   grouped by kind, and `Code` with resolved exception handlers and line numbers.
+
+`JavaClass::from_model` then wraps the `ClassModel` with the state the class file cannot
+describe - static field values, the instance-field template, initialization state, and the lazy
+vtable and field-offset caches. Bytecode operands that name a constant-pool entry (`getfield`,
+`invokevirtual`, `ldc`, ...) are resolved through `jclassmodel`'s `ConstantPool`, which returns
+already-resolved names and descriptors instead of further indexes. `jclassfile` is a private
+dependency of `jclassmodel`, not a direct dependency of the VM.
+
+### 2.2 Class Static Initialization
 Refer to the dedicated document [class_static_initialization.md](class_static_initialization.md).
 
 ---
