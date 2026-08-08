@@ -143,22 +143,7 @@ Publishing them separately:
 **Reasoning:**
 `jclassfile` mirrors [JVMS §4][jvms-4] faithfully: constant-pool entries hold `u16` indexes into
 each other, attributes are an untyped list, and a name is only reachable by following an index to
-a `Utf8` entry. That is the right shape for a parser and the wrong shape for a consumer. The VM
-previously carried that postprocessing itself, in `cpool_helper` and `attributes_helper` - some
-1400 lines of index chasing and its tests, which every part of the runtime had to go through and
-which any other consumer of `jclassfile` would have to rewrite.
-
-Moving the resolution step into its own crate does that work once, at load time:
-- Method and field lookups are keyed by name + descriptor rather than by index.
-- Attributes are grouped by kind, and `Code` arrives with resolved exception handlers and line
-  numbers.
-- `JavaClass` is left holding only what the class file cannot express - field values,
-  initialization state, and the lazy vtable and offset caches.
-
-The cost is one more crate in the dependency chain and one more conversion at class-load time,
-which happens once per class and is dwarfed by the parse itself. In exchange, `jclassfile` stays a
-*private* dependency of `jclassmodel`: it appears nowhere in the VM's types, so a `jclassfile`
-version bump cannot ripple into the runtime.
+a `Utf8` entry. That is the right shape for a parser and the wrong shape for a consumer.
 
 ---
 
