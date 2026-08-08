@@ -8,7 +8,7 @@ use crate::vm::system_native::method_handle_natives::method_type::MethodType;
 use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind::*;
-use jclassfile::methods::MethodFlags;
+use jclassmodel::modifiers::MethodModifier;
 
 pub fn resolve(
     member_name_ref: i32,
@@ -92,8 +92,8 @@ pub(crate) fn member_name_init(member_name_ref: i32, obj_ref: i32) -> Result<()>
             // fill in vmtarget, vmindex while we have Method ref in hand:
             let modifiers =
                 HEAP.get_object_field_value(obj_ref, obj_name.as_str(), "modifiers")?[0];
-            let method_flags = MethodFlags::from_bits_truncate(modifiers as u16);
-            let kind = if method_flags.contains(MethodFlags::ACC_STATIC) {
+            let method_flags = MethodModifier::from_bits_truncate(modifiers as u16);
+            let kind = if method_flags.contains(MethodModifier::Static) {
                 REF_invokeStatic
             } else {
                 todo!("member_name_init: Handle non-static method resolution")

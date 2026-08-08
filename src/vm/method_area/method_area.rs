@@ -1,30 +1,21 @@
-use crate::vm;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::java_instance::{JavaInstance, JavaInstanceBase};
 use crate::vm::helper::klass;
-use crate::vm::method_area::attributes_helper::AttributesHelper;
-use crate::vm::method_area::class_modifiers::ClassModifier;
-use crate::vm::method_area::cpool_helper::{CPoolHelper, CPoolHelperTrait};
-use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
-use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::module_helper::Modules;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
-use crate::vm::{stack, JAVA_HOME, SYSTEM_CLASSLOADER_REF};
-use indexmap::{IndexMap, IndexSet};
-use jclassfile::class_file::{parse, ClassFile};
-use jclassfile::fields::{FieldFlags, FieldInfo};
-use jclassfile::methods::{MethodFlags, MethodInfo};
-use jdescriptor::TypeDescriptor;
+use crate::vm::{JAVA_HOME, SYSTEM_CLASSLOADER_REF};
+use indexmap::IndexSet;
+use jclassmodel::{parse, ClassModel};
 use jimage_rs::jimage::JImage;
 use jimage_rs::raw_jimage::RawJImage;
 use once_cell::sync::OnceCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -96,9 +87,8 @@ impl MethodArea {
             return Ok((internal, external));
         }
 
-        let class_file = parse(bytecode)?;
-        let (_, java_class) =
-            self.to_java_class(class_file, internal.clone(), external.clone())?;
+        let model = parse(bytecode)?.into_model(internal.clone(), external.clone())?;
+        let (_, java_class) = self.to_java_class(model)?;
         CLASSES.insert_klass(Arc::clone(&java_class), Some(class_loader_ref))?;
         trace!("<META CLASS LOADED> -> {}", java_class.this_class_name());
 
@@ -159,265 +149,20 @@ impl MethodArea {
     }
 
     fn try_parse(&self, buff: &[u8]) -> Result<Option<Arc<JavaClass>>> {
-        let class_file = parse(buff)?;
-
-        // todo: add and use handy wrapper_getter here
-        let cpool_helper = CPoolHelper::new(class_file.constant_pool());
-        let this_class_index = class_file.this_class();
-        let class_name = cpool_helper
-            .get_class_name(this_class_index)
-            .ok_or_else(|| {
-                Error::new_constant_pool(&format!(
-                    "Error getting class_name by index={this_class_index}"
-                ))
-            })?;
+        let parsed = parse(buff)?;
+        let class_name = parsed
+            .this_class_name()
+            .ok_or_else(|| Error::new_constant_pool("Error getting class_name of parsed class"))?;
 
         let (internal, external) = derive_internal_and_external_names(&class_name);
-        self.to_java_class(class_file, internal, external)
+        self.to_java_class(parsed.into_model(internal, external)?)
             .map(|(_, java_class)| Ok(Some(java_class)))?
     }
 
-    fn to_java_class(
-        &self,
-        class_file: ClassFile,
-        class_name: String,
-        external_name: String,
-    ) -> Result<(String, Arc<JavaClass>)> {
-        let constant_pool = class_file.constant_pool();
-        let loaded_classname_index = class_file.this_class();
-        let loaded_classname = class_name.clone();
-        let cpool_helper = CPoolHelper::new_with_classname(
-            constant_pool,
-            loaded_classname_index,
-            loaded_classname,
-        );
+    fn to_java_class(&self, model: ClassModel) -> Result<(String, Arc<JavaClass>)> {
+        let name = model.name.clone();
 
-        let super_class_index = class_file.super_class();
-        let super_class_name = if super_class_index > 0 {
-            cpool_helper
-                .get_class_name(super_class_index)
-                .map(Some)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting super_class_name by index={super_class_index}"
-                    ))
-                })
-        } else {
-            Ok(None)
-        }?;
-
-        let interface_indexes = class_file.interfaces();
-        let interface_names = interface_indexes
-            .iter()
-            .map(|index| {
-                cpool_helper.get_class_name(*index).ok_or_else(|| {
-                    Error::new_constant_pool(&format!("Error getting interface by index={index}"))
-                })
-            })
-            .collect::<Result<IndexSet<String>>>()?;
-
-        let methods = Self::get_methods(class_file.methods(), &cpool_helper, &class_name)?;
-        let (fields_info, static_fields, instance_fields_template) =
-            Self::get_fields(class_file.fields(), &cpool_helper, &class_name)?;
-
-        let access_flags = class_file.access_flags().bits();
-
-        let attributes_helper = AttributesHelper::new(class_file.attributes());
-        let declaring_class =
-            Self::get_declaring_class(&attributes_helper, &cpool_helper, class_name.as_str());
-
-        let annotations_raw = attributes_helper
-            .get_annotations(&cpool_helper)
-            .map(|(_annotations, annotations_raw)| annotations_raw);
-
-        let enclosing_method = Self::get_enclosing_method(&attributes_helper, &cpool_helper);
-        let source_file = Self::get_source_file(&attributes_helper, &cpool_helper);
-
-        Ok((
-            class_name.clone(),
-            Arc::new(JavaClass::new(
-                methods,
-                fields_info,
-                static_fields,
-                instance_fields_template,
-                cpool_helper,
-                attributes_helper,
-                class_name,
-                external_name,
-                super_class_name,
-                interface_names,
-                ClassModifier::from_bits_truncate(access_flags),
-                declaring_class,
-                annotations_raw,
-                enclosing_method,
-                source_file,
-            )),
-        ))
-    }
-
-    fn get_methods(
-        class_file_methods: &[MethodInfo],
-        helper: &CPoolHelper,
-        class_name: &str,
-    ) -> Result<IndexMap<String, Arc<JavaMethod>>> {
-        let mut method_by_signature = IndexMap::new();
-
-        for method_info in class_file_methods.iter() {
-            let name_index = method_info.name_index();
-            let method_name = helper.get_utf8(name_index).ok_or_else(|| {
-                Error::new_execution(&format!("error getting method name by index {name_index}"))
-            })?;
-
-            let descriptor_index = method_info.descriptor_index();
-            let method_signature = helper.get_utf8(descriptor_index).ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "error getting method signature by index {descriptor_index}"
-                ))
-            })?;
-
-            let full_signature = format!("{method_name}:{method_signature}");
-            let attributes_helper = AttributesHelper::new(method_info.attributes());
-
-            let access_flags = method_info.access_flags();
-            let code_context = if !access_flags
-                .intersects(MethodFlags::ACC_ABSTRACT | MethodFlags::ACC_NATIVE)
-            {
-                attributes_helper
-                    .get_code(helper)
-                    .map(
-                        |(
-                            max_stack,
-                            max_locals,
-                            code,
-                            line_numbers,
-                            exception_table,
-                            local_variable_table,
-                        )| {
-                            let line_numbers = line_numbers
-                                .iter()
-                                .map(|record| (record.start_pc(), record.line_number()))
-                                .collect::<BTreeMap<_, _>>();
-                            Some(CodeContext::new(
-                                max_stack,
-                                max_locals,
-                                Arc::new(code),
-                                Arc::new(line_numbers),
-                                Arc::new(stack::stack_frame::ExceptionTable::new(exception_table)),
-                                Arc::new(local_variable_table),
-                            ))
-                        },
-                    )
-                    .ok_or_else(|| {
-                        Error::new_execution(&format!(
-                            "Error getting code attribute for method {full_signature}"
-                        ))
-                    })?
-            } else {
-                None
-            };
-
-            let exception_indexes = attributes_helper.get_exception_indexes().unwrap_or(vec![]);
-
-            let annotation_default_raw = attributes_helper.get_annotation_default_raw();
-            let result = attributes_helper.get_annotations(helper);
-
-            let (runtime_visible_annotations, annotations_raw) = match result {
-                Some((annotations, annotations_raw)) => (annotations, Some(annotations_raw)),
-                None => (HashSet::new(), None),
-            };
-
-            let method_descriptor = method_signature.parse().map_err(|err| {
-                Error::new_execution(&format!(
-                    "Error parsing signature {method_signature}: {err}"
-                ))
-            })?;
-
-            let native = access_flags.contains(MethodFlags::ACC_NATIVE);
-
-            let key = if native
-                && runtime_visible_annotations
-                    .contains("Ljava/lang/invoke/MethodHandle$PolymorphicSignature;")
-            {
-                method_name.clone()
-            } else {
-                full_signature.clone()
-            };
-
-            method_by_signature.insert(
-                key,
-                Arc::new(JavaMethod::new(
-                    method_descriptor,
-                    class_name,
-                    &full_signature,
-                    code_context,
-                    native,
-                    exception_indexes,
-                    access_flags.bits() as i32,
-                    &method_name,
-                    annotation_default_raw,
-                    annotations_raw,
-                    runtime_visible_annotations,
-                    method_by_signature.len() as i32, // God, forgive me, this is a hack to get the method index
-                )),
-            );
-        }
-
-        Ok(method_by_signature)
-    }
-
-    fn get_fields(
-        field_infos: &[FieldInfo],
-        cpool_helper: &CPoolHelper,
-        class_name: &str,
-    ) -> Result<(
-        IndexMap<String, Arc<vm::method_area::field::FieldInfo>>,
-        IndexMap<String, Arc<FieldValue>>,
-        IndexMap<String, FieldValue>,
-    )> {
-        let mut fields_info = IndexMap::new();
-        let mut non_static_field_properties = IndexMap::new();
-        let mut static_field_by_name = IndexMap::new();
-        for field_info in field_infos.iter() {
-            let name_index = field_info.name_index();
-            let field_name = cpool_helper.get_utf8(name_index).ok_or_else(|| {
-                Error::new_execution(&format!("Error getting field name by index {name_index}"))
-            })?;
-
-            let descriptor_index = field_info.descriptor_index();
-            let field_descriptor = cpool_helper.get_utf8(descriptor_index).ok_or_else(|| {
-                Error::new_execution(&format!(
-                    "Error getting field descriptor by index {descriptor_index}"
-                ))
-            })?;
-            let descriptor: TypeDescriptor = field_descriptor.parse().map_err(|err| {
-                Error::new_execution(&format!(
-                    "Error parsing field descriptor {field_descriptor}: {err}"
-                ))
-            })?;
-
-            let flags = field_info.access_flags();
-            fields_info.insert(
-                field_name.clone(),
-                Arc::new(vm::method_area::field::FieldInfo::new(
-                    descriptor.clone(),
-                    flags.bits(),
-                    class_name.to_string(),
-                    field_name.clone(),
-                )),
-            );
-            if flags.contains(FieldFlags::ACC_STATIC) {
-                static_field_by_name
-                    .insert(field_name.clone(), Arc::new(FieldValue::new(descriptor)?));
-            } else {
-                non_static_field_properties.insert(field_name, FieldValue::new(descriptor)?);
-            }
-        }
-
-        Ok((
-            fields_info,
-            static_field_by_name,
-            non_static_field_properties,
-        ))
+        Ok((name, Arc::new(JavaClass::from_model(model)?)))
     }
 
     pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
@@ -437,22 +182,11 @@ impl MethodArea {
 
     fn generate_synthetic_class(class_name: &str) -> Arc<JavaClass> {
         let (internal, external) = derive_internal_and_external_names(class_name);
-        Arc::new(JavaClass::new(
-            IndexMap::new(),
-            IndexMap::new(),
-            IndexMap::new(),
-            IndexMap::new(),
-            CPoolHelper::new(&Vec::new()),
-            AttributesHelper::new(&Vec::new()),
+        Arc::new(JavaClass::synthetic(
             internal,
             external,
             None,
             IndexSet::new(),
-            ClassModifier::Public | ClassModifier::Final | ClassModifier::Abstract,
-            None,
-            None,
-            None,
-            None,
         ))
     }
 
@@ -491,47 +225,6 @@ impl MethodArea {
         self.main_thread_group_id.set(thread_group_id).map_err(|_| {
             Error::new_execution("main_thread_group_id was already set, cannot be set again")
         })
-    }
-
-    fn get_declaring_class(
-        attributes_helper: &AttributesHelper,
-        cpool_helper: &CPoolHelper,
-        class_name: &str,
-    ) -> Option<String> {
-        let inner_class_records = attributes_helper.get_inner_class_records()?;
-
-        inner_class_records.iter().find_map(|inner_class_record| {
-            let inner_class_info_index = inner_class_record.inner_class_info_index();
-            let inner_class_info = cpool_helper.get_class_name(inner_class_info_index)?;
-
-            if class_name == inner_class_info {
-                let outer_class_info_index = inner_class_record.outer_class_info_index();
-                let outer_class_info = cpool_helper.get_class_name(outer_class_info_index)?;
-
-                Some(outer_class_info)
-            } else {
-                None
-            }
-        })
-    }
-
-    fn get_enclosing_method(
-        attributes_helper: &AttributesHelper,
-        cpool_helper: &CPoolHelper,
-    ) -> Option<(String, String, String)> {
-        let (class_index, method_index) = attributes_helper.get_enclosing_method()?;
-
-        let class_name = cpool_helper.get_class_name(class_index)?;
-        let (name, descriptor) = cpool_helper.get_name_and_type(method_index)?;
-
-        Some((class_name, name, descriptor))
-    }
-
-    fn get_source_file(
-        attributes_helper: &AttributesHelper,
-        cpool_helper: &CPoolHelper,
-    ) -> Option<String> {
-        attributes_helper.get_source_file(cpool_helper)
     }
 
     pub fn modules(&self) -> Arc<Modules> {

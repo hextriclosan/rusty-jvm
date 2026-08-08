@@ -119,7 +119,7 @@ are dispatched by a small dedicated matcher (`dispatcher/polymorphic.rs`).
 ## 5. Separate sub-crates for reusable components
 
 **Decision:** Parsing and descriptor logic is factored into standalone published crates:
-`jclassfile`, `jdescriptor`, `jimage-rs`, and `jniname`.
+`jclassfile`, `jclassmodel`, `jdescriptor`, `jimage-rs`, and `jniname`.
 
 **Reasoning:**
 These components have well-defined, narrow responsibilities and clear public APIs that are
@@ -134,7 +134,20 @@ Publishing them separately:
 
 ---
 
-## 6. One OS thread per Java thread; monitors as a side-table
+## 6. Class files are consumed through a resolved model, not the raw parse tree
+
+**Decision:** The VM depends on `jclassmodel` and does not use `jclassfile` directly.
+`MethodArea` parses bytes into a `ParsedClass`, converts it into a `ClassModel`, and builds
+`JavaClass` from that model.
+
+**Reasoning:**
+`jclassfile` mirrors [JVMS §4][jvms-4] faithfully: constant-pool entries hold `u16` indexes into
+each other, attributes are an untyped list, and a name is only reachable by following an index to
+a `Utf8` entry. That is the right shape for a parser and the wrong shape for a consumer.
+
+---
+
+## 7. One OS thread per Java thread; monitors as a side-table
 
 **Decision:** Each Java platform thread is backed by one `std::thread`. Per-thread
 runtime state lives in a `thread_local!` `JavaThread`; object monitors are kept in a
@@ -165,4 +178,5 @@ thread read its *own* frames (so no thread ever touches another's live stack), a
 being able to pause a thread blocked in a native. Full details are in [threading.md](threading.md).
 
 [jvms-2.6.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.2
+[jvms-4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
 [jvms-5.4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5

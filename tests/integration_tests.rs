@@ -614,6 +614,36 @@ Class: int
   isSynthetic: false
   isRecord: false
   isEnumeration: false
+Class: class samples.reflection.trivial.TrivialReflection$PrivateStaticNested
+  modifiers: 10
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.TrivialReflection$ProtectedInner
+  modifiers: 4
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
+Class: class samples.reflection.trivial.TrivialReflection$PackagePrivateStaticNested
+  modifiers: 24
+  isPrimitive: false
+  isArray: false
+  isInterface: false
+  isEnum: false
+  isAnnotation: false
+  isSynthetic: false
+  isRecord: false
+  isEnumeration: false
 "#,
     );
 }
@@ -1648,6 +1678,11 @@ AnonymousClass enclosing method: testEnclosingMethods
 Inside anonymous constructor initializer.
 AnonymousClass in constructor enclosing method: testEnclosingMethods
 LocalClass in constructor enclosing method: testEnclosingMethods
+AnonymousClass in static method enclosing method: getAnonymous
+AnonymousClass in static block enclosing method: null
+AnonymousClass in static block enclosing class: samples.reflection.trivial.enclosingmethod.EnclosingMethodExample$AnonymousStaticBlock
+AnonymousClass in field initializer enclosing method: null
+AnonymousClass in field initializer enclosing class: samples.reflection.trivial.enclosingmethod.EnclosingMethodExample$AnonymousStaticBlock
 "#,
     );
 }

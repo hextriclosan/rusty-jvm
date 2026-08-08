@@ -5,10 +5,10 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
-use crate::vm::method_area::class_modifiers::ClassModifier;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
+use jclassmodel::modifiers::ClassModifier;
 
 const PUBLIC: u16 = 0x00000001;
 
@@ -205,19 +205,29 @@ pub(crate) fn get_declared_constructors0(class_ref: i32, public_only: bool) -> R
 /// `java.lang.Class.getEnclosingMethod0()[Ljava/lang/Object;`
 pub(crate) fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
-    if let Some((class_name, name, descriptor)) = klass.enclosing_method() {
-        let class_name_ref = clazz_ref(class_name)?;
-        let name_ref = StringPoolHelper::get_string(name)?;
-        let descriptor_ref = StringPoolHelper::get_string(descriptor)?;
+    let Some(enclosing_method) = klass.enclosing_method() else {
+        return Ok(0);
+    };
 
-        let array_ref = HEAP.create_array_with_values(
-            "[Ljava/lang/reflect/Method;",
-            &[class_name_ref, name_ref, descriptor_ref],
-        );
-        Ok(array_ref) // new Object[] {class_name, name, descriptor}
-    } else {
-        Ok(0)
-    }
+    let class_name_ref = clazz_ref(&enclosing_method.class_name)?;
+
+    // JVMS §4.7.7 allows the attribute to name an enclosing class without an enclosing method,
+    // for a class declared in an initializer. `Class.EnclosingMethodInfo` accepts a null name and
+    // descriptor (they must be null together), and `getEnclosingClass()` still reads element 0, so
+    // the enclosing class has to be reported even when there is no method to go with it.
+    let (name_ref, descriptor_ref) = match &enclosing_method.method {
+        Some(method) => (
+            StringPoolHelper::get_string(&method.name)?,
+            StringPoolHelper::get_string(&method.descriptor)?,
+        ),
+        None => (0, 0),
+    };
+
+    let array_ref = HEAP.create_array_with_values(
+        "[Ljava/lang/reflect/Method;",
+        &[class_name_ref, name_ref, descriptor_ref],
+    );
+    Ok(array_ref) // new Object[] {class_name, name, descriptor}
 }
 
 /// `java.lang.Class.getRawAnnotations()[B`

@@ -23,10 +23,10 @@ use crate::vm::execution_engine::opcode::*;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::vec_to_i64;
-use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::throwable::NATIVE_METHOD;
+use jclassmodel::constant_pool::ConstantPoolLookup;
 use std::collections::BTreeSet;
 
 const ACC_STATIC: i32 = 0x0008;
@@ -83,7 +83,7 @@ fn build_message(method: &JavaMethod, bci: usize) -> Option<String> {
     let opcode = *bytecode.get(bci)?;
 
     let klass = CLASSES.get(method.class_name()).ok()?;
-    let cpool = klass.cpool_helper();
+    let cpool = klass.constant_pool();
 
     let Fault { action, null_depth } = decode_fault(opcode, bytecode, bci, cpool)?;
 
@@ -116,7 +116,7 @@ struct Fault {
     null_depth: usize,
 }
 
-fn decode_fault<T: CPoolHelperTrait>(
+fn decode_fault<T: ConstantPoolLookup>(
     opcode: u8,
     bytecode: &[u8],
     bci: usize,
@@ -208,7 +208,7 @@ enum Slot {
 /// produced by `aload`. `start` is a basic-block leader, so the walk sees only straight-line code;
 /// it returns `None` (the analysis bails) on any control-flow instruction or any opcode whose stack
 /// effect is not modeled - never producing a wrong result, only a less detailed message.
-fn simulate_block<T: CPoolHelperTrait>(
+fn simulate_block<T: ConstantPoolLookup>(
     bytecode: &[u8],
     start: usize,
     faulting_bci: usize,

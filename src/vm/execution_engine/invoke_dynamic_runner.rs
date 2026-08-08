@@ -7,7 +7,6 @@ use crate::vm::execution_engine::ops_reference_processor::prepare_invoke_context
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
-use crate::vm::method_area::attributes_helper::BootstrapMethodInfo;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -17,6 +16,7 @@ use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use dashmap::DashMap;
 use derive_new::new;
 use getset::{CopyGetters, Getters};
+use jclassmodel::attributes::BootstrapMethodInfo;
 use jdescriptor::MethodDescriptor;
 
 /// The `InvokeDynamicRunner` is responsible for handling the `invokedynamic` instruction in the JVM.
@@ -219,9 +219,9 @@ impl InvokeDynamicRunner {
         invokedynamic_index: u16,
     ) -> Result<BootstrapInfo> {
         let klass = CLASSES.get(current_class_name)?;
-        let attributes_helper = klass.attributes_helper();
-        let bootstrap_method_info = attributes_helper.get_bootstrap_method(
-            klass.cpool_helper(),
+        let attributes = klass.attributes();
+        let bootstrap_method_info = attributes.get_bootstrap_method(
+            klass.constant_pool(),
             invokedynamic_index,
         ).ok_or_else(|| {
             Error::new_constant_pool(&format!(

@@ -3,12 +3,10 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, undecorate};
-use crate::vm::method_area::attributes_helper::LocalVariableInfo;
-use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
-use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
 use derive_new::new;
 use getset::{CopyGetters, Getters};
+use jclassmodel::attributes::LocalVariableInfo;
 use jdescriptor::MethodDescriptor;
 use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashSet};
@@ -23,7 +21,7 @@ pub(crate) struct JavaMethod {
     native: bool,
 
     reflection_ref: OnceCell<i32>,
-    exception_indexes: Vec<u16>,
+    exceptions: Vec<String>,
     access_flags: i32,
     name: String,
     _annotation_default_raw: Option<Vec<u8>>,
@@ -57,7 +55,7 @@ impl JavaMethod {
         name_signature: &str,
         code_context: Option<CodeContext>,
         native: bool,
-        exception_indexes: Vec<u16>,
+        exceptions: Vec<String>,
         access_flags: i32,
         name: &str,
         _annotation_default_raw: Option<Vec<u8>>,
@@ -72,7 +70,7 @@ impl JavaMethod {
             code_context,
             native,
             reflection_ref: OnceCell::new(),
-            exception_indexes,
+            exceptions,
             access_flags,
             name: name.to_string(),
             _annotation_default_raw,
@@ -174,17 +172,10 @@ impl JavaMethod {
         let return_type = self.method_descriptor.return_type().to_string();
         let return_type_ref = clazz_ref(&return_type)?;
 
-        let klass = CLASSES.get(&self.class_name)?;
-        let cpool_helper = klass.cpool_helper();
         let exception_type_clazz_refs = self
-            .exception_indexes
+            .exceptions
             .iter()
-            .map(|i| {
-                let exception_type = cpool_helper.get_class_name(*i).ok_or_else(|| {
-                    Error::new_execution(&format!("Invalid exception index: {}", i))
-                })?;
-                clazz_ref(&exception_type)
-            })
+            .map(|exception_type| clazz_ref(exception_type))
             .collect::<Result<Vec<_>>>()?;
         let exception_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
@@ -261,17 +252,10 @@ impl JavaMethod {
         let parameter_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
 
-        let klass = CLASSES.get(&self.class_name)?;
-        let cpool_helper = klass.cpool_helper();
         let exception_type_clazz_refs = self
-            .exception_indexes
+            .exceptions
             .iter()
-            .map(|i| {
-                let exception_type = cpool_helper.get_class_name(*i).ok_or_else(|| {
-                    Error::new_execution(&format!("Invalid exception index: {}", i))
-                })?;
-                clazz_ref(&exception_type)
-            })
+            .map(|exception_type| clazz_ref(exception_type))
             .collect::<Result<Vec<_>>>()?;
         let checked_exception_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);

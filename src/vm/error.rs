@@ -93,9 +93,18 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<jclassfile::error::Error> for Error {
-    fn from(error: jclassfile::error::Error) -> Self {
-        Error::new(ClassFile(error.to_string()))
+impl From<jclassmodel::Error> for Error {
+    fn from(error: jclassmodel::Error) -> Self {
+        let message = match StdError::source(&error) {
+            Some(source) => format!("{}: {source}", error.message()),
+            None => error.message().to_string(),
+        };
+
+        match error.kind() {
+            jclassmodel::ErrorKind::ClassFile => Error::new(ClassFile(message)),
+            jclassmodel::ErrorKind::ConstantPool => Error::new(ConstantPool(message)),
+            _ => Error::new_execution(&message),
+        }
     }
 }
 

@@ -639,6 +639,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "jclassmodel"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7abc99adeb91b82eb752fb883c0a8ee9cdbf99ee8c213d1706e4aefb3a181d4"
+dependencies = [
+ "bitflags 2.13.1",
+ "derive-new",
+ "getset",
+ "jclassfile 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "jdescriptor"
 version = "0.2.0"
 dependencies = [
@@ -1499,7 +1512,7 @@ dependencies = [
  "iana-time-zone",
  "indexmap",
  "itertools",
- "jclassfile 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jclassmodel 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "jni-sys",

@@ -55,14 +55,36 @@ public class EnclosingMethodExample {
         Method localClassInConstructorEnclosingMethod = LocalClassInConstructor.class.getEnclosingMethod();
         System.out.println("LocalClass in constructor enclosing method: " + (localClassInConstructorEnclosingMethod != null ? localClassInConstructorEnclosingMethod.getName() : "null"));
 
-        // 8. Anonymous class within a static block
-//         Object anonymousInStaticBlock = AnonymousStaticBlock.getAnonymous();
-//         Method anonymousInStaticBlockEnclosingMethod = anonymousInStaticBlock.getClass().getEnclosingMethod();  // fixme: Exception in thread \"system\" java.lang.InternalError: Enclosing method not found
-//         System.out.println("AnonymousClass in static block enclosing method: " + (anonymousInStaticBlockEnclosingMethod != null ? anonymousInStaticBlockEnclosingMethod.getName() : "null"));
+        // 8. Anonymous class returned from a static method
+        Object anonymousInStaticMethod = AnonymousStaticBlock.getAnonymous();
+        Method anonymousInStaticMethodEnclosingMethod = anonymousInStaticMethod.getClass().getEnclosingMethod();
+        System.out.println("AnonymousClass in static method enclosing method: " + (anonymousInStaticMethodEnclosingMethod != null ? anonymousInStaticMethodEnclosingMethod.getName() : "null"));
+
+        // 9. Anonymous class within a static initializer block. JVMS §4.7.7 records this with a
+        // method_index of 0: an EnclosingMethod attribute naming the class but no method, so
+        // getEnclosingMethod() is null while getEnclosingClass() still resolves.
+        Object anonymousInStaticBlock = AnonymousStaticBlock.FROM_STATIC_BLOCK;
+        Method anonymousInStaticBlockEnclosingMethod = anonymousInStaticBlock.getClass().getEnclosingMethod();
+        System.out.println("AnonymousClass in static block enclosing method: " + (anonymousInStaticBlockEnclosingMethod != null ? anonymousInStaticBlockEnclosingMethod.getName() : "null"));
+        System.out.println("AnonymousClass in static block enclosing class: " + anonymousInStaticBlock.getClass().getEnclosingClass().getName());
+
+        // 10. Anonymous class within an instance field initializer, likewise method_index 0.
+        Object anonymousInFieldInit = new AnonymousStaticBlock().fromFieldInitializer;
+        Method anonymousInFieldInitEnclosingMethod = anonymousInFieldInit.getClass().getEnclosingMethod();
+        System.out.println("AnonymousClass in field initializer enclosing method: " + (anonymousInFieldInitEnclosingMethod != null ? anonymousInFieldInitEnclosingMethod.getName() : "null"));
+        System.out.println("AnonymousClass in field initializer enclosing class: " + anonymousInFieldInit.getClass().getEnclosingClass().getName());
     }
 
     // Utility class for static block example
     static class AnonymousStaticBlock {
+        static final Object FROM_STATIC_BLOCK;
+
+        static {
+            FROM_STATIC_BLOCK = new Object() {};
+        }
+
+        final Object fromFieldInitializer = new Object() {};
+
         static Object getAnonymous() {
             return new Object() {};
         }

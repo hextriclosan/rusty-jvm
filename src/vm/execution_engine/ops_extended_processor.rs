@@ -6,10 +6,10 @@ use crate::vm::execution_engine::ops_load_processor::handle_load;
 use crate::vm::execution_engine::ops_math_processor::increment;
 use crate::vm::execution_engine::ops_store_processor::handle_store;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::method_area::cpool_helper::CPoolHelperTrait;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
+use jclassmodel::constant_pool::ConstantPoolLookup;
 use std::fmt::Display;
 use tracing::trace;
 
@@ -51,8 +51,8 @@ pub(crate) fn process(
             let dimension_number = stack_frame.extract_one_byte();
 
             let klass = CLASSES.get(current_class_name)?;
-            let cpool_helper = klass.cpool_helper();
-            let class_name = cpool_helper
+            let constant_pool = klass.constant_pool();
+            let class_name = constant_pool
                 .get_class_name(class_index as u16)
                 .ok_or_else(|| {
                     Error::new_execution(&format!(
