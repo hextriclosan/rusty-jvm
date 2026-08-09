@@ -15,9 +15,11 @@ by that path.
 
 ## Provenance
 
-| | |
+| Field | Value |
 |---|---|
 | Coordinates | `io.github.hextriclosan:algorithm:0.0.5` |
 | Source | https://repo1.maven.org/maven2/io/github/hextriclosan/algorithm/0.0.5/algorithm-0.0.5.jar |
 | SHA-256 | `31c2f4f9af4a60ba24cb15f3708f5a48db1671d5735288beb2259ecc986c1734` |
 | Size | 17238 bytes |
+| Upstream project | https://github.com/hextriclosan/algorithm |
+| License | MIT - full text in [LICENSE](LICENSE), copied verbatim from the upstream [`v0.0.5`](https://github.com/hextriclosan/algorithm/blob/v0.0.5/LICENSE) tag |
