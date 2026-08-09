@@ -1,8 +1,9 @@
+use anyhow::Context;
 use fs_extra::dir::{copy, CopyOptions};
-use std::fs::{create_dir_all, File};
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::{env, fs, io};
+use std::{env, fs};
 
 fn main() -> anyhow::Result<()> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
@@ -104,7 +105,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         run(&javac, &args)?;
     }
 
-    let jar_path = download_jar_to_test_dir(dest_dir)?;
+    let jar_path = copy_lib_jar_to_test_dir(dest_dir)?;
 
     // build jar
     let output = Command::new(&javac)
@@ -241,19 +242,17 @@ fn run(javac: &PathBuf, args: &[&str]) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn download_jar_to_test_dir(path: &Path) -> anyhow::Result<String> {
-    let short_path = PathBuf::from("lib_jar").join("algorithm.jar");
-    let file_path = path.join(&short_path);
-    if file_path.exists() {
-        return Ok(file_path.display().to_string());
-    }
+/// Copies the vendored third-party jar next to the compiled test classes, where both the
+/// `-cp "lib_jar/*"` test and `app.jar`'s `Class-Path` manifest entry expect to find it.
+/// See `tests/test_data/lib_jar/README.md` for its provenance.
+fn copy_lib_jar_to_test_dir(path: &Path) -> anyhow::Result<String> {
+    let relative = PathBuf::from("lib_jar").join("algorithm.jar");
+    let source = PathBuf::from("tests").join("test_data").join(&relative);
+    let destination = path.join(&relative);
 
-    create_dir_all(file_path.parent().unwrap())?;
-    let url = "https://repo1.maven.org/maven2/io/github/hextriclosan/algorithm/0.0.5/algorithm-0.0.5.jar";
-    let response = ureq::get(url).call()?;
-    let mut reader = response.into_body();
-    let mut file = File::create(&file_path)?;
-    io::copy(&mut reader.as_reader(), &mut file)?;
+    create_dir_all(destination.parent().unwrap())?;
+    fs::copy(&source, &destination)
+        .with_context(|| format!("failed to copy {}", source.display()))?;
 
-    Ok(file_path.display().to_string())
+    Ok(destination.display().to_string())
 }

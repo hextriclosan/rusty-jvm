@@ -17,4 +17,5 @@
 *.dll binary
 *.wasm binary
 *.class binary
+*.jar binary
 *.jimage binary
