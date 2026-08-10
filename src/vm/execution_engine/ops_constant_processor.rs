@@ -2,6 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -19,7 +20,7 @@ pub(crate) fn process(
             trace!("NOP");
             Ok(())
         }
-        ACONST_NULL => push_constant(stack_frame, 0i32, "ACONST_NULL"),
+        ACONST_NULL => push_constant(stack_frame, Slot::Ref(0), "ACONST_NULL"),
         ICONST_M1 => push_constant(stack_frame, -1i32, "ICONST_M1"),
         ICONST_0 => push_constant(stack_frame, 0i32, "ICONST_0"),
         ICONST_1 => push_constant(stack_frame, 1i32, "ICONST_1"),

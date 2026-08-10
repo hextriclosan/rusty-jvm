@@ -1,14 +1,16 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::ldc_resolution_manager::{
-    build_methodtype_ref, resolve_method_handle,
+    build_methodtype_ref, resolve_method_handle, LdcConstant,
 };
 use crate::vm::execution_engine::ops_reference_processor::prepare_invoke_context;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
+use crate::vm::jni::java_thread::{JavaThread, TempRootsGuard};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::system_native::method_handle_natives::invocation::invoke_exact;
@@ -62,9 +64,10 @@ struct BootstrapInfo {
 
     /// Bootstrap method arguments provided via the constant pool.
     ///
-    /// These may be class references, strings, or method handles — already resolved to heap references (`i32`).
+    /// Class references, strings, method handles or numeric constants, resolved but not yet boxed;
+    /// see [`LdcConstant`].
     #[get = "pub"]
-    bootstrap_args: Vec<i32>,
+    bootstrap_args: Vec<LdcConstant>,
 
     /// The name of the method being dynamically resolved by the `invokedynamic` instruction.
     ///
@@ -88,8 +91,13 @@ impl TryFrom<(BootstrapMethodInfo, &str)> for BootstrapInfo {
             value
                 .bootstrap_arguments_cpool_indexes()
                 .iter()
-                .map(|&cpool_index| area.resolve_ldc(current_class_name, cpool_index)) //todo: extend with resolve_ldc2_w for long/double
-                .collect::<Result<Vec<i32>>>()
+                //todo: extend with resolve_ldc2_w for long/double
+                //
+                // The constant's kind is kept rather than flattened to raw bits: these are handed
+                // to the bootstrap method as `Object`s, so a numeric constant has to be boxed, and
+                // only the kind says whether that means `Integer` or `Float`.
+                .map(|&cpool_index| area.resolve_ldc_constant(current_class_name, cpool_index))
+                .collect::<Result<Vec<LdcConstant>>>()
         })?;
 
         Ok(BootstrapInfo {
@@ -130,7 +138,8 @@ impl InvokeDynamicRunner {
     fn resolve(current_class_name: &str, invokedynamic_index: u16) -> Result<ResolvedMethod> {
         let bootstrap_info =
             Self::extract_bootstrap_info(current_class_name, invokedynamic_index)?;
-        let args = Self::prepare_args(current_class_name, &bootstrap_info)?;
+        // `_roots` keeps the assembled arguments reachable until the bootstrap call has taken them.
+        let (args, _roots) = Self::prepare_args(current_class_name, &bootstrap_info)?;
         let method_handle_dynamic_invoked_ref = Self::build_method_handle_dynamic_invoked(&args)?;
 
         Ok(ResolvedMethod::new(
@@ -157,21 +166,52 @@ impl InvokeDynamicRunner {
         Ok(method_handle_dynamic_invoked_ref)
     }
 
+    /// Boxes a numeric bootstrap argument so it can be stored in the `Object[]` handed to the
+    /// bootstrap method.
+    ///
+    /// An `Integer` or `Float` constant is 32 bits of value, not a reference. Storing those bits
+    /// straight into a `[Ljava/lang/Object;` leaves the bootstrap method reading them as an object
+    /// reference; JVMS §5.4.3.6 calls for the boxed form.
+    fn box_bootstrap_arg(argument: &LdcConstant) -> Result<i32> {
+        Ok(match argument {
+            LdcConstant::Int(value) => Executor::invoke_static_method(
+                "java/lang/Integer",
+                "valueOf:(I)Ljava/lang/Integer;",
+                &[(*value).into()],
+            )?[0],
+            LdcConstant::Float(value) => Executor::invoke_static_method(
+                "java/lang/Float",
+                "valueOf:(F)Ljava/lang/Float;",
+                &[(*value).into()],
+            )?[0],
+            LdcConstant::Reference(reference) => *reference,
+        })
+    }
+
     fn prepare_args(
         current_class_name: &str,
         bootstrap_info: &BootstrapInfo,
-    ) -> Result<[StackValueKind; 6]> {
+    ) -> Result<([StackValueKind; 6], TempRootsGuard)> {
         let bootstrap_args = bootstrap_info.bootstrap_args();
         let arguments_ref = HEAP.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32);
+
+        // Each argument below lives only in a Rust local until the bootstrap call takes it, and
+        // every step in between (boxing, handle resolution, interning, method type construction)
+        // runs Java and so can collect — hence a root per argument, added as soon as it exists.
+        // Rooting the array first also covers the boxed constants stored into it, and the guard
+        // goes back to the caller to cover the bootstrap call itself.
+        let mut roots = JavaThread::hold_temp_roots(vec![Slot::Ref(arguments_ref)]);
 
         bootstrap_args
             .iter()
             .enumerate()
-            .try_for_each(|(index, some_ref)| {
-                HEAP.set_array_value(arguments_ref, index as i32, vec![*some_ref])
+            .try_for_each(|(index, argument)| {
+                let value = Self::box_bootstrap_arg(argument)?;
+                HEAP.set_array_value(arguments_ref, index as i32, vec![value])
             })?;
 
         let call_site_clazz = clazz_ref("java/lang/invoke/CallSite")?;
+        roots.add_root(Slot::Ref(call_site_clazz));
 
         let method_handle_ref = resolve_method_handle(
             current_class_name,
@@ -180,8 +220,10 @@ impl InvokeDynamicRunner {
             bootstrap_info.bootstrap_method_name(),
             bootstrap_info.bootstrap_method_descriptor(),
         )?;
+        roots.add_root(Slot::Ref(method_handle_ref));
 
         let method_name_ref = StringPoolHelper::get_string(bootstrap_info.invoke_dynamic_name())?;
+        roots.add_root(Slot::Ref(method_name_ref));
         let invoke_dynamic_methodtype_or_type_ref = match bootstrap_info.ref_kind() {
             ReferenceKind::REF_invokeStatic
             | ReferenceKind::REF_invokeInterface
@@ -200,8 +242,10 @@ impl InvokeDynamicRunner {
                 )))
             }
         }?;
+        roots.add_root(Slot::Ref(invoke_dynamic_methodtype_or_type_ref));
 
         let current_clazz = clazz_ref(current_class_name)?;
+        roots.add_root(Slot::Ref(current_clazz));
 
         let args = [
             call_site_clazz.into(),
@@ -211,7 +255,7 @@ impl InvokeDynamicRunner {
             arguments_ref.into(),
             current_clazz.into(),
         ];
-        Ok(args)
+        Ok((args, roots))
     }
 
     fn extract_bootstrap_info(

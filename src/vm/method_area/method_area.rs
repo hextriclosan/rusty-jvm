@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
+use crate::vm::execution_engine::ldc_resolution_manager::LdcConstant;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::java_instance::{JavaInstance, JavaInstanceBase};
@@ -8,6 +9,7 @@ use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::module_helper::Modules;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
 use crate::vm::{JAVA_HOME, SYSTEM_CLASSLOADER_REF};
 use indexmap::IndexSet;
@@ -190,7 +192,20 @@ impl MethodArea {
         ))
     }
 
-    pub(crate) fn resolve_ldc(&self, current_class_name: &str, cpoolindex: u16) -> Result<i32> {
+    /// Resolves an `ldc` constant to the slot it occupies on the operand stack.
+    pub(crate) fn resolve_ldc(&self, current_class_name: &str, cpoolindex: u16) -> Result<Slot> {
+        self.ldc_resolution_manager
+            .resolve_ldc(current_class_name, cpoolindex)
+            .map(|constant| constant.slot())
+    }
+
+    /// Resolves an `ldc` constant keeping its kind, for callers that must box a numeric constant
+    /// rather than merely place it in a slot.
+    pub(crate) fn resolve_ldc_constant(
+        &self,
+        current_class_name: &str,
+        cpoolindex: u16,
+    ) -> Result<LdcConstant> {
         self.ldc_resolution_manager
             .resolve_ldc(current_class_name, cpoolindex)
     }

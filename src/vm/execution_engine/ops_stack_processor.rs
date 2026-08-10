@@ -126,21 +126,11 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
-    use std::collections::BTreeMap;
-    use std::sync::Arc;
+    use crate::vm::stack::stack_frame::StackFrame;
 
     /// A single frame whose operand stack holds `operands`, bottom-first.
     fn frames_with(operands: &[Slot]) -> StackFrames {
-        let mut frame = StackFrame::new(
-            Arc::new("test:()V".to_string()),
-            0,
-            operands.len() * 3, // headroom for the widest dup
-            Arc::new(Vec::new()),
-            Arc::new("Test".to_string()),
-            Arc::new(BTreeMap::new()),
-            Arc::new(ExceptionTable::new(Vec::new())),
-        );
+        let mut frame = StackFrame::for_test(0, operands.len() * 3); // headroom for the widest dup
         for operand in operands {
             frame.push(*operand).unwrap();
         }

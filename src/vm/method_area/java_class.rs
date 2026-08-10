@@ -401,6 +401,31 @@ impl JavaClass {
         Ok(Arc::clone(field_value))
     }
 
+    /// The declared type of the static field at `offset`.
+    ///
+    /// [`Self::get_static_field_by_offset`] yields only the value, which is raw `i32` chunks with
+    /// nothing to say whether they are a reference. Callers that put such a value on an operand
+    /// stack need this to tag it.
+    pub fn get_static_field_descriptor_by_offset(&self, offset: i64) -> Result<&TypeDescriptor> {
+        let real_offset = offset - STATIC_FIELDS_START;
+        let (field_name, _) = self
+            .static_fields
+            .get_index(real_offset as usize)
+            .ok_or_else(|| {
+                Error::new_execution(&format!("Failed to get static field by offset {offset}"))
+            })?;
+
+        self.fields_info
+            .get(field_name)
+            .map(|field_info| field_info.type_descriptor())
+            .ok_or_else(|| {
+                Error::new_execution(&format!(
+                    "Failed to get field info for static field {}.{field_name}",
+                    self.this_class_name
+                ))
+            })
+    }
+
     pub fn get_field_name_by_offset(&self, offset: i64) -> Result<(String, String)> {
         // `offset` is a 4-byte-scaled slot index (see [`FIELD_OFFSET_SCALE`]); a sub-word Unsafe op
         // may pass a word-aligned offset (`offset & ~3`), which still divides back to the right slot.

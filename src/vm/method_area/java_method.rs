@@ -2,11 +2,13 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{clazz_ref, undecorate};
+use crate::vm::helper::{clazz_ref, receiver_only_chunks, ref_arg_chunks, undecorate};
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{ExceptionTable, StackFrame};
 use derive_new::new;
 use getset::{CopyGetters, Getters};
 use jclassmodel::attributes::LocalVariableInfo;
+use jclassmodel::modifiers::MethodModifier;
 use jdescriptor::MethodDescriptor;
 use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashSet};
@@ -28,6 +30,8 @@ pub(crate) struct JavaMethod {
     annotations_raw: Option<Vec<u8>>,
     runtime_visible_annotations: HashSet<String>,
     slot: i32,
+    /// Which of this method's argument chunks are references — see [`JavaMethod::arg_ref_chunks`].
+    arg_ref_chunks: OnceCell<Vec<bool>>,
 }
 
 #[derive(Debug, new, Getters, CopyGetters)]
@@ -77,6 +81,7 @@ impl JavaMethod {
             annotations_raw,
             runtime_visible_annotations,
             slot,
+            arg_ref_chunks: OnceCell::new(),
         }
     }
 
@@ -99,11 +104,13 @@ impl JavaMethod {
     }
 
     /// Builds a synthetic stack frame for this native method so it appears on the thread's stack
-    /// chain while it executes (native methods carry no `code_context`, hence no `new_stack_frame`).
-    pub fn new_native_stack_frame(&self) -> StackFrame {
+    /// chain while it executes (native methods carry no `code_context`, hence no `new_stack_frame`),
+    /// holding `args` so its reference arguments stay visible as roots for the duration.
+    pub fn new_native_stack_frame(&self, args: Vec<Slot>) -> StackFrame {
         StackFrame::new_native(
             Arc::clone(&self.name_signature),
             Arc::clone(&self.class_name),
+            args,
         )
     }
 
@@ -314,7 +321,41 @@ impl JavaMethod {
         &self.name_signature
     }
 
-    pub fn runtime_visible_annotations(&self) -> &HashSet<String> {
-        &self.runtime_visible_annotations
+    /// Which of this method's argument chunks are references, in the order a caller collects them:
+    /// receiver first for an instance method, then each parameter, `long` and `double` contributing
+    /// two chunks each.
+    ///
+    /// Cached because it is a fixed property of the descriptor, and every call would otherwise walk
+    /// the parameter list again to rediscover it.
+    ///
+    /// A `@PolymorphicSignature` method reports only its receiver: its declared descriptor is a
+    /// placeholder that says nothing about the parameters, so the rest stay untagged unless a caller
+    /// has the call site's own descriptor to work from.
+    pub fn arg_ref_chunks(&self) -> Result<&[bool]> {
+        self.arg_ref_chunks
+            .get_or_try_init(|| {
+                if self.is_polymorphic_signature() {
+                    Ok(receiver_only_chunks(!self.is_static()))
+                } else {
+                    ref_arg_chunks(&self.method_descriptor, !self.is_static())
+                }
+            })
+            .map(Vec::as_slice)
+    }
+
+    pub fn is_static(&self) -> bool {
+        MethodModifier::from_bits_truncate(self.access_flags as u16)
+            .contains(MethodModifier::Static)
+    }
+
+    /// Whether this is a `@PolymorphicSignature` intrinsic (`MethodHandle.invoke*`, `VarHandle`
+    /// accessors).
+    ///
+    /// Such a method's declared descriptor is a placeholder — `(Object[])Object` — rather than the
+    /// types at any particular call site, so it must not be used to reason about argument or return
+    /// values. Only the resolved `MethodType` knows those.
+    pub fn is_polymorphic_signature(&self) -> bool {
+        self.runtime_visible_annotations
+            .contains("Ljava/lang/invoke/MethodHandle$PolymorphicSignature;")
     }
 }

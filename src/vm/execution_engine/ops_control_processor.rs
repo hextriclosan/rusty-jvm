@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -69,7 +70,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<Vec<i3
         LRETURN => last_value = perform_return::<i64>(stack_frames, "LRETURN")?,
         FRETURN => last_value = perform_return::<f32>(stack_frames, "FRETURN")?,
         DRETURN => last_value = perform_return::<f64>(stack_frames, "DRETURN")?,
-        ARETURN => last_value = perform_return::<i32>(stack_frames, "ARETURN")?,
+        ARETURN => last_value = perform_return::<Slot>(stack_frames, "ARETURN")?,
         RETURN => {
             last_value = vec![];
             stack_frames.exit_frame();

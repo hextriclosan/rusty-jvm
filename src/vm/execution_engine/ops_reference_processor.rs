@@ -1,8 +1,8 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::exception::helpers::throw_null_pointer_exception;
-use crate::vm::execution_engine::common::{last_frame_mut, store_ex_pc};
-use crate::vm::execution_engine::invoker::invoke;
+use crate::vm::execution_engine::common::{last_frame_mut, push_typed, store_ex_pc};
+use crate::vm::execution_engine::invoker::{invoke, SignatureOrigin};
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
@@ -12,6 +12,7 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::monitor;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jclassmodel::constant_pool::{ConstantPool, ConstantPoolLookup};
 use jdescriptor::MethodDescriptor;
@@ -37,11 +38,15 @@ pub(crate) fn process(
 
             StaticInit::initialize(&fields_class_name)?;
 
-            field
-                .raw_value()?
-                .iter()
-                .rev()
-                .try_for_each(|x| stack_frame.push(*x))?;
+            let klass = CLASSES.get(&fields_class_name)?;
+            let field_info = klass
+                .field_info(&field_name)
+                .ok_or(Error::new_execution("Error getting field info"))?;
+            push_typed(
+                stack_frame,
+                field_info.type_descriptor(),
+                &field.raw_value()?,
+            )?;
 
             stack_frame.incr_pc();
             trace!(
@@ -95,8 +100,15 @@ pub(crate) fn process(
 
             let Some(value) = value else { return Ok(()) };
 
+            let type_descriptor = lookup::lookup_for_field_descriptor(&class_name, &field_name)
+                .ok_or_else(|| {
+                    Error::new_constant_pool(&format!(
+                        "Error getting type descriptor for {class_name}.{field_name}"
+                    ))
+                })?;
+
             let stack_frame = last_frame_mut(stack_frames)?;
-            value.iter().rev().try_for_each(|x| stack_frame.push(*x))?;
+            push_typed(stack_frame, &type_descriptor, &value)?;
 
             stack_frame.incr_pc();
             trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
@@ -163,6 +175,7 @@ pub(crate) fn process(
             invoke(
                 stack_frames,
                 &full_signature,
+                SignatureOrigin::CallSite,
                 &method_args,
                 Arc::clone(&exact_implementation),
                 class_name,
@@ -185,6 +198,7 @@ pub(crate) fn process(
             invoke(
                 stack_frames,
                 &full_signature,
+                SignatureOrigin::CallSite,
                 &method_args,
                 Arc::clone(&java_method),
                 class_name,
@@ -208,6 +222,7 @@ pub(crate) fn process(
             invoke(
                 stack_frames,
                 &full_signature,
+                SignatureOrigin::CallSite,
                 &method_args,
                 Arc::clone(&java_method),
                 &class_name_to_start_lookup_from,
@@ -254,6 +269,7 @@ pub(crate) fn process(
             invoke(
                 stack_frames,
                 &full_signature,
+                SignatureOrigin::CallSite,
                 &method_args,
                 Arc::clone(&java_method),
                 exact_class_name,
@@ -300,7 +316,7 @@ pub(crate) fn process(
             })?;
 
             let instanceref = HEAP.create_instance(instance_with_default_fields);
-            stack_frame.push(instanceref)?;
+            stack_frame.push(Slot::Ref(instanceref))?;
 
             trace!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
             stack_frame.incr_pc();
@@ -328,7 +344,7 @@ pub(crate) fn process(
             let length = stack_frame.pop();
 
             let arrayref = HEAP.create_array(type_name, length);
-            stack_frame.push(arrayref)?;
+            stack_frame.push(Slot::Ref(arrayref))?;
 
             stack_frame.incr_pc();
             trace!("NEWARRAY -> atype={atype}, length={length}, arrayref={arrayref}");
@@ -354,7 +370,7 @@ pub(crate) fn process(
                 format!("[L{class_of_array};")
             };
             let arrayref = HEAP.create_array(&class_of_array, length);
-            stack_frame.push(arrayref)?;
+            stack_frame.push(Slot::Ref(arrayref))?;
 
             stack_frame.incr_pc();
             trace!("ANEWARRAY -> class_of_array={class_of_array}, length={length}, arrayref={arrayref}");
@@ -418,7 +434,7 @@ pub(crate) fn process(
                 }
             }
 
-            stack_frame.push(objectref)?;
+            stack_frame.push(Slot::Ref(objectref))?;
 
             trace!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }
@@ -427,9 +443,11 @@ pub(crate) fn process(
             // todo: merge me with CHECKCAST
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
-            let mut objectref = stack_frame.pop();
+            let objectref: i32 = stack_frame.pop();
 
-            if objectref != 0 {
+            // Unlike CHECKCAST, this consumes the reference and yields a boolean, so the result is
+            // pushed untagged however the operand was tagged.
+            let instance_of = if objectref != 0 {
                 let klass = CLASSES.get(current_class_name)?;
                 let constant_pool = klass.constant_pool();
                 let class_name = constant_pool
@@ -442,13 +460,17 @@ pub(crate) fn process(
 
                 let instance_class_name = HEAP.get_instance_name(objectref)?;
 
-                let instanse_of = InstanceChecker::checkcast(&instance_class_name, &class_name)?;
-                objectref = if instanse_of { 1 } else { 0 };
-            }
+                i32::from(InstanceChecker::checkcast(
+                    &instance_class_name,
+                    &class_name,
+                )?)
+            } else {
+                0
+            };
 
-            stack_frame.push(objectref)?;
+            stack_frame.push(instance_of)?;
 
-            trace!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}");
+            trace!("INSTANCEOF -> class_constpool_index={class_constpool_index}, objectref={objectref}, instance_of={instance_of}");
         }
         MONITORENTER => {
             let stack_frame = last_frame_mut(stack_frames)?;

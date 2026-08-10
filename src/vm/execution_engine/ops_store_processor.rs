@@ -2,6 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -14,7 +15,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
         LSTORE => handle_pos_and_store::<i64>(stack_frame, "LSTORE "),
         FSTORE => handle_pos_and_store::<f32>(stack_frame, "FSTORE "),
         DSTORE => handle_pos_and_store::<f64>(stack_frame, "DSTORE "),
-        ASTORE => handle_pos_and_store::<i32>(stack_frame, "ASTORE "),
+        ASTORE => handle_pos_and_store::<Slot>(stack_frame, "ASTORE "),
         ISTORE_0 | ISTORE_1 | ISTORE_2 | ISTORE_3 => {
             handle_store::<i32, _>(stack_frame, code - ISTORE_0, "ISTORE_")
         }
@@ -28,13 +29,13 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
             handle_store::<f64, _>(stack_frame, code - DSTORE_0, "DSTORE_")
         }
         ASTORE_0 | ASTORE_1 | ASTORE_2 | ASTORE_3 => {
-            handle_store::<i32, _>(stack_frame, code - ASTORE_0, "ASTORE_")
+            handle_store::<Slot, _>(stack_frame, code - ASTORE_0, "ASTORE_")
         }
         IASTORE => handle_array_store::<i32>(stack_frame, "IASTORE")?,
         LASTORE => handle_array_store::<i64>(stack_frame, "LASTORE")?,
         FASTORE => handle_array_store::<f32>(stack_frame, "FASTORE")?,
         DASTORE => handle_array_store::<f64>(stack_frame, "DASTORE")?,
-        AASTORE => handle_array_store::<i32>(stack_frame, "AASTORE")?,
+        AASTORE => handle_array_store::<Slot>(stack_frame, "AASTORE")?,
         BASTORE => handle_array_store::<i32>(stack_frame, "BASTORE")?,
         CASTORE => handle_array_store::<i32>(stack_frame, "CASTORE")?,
         SASTORE => handle_array_store::<i32>(stack_frame, "SASTORE")?,

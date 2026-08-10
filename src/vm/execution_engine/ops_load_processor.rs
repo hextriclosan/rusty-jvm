@@ -3,6 +3,7 @@ use crate::vm::exception::helpers::throw_null_pointer_exception;
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use std::fmt::Display;
@@ -14,7 +15,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
         LLOAD => handle_pos_and_load::<i64>(last_frame_mut(stack_frames)?, "LLOAD "),
         FLOAD => handle_pos_and_load::<f32>(last_frame_mut(stack_frames)?, "FLOAD "),
         DLOAD => handle_pos_and_load::<f64>(last_frame_mut(stack_frames)?, "DLOAD "),
-        ALOAD => handle_pos_and_load::<i32>(last_frame_mut(stack_frames)?, "ALOAD "),
+        ALOAD => handle_pos_and_load::<Slot>(last_frame_mut(stack_frames)?, "ALOAD "),
         ILOAD_0 | ILOAD_1 | ILOAD_2 | ILOAD_3 => {
             handle_load::<i32, _>(last_frame_mut(stack_frames)?, code - ILOAD_0, "ILOAD_")
         }
@@ -28,13 +29,13 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
             handle_load::<f64, _>(last_frame_mut(stack_frames)?, code - DLOAD_0, "DLOAD_")
         }
         ALOAD_0 | ALOAD_1 | ALOAD_2 | ALOAD_3 => {
-            handle_load::<i32, _>(last_frame_mut(stack_frames)?, code - ALOAD_0, "ALOAD_")
+            handle_load::<Slot, _>(last_frame_mut(stack_frames)?, code - ALOAD_0, "ALOAD_")
         }
         IALOAD => handle_array_load::<i32>(stack_frames, "IALOAD"),
         LALOAD => handle_array_load::<i64>(stack_frames, "LALOAD"),
         FALOAD => handle_array_load::<f32>(stack_frames, "FALOAD"),
         DALOAD => handle_array_load::<f64>(stack_frames, "DALOAD"),
-        AALOAD => handle_array_load::<i32>(stack_frames, "AALOAD"),
+        AALOAD => handle_ref_array_load(stack_frames),
         BALOAD => handle_array_load::<i32>(stack_frames, "BALOAD"),
         CALOAD => handle_array_load::<i32>(stack_frames, "CALOAD"),
         SALOAD => handle_array_load::<i32>(stack_frames, "SALOAD"),
@@ -65,6 +66,34 @@ where
 
     stack_frame.incr_pc();
     trace!("{name_starts}{pos} -> value={value}");
+    Ok(())
+}
+
+/// `aaload`: loads a reference out of an object array.
+///
+/// Deliberately not sharing [`handle_array_load`] with the primitive array loads. The heap hands
+/// back untagged `i32` chunks, and only the opcode knows they are a reference — so the tagged slot
+/// is built here, where that is evident, rather than inferred inside a `StackValue` impl that
+/// cannot see the context.
+fn handle_ref_array_load(stack_frames: &mut StackFrames) -> Result<()> {
+    let stack_frame = last_frame_mut(stack_frames)?;
+    let index: i32 = stack_frame.pop();
+    let arrayref: i32 = stack_frame.pop();
+    if arrayref == 0 {
+        throw_null_pointer_exception(stack_frames)?;
+        return Ok(());
+    }
+    let raw_value = HEAP.get_array_value(arrayref, index)?;
+    let value = Slot::Ref(*raw_value.first().ok_or_else(|| {
+        Error::new_execution(&format!(
+            "AALOAD -> no value at index {index} of array {arrayref}"
+        ))
+    })?);
+
+    stack_frame.push(value)?;
+    stack_frame.incr_pc();
+    trace!("AALOAD -> arrayref={arrayref}, index={index}, value={value}");
+
     Ok(())
 }
 
