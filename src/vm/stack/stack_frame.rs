@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::method_area::instance_checker::InstanceChecker;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack::Stack;
 use crate::vm::stack::stack_value::StackValue;
 use derive_new::new;
@@ -27,8 +28,8 @@ pub(crate) struct StackFrame {
     bci: usize,
     /// Stores the current program counter (pc) in `ex_pc` before invoking a method. This value is later used as the current `pc` if an exception is thrown.
     ex_pc: Option<usize>,
-    locals: Box<[i32]>,
-    operand_stack: Stack<i32>,
+    locals: Box<[Slot]>,
+    operand_stack: Stack<Slot>,
     bytecode_ref: Arc<Vec<u8>>,
     current_class_name: Arc<String>,
     line_numbers: Arc<BTreeMap<u16, u16>>,
@@ -145,7 +146,7 @@ impl StackFrame {
             pc: 0,
             bci: 0,
             ex_pc: None,
-            locals: vec![0i32; locals_size].into_boxed_slice(),
+            locals: vec![Slot::Value(0); locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
             current_class_name,
@@ -296,13 +297,29 @@ impl StackFrame {
         T::pop_from(self)
     }
 
+    /// Pushes non-reference bits, leaving the slot untagged so a root scan skips it.
     pub(crate) fn push_raw(&mut self, val: i32) -> Result<()> {
+        self.push_slot(Slot::Value(val))
+    }
+
+    /// Pops a slot's raw bits, discarding its tag. Popping never needs the tag: the opcode already
+    /// knows what it asked for, and the value leaves the frame either way.
+    pub(crate) fn pop_raw(&mut self) -> i32 {
+        self.pop_slot().value()
+    }
+
+    /// Pushes a slot **with its tag intact**. Reference-producing opcodes push `Slot::Ref`
+    /// explicitly, and the stack-shuffle opcodes (`dup`, `swap`, …) use this to relocate values
+    /// whose type they do not know — going through [`Self::push_raw`] instead would strip the
+    /// reference tag off every value they touch.
+    pub(crate) fn push_slot(&mut self, slot: Slot) -> Result<()> {
         self.operand_stack
-            .push(val)
+            .push(slot)
             .map_err(|e| Error::new_execution(&e))
     }
 
-    pub(crate) fn pop_raw(&mut self) -> i32 {
+    /// Pops a slot with its tag intact; the counterpart of [`Self::push_slot`].
+    pub(crate) fn pop_slot(&mut self) -> Slot {
         self.operand_stack.pop().expect("Empty stack")
     }
 
@@ -314,12 +331,37 @@ impl StackFrame {
         T::get(index, self)
     }
 
+    /// Stores non-reference bits in a local. See [`Self::push_raw`].
     pub fn set_local_raw(&mut self, index: usize, val: i32) {
-        self.locals[index] = val;
+        self.locals[index] = Slot::Value(val);
     }
 
     pub fn get_local_raw(&self, index: usize) -> i32 {
+        self.get_local_slot(index).value()
+    }
+
+    /// Stores a local with its tag intact; the locals counterpart of [`Self::push_slot`].
+    pub(crate) fn set_local_slot(&mut self, index: usize, slot: Slot) {
+        self.locals[index] = slot;
+    }
+
+    /// Reads a local with its tag intact; the counterpart of [`Self::set_local_slot`].
+    pub(crate) fn get_local_slot(&self, index: usize) -> Slot {
         *self.locals.get(index).expect("No value at index")
+    }
+
+    /// Every heap reference this frame holds, in locals and on the operand stack — the frame's
+    /// contribution to a garbage collector's root set.
+    ///
+    /// Only slots the interpreter tagged are reported, so an `int` that happens to equal a live
+    /// reference is not mistaken for one.
+    #[allow(dead_code)] // consumed by the root scan added in a later step
+    pub(crate) fn ref_slots(&self) -> impl Iterator<Item = i32> + '_ {
+        self.locals
+            .iter()
+            .chain(self.operand_stack.iter())
+            .filter(|slot| slot.is_ref())
+            .map(|slot| slot.value())
     }
 
     pub fn line_numbers(&self) -> &BTreeMap<u16, u16> {
@@ -355,5 +397,101 @@ impl Display for StackFrame {
             self.line_numbers,
             self.exception_table,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn frame(locals_size: usize, stack_size: usize) -> StackFrame {
+        StackFrame::new(
+            Arc::new("test:()V".to_string()),
+            locals_size,
+            stack_size,
+            Arc::new(Vec::new()),
+            Arc::new("Test".to_string()),
+            Arc::new(BTreeMap::new()),
+            Arc::new(ExceptionTable::new(Vec::new())),
+        )
+    }
+
+    #[test]
+    fn should_report_no_roots_for_a_fresh_frame() {
+        assert_eq!(frame(4, 4).ref_slots().count(), 0);
+    }
+
+    #[test]
+    fn should_report_only_tagged_slots_as_roots() {
+        let mut frame = frame(2, 2);
+        frame.set_local(0, Slot::Ref(7));
+        frame.set_local(1, 7i32);
+        frame.push(Slot::Ref(9)).unwrap();
+        frame.push(9i32).unwrap();
+
+        // The untagged `7` and `9` are ordinary ints that merely look like references.
+        assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![7, 9]);
+    }
+
+    #[test]
+    fn should_treat_null_as_a_reference_slot() {
+        let mut frame = frame(1, 1);
+        frame.push(Slot::Ref(0)).unwrap();
+        assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![0]);
+    }
+
+    #[test]
+    fn should_preserve_the_tag_across_a_slot_move() {
+        let mut frame = frame(0, 2);
+        frame.push(Slot::Ref(5)).unwrap();
+
+        // What `dup` does: relocate a value of unknown type.
+        let slot = frame.pop_slot();
+        frame.push_slot(slot).unwrap();
+        frame.push_slot(slot).unwrap();
+
+        assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![5, 5]);
+    }
+
+    #[test]
+    fn should_drop_the_tag_when_a_primitive_overwrites_a_local() {
+        let mut frame = frame(1, 0);
+        frame.set_local(0, Slot::Ref(5));
+        frame.set_local(0, 5i32);
+
+        assert_eq!(frame.ref_slots().count(), 0);
+    }
+
+    /// `astore` then `aload`: the tag survives a trip through a local.
+    #[test]
+    fn should_carry_the_tag_between_stack_and_locals() {
+        let mut frame = frame(1, 1);
+        frame.push(Slot::Ref(-1)).unwrap();
+
+        let stored: Slot = frame.pop();
+        frame.set_local(0, stored);
+        let loaded: Slot = frame.get_local(0);
+        frame.push(loaded).unwrap();
+
+        assert_eq!(loaded, Slot::Ref(-1));
+        // Reported twice: the local still holds it, and so does the stack.
+        assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![-1, -1]);
+    }
+
+    /// Raw bits from the heap carry no tag, and a `Slot` must never invent one. `aaload` and
+    /// friends build `Slot::Ref` themselves instead.
+    #[test]
+    #[should_panic(expected = "cannot be rebuilt from untagged bits")]
+    fn should_refuse_to_rebuild_a_slot_from_untagged_bits() {
+        let _ = Slot::from_vec(&[5]);
+    }
+
+    #[test]
+    fn should_not_tag_the_halves_of_a_wide_value() {
+        let mut frame = frame(2, 2);
+        frame.push(i64::MAX).unwrap();
+        frame.set_local(0, f64::MAX);
+
+        assert_eq!(frame.ref_slots().count(), 0);
     }
 }

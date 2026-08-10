@@ -27,6 +27,12 @@ impl<T> Stack<T> {
     pub fn clear(&mut self) {
         self.data.clear();
     }
+
+    /// Iterates the live entries bottom-up. Used to scan a frame's operand stack without draining
+    /// it.
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.data.iter()
+    }
 }
 
 #[cfg(test)]
