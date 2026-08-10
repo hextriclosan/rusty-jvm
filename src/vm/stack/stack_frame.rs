@@ -308,17 +308,21 @@ impl StackFrame {
         self.pop_slot().value()
     }
 
-    /// Pushes a slot **with its tag intact**. Reference-producing opcodes push `Slot::Ref`
-    /// explicitly, and the stack-shuffle opcodes (`dup`, `swap`, …) use this to relocate values
-    /// whose type they do not know — going through [`Self::push_raw`] instead would strip the
-    /// reference tag off every value they touch.
+    /// Pushes a slot **with its tag intact**, the slot-level counterpart of [`Self::push_raw`].
+    ///
+    /// Like `push_raw` this is the low-level primitive reached through a [`StackValue`] impl, and
+    /// it reports a stack overflow bare. Call [`Self::push`] instead: it routes here via
+    /// `Slot`'s impl and adds the failing frame to the error. Opcodes that relocate values whose
+    /// type they do not know (`dup`, `swap`, ...) push a `Slot` for exactly that reason — going
+    /// through `push_raw` would strip the reference tag off every value they touch.
     pub(crate) fn push_slot(&mut self, slot: Slot) -> Result<()> {
         self.operand_stack
             .push(slot)
             .map_err(|e| Error::new_execution(&e))
     }
 
-    /// Pops a slot with its tag intact; the counterpart of [`Self::push_slot`].
+    /// Pops a slot with its tag intact; the counterpart of [`Self::push_slot`], and likewise
+    /// reached through [`Self::pop`] rather than called directly.
     pub(crate) fn pop_slot(&mut self) -> Slot {
         self.operand_stack.pop().expect("Empty stack")
     }
@@ -340,12 +344,14 @@ impl StackFrame {
         self.get_local_slot(index).value()
     }
 
-    /// Stores a local with its tag intact; the locals counterpart of [`Self::push_slot`].
+    /// Stores a local with its tag intact; the locals counterpart of [`Self::push_slot`], reached
+    /// through [`Self::set_local`].
     pub(crate) fn set_local_slot(&mut self, index: usize, slot: Slot) {
         self.locals[index] = slot;
     }
 
-    /// Reads a local with its tag intact; the counterpart of [`Self::set_local_slot`].
+    /// Reads a local with its tag intact; the counterpart of [`Self::set_local_slot`], reached
+    /// through [`Self::get_local`].
     pub(crate) fn get_local_slot(&self, index: usize) -> Slot {
         *self.locals.get(index).expect("No value at index")
     }
@@ -484,6 +490,35 @@ mod tests {
     #[should_panic(expected = "cannot be rebuilt from untagged bits")]
     fn should_refuse_to_rebuild_a_slot_from_untagged_bits() {
         let _ = Slot::from_vec(&[5]);
+    }
+
+    /// Overflowing on a `Slot` must report the frame like every other push does. `dup`/`swap` move
+    /// slots, so pushing one through `push` rather than `push_slot` is what keeps their overflows
+    /// diagnosable.
+    #[test]
+    fn should_report_the_frame_when_a_slot_overflows_the_stack() {
+        let mut frame = frame(0, 1);
+        frame.push(Slot::Ref(1)).unwrap();
+
+        let error = frame.push(Slot::Ref(2)).unwrap_err().to_string();
+
+        assert!(error.contains("Exceeded max stack size"), "{error}");
+        assert!(error.contains("Current Frame:"), "{error}");
+        // The tagged slot already on the stack shows up in the dump.
+        assert!(error.contains("#1"), "{error}");
+    }
+
+    /// The same overflow taken through the low-level primitive, which by design carries no frame
+    /// context — `push` is what adds it, and adding it here too would double-wrap the message.
+    #[test]
+    fn should_report_a_bare_error_when_a_slot_overflows_via_the_primitive() {
+        let mut frame = frame(0, 1);
+        frame.push_slot(Slot::Ref(1)).unwrap();
+
+        let error = frame.push_slot(Slot::Ref(2)).unwrap_err().to_string();
+
+        assert!(error.contains("Exceeded max stack size"), "{error}");
+        assert!(!error.contains("Current Frame:"), "{error}");
     }
 
     #[test]
