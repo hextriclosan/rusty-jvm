@@ -7,6 +7,7 @@ use crate::vm::execution_engine::ops_math_processor::increment;
 use crate::vm::execution_engine::ops_store_processor::handle_store;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
 use jclassmodel::constant_pool::ConstantPoolLookup;
@@ -27,12 +28,12 @@ pub(crate) fn process(
                 LLOAD => handle_pos_and_load::<i64>(stack_frame, "WIDE LLOAD ")?,
                 FLOAD => handle_pos_and_load::<f32>(stack_frame, "WIDE FLOAD ")?,
                 DLOAD => handle_pos_and_load::<f64>(stack_frame, "WIDE DLOAD ")?,
-                ALOAD => handle_pos_and_load::<i32>(stack_frame, "WIDE ALOAD ")?,
+                ALOAD => handle_pos_and_load::<Slot>(stack_frame, "WIDE ALOAD ")?,
                 ISTORE => handle_pos_and_store::<i32>(stack_frame, "WIDE ISTORE "),
                 LSTORE => handle_pos_and_store::<i64>(stack_frame, "WIDE LSTORE "),
                 FSTORE => handle_pos_and_store::<f32>(stack_frame, "WIDE FSTORE "),
                 DSTORE => handle_pos_and_store::<f64>(stack_frame, "WIDE DSTORE "),
-                ASTORE => handle_pos_and_store::<i32>(stack_frame, "WIDE ASTORE "),
+                ASTORE => handle_pos_and_store::<Slot>(stack_frame, "WIDE ASTORE "),
                 IINC => increment(
                     stack_frame,
                     |sf| sf.extract_two_bytes() as usize,
@@ -68,7 +69,7 @@ pub(crate) fn process(
                 .collect::<Vec<_>>();
 
             let root_array_ref = create_n_array(&dimentions, &class_name, 0)?;
-            stack_frame.push(root_array_ref)?;
+            stack_frame.push(Slot::Ref(root_array_ref))?;
 
             stack_frame.incr_pc();
             trace!("MULTIANEWARRAY -> type={class_name}, dimension_number={dimension_number}, root_array_ref={root_array_ref}");

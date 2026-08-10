@@ -156,20 +156,43 @@ impl StackFrame {
         }
     }
 
+    /// A bare frame with no bytecode, for tests that exercise slot handling rather than execution.
+    #[cfg(test)]
+    pub(crate) fn for_test(locals_size: usize, stack_size: usize) -> Self {
+        Self::new(
+            Arc::new("test:()V".to_string()),
+            locals_size,
+            stack_size,
+            Arc::new(Vec::new()),
+            Arc::new("Test".to_string()),
+            Arc::new(BTreeMap::new()),
+            Arc::new(ExceptionTable::new(Vec::new())),
+        )
+    }
+
     /// Builds a synthetic frame representing a native method that is currently executing.
     ///
-    /// Native methods have no bytecode, locals, line numbers or exception handlers, so those are
-    /// left empty. The frame is never run by the interpreter loop; it exists purely so that a
-    /// native method appears on the thread's stack chain (e.g. as `(Native Method)` in stack
-    /// traces) while it runs, including when it calls back into Java.
-    pub fn new_native(method_name: Arc<String>, current_class_name: Arc<String>) -> Self {
+    /// Native methods have no bytecode, line numbers or exception handlers, so those are left
+    /// empty. The frame is never run by the interpreter loop; it exists so that a native method
+    /// appears on the thread's stack chain (e.g. as `(Native Method)` in stack traces) while it
+    /// runs, including when it calls back into Java.
+    ///
+    /// It does carry the call's arguments as locals. They were popped off the caller's operand
+    /// stack before dispatch, so this frame is the only place a reference argument — the receiver
+    /// included — can be seen as a root while the native runs. That window is not brief: resolving
+    /// a native symbol re-enters Java, and any native may call back.
+    pub fn new_native(
+        method_name: Arc<String>,
+        current_class_name: Arc<String>,
+        args: Vec<Slot>,
+    ) -> Self {
         StackFrame {
             index: COUNTER.fetch_add(1, SeqCst),
             method_name,
             pc: 0,
             bci: 0,
             ex_pc: None,
-            locals: Box::new([]),
+            locals: args.into_boxed_slice(),
             operand_stack: Stack::with_capacity(0),
             bytecode_ref: Arc::new(Vec::new()),
             current_class_name,
@@ -411,15 +434,7 @@ mod tests {
     use super::*;
 
     fn frame(locals_size: usize, stack_size: usize) -> StackFrame {
-        StackFrame::new(
-            Arc::new("test:()V".to_string()),
-            locals_size,
-            stack_size,
-            Arc::new(Vec::new()),
-            Arc::new("Test".to_string()),
-            Arc::new(BTreeMap::new()),
-            Arc::new(ExceptionTable::new(Vec::new())),
-        )
+        StackFrame::for_test(locals_size, stack_size)
     }
 
     #[test]
@@ -482,6 +497,20 @@ mod tests {
         assert_eq!(loaded, Slot::Ref(-1));
         // Reported twice: the local still holds it, and so does the stack.
         assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![-1, -1]);
+    }
+
+    /// A native method's arguments live nowhere else while it runs: the caller popped them before
+    /// dispatch. The synthetic frame is what keeps them reachable.
+    #[test]
+    fn should_report_a_native_frames_arguments_as_roots() {
+        let frame = StackFrame::new_native(
+            Arc::new("read:(Ljava/lang/Object;I)I".to_string()),
+            Arc::new("Test".to_string()),
+            vec![Slot::Ref(3), Slot::Ref(8), Slot::Value(64)],
+        );
+
+        assert!(frame.is_native());
+        assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![3, 8]);
     }
 
     /// Raw bits from the heap carry no tag, and a `Slot` must never invent one. `aaload` and

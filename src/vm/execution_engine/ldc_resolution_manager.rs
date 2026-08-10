@@ -4,13 +4,50 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, i64_to_vec, vec_to_i64};
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use jclassmodel::constant_pool::ConstantPoolLookup;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
 type CPoolIndex = u16;
-type Value = Vec<i32>;
+/// A resolved constant, cached as the chunks it occupies.
+///
+/// `ldc2_w` constants are `long`/`double`, whose two halves are stored as [`LdcConstant::Int`]
+/// because only their raw bits are ever read back ([`LdcResolutionManager::constants_to_i64`]).
+type Value = Vec<LdcConstant>;
+
+/// A resolved constant-pool constant, with enough of its kind kept to serve every consumer.
+///
+/// `ldc` needs to know only whether the result is a reference, which a [`Slot`] would express. A
+/// bootstrap argument needs more: passed to a bootstrap method it is an `Object`, so a numeric
+/// constant has to be boxed first — and `Integer` and `Float` box differently while being
+/// indistinguishable once both are 32 raw bits. Collapsing them early is what made primitive
+/// bootstrap arguments reach `[Ljava/lang/Object;` as bare bits.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum LdcConstant {
+    Int(i32),
+    Float(f32),
+    /// A `String`, `Class`, `MethodType` or `MethodHandle` entry, already resolved to a heap
+    /// reference.
+    Reference(i32),
+}
+
+impl LdcConstant {
+    /// The operand-stack slot this constant occupies, tagged when it is a reference.
+    pub(crate) fn slot(&self) -> Slot {
+        match self {
+            LdcConstant::Int(value) => Slot::Value(*value),
+            LdcConstant::Float(value) => Slot::Value(value.to_bits() as i32),
+            LdcConstant::Reference(reference) => Slot::Ref(*reference),
+        }
+    }
+
+    /// The raw 32 bits, for callers that only move the value around.
+    pub(crate) fn raw(&self) -> i32 {
+        self.slot().value()
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct LdcResolutionManager {
@@ -18,7 +55,7 @@ pub struct LdcResolutionManager {
 }
 
 impl LdcResolutionManager {
-    pub fn resolve_ldc(&self, current_class_name: &str, cpoolindex: u16) -> Result<i32> {
+    pub fn resolve_ldc(&self, current_class_name: &str, cpoolindex: u16) -> Result<LdcConstant> {
         if let Some(Some(value)) = self
             .cache
             .read()?
@@ -31,26 +68,28 @@ impl LdcResolutionManager {
         let java_class = CLASSES.get(current_class_name)?;
         let constant_pool = java_class.constant_pool();
 
+        // The entry's kind is settled here, where the constant pool still says what it is, and
+        // travels with the value from now on.
         let result = if let Some(value) = constant_pool.get_integer(cpoolindex) {
-            value
+            LdcConstant::Int(value)
         } else if let Some(value) = constant_pool.get_float(cpoolindex) {
-            Self::float_to_int(value)
+            LdcConstant::Float(value)
         } else if let Some(value) = constant_pool.get_string(cpoolindex) {
-            StringPoolHelper::get_string(&value)?
+            LdcConstant::Reference(StringPoolHelper::get_string(&value)?)
         } else if let Some(class_name) = constant_pool.get_class_name(cpoolindex) {
-            clazz_ref(&class_name)?
+            LdcConstant::Reference(clazz_ref(&class_name)?)
         } else if let Some(method_type) = constant_pool.get_method_type(cpoolindex) {
-            build_methodtype_ref(&method_type)?
+            LdcConstant::Reference(build_methodtype_ref(&method_type)?)
         } else if let Some((reference_kind, class_name, name, descriptor)) =
             constant_pool.get_method_handle(cpoolindex)
         {
-            resolve_method_handle(
+            LdcConstant::Reference(resolve_method_handle(
                 current_class_name,
                 ReferenceKind::try_from(reference_kind)?,
                 &class_name,
                 &name,
                 &descriptor,
-            )?
+            )?)
         } else {
             return Err(Error::new_constant_pool(&format!(
                 "Error resolving ldc: {}",
@@ -74,7 +113,7 @@ impl LdcResolutionManager {
             .get(current_class_name)
             .map(|map| map.get(&cpoolindex))
         {
-            return Ok(vec_to_i64(value));
+            return Ok(Self::constants_to_i64(value));
         }
 
         let java_class = CLASSES.get(current_class_name)?;
@@ -95,13 +134,21 @@ impl LdcResolutionManager {
             .write()?
             .entry(current_class_name.to_string())
             .or_insert_with(HashMap::new)
-            .insert(cpoolindex, i64_to_vec(result));
+            .insert(
+                cpoolindex,
+                i64_to_vec(result)
+                    .into_iter()
+                    .map(LdcConstant::Int)
+                    .collect(),
+            );
 
         Ok(result)
     }
 
-    fn float_to_int(value: f32) -> i32 {
-        value.to_bits() as i32
+    /// `ldc2_w` constants are always `long`/`double`, stored as their two raw halves.
+    fn constants_to_i64(constants: &[LdcConstant]) -> i64 {
+        let raw = constants.iter().map(LdcConstant::raw).collect::<Vec<_>>();
+        vec_to_i64(&raw)
     }
 
     fn double_to_int(value: f64) -> i64 {
@@ -219,4 +266,44 @@ fn build_lookup_for_class(current_class_name: &str) -> Result<i32> {
         &[current_clazz.into()],
     )?[0];
     Ok(new_lookup)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The distinction the old `i32` representation lost. Both are 32 bits, but one boxes as
+    /// `Integer` and the other as `Float`, so collapsing them makes correct boxing impossible.
+    #[test]
+    fn should_keep_int_and_float_constants_distinct() {
+        let one_as_int = LdcConstant::Int(1);
+        let one_as_float = LdcConstant::Float(1.0);
+
+        assert_ne!(one_as_int, one_as_float);
+        assert_ne!(one_as_int.raw(), one_as_float.raw());
+    }
+
+    #[test]
+    fn should_place_numeric_constants_in_untagged_slots() {
+        assert_eq!(LdcConstant::Int(7).slot(), Slot::Value(7));
+        assert_eq!(
+            LdcConstant::Float(1.5).slot(),
+            Slot::Value(1.5f32.to_bits() as i32)
+        );
+    }
+
+    #[test]
+    fn should_place_resolved_references_in_tagged_slots() {
+        assert_eq!(LdcConstant::Reference(9).slot(), Slot::Ref(9));
+    }
+
+    /// `ldc` pushes a float as its bit pattern, so the round trip has to be exact.
+    #[test]
+    fn should_round_trip_a_float_through_its_slot() {
+        for value in [0.0f32, -1.5, f32::MIN, f32::MAX, f32::NAN] {
+            let bits = LdcConstant::Float(value).slot().value();
+            let restored = f32::from_bits(bits as u32);
+            assert_eq!(restored.to_bits(), value.to_bits());
+        }
+    }
 }

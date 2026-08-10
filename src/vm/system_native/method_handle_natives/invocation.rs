@@ -1,7 +1,7 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::execution_engine::common::last_frame_mut;
+use crate::vm::execution_engine::common::{last_frame_mut, push_typed};
 use crate::vm::execution_engine::executor::Executor;
-use crate::vm::execution_engine::invoker::invoke;
+use crate::vm::execution_engine::invoker::{invoke, SignatureOrigin};
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{klass, vec_to_i64};
@@ -11,12 +11,14 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::method_handle_natives::member_name::MemberName;
 use crate::vm::system_native::method_handle_natives::method_type::MethodType;
 use crate::vm::system_native::method_handle_natives::offsets::{
     get_field_offset, get_static_field_offset,
 };
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind::*;
+use jdescriptor::TypeDescriptor;
 use once_cell::sync::Lazy;
 use std::env;
 use std::sync::Arc;
@@ -121,6 +123,7 @@ fn bound_method_handle_invocation(
         invoke(
             stack_frames,
             method_to_invoke.name_signature(),
+            SignatureOrigin::ResolvedMethod,
             &new_args,
             Arc::clone(&method_to_invoke),
             class_name_to_load,
@@ -252,6 +255,7 @@ fn invoke_exact_method(member_name: &MemberName, method_args: &[i32]) -> Result<
         invoke(
             stack_frames,
             method_to_invoke.name_signature(),
+            SignatureOrigin::ResolvedMethod,
             method_args.as_slice(),
             Arc::clone(&method_to_invoke),
             method_to_invoke.class_name(),
@@ -292,8 +296,8 @@ fn mimic_new(class_name: &str, method_args: &[i32]) -> Result<Vec<i32>> {
     let instanceref = HEAP.create_instance(instance_with_default_fields);
 
     JavaThread::with_top_frames_mut(|stack_frames| {
-        last_frame_mut(stack_frames)?.push(instanceref)
-    })??; // NEW opcode
+        last_frame_mut(stack_frames)?.push(Slot::Ref(instanceref))
+    })??; // NEW opcode, including the reference tag it pushes
 
     let method_args = std::iter::once(instanceref)
         .chain(method_args.iter().cloned())
@@ -306,30 +310,60 @@ fn invoke_exact_get_field(member_name: &MemberName, method_args: &[i32]) -> Resu
     let (instance_ref, class_name, field_name, _) = prepare_field(member_name, method_args)?;
 
     let value = HEAP.get_object_field_value(instance_ref, &class_name, &field_name)?;
+
+    let type_descriptor = lookup::lookup_for_field_descriptor(&class_name, &field_name)
+        .ok_or_else(|| {
+            Error::new_execution(&format!(
+                "Error getting type descriptor for {class_name}.{field_name}"
+            ))
+        })?;
+
+    push_field_value(&type_descriptor, &value)
+}
+
+/// Pushes a field's value onto the caller's operand stack, exactly as the `getfield`/`getstatic`
+/// opcodes do.
+///
+/// Sharing [`push_typed`] is what keeps the two spellings of the same operation in step. They were
+/// out of step before: this path pushed the heap's chunks in storage order while the opcodes
+/// reversed them, so a `long` or `double` field read through a `MethodHandle` came back with its
+/// two halves swapped.
+fn push_field_value(type_descriptor: &TypeDescriptor, raw: &[i32]) -> Result<()> {
     JavaThread::with_top_frames_mut(|stack_frames| {
-        let last_frame = last_frame_mut(stack_frames)?;
-        value.iter().try_for_each(|val| last_frame.push(*val))
+        push_typed(last_frame_mut(stack_frames)?, type_descriptor, raw)
     })?
 }
 
+/// Reorders a value's chunks from the order the arguments arrived in to the order the heap stores.
+///
+/// The mirror of what [`push_typed`] does on the way out, and needed for the same reason. The
+/// `putfield`/`putstatic` opcodes never need it: popping the operand stack top-down yields storage
+/// order directly, whereas these paths receive the chunks already collected into argument order.
+/// A category-2 value is therefore reversed; anything narrower is a single chunk and unaffected.
+fn stored_order(args: &[i32]) -> Vec<i32> {
+    args.iter().rev().copied().collect()
+}
+
+/// The MethodHandle spelling of `putfield`.
 fn invoke_exact_put_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
     let (instance_ref, class_name, field_name, args) = prepare_field(member_name, method_args)?;
 
-    HEAP.set_object_field_value(instance_ref, &class_name, &field_name, args)
+    HEAP.set_object_field_value(instance_ref, &class_name, &field_name, stored_order(&args))
 }
 
+/// The MethodHandle spelling of `getstatic`; a `findStaticGetter` on an object-typed field returns
+/// a live reference, so it is tagged exactly as [`invoke_exact_get_field`] tags an instance field.
 fn invoke_exact_get_static_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
-    let (field, _args) = prepare_static_field(member_name, method_args)?;
+    let (field, type_descriptor, _args) = prepare_static_field(member_name, method_args)?;
     let value = field.raw_value()?;
-    JavaThread::with_top_frames_mut(|stack_frames| {
-        let last_frame = last_frame_mut(stack_frames)?;
-        value.iter().try_for_each(|val| last_frame.push(*val))
-    })?
+
+    push_field_value(&type_descriptor, &value)
 }
 
+/// The MethodHandle spelling of `putstatic`.
 fn invoke_exact_put_static_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
-    let (field, args) = prepare_static_field(member_name, method_args)?;
-    field.set_raw_value(args)
+    let (field, _type_descriptor, args) = prepare_static_field(member_name, method_args)?;
+    field.set_raw_value(stored_order(&args))
 }
 
 fn prepare_field(
@@ -347,10 +381,12 @@ fn prepare_field(
     Ok((instance_ref, class_name, field_name, args))
 }
 
+/// Resolves the static field a `MemberName` points at, along with its declared type — the only
+/// thing that can say whether the raw chunks it holds are a reference.
 fn prepare_static_field(
     member_name: &MemberName,
     method_args: &[i32],
-) -> Result<(Arc<FieldValue>, Vec<i32>)> {
+) -> Result<(Arc<FieldValue>, TypeDescriptor, Vec<i32>)> {
     let args = method_args.to_vec();
     let class_name = member_name.class_name();
 
@@ -358,5 +394,7 @@ fn prepare_static_field(
     let member_name_ref = member_name.member_name_ref();
     let offset = get_static_field_offset(member_name_ref)?;
     let field = klass.get_static_field_by_offset(offset)?;
-    Ok((field, args))
+    let type_descriptor = klass.get_static_field_descriptor_by_offset(offset)?.clone();
+
+    Ok((field, type_descriptor, args))
 }

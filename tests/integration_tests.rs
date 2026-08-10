@@ -1899,6 +1899,28 @@ fn should_support_swap_opcode() {
     assert_success("samples.opcodes.swap.SwapGeneratedExample", "2\n");
 }
 
+/// A `long` or `double` field reached through a `MethodHandle` must read and write the same value
+/// the field access opcodes do. The two spellings kept their chunks in opposite orders, so wide
+/// values came back with their halves swapped; each case below pairs a handle access with a direct
+/// one, since a handle-only round trip hides that.
+#[test]
+fn should_access_wide_fields_through_method_handles() {
+    assert_success(
+        "samples.reflection.methodhandlewidefields.MethodHandleWideFields",
+        r#"instance long get:   123456789abcdef
+instance long set:   fedcba9876543211
+instance double get: 12.5
+instance double set: -0.75
+static long get:     123456789abcdef
+static long set:     fedcba9876543211
+static double get:   12.5
+static double set:   -0.75
+instance int get:    42
+instance int set:    7
+"#,
+    );
+}
+
 #[test]
 fn should_work_with_method_handle() {
     assert_success(

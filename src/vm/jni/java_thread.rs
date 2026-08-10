@@ -2,9 +2,12 @@ use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::jni_env::jni_native_interface;
 use crate::vm::safepoint::{self, Safepoint};
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jni_sys::{JNIEnv, JNINativeInterface_};
 use std::cell::{Cell, RefCell};
+use std::marker::PhantomData;
+use std::rc::Rc;
 use std::sync::Arc;
 
 /// Represents a JVM thread for JNI purposes.
@@ -41,6 +44,17 @@ pub(crate) struct JavaThread {
     /// the global registry once the thread is attached, so another thread can drive it to a
     /// safepoint to snapshot its stack. See [`crate::vm::safepoint`].
     safepoint: Arc<Safepoint>,
+    /// References held alive across a VM operation that has no frame to put them in.
+    ///
+    /// Almost every reference the VM touches lives in some frame's locals or operand stack, which
+    /// is what a root scan walks. A few do not: values popped off the caller before a callee's
+    /// frame exists, or allocated by VM-side code that then calls into Java. While that code runs
+    /// they exist only in Rust locals, where no scan can see them — and the code in question can
+    /// run class initializers or re-enter the interpreter, so a collection really can happen in the
+    /// middle of it.
+    ///
+    /// Scopes nest and unwind in LIFO order via [`TempRootsGuard`], so this is a stack, not a set.
+    temp_roots: RefCell<Vec<Slot>>,
 }
 
 thread_local! {
@@ -50,7 +64,46 @@ thread_local! {
         current_thread: Cell::new(None),
         stack_frames: RefCell::new(Vec::new()),
         safepoint: Safepoint::new(),
+        temp_roots: RefCell::new(Vec::new()),
     };
+}
+
+/// RAII guard returned by [`JavaThread::hold_temp_roots`]; drops its scope's references on drop,
+/// restoring the stack to the depth it had on entry.
+///
+/// Deliberately `!Send`. The guard names a depth in *the creating thread's* `temp_roots`, but `Drop`
+/// resolves `JAVA_THREAD` on whichever thread runs it. Were the guard to cross a thread boundary it
+/// would truncate a stack it never pushed to — discarding live roots on the destination thread while
+/// the origin's scope leaked, and neither failure would be visible where it was caused.
+///
+/// [`StackFramesGuard`] has the same requirement and gets it for free, since a raw pointer is
+/// already `!Send`; a bare `usize` is not, hence the marker.
+pub(crate) struct TempRootsGuard {
+    restore_to: usize,
+    /// Depth of this scope's top, kept so [`Self::add_root`] can check it is still the innermost.
+    scope_end: usize,
+    _not_send: PhantomData<Rc<()>>,
+}
+
+impl TempRootsGuard {
+    /// Adds `slot` to this scope, for references acquired one at a time with Java calls in between.
+    ///
+    /// Only the innermost live scope may grow: a slot pushed above a nested scope is discarded when
+    /// *that* scope unwinds, while this guard goes on assuming it is rooted.
+    pub(crate) fn add_root(&mut self, slot: Slot) {
+        JAVA_THREAD.with(|t| {
+            let mut temp_roots = t.temp_roots.borrow_mut();
+            debug_assert_eq!(temp_roots.len(), self.scope_end, "not the innermost scope");
+            temp_roots.push(slot);
+            self.scope_end = temp_roots.len();
+        });
+    }
+}
+
+impl Drop for TempRootsGuard {
+    fn drop(&mut self) {
+        JAVA_THREAD.with(|t| t.temp_roots.borrow_mut().truncate(self.restore_to));
+    }
 }
 
 /// RAII guard returned by [`JavaThread::register_stack_frames`]; pops its segment off the
@@ -133,6 +186,39 @@ impl JavaThread {
             // Publish this thread's safepoint under its identity so it can be targeted for a stack dump.
             safepoint::register(thread_ref, Arc::clone(&t.safepoint));
         });
+    }
+
+    /// Keeps `slots` reachable for a root scan until the returned guard drops.
+    ///
+    /// For VM operations that hold references with no frame to put them in; see the `temp_roots`
+    /// field. Guards must be dropped in LIFO order, which holding them as locals gives naturally.
+    pub(crate) fn hold_temp_roots(slots: Vec<Slot>) -> TempRootsGuard {
+        JAVA_THREAD.with(|t| {
+            let mut temp_roots = t.temp_roots.borrow_mut();
+            let restore_to = temp_roots.len();
+            temp_roots.extend(slots);
+            TempRootsGuard {
+                restore_to,
+                scope_end: temp_roots.len(),
+                _not_send: PhantomData,
+            }
+        })
+    }
+
+    /// Every reference currently held in this thread's temporary root scopes.
+    ///
+    /// Read by the calling thread about itself, the same way a thread collects its own stack at a
+    /// safepoint rather than having another thread reach into it.
+    #[allow(dead_code)] // consumed by the root scan added in a later step
+    pub(crate) fn temp_root_refs() -> Vec<i32> {
+        JAVA_THREAD.with(|t| {
+            t.temp_roots
+                .borrow()
+                .iter()
+                .filter(|slot| slot.is_ref())
+                .map(|slot| slot.value())
+                .collect()
+        })
     }
 
     /// Returns a clone of the calling thread's safepoint. `Engine::execute` grabs it once and polls
@@ -220,4 +306,70 @@ fn try_set_preserves_first() {
     let err = JavaThread::try_set_pending_exception(22).unwrap_err();
     assert!(matches!(err.kind(), JniExceptionAlreadyPending(11)));
     assert_eq!(JavaThread::take_pending_exception(), Some(11));
+}
+
+#[cfg(test)]
+mod temp_roots_tests {
+    use super::*;
+
+    #[test]
+    fn should_hold_references_for_the_life_of_the_scope() {
+        assert!(JavaThread::temp_root_refs().is_empty());
+
+        let held = JavaThread::hold_temp_roots(vec![Slot::Ref(5), Slot::Value(6), Slot::Ref(7)]);
+        // The untagged 6 is an ordinary value that merely looks like a reference.
+        assert_eq!(JavaThread::temp_root_refs(), vec![5, 7]);
+
+        drop(held);
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
+
+    /// The guard must not cross threads: `Drop` truncates whichever thread's `temp_roots` it runs
+    /// on, so a guard dropped elsewhere would discard that thread's live roots and leak its own.
+    /// The `PhantomData<Rc<()>>` in the struct is what prevents it; this fails if that is removed.
+    #[test]
+    fn should_keep_the_temp_roots_guard_thread_bound() {
+        struct Probe<T>(PhantomData<T>);
+
+        trait MaybeSend {
+            const IS_SEND: bool = false;
+        }
+        impl<T> MaybeSend for Probe<T> {}
+
+        // An inherent const wins over the trait's, but only when its `Send` bound is satisfied.
+        impl<T: Send> Probe<T> {
+            const IS_SEND: bool = true;
+        }
+
+        const { assert!(!<Probe<TempRootsGuard>>::IS_SEND) };
+        const { assert!(<Probe<usize>>::IS_SEND, "probe does not discriminate") };
+    }
+
+    /// A scope grows as references appear, and drops everything it accumulated.
+    #[test]
+    fn should_hold_references_added_after_the_scope_opened() {
+        let mut held = JavaThread::hold_temp_roots(vec![Slot::Ref(5)]);
+        held.add_root(Slot::Ref(6));
+        // A nested scope opened and closed in between leaves the outer one appendable.
+        drop(JavaThread::hold_temp_roots(vec![Slot::Ref(7)]));
+        held.add_root(Slot::Ref(8));
+        assert_eq!(JavaThread::temp_root_refs(), vec![5, 6, 8]);
+
+        drop(held);
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
+
+    /// Scopes nest: a polymorphic call can re-enter Java and reach another one.
+    #[test]
+    fn should_unwind_nested_scopes_in_order() {
+        let outer = JavaThread::hold_temp_roots(vec![Slot::Ref(1)]);
+        let inner = JavaThread::hold_temp_roots(vec![Slot::Ref(2)]);
+        assert_eq!(JavaThread::temp_root_refs(), vec![1, 2]);
+
+        drop(inner);
+        assert_eq!(JavaThread::temp_root_refs(), vec![1]);
+
+        drop(outer);
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
 }

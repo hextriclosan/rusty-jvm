@@ -3,8 +3,10 @@ use crate::vm::execution_engine::engine::Engine;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_class::JavaClass;
+use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrame;
 use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::threads;
@@ -151,7 +153,7 @@ impl Executor {
     ) -> Result<Vec<i32>> {
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
-        Self::set_stack_arguments(&mut stack_frame, args)?;
+        Self::set_stack_arguments(&mut stack_frame, &java_method, args)?;
         Engine::execute(
             stack_frame,
             &format!(
@@ -161,10 +163,29 @@ impl Executor {
         )
     }
 
-    fn set_stack_arguments(stack_frame: &mut StackFrame, args: &[StackValueKind]) -> Result<()> {
+    /// Lays `args` out in the callee's locals, tagging the receiver and every object or array
+    /// parameter as a reference.
+    ///
+    /// [`StackValueKind`] records how wide a value is but not whether it is a reference: every
+    /// VM-side caller hands an object reference over as a plain `I32`. The callee's own descriptor
+    /// supplies the missing half, the same way it does for arguments arriving from the interpreter.
+    ///
+    /// Without this, an object reachable only through a VM-initiated call — the argument array of an
+    /// `invokedynamic` bootstrap, say — would sit in an untagged local for the whole of that call and
+    /// be invisible to a root scan, along with everything only it references.
+    fn set_stack_arguments(
+        stack_frame: &mut StackFrame,
+        java_method: &JavaMethod,
+        args: &[StackValueKind],
+    ) -> Result<()> {
+        let ref_chunks = java_method.arg_ref_chunks()?;
+
         let mut chunk_index = 0;
         for arg in args.iter() {
             match arg {
+                StackValueKind::I32(value) if ref_chunks.get(chunk_index) == Some(&true) => {
+                    stack_frame.set_local(chunk_index, Slot::Ref(*value))
+                }
                 StackValueKind::I32(value) => stack_frame.set_local(chunk_index, *value),
                 StackValueKind::I64(value) => stack_frame.set_local(chunk_index, *value),
                 StackValueKind::F32(value) => stack_frame.set_local(chunk_index, *value),
