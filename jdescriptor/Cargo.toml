@@ -18,4 +18,4 @@ serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.17"
 
 [dev-dependencies]
-rstest = "0.26.1"
+rstest = "0.27.0"
