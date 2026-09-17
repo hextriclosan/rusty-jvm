@@ -13,7 +13,9 @@ use crate::vm::jni::array_operations_impl::{
     set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
     set_long_array_region, set_object_array_element, set_short_array_region,
 };
-use crate::vm::jni::class_operations_impl::{find_class, get_superclass, is_assignable_from};
+use crate::vm::jni::class_operations_impl::{
+    find_class, get_module, get_superclass, is_assignable_from,
+};
 use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
@@ -237,7 +239,6 @@ jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);
 jni_stub!(GetDirectBufferAddress(jobject) -> *mut c_void);
 jni_stub!(GetDirectBufferCapacity(jobject) -> jlong);
 jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
-jni_stub!(GetModule(jclass) -> jobject);
 jni_stub!(IsVirtualThread(jobject) -> jboolean);
 
 jni_vm_stub!(DestroyJavaVM() -> jint);
@@ -479,7 +480,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetDirectBufferAddress = GetDirectBufferAddress;
     ni.v24.GetDirectBufferCapacity = GetDirectBufferCapacity;
     ni.v24.GetObjectRefType = GetObjectRefType;
-    ni.v24.GetModule = GetModule;
+    ni.v24.GetModule = get_module;
     ni.v24.IsVirtualThread = IsVirtualThread;
     ni.v24.GetStringUTFLengthAsLong = get_string_utf_length_as_long;
 
