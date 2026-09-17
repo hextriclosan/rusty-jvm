@@ -5,6 +5,8 @@ use crate::vm::jni::utils::{
     set_pending_no_class_def_found_error,
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
+use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
+use jdescriptor::TypeDescriptor;
 use jni_sys::{jboolean, jclass, JNIEnv};
 use std::ffi::{c_char, CStr};
 use std::ptr::null_mut;
@@ -26,6 +28,11 @@ pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c
         }
     };
 
+    if !is_valid_find_class_name(&name) {
+        set_pending_no_class_def_found_error(&name);
+        return null_mut();
+    }
+
     match clazz_ref(&name) {
         Ok(clazz) => clazz as jclass,
         Err(_) => {
@@ -33,6 +40,34 @@ pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c
             null_mut()
         }
     }
+}
+
+fn is_valid_find_class_name(name: &str) -> bool {
+    if name.starts_with('[') {
+        let Ok(descriptor) = name.parse::<TypeDescriptor>() else {
+            return false;
+        };
+        if descriptor.to_string() != name {
+            return false;
+        }
+        return match descriptor {
+            TypeDescriptor::Array(component, _) => match component.as_ref() {
+                TypeDescriptor::Void => false,
+                TypeDescriptor::Object(class_name) => is_valid_internal_class_name(class_name),
+                _ => true,
+            },
+            _ => false,
+        };
+    }
+
+    !PRIMITIVE_TYPE_BY_CODE.contains_key(name) && is_valid_internal_class_name(name)
+}
+
+fn is_valid_internal_class_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .split('/')
+            .all(|part| !part.is_empty() && !part.contains(['.', ';', '[']))
 }
 
 pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> jclass {
