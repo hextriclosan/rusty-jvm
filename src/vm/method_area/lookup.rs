@@ -17,6 +17,17 @@ pub(crate) fn lookup_method(
     class_name: &str,
     full_method_signature: &str,
 ) -> Result<Option<Arc<JavaMethod>>> {
+    if let Some(method) = lookup_instance_method(class_name, full_method_signature)? {
+        return Ok(Some(method));
+    }
+
+    lookup_static_method(class_name, full_method_signature)
+}
+
+pub(crate) fn lookup_instance_method(
+    class_name: &str,
+    full_method_signature: &str,
+) -> Result<Option<Arc<JavaMethod>>> {
     let klass = CLASSES.get(class_name)?;
     let vtable = klass.vtable()?;
 
@@ -24,9 +35,20 @@ pub(crate) fn lookup_method(
         return Ok(Some(Arc::clone(method)));
     }
 
-    // Fall back for polymorphic signature methods whose descriptor varies per call site
-    Ok(lookup_for_implementation(class_name, full_method_signature)
-        .or_else(|| lookup_for_implementation_interface(class_name, full_method_signature)))
+    Ok(
+        lookup_for_instance_implementation(class_name, full_method_signature)
+            .or_else(|| lookup_for_implementation_interface(class_name, full_method_signature)),
+    )
+}
+
+pub(crate) fn lookup_static_method(
+    class_name: &str,
+    full_method_signature: &str,
+) -> Result<Option<Arc<JavaMethod>>> {
+    Ok(lookup_for_static_implementation(
+        class_name,
+        full_method_signature,
+    ))
 }
 
 /// Builds the vtable for `class_name` by collecting all method signatures reachable
@@ -41,7 +63,7 @@ pub(crate) fn build_vtable(class_name: &str) -> Result<IndexMap<String, Arc<Java
 
     let mut vtable = IndexMap::new();
     for sig in sigs {
-        if let Some(method) = lookup_for_implementation(class_name, &sig)
+        if let Some(method) = lookup_for_instance_implementation(class_name, &sig)
             .or_else(|| lookup_for_implementation_interface(class_name, &sig))
         {
             vtable.insert(sig, method);
@@ -121,17 +143,39 @@ pub(crate) fn lookup_and_fill_instance_fields_hierarchy(
 
 // ── Private helpers ──────────────────────────────────────────────────────────
 
-fn lookup_for_implementation(
+fn lookup_for_instance_implementation(
     class_name: &str,
     full_method_signature: &str,
 ) -> Option<Arc<JavaMethod>> {
     let klass = CLASSES.get(class_name).ok()?;
 
-    if let Some(java_method) = klass.try_get_method(full_method_signature) {
+    if let Some(java_method) = klass
+        .try_get_method(full_method_signature)
+        .filter(|method| !method.is_static())
+    {
+        Some(Arc::clone(&java_method))
+    } else if full_method_signature.starts_with("<init>:") {
+        None
+    } else {
+        let parent_class_name = klass.parent().as_ref()?;
+        lookup_for_instance_implementation(parent_class_name, full_method_signature)
+    }
+}
+
+fn lookup_for_static_implementation(
+    class_name: &str,
+    full_method_signature: &str,
+) -> Option<Arc<JavaMethod>> {
+    let klass = CLASSES.get(class_name).ok()?;
+
+    if let Some(java_method) = klass
+        .try_get_method(full_method_signature)
+        .filter(|method| method.is_static())
+    {
         Some(Arc::clone(&java_method))
     } else {
         let parent_class_name = klass.parent().as_ref()?;
-        lookup_for_implementation(parent_class_name, full_method_signature)
+        lookup_for_static_implementation(parent_class_name, full_method_signature)
     }
 }
 
@@ -158,7 +202,10 @@ fn lookup_in_interface_hierarchy(
 ) -> Option<Arc<JavaMethod>> {
     for interface_name in interfaces.iter() {
         if let Some(interface_class) = CLASSES.get(interface_name).ok() {
-            if let Some(java_method) = interface_class.try_get_method(full_method_signature) {
+            if let Some(java_method) = interface_class
+                .try_get_method(full_method_signature)
+                .filter(|method| !method.is_static())
+            {
                 return Some(java_method);
             }
 
