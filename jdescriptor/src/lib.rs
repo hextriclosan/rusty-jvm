@@ -147,7 +147,15 @@ impl FromStr for TypeDescriptor {
     type Err = DescriptorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        get_next(&mut s.chars())?.ok_or(DescriptorError::InvalidFormat("Invalid descriptor"))
+        let mut chars = s.chars();
+        let descriptor =
+            get_next(&mut chars)?.ok_or(DescriptorError::InvalidFormat("Invalid descriptor"))?;
+        if chars.next().is_some() {
+            return Err(DescriptorError::InvalidFormat(
+                "Trailing characters after type descriptor.",
+            ));
+        }
+        Ok(descriptor)
     }
 }
 
@@ -167,6 +175,11 @@ fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError
             let mut class_name = String::new();
             for c in chars {
                 if c == ';' {
+                    if class_name.is_empty() {
+                        return Err(DescriptorError::InvalidFormat(
+                            "Class name descriptor cannot be empty.",
+                        ));
+                    }
                     return Ok(Some(Object(class_name)));
                 }
                 class_name.push(c);
@@ -185,6 +198,11 @@ fn get_next(chars: &mut Chars) -> Result<Option<TypeDescriptor>, DescriptorError
             }
             let base_type =
                 get_next(chars)?.ok_or(DescriptorError::InvalidFormat("Invalid descriptor."))?;
+            if base_type == Void {
+                return Err(DescriptorError::InvalidFormat(
+                    "Array component type cannot be void.",
+                ));
+            }
             Some(Array(Box::new(base_type), dimensions))
         }
         ')' => None,
@@ -212,11 +230,21 @@ impl FromStr for MethodDescriptor {
 
         let mut parameter_types = Vec::new();
         while let Some(descr) = get_next(&mut chars)? {
+            if descr == Void {
+                return Err(DescriptorError::InvalidFormat(
+                    "Method parameter type cannot be void.",
+                ));
+            }
             parameter_types.push(descr);
         }
 
         let return_type =
             get_next(&mut chars)?.ok_or(DescriptorError::InvalidFormat("Missing return type."))?;
+        if chars.next().is_some() {
+            return Err(DescriptorError::InvalidFormat(
+                "Trailing characters after method descriptor.",
+            ));
+        }
         Ok(Self::new(parameter_types, return_type))
     }
 }
@@ -274,6 +302,23 @@ mod tests {
                 "Unrecognized type descriptor."
             ))
         );
+    }
+    #[rstest]
+    #[case("Igarbage")]
+    #[case("Ljava/lang/String;extra")]
+    #[case("[Iextra")]
+    #[case("L;")]
+    #[case("[V")]
+    fn should_reject_invalid_type_descriptors(#[case] descriptor: &str) {
+        assert!(str::parse::<TypeDescriptor>(descriptor).is_err());
+    }
+    #[rstest]
+    #[case("(V)V")]
+    #[case("()Vextra")]
+    #[case("(I)Vextra")]
+    #[case("(I)")]
+    fn should_reject_invalid_method_descriptors(#[case] descriptor: &str) {
+        assert!(str::parse::<MethodDescriptor>(descriptor).is_err());
     }
     #[test]
     fn should_return_error_for_array_without_type() {
