@@ -28,10 +28,14 @@ public class JniClassOperationsDemo {
         testFindClass("multi-dim array", "[[Ljava/lang/String;");
 
         // Negative test cases for various invalid formats
-        //testFindClass("dot notation", "java.lang.String"); // fixme: should not pass https://github.com/hextriclosan/rusty-jvm/issues/810
-        //testFindClass("primitive I", "I"); // fixme: should not pass https://github.com/hextriclosan/rusty-jvm/issues/810
-        //testFindClass("primitive J", "J"); // fixme: should not pass https://github.com/hextriclosan/rusty-jvm/issues/810
-        //testFindClass("primitive V", "V"); // fixme: should not pass https://github.com/hextriclosan/rusty-jvm/issues/810
+        testFindClass("dot notation", "java.lang.String");
+        testFindClass("primitive I", "I");
+        testFindClass("primitive J", "J");
+        testFindClass("primitive V", "V");
+        testFindClass("object descriptor", "Ljava/lang/String;");
+        testFindClass("void array", "[V");
+        testFindClass("trailing array data", "[Igarbage");
+        testFindClass("dotted object array", "[Ljava.lang.String;");
 
         testFindClass("primitive int", "int");
         testFindClass("primitive long", "long");

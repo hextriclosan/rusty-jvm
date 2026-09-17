@@ -4167,6 +4167,14 @@ fn should_support_jni_class_operations() {
 [OK] object array -> class [Ljava.lang.String;
 [OK] primitive array -> class [I
 [OK] multi-dim array -> class [[Ljava.lang.String;
+[FAIL] dot notation -> java.lang.NoClassDefFoundError: java.lang.String
+[FAIL] primitive I -> java.lang.NoClassDefFoundError: I
+[FAIL] primitive J -> java.lang.NoClassDefFoundError: J
+[FAIL] primitive V -> java.lang.NoClassDefFoundError: V
+[FAIL] object descriptor -> java.lang.NoClassDefFoundError: Ljava/lang/String;
+[FAIL] void array -> java.lang.NoClassDefFoundError: [V
+[FAIL] trailing array data -> java.lang.NoClassDefFoundError: [Igarbage
+[FAIL] dotted object array -> java.lang.NoClassDefFoundError: [Ljava.lang.String;
 [FAIL] primitive int -> java.lang.NoClassDefFoundError: int
 [FAIL] primitive long -> java.lang.NoClassDefFoundError: long
 [FAIL] primitive void -> java.lang.NoClassDefFoundError: void
