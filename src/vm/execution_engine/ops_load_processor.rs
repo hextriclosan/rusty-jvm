@@ -1,5 +1,5 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::throw_null_pointer_exception;
+use crate::vm::exception::helpers::check_array_access;
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::heap::heap::HEAP;
@@ -76,11 +76,13 @@ where
 /// is built here, where that is evident, rather than inferred inside a `StackValue` impl that
 /// cannot see the context.
 fn handle_ref_array_load(stack_frames: &mut StackFrames) -> Result<()> {
-    let stack_frame = last_frame_mut(stack_frames)?;
-    let index: i32 = stack_frame.pop();
-    let arrayref: i32 = stack_frame.pop();
-    if arrayref == 0 {
-        throw_null_pointer_exception(stack_frames)?;
+    let (arrayref, index) = {
+        let stack_frame = last_frame_mut(stack_frames)?;
+        let index = stack_frame.pop();
+        let arrayref = stack_frame.pop();
+        (arrayref, index)
+    };
+    if !check_array_access(arrayref, index, stack_frames)? {
         return Ok(());
     }
     let raw_value = HEAP.get_array_value(arrayref, index)?;
@@ -90,6 +92,7 @@ fn handle_ref_array_load(stack_frames: &mut StackFrames) -> Result<()> {
         ))
     })?);
 
+    let stack_frame = last_frame_mut(stack_frames)?;
     stack_frame.push(value)?;
     stack_frame.incr_pc();
     trace!("AALOAD -> arrayref={arrayref}, index={index}, value={value}");
@@ -101,16 +104,19 @@ fn handle_array_load<T: StackValue + Display + Copy>(
     stack_frames: &mut StackFrames,
     name_starts: &str,
 ) -> Result<()> {
-    let stack_frame = last_frame_mut(stack_frames)?;
-    let index: i32 = stack_frame.pop();
-    let arrayref: i32 = stack_frame.pop();
-    if arrayref == 0 {
-        throw_null_pointer_exception(stack_frames)?;
+    let (arrayref, index) = {
+        let stack_frame = last_frame_mut(stack_frames)?;
+        let index = stack_frame.pop();
+        let arrayref = stack_frame.pop();
+        (arrayref, index)
+    };
+    if !check_array_access(arrayref, index, stack_frames)? {
         return Ok(());
     }
     let raw_value = HEAP.get_array_value(arrayref, index)?;
 
     let value: T = T::from_vec(&raw_value);
+    let stack_frame = last_frame_mut(stack_frames)?;
     stack_frame.push(value)?;
     stack_frame.incr_pc();
     trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");
