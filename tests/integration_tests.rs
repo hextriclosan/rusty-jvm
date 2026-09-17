@@ -198,6 +198,19 @@ fn should_support_arrays() {
 }
 
 #[test]
+fn should_throw_for_invalid_array_access() {
+    assert_success(
+        "samples.arrays.bounds.ArrayIndexOutOfBounds",
+        r#"primitive load negative: java.lang.ArrayIndexOutOfBoundsException
+reference load at length: java.lang.ArrayIndexOutOfBoundsException
+primitive store at length: java.lang.ArrayIndexOutOfBoundsException
+reference store negative: java.lang.ArrayIndexOutOfBoundsException
+null store: java.lang.NullPointerException
+"#,
+    );
+}
+
+#[test]
 fn should_support_arrays_with_longs() {
     assert_success("samples.arrays.array.longs.ArrayLong", "233646220932000\n");
 }

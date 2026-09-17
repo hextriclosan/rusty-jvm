@@ -7,6 +7,7 @@ use crate::vm::exception::pending_helpers::{
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::stack::stack_value::StackValueKind;
 
 /// Throws an implicit (VM-raised) `NullPointerException` with **no** detail message. The helpful
 /// message describing the null reference (JEP 358) is computed lazily by
@@ -19,6 +20,30 @@ pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()
         &[],
         stack_frames,
     )
+}
+
+pub fn check_array_access(
+    array_ref: i32,
+    index: i32,
+    stack_frames: &mut StackFrames,
+) -> Result<bool> {
+    if array_ref == 0 {
+        throw_null_pointer_exception(stack_frames)?;
+        return Ok(false);
+    }
+
+    let length = HEAP.get_array_len(array_ref)?;
+    if index < 0 || index >= length {
+        construct_exception_and_throw(
+            "java/lang/ArrayIndexOutOfBoundsException",
+            "<init>:(I)V",
+            &[StackValueKind::from(index)],
+            stack_frames,
+        )?;
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 pub fn check_bounds(arr_ref: i32, offset: i32, len: i32) -> Result<bool> {
