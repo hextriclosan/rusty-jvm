@@ -3,6 +3,8 @@ use crate::vm::JAVA_HOME;
 use os_info::Type;
 use os_info::Version::Semantic;
 use std::env;
+#[cfg(all(unix, not(target_os = "macos")))]
+use std::ffi::CStr;
 use std::string::ToString;
 use std::sync::LazyLock;
 
@@ -59,6 +61,46 @@ pub(crate) fn file_separator() -> &'static str {
     {
         "/"
     }
+}
+
+#[cfg(windows)]
+fn windows_encoding(code_page: u32) -> String {
+    match code_page {
+        0 | 65001 => "UTF-8".to_string(),
+        874 | 932 | 936 | 949 | 950 | 1361 => format!("MS{code_page}"),
+        54936 => "GB18030".to_string(),
+        _ => format!("Cp{code_page}"),
+    }
+}
+
+#[cfg(windows)]
+static SUN_JNU_ENCODING: LazyLock<String> =
+    LazyLock::new(|| windows_encoding(unsafe { winapi::um::winnls::GetACP() }));
+
+#[cfg(target_os = "macos")]
+static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| "UTF-8".to_string());
+
+#[cfg(all(unix, not(target_os = "macos")))]
+static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| unsafe {
+    if nix::libc::setlocale(nix::libc::LC_CTYPE, c"".as_ptr()).is_null() {
+        return "ISO8859-1".to_string();
+    }
+
+    let encoding = nix::libc::nl_langinfo(nix::libc::CODESET);
+    if encoding.is_null() {
+        return "ISO8859-1".to_string();
+    }
+
+    match CStr::from_ptr(encoding).to_string_lossy().as_ref() {
+        "" => "ISO8859-1".to_string(),
+        "646" => "ISO646-US".to_string(),
+        "EUC-JP" => "EUC-JP-LINUX".to_string(),
+        encoding => encoding.to_string(),
+    }
+});
+
+pub(crate) fn sun_jnu_encoding() -> &'static str {
+    &SUN_JNU_ENCODING
 }
 
 static OS_VERSION: LazyLock<String> = LazyLock::new(|| {
@@ -160,4 +202,18 @@ static SUN_BOOT_LIBRARY_PATH: LazyLock<String> = LazyLock::new(|| {
 });
 pub(crate) fn sun_boot_library_path() -> &'static str {
     &SUN_BOOT_LIBRARY_PATH
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::windows_encoding;
+
+    #[test]
+    fn should_map_windows_code_pages_to_java_charset_names() {
+        assert_eq!(windows_encoding(0), "UTF-8");
+        assert_eq!(windows_encoding(65001), "UTF-8");
+        assert_eq!(windows_encoding(932), "MS932");
+        assert_eq!(windows_encoding(54936), "GB18030");
+        assert_eq!(windows_encoding(1251), "Cp1251");
+    }
 }
