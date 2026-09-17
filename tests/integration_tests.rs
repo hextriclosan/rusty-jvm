@@ -4202,6 +4202,30 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_support_jni_is_same_object() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.objectops.JniIsSameObjectDemo",
+        &[],
+        r#"same reference=true
+different references=false
+two nulls=true
+object and null=false
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniIsSameObjectDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_support_thread_pool_executor() {
     assert_success(
         "samples.concurrency.advancedpooldemo.AdvancedPoolDemo",

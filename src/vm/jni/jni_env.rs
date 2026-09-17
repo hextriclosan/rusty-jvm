@@ -36,7 +36,7 @@ use crate::vm::jni::object_fields_impl::{
     set_boolean_field, set_byte_field, set_char_field, set_double_field, set_float_field,
     set_int_field, set_long_field, set_object_field, set_short_field,
 };
-use crate::vm::jni::object_operations_impl::get_object_class;
+use crate::vm::jni::object_operations_impl::{get_object_class, is_same_object};
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -158,7 +158,6 @@ jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
 jni_stub!(NewGlobalRef(jobject) -> jobject);
 jni_stub!(DeleteGlobalRef(jobject) -> ());
 jni_stub!(DeleteLocalRef(jobject) -> ());
-jni_stub!(IsSameObject(jobject, jobject) -> jboolean);
 jni_stub!(NewLocalRef(jobject) -> jobject);
 jni_stub!(EnsureLocalCapacity(jint) -> jint);
 jni_stub!(AllocObject(jclass) -> jobject);
@@ -271,7 +270,7 @@ static VTABLE: Wrapper = {
     ni.v24.NewGlobalRef = NewGlobalRef;
     ni.v24.DeleteGlobalRef = DeleteGlobalRef;
     ni.v24.DeleteLocalRef = DeleteLocalRef;
-    ni.v24.IsSameObject = IsSameObject;
+    ni.v24.IsSameObject = is_same_object;
     ni.v24.NewLocalRef = NewLocalRef;
     ni.v24.EnsureLocalCapacity = EnsureLocalCapacity;
     ni.v24.AllocObject = AllocObject;
