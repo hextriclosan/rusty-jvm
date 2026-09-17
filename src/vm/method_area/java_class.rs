@@ -338,6 +338,12 @@ impl JavaClass {
         &self,
         instance_field_name_type: &str,
     ) -> Option<&TypeDescriptor> {
+        if !self
+            .instance_fields_template
+            .contains_key(instance_field_name_type)
+        {
+            return None;
+        }
         let field_info = self.fields_info.get(instance_field_name_type)?;
 
         Some(field_info.type_descriptor())
