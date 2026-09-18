@@ -8,6 +8,7 @@ mod java_vm_interface_impl;
 pub(crate) mod jni_env;
 mod jni_invoke;
 mod jni_value;
+mod monitor_impl;
 mod object_fields_impl;
 mod object_operations_impl;
 mod static_fields_impl;
