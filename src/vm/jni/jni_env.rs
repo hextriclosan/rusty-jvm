@@ -36,7 +36,9 @@ use crate::vm::jni::object_fields_impl::{
     set_boolean_field, set_byte_field, set_char_field, set_double_field, set_float_field,
     set_int_field, set_long_field, set_object_field, set_short_field,
 };
-use crate::vm::jni::object_operations_impl::{get_object_class, is_same_object};
+use crate::vm::jni::object_operations_impl::{
+    get_object_class, is_same_object, is_virtual_thread,
+};
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -238,7 +240,6 @@ jni_stub!(GetDirectBufferAddress(jobject) -> *mut c_void);
 jni_stub!(GetDirectBufferCapacity(jobject) -> jlong);
 jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
 jni_stub!(GetModule(jclass) -> jobject);
-jni_stub!(IsVirtualThread(jobject) -> jboolean);
 
 jni_vm_stub!(DestroyJavaVM() -> jint);
 jni_vm_stub!(AttachCurrentThread(*mut *mut c_void, *mut c_void) -> jint);
@@ -480,7 +481,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetDirectBufferCapacity = GetDirectBufferCapacity;
     ni.v24.GetObjectRefType = GetObjectRefType;
     ni.v24.GetModule = GetModule;
-    ni.v24.IsVirtualThread = IsVirtualThread;
+    ni.v24.IsVirtualThread = is_virtual_thread;
     ni.v24.GetStringUTFLengthAsLong = get_string_utf_length_as_long;
 
     let mut ii: JNIInvokeInterface_ = unsafe { std::mem::zeroed() };
