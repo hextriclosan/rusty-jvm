@@ -2,9 +2,10 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::utils::{
     set_pending_array_index_out_of_bounds_exception,
-    set_pending_array_region_out_of_bounds_exception, set_pending_negative_array_size_exception,
-    set_pending_null_pointer_exception,
+    set_pending_array_region_out_of_bounds_exception, set_pending_array_store_exception,
+    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
 };
+use crate::vm::method_area::instance_checker::InstanceChecker;
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
@@ -105,6 +106,24 @@ pub(super) extern "system" fn set_object_array_element(
     if index >= len || index < 0 {
         set_pending_array_index_out_of_bounds_exception(index, len);
         return;
+    }
+
+    if !value.is_null() {
+        let array_class = HEAP
+            .get_instance_name(array_ref)
+            .expect("Failed to get array class");
+        let element_type = array_class
+            .strip_prefix('[')
+            .expect("Object array class must start with '['");
+        let storable = InstanceChecker::can_store_in_array(value as i32, element_type)
+            .expect("Failed to check array element type");
+        if !storable {
+            let value_class = HEAP
+                .get_instance_name(value as i32)
+                .expect("Failed to get value class");
+            set_pending_array_store_exception(&value_class, &array_class, index);
+            return;
+        }
     }
 
     HEAP.set_array_value(array_ref, index, vec![value as i32])

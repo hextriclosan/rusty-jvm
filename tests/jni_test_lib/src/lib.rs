@@ -17,6 +17,7 @@ mod monitor_demo;
 mod new_object_a_demo;
 mod null_arguments_demo;
 mod object_array_bounds_demo;
+mod object_array_store_demo;
 mod object_fields_demo;
 mod object_operations_demo;
 mod object_ref_type_demo;
