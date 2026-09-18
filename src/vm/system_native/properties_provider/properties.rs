@@ -121,6 +121,24 @@ pub(crate) fn os_name() -> &'static str {
     &OS_NAME
 }
 
+pub(crate) fn os_arch() -> &'static str {
+    match env::consts::ARCH {
+        "x86_64" => "amd64",
+        "x86" => "x86",
+        "aarch64" => "aarch64",
+        "s390x" => "s390x",
+        architecture => architecture,
+    }
+}
+
+pub(crate) fn data_model() -> &'static str {
+    if cfg!(target_pointer_width = "64") {
+        "64"
+    } else {
+        "32"
+    }
+}
+
 static USER_DIR: LazyLock<String> = LazyLock::new(|| {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     current_dir.display().to_string()

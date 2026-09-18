@@ -1776,6 +1776,23 @@ fn should_return_system_properties() {
         tmp_dir,
         env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
     );
+
+    let expected_arch = match env::consts::ARCH {
+        "x86_64" => "amd64",
+        "x86" => "x86",
+        "aarch64" => "aarch64",
+        "s390x" => "s390x",
+        architecture => architecture,
+    };
+    assert_eq!(json["os.arch"], expected_arch);
+    assert_eq!(
+        json["sun.arch.data.model"],
+        if cfg!(target_pointer_width = "64") {
+            "64"
+        } else {
+            "32"
+        }
+    );
 }
 
 #[test]
