@@ -182,6 +182,10 @@ pub(crate) fn list0(_this: i32, file_ref: i32) -> Result<i32> {
     }
 
     Ok(HEAP.create_array_with_values("[Ljava/lang/String;", &names))
+pub(crate) fn create_directory0(_this: i32, file_ref: i32) -> Result<bool> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    Ok(std::fs::create_dir(path).is_ok())
 }
 
 /// Get the length of the file in bytes.

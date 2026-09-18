@@ -1459,6 +1459,14 @@ fn should_report_file_last_modified_time() {
         "samples.io.filelastmodified.FileLastModified",
         &[&file_path],
         &format!("{modified}\n"),
+fn should_create_directory() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let directory = temp.path().join("created-by-java");
+    let path = directory.to_str().unwrap();
+    utils::assert_success_with_args(
+        "samples.io.createdirectory.CreateDirectory",
+        &[path],
+        "true\ntrue\nfalse\n",
     );
 }
 
