@@ -1,4 +1,5 @@
 use crate::from_mutf8_ptr;
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
 use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::jni::utils::{
     set_pending_class_format_error, set_pending_internal_error,
@@ -71,6 +72,10 @@ fn is_valid_internal_class_name(name: &str) -> bool {
 }
 
 pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> jclass {
+    if sub.is_null() {
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return null_mut();
+    }
     let klass = klass(sub as i32).expect("Failed to get class from reference");
     let parent = if !klass.is_interface() {
         klass.parent().clone()
