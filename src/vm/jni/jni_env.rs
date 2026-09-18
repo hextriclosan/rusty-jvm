@@ -36,7 +36,9 @@ use crate::vm::jni::object_fields_impl::{
     set_boolean_field, set_byte_field, set_char_field, set_double_field, set_float_field,
     set_int_field, set_long_field, set_object_field, set_short_field,
 };
-use crate::vm::jni::object_operations_impl::{get_object_class, is_same_object};
+use crate::vm::jni::object_operations_impl::{
+    get_object_class, get_object_ref_type, is_same_object,
+};
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -60,7 +62,7 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
-    jobject, jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
+    jobject, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
     JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
@@ -236,7 +238,6 @@ jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);
 jni_stub!(GetDirectBufferAddress(jobject) -> *mut c_void);
 jni_stub!(GetDirectBufferCapacity(jobject) -> jlong);
-jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
 jni_stub!(GetModule(jclass) -> jobject);
 jni_stub!(IsVirtualThread(jobject) -> jboolean);
 
@@ -478,7 +479,7 @@ static VTABLE: Wrapper = {
     ni.v24.NewDirectByteBuffer = NewDirectByteBuffer;
     ni.v24.GetDirectBufferAddress = GetDirectBufferAddress;
     ni.v24.GetDirectBufferCapacity = GetDirectBufferCapacity;
-    ni.v24.GetObjectRefType = GetObjectRefType;
+    ni.v24.GetObjectRefType = get_object_ref_type;
     ni.v24.GetModule = GetModule;
     ni.v24.IsVirtualThread = IsVirtualThread;
     ni.v24.GetStringUTFLengthAsLong = get_string_utf_length_as_long;
