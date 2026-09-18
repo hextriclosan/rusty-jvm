@@ -257,25 +257,8 @@ fn set_primitive_type_array_region<T>(
     buf: *const T,
 ) {
     let array_ref = array as i32;
-    if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
-    }
-
-    let array_len = get_array_length(_env, array) as usize;
-    if start < 0 {
-        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if len < 0 {
-        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-
-    if start as usize > array_len {
-        panic!("Start index out of bounds: start={start}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if (start + len) as usize > array_len {
-        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
+    if !validate_array_region(array_ref, start, len) {
+        return;
     }
 
     if len == 0 {
@@ -283,7 +266,8 @@ fn set_primitive_type_array_region<T>(
     }
     let byte_buf = buf as *const u8;
     if byte_buf.is_null() {
-        panic!("Invalid buffer: null pointer with non-zero length");
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return;
     }
     let start_in_bytes = start as usize * size_of::<T>();
     let len_in_bytes = len as usize * size_of::<T>();
@@ -319,25 +303,8 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
     buf: *mut T,
 ) {
     let array_ref = array as i32;
-    if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
-    }
-
-    let array_len = get_array_length(_env, array) as usize;
-    if start < 0 {
-        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if len < 0 {
-        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-
-    if start as usize > array_len {
-        panic!("Start index out of bounds: start={start}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if (start + len) as usize > array_len {
-        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
+    if !validate_array_region(array_ref, start, len) {
+        return;
     }
 
     if len == 0 {
@@ -345,11 +312,35 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
     }
     let byte_buf = buf as *mut u8;
     if byte_buf.is_null() {
-        panic!("Invalid buffer: null pointer with non-zero length");
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return;
     }
     let start_in_bytes = start as usize * size_of::<T>();
     let len_in_bytes = len as usize * size_of::<T>();
     read_from_array(array_ref, byte_buf, start_in_bytes, len_in_bytes);
+}
+
+fn validate_array_region(array_ref: i32, start: jsize, len: jsize) -> bool {
+    if array_ref == 0 {
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return false;
+    }
+    let array_len = HEAP
+        .get_array_len(array_ref)
+        .expect("Failed to get array length");
+    let end = start.checked_add(len);
+    let end_out_of_bounds = match end {
+        Some(end) => end > array_len,
+        None => true,
+    };
+    if start < 0 || len < 0 || end_out_of_bounds {
+        set_pending_array_index_out_of_bounds_exception(&format!(
+            "Range [{start}, {end:?}) out of bounds for length {array_len}"
+        ))
+        .expect("Failed to create ArrayIndexOutOfBoundsException");
+        return false;
+    }
+    true
 }
 
 fn free_buffer(elems: *mut u8, len: usize) {
@@ -375,3 +366,6 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
+use crate::vm::exception::pending_helpers::{
+    set_pending_array_index_out_of_bounds_exception, set_pending_null_pointer_exception,
+};
