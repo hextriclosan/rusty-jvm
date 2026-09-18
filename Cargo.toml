@@ -45,6 +45,7 @@ rand = "0.10.1"
 page_size = "0.6.0"
 memmap2 = "0.9.10"
 iana-time-zone = "0.1.65"
+if-addrs = "0.15.0"
 jniname = "0.1.0"
 libffi = { version = "5.1.0" }
 lru = "0.18.0"
