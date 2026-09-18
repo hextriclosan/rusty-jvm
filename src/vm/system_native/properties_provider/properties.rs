@@ -129,6 +129,22 @@ pub(crate) fn user_dir() -> &'static str {
     &USER_DIR
 }
 
+static USER_HOME: LazyLock<String> = LazyLock::new(|| {
+    let variable = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    env::var(variable).unwrap_or_else(|_| "?".to_string())
+});
+
+pub(crate) fn user_home() -> &'static str {
+    &USER_HOME
+}
+
+static USER_NAME: LazyLock<String> =
+    LazyLock::new(|| whoami::username().unwrap_or_else(|_| "?".to_string()));
+
+pub(crate) fn user_name() -> &'static str {
+    &USER_NAME
+}
+
 static TMP_DIR: LazyLock<String> = LazyLock::new(|| env::temp_dir().display().to_string());
 pub(crate) fn tmp_dir() -> &'static str {
     &TMP_DIR
