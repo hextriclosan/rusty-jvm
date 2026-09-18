@@ -1057,6 +1057,13 @@ fn should_copy_swap_unsafe_raw_memory() {
     );
 }
 
+#[test]
+fn should_compare_and_exchange_unsafe_raw_memory_atomically() {
+    assert_success(
+        "samples.jdkinternal.unsafe.rawatomic.UnsafeRawAtomicCas",
+        "int success=true\nint witness=20\nlong success=true\nlong witness=200\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
