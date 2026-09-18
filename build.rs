@@ -82,6 +82,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeUsage.java",
         "UnsafeObjectFieldOffset.java",
         "UnsafePutReferenceVolatileExample.java",
+        "UnsafeZeroAllocation.java",
         "UserPerfCounterExample.java",
         "ClasspathDemo.java",
         "HelpfulNpeDebugInfo.java",
@@ -204,6 +205,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "-d",
             ],
             "UnsafePutReferenceVolatileExample.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
+            "UnsafeZeroAllocation.java",
         ),
         (
             &[
