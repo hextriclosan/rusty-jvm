@@ -2325,6 +2325,14 @@ fn should_return_random_number() {
 }
 
 #[test]
+fn should_report_finite_runtime_max_memory() {
+    assert_success(
+        "samples.runtime.maxmemory.RuntimeMaxMemory",
+        "positive=true\nfinite=true\n",
+    );
+}
+
+#[test]
 fn should_work_with_records() {
     assert_success(
         "samples.javacore.recordexample.RecordExample",
