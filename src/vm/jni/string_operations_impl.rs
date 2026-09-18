@@ -131,7 +131,8 @@ pub(super) extern "system" fn get_string_chars(
 ) -> *const jchar {
     let string_ref = from as i32;
     if string_ref == 0 {
-        panic!("Invalid string reference: null");
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return std::ptr::null();
     }
 
     let raw_data = get_string_raw_data(string_ref);
@@ -278,7 +279,8 @@ pub(super) extern "system" fn get_string_utf_chars(
 ) -> *const c_char {
     let string_ref = from as i32;
     if string_ref == 0 {
-        panic!("Invalid string reference: null");
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return std::ptr::null();
     }
 
     let mutf8_data = to_mutf8_data!(string_ref);
@@ -420,3 +422,4 @@ pub(super) extern "system" fn release_string_critical(
     // TODO(GC): Unpin object and re-enable GC here
     release_string_chars(env, str, carray);
 }
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
