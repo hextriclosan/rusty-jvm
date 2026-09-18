@@ -68,7 +68,7 @@ pub(super) fn get_method_id_impl(
     }
 }
 
-fn set_pending_no_such_method_error(signature: &str) {
+pub(super) fn set_pending_no_such_method_error(signature: &str) {
     set_pending_error("java/lang/NoSuchMethodError", signature);
 }
 
