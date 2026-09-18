@@ -59,6 +59,10 @@ pub(crate) fn set_pending_io_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/io/IOException", message)
 }
 
+pub(crate) fn set_pending_sync_failed_exception(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/io/SyncFailedException", message)
+}
+
 /// Sets a pending `IllegalArgumentException` with the given message.
 pub(crate) fn set_pending_illegal_argument_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/IllegalArgumentException", message)
