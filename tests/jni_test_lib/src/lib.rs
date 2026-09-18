@@ -1,5 +1,6 @@
 mod array_operations_demo;
 mod class_operations_demo;
+mod direct_buffer_demo;
 mod exception_demo;
 mod instance_methods_demo;
 mod is_same_object_demo;
