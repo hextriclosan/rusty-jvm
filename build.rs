@@ -87,6 +87,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "ReflectionGetCallerClassExample.java",
         "UnsafeGetLongUnalignedExample.java",
         "UnsafeUsage.java",
+        "UnsafeRawChar.java",
         "UnsafeObjectFieldOffset.java",
         "UnsafeObjectFieldOffsetErrors.java",
         "UnsafePutReferenceVolatileExample.java",
@@ -197,6 +198,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "-d",
             ],
             "UnsafeUsage.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
+            "UnsafeRawChar.java",
         ),
         (
             &[

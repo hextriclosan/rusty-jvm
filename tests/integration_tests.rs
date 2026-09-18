@@ -988,6 +988,11 @@ fn should_return_zero_for_zero_byte_unsafe_allocation() {
         "true\n",
     );
 }
+
+#[test]
+fn should_read_chars_from_unsafe_raw_memory() {
+    assert_success("samples.jdkinternal.unsafe.rawchar.UnsafeRawChar", "Ж\n");
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
