@@ -15,7 +15,7 @@ use crate::vm::threads;
 use dashmap::DashMap;
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr;
-use std::sync::atomic::{AtomicI32, AtomicI64, Ordering};
+use std::sync::atomic::{fence, AtomicI32, AtomicI64, Ordering};
 use std::sync::LazyLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -595,7 +595,7 @@ pub(crate) fn array_index_scale0(_this: i32, class_ref: i32) -> Result<i32> {
 
 /// `jdk.internal.misc.Unsafe.fullFence()V`
 pub(crate) fn full_fence(_this: i32) -> Result<()> {
-    // todo: implement me
+    fence(Ordering::SeqCst);
     Ok(())
 }
 
