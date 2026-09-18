@@ -4247,6 +4247,26 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_support_jni_is_virtual_thread() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.threadops.JniIsVirtualThreadDemo",
+        &[],
+        "platform=false\nvirtual=true\nnull=false\n",
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.threadops.JniIsVirtualThreadDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_support_thread_pool_executor() {
     assert_success(
         "samples.concurrency.advancedpooldemo.AdvancedPoolDemo",
