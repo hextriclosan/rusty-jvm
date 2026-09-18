@@ -37,6 +37,7 @@ use crate::vm::jni::object_fields_impl::{
     set_int_field, set_long_field, set_object_field, set_short_field,
 };
 use crate::vm::jni::object_operations_impl::{get_object_class, is_same_object};
+use crate::vm::jni::reflection_impl::{from_reflected_method, to_reflected_method};
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -151,9 +152,7 @@ macro_rules! jni_variadic_stub {
 }
 
 jni_stub!(DefineClass(*const c_char, jobject, *const jbyte, jsize) -> jclass);
-jni_stub!(FromReflectedMethod(jobject) -> jmethodID);
 jni_stub!(FromReflectedField(jobject) -> jfieldID);
-jni_stub!(ToReflectedMethod(jclass, jmethodID, jboolean) -> jobject);
 jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
 jni_stub!(NewGlobalRef(jobject) -> jobject);
 jni_stub!(DeleteGlobalRef(jobject) -> ());
@@ -253,9 +252,9 @@ static VTABLE: Wrapper = {
     ni.v24.GetVersion = get_version;
     ni.v24.DefineClass = DefineClass;
     ni.v24.FindClass = find_class;
-    ni.v24.FromReflectedMethod = FromReflectedMethod;
+    ni.v24.FromReflectedMethod = from_reflected_method;
     ni.v24.FromReflectedField = FromReflectedField;
-    ni.v24.ToReflectedMethod = ToReflectedMethod;
+    ni.v24.ToReflectedMethod = to_reflected_method;
     ni.v24.GetSuperclass = get_superclass;
     ni.v24.IsAssignableFrom = is_assignable_from;
     ni.v24.ToReflectedField = ToReflectedField;
