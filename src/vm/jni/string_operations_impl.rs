@@ -111,7 +111,8 @@ pub(super) extern "system" fn new_string(
         panic!("negative array size"); // todo throw NegativeArraySizeException here
     }
     if unicode.is_null() && len > 0 {
-        panic!("unicode array is null but length is {len}");
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return std::ptr::null_mut();
     }
     let arr_ref = new_char_array(env, len);
     set_char_array_region(env, arr_ref, 0, len, unicode);
@@ -206,7 +207,8 @@ pub(super) extern "system" fn new_string_utf8(
     mutf8_bytes: *const c_char,
 ) -> jstring {
     if mutf8_bytes.is_null() {
-        panic!("modified utf-8 array is null");
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return std::ptr::null_mut();
     }
 
     let decoded = match from_mutf8_ptr!(mutf8_bytes) {
@@ -420,3 +422,4 @@ pub(super) extern "system" fn release_string_critical(
     // TODO(GC): Unpin object and re-enable GC here
     release_string_chars(env, str, carray);
 }
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
