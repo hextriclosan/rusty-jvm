@@ -110,3 +110,27 @@ pub(crate) fn length0(obj_ref: i32) -> Result<i64> {
     let len = length(obj_ref, RandomAccessFile)?.unwrap_or(-1);
     Ok(len)
 }
+
+pub(crate) fn set_length0(obj_ref: i32, new_length: i64) -> Result<()> {
+    if new_length < 0 {
+        set_pending_io_exception(&format!("Negative length {new_length}"))?;
+        return Ok(());
+    }
+    let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
+        return Ok(());
+    };
+    if let Err(error) = file.set_len(new_length as u64) {
+        set_pending_io_exception(&error.to_string())?;
+        return Ok(());
+    }
+    match file.stream_position() {
+        Ok(position) if position > new_length as u64 => {
+            if let Err(error) = file.seek(std::io::SeekFrom::Start(new_length as u64)) {
+                set_pending_io_exception(&error.to_string())?;
+            }
+        }
+        Ok(_) => {}
+        Err(error) => set_pending_io_exception(&error.to_string())?,
+    }
+    Ok(())
+}
