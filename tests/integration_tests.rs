@@ -1524,6 +1524,13 @@ fn should_update_file_permissions() {
         permissions.set_readonly(false);
     }
     std::fs::set_permissions(file_path, permissions).unwrap();
+fn should_report_file_system_space() {
+    let temp = tempfile::TempDir::new().unwrap();
+    utils::assert_success_with_args(
+        "samples.io.filespace.FileSpace",
+        &[temp.path().to_str().unwrap()],
+        "true\ntrue\ntrue\n",
+    );
 }
 
 #[test]
