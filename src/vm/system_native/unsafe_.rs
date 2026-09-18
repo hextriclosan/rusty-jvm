@@ -578,6 +578,9 @@ pub(crate) fn should_be_initialized0(_this: i32, class_ref: i32) -> Result<bool>
 
 /// `jdk.internal.misc.Unsafe.allocateMemory0(J)J`
 pub(crate) fn allocate_memory0(_this: i32, bytes: i64) -> Result<i64> {
+    if bytes == 0 {
+        return Ok(0);
+    }
     let size = bytes as usize;
     let layout =
         Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory allocation"))?;
