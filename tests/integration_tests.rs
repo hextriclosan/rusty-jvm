@@ -933,6 +933,11 @@ fn should_initialize_system_on_load() {
 }
 
 #[test]
+fn should_replace_system_input_stream() {
+    assert_success("samples.system.setin.SystemSetInExample", "65\n66\n");
+}
+
+#[test]
 fn should_operate_with_map_interface() {
     assert_success(
         "samples.javabase.util.mapinterface.usage.AdvancedMapInterfaceUsage",
