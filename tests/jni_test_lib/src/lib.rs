@@ -4,6 +4,7 @@ mod exception_demo;
 mod instance_methods_demo;
 mod is_same_object_demo;
 mod jni_no_such_id_demo;
+mod object_array_null_class_demo;
 mod object_fields_demo;
 mod object_operations_demo;
 mod static_fields_demo;
