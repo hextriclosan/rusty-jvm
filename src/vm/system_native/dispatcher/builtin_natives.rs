@@ -602,6 +602,7 @@ builtin_natives! {
     "java/io/UnixFileSystem": instance fn createFileExclusively0(name: string) -> boolean => sn::file_system::create_file_exclusively0;
     "java/io/UnixFileSystem": instance fn getBooleanAttributes0(file: file) -> int => sn::file_system::get_boolean_attributes0;
     "java/io/UnixFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => sn::file_system::check_access0;
+    "java/io/UnixFileSystem": instance fn setPermission0(file: file, access: int, enable: boolean, owner_only: boolean) -> boolean => sn::file_system::set_permission0;
     "java/io/UnixFileSystem": instance fn delete0(file: file) -> boolean => sn::file_system::delete0;
     "java/io/UnixFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
     "java/io/UnixFileSystem": instance fn createDirectory0(file: file) -> boolean => sn::file_system::create_directory0;
@@ -621,6 +622,8 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn getBooleanAttributes0(file: file) -> int => sn::file_system::get_boolean_attributes0;
     "java/io/WinNTFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => sn::file_system::check_access0;
     "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => sn::file_system::winnt::get_final_path0; // JDK 25
+    "java/io/WinNTFileSystem": instance fn setPermission0(file: file, access: int, enable: boolean, owner_only: boolean) -> boolean => sn::file_system::set_permission0;
+    "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => sn::file_system::winnt::get_final_path0;
     "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::delete0;
     "java/io/WinNTFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
     "java/io/WinNTFileSystem": instance fn createDirectory0(file: file) -> boolean => sn::file_system::create_directory0;
