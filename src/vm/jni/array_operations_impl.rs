@@ -25,7 +25,8 @@ pub(super) extern "system" fn new_object_array(
     let init_obj_ref = init as i32;
 
     if clazz_ref == 0 {
-        panic!("Class reference is null"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return std::ptr::null_mut();
     }
 
     if len < 0 {
@@ -375,3 +376,4 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
