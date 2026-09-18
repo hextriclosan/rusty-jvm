@@ -1079,6 +1079,26 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_set_file_last_modified_time() {
+    const MODIFIED_MILLIS: u128 = 1_600_000_000_000;
+    let (file_path, _guard) = tmp_file("set-last-modified.txt");
+    std::fs::write(&file_path, b"timestamp").unwrap();
+    utils::assert_success_with_args(
+        "samples.io.setfilelastmodified.SetFileLastModified",
+        &[&file_path, &MODIFIED_MILLIS.to_string()],
+        "true\n",
+    );
+    let modified = std::fs::metadata(file_path)
+        .unwrap()
+        .modified()
+        .unwrap()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    assert_eq!(modified, MODIFIED_MILLIS);
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();
