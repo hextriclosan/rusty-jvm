@@ -1047,6 +1047,16 @@ fn should_copy_unsafe_raw_memory() {
     );
 }
 
+#[test]
+fn should_copy_swap_unsafe_raw_memory() {
+    // the swapped elements are read back in the platform's byte order
+    utils::assert_same_as_reference_jvm(
+        &["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"],
+        "samples.jdkinternal.unsafe.copyswapraw.UnsafeCopySwapRawMemory",
+        Success,
+    );
+}
+
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
