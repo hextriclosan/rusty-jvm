@@ -568,6 +568,7 @@ builtin_natives! {
     "java/io/UnixFileSystem": instance fn delete0(file: file) -> boolean => sn::file_system::delete0;
     "java/io/UnixFileSystem": instance fn getNameMax0(name: string) -> long => sn::file_system::unix::get_name_max0;
     "java/io/UnixFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
+    "java/io/UnixFileSystem": instance fn setReadOnly0(file: file) -> boolean => sn::file_system::set_read_only0;
     }
 
     #[cfg(windows)]
@@ -581,6 +582,7 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::delete0;
     "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => sn::file_system::winnt::get_name_max0;
     "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
+    "java/io/WinNTFileSystem": instance fn setReadOnly0(file: file) -> boolean => sn::file_system::set_read_only0;
     }
 
     #[cfg(unix)]

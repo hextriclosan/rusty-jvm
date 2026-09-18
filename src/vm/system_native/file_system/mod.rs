@@ -170,3 +170,14 @@ pub(crate) fn get_length0(_this: i32, file_ref: i32) -> Result<i64> {
 
     Ok(len as i64)
 }
+
+pub(crate) fn set_read_only0(_this: i32, file_ref: i32) -> Result<bool> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let mut permissions = match std::fs::metadata(&path) {
+        Ok(metadata) => metadata.permissions(),
+        Err(_) => return Ok(false),
+    };
+    permissions.set_readonly(true);
+    Ok(std::fs::set_permissions(path, permissions).is_ok())
+}
