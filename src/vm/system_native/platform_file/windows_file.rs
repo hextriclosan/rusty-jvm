@@ -15,6 +15,18 @@ use winapi::um::winnt::HANDLE;
 pub struct PlatformFile {}
 
 impl PlatformFile {
+    pub fn sync(file_descriptor_ref: i32) -> Result<()> {
+        let raw =
+            HEAP.get_object_field_value(file_descriptor_ref, "java/io/FileDescriptor", "handle")?;
+        let raw_handle = vec_to_i64(&raw);
+        if raw_handle == -1 {
+            return Err(Error::new_native("Stream Closed"));
+        }
+        let file = ManuallyDrop::new(unsafe { File::from_raw_handle(raw_handle as RawHandle) });
+        file.sync_all()?;
+        Ok(())
+    }
+
     pub fn close(file_descriptor_ref: i32) -> Result<()> {
         let raw =
             HEAP.get_object_field_value(file_descriptor_ref, "java/io/FileDescriptor", "handle")?;
