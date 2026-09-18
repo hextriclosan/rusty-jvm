@@ -9,6 +9,7 @@ mod object_operations_demo;
 mod static_fields_demo;
 mod static_methods_demo;
 mod string_operations_demo;
+mod string_region_bounds_demo;
 
 use jni::elements::ReleaseMode::NoCopyBack;
 use jni::errors::ThrowRuntimeExAndDefault;
