@@ -1776,6 +1776,14 @@ fn should_return_system_properties() {
         tmp_dir,
         env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
     );
+    assert_eq!(
+        json["sun.io.unicode.encoding"],
+        if is_bigendian() {
+            "UnicodeBig"
+        } else {
+            "UnicodeLittle"
+        }
+    );
 }
 
 #[test]

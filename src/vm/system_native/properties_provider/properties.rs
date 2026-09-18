@@ -28,6 +28,14 @@ pub(crate) fn endianness() -> &'static str {
     }
 }
 
+pub(crate) fn unicode_encoding() -> &'static str {
+    if is_bigendian() {
+        "UnicodeBig"
+    } else {
+        "UnicodeLittle"
+    }
+}
+
 pub(crate) fn line_separator() -> &'static str {
     #[cfg(target_os = "windows")]
     {
