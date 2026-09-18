@@ -207,9 +207,10 @@ fn get_primitive_element_type_name(array_name: &str) -> Result<&str> {
 }
 
 /// `java.lang.System.setIn0(Ljava/io/InputStream;)V`
-pub(crate) fn set_in0(_input_stream_ref: i32) -> Result<()> {
-    // todo: implement me
-    Ok(())
+pub(crate) fn set_in0(input_stream_ref: i32) -> Result<()> {
+    let (_, field_ref) = lookup::lookup_for_static_field("java/lang/System", "in")?
+        .ok_or_else(|| Error::new_execution("Field System.in not found"))?;
+    field_ref.set_raw_value(vec![input_stream_ref])
 }
 
 /// `java.lang.System.setOut0(Ljava/io/PrintStream;)V`
