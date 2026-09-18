@@ -90,6 +90,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeRawChar.java",
         "UnsafeSubwordFields.java",
         "UnsafeSetMemoryArray.java",
+        "UnsafeCopyRawMemory.java",
         "UnsafeObjectFieldOffset.java",
         "UnsafeObjectFieldOffsetErrors.java",
         "UnsafePutReferenceVolatileExample.java",
@@ -224,6 +225,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "-d",
             ],
             "UnsafeSetMemoryArray.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
+            "UnsafeCopyRawMemory.java",
         ),
         (
             &[

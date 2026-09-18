@@ -1037,6 +1037,13 @@ fn should_set_unsafe_array_memory() {
     );
 }
 
+#[test]
+fn should_copy_unsafe_raw_memory() {
+    assert_success(
+        "samples.jdkinternal.unsafe.copyraw.UnsafeCopyRawMemory",
+        "123456789abcdef\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
