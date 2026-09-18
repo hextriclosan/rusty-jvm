@@ -1026,6 +1026,14 @@ fn should_access_instance_and_static_fields_with_unsafe() {
         after static put: -1 32767 65 2147483647 -9223372036854775808 static put\n",
     );
 }
+
+#[test]
+fn should_set_unsafe_array_memory() {
+    assert_success(
+        "samples.jdkinternal.unsafe.setmemory.UnsafeSetMemoryArray",
+        "[0, 7, 7, 7, 0, 0]\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
