@@ -1436,6 +1436,16 @@ fn should_resize_random_access_file() {
         "4\n6\n",
     );
     assert_eq!(std::fs::read(file_path).unwrap(), b"abcX\0\0");
+fn should_delete_empty_directory() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let directory = temp.path().join("delete-me");
+    std::fs::create_dir(&directory).unwrap();
+    let path = directory.to_str().unwrap();
+    utils::assert_success_with_args(
+        "samples.io.deletedirectory.DeleteDirectory",
+        &[path],
+        "true\nfalse\n",
+    );
 }
 
 #[test]
