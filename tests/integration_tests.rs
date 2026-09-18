@@ -864,6 +864,14 @@ After copySwapMemory: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8]
         ),
     );
 }
+
+#[test]
+fn should_return_zero_for_zero_byte_unsafe_allocation() {
+    assert_success(
+        "samples.jdkinternal.unsafe.zeroallocation.UnsafeZeroAllocation",
+        "true\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
