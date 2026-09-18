@@ -277,7 +277,7 @@ pub(crate) fn get_char(_this: i32, obj_ref: i32, offset: i64) -> Result<u16> {
             todo!("implement get_char for class field");
         }
     } else {
-        todo!("implement get_char for null object");
+        Ok(read_raw(offset))
     }
 }
 
