@@ -13,7 +13,9 @@ use crate::vm::jni::array_operations_impl::{
     set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
     set_long_array_region, set_object_array_element, set_short_array_region,
 };
-use crate::vm::jni::class_operations_impl::{find_class, get_superclass, is_assignable_from};
+use crate::vm::jni::class_operations_impl::{
+    define_class, find_class, get_superclass, is_assignable_from,
+};
 use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
@@ -60,10 +62,10 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
-    jobject, jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
+    jobject, jobjectRefType, jshort, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
     JNINativeInterface_, JNINativeMethod, JavaVM,
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 
 /// Returns a pointer to the global JNI function table.
 ///
@@ -150,7 +152,6 @@ macro_rules! jni_variadic_stub {
     };
 }
 
-jni_stub!(DefineClass(*const c_char, jobject, *const jbyte, jsize) -> jclass);
 jni_stub!(FromReflectedMethod(jobject) -> jmethodID);
 jni_stub!(FromReflectedField(jobject) -> jfieldID);
 jni_stub!(ToReflectedMethod(jclass, jmethodID, jboolean) -> jobject);
@@ -251,7 +252,7 @@ unsafe impl Sync for Wrapper {}
 static VTABLE: Wrapper = {
     let mut ni: JNINativeInterface_ = unsafe { std::mem::zeroed() };
     ni.v24.GetVersion = get_version;
-    ni.v24.DefineClass = DefineClass;
+    ni.v24.DefineClass = define_class;
     ni.v24.FindClass = find_class;
     ni.v24.FromReflectedMethod = FromReflectedMethod;
     ni.v24.FromReflectedField = FromReflectedField;
