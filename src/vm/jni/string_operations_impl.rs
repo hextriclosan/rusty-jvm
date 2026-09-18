@@ -92,7 +92,8 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
     let string_ref = input as i32;
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return 0;
     }
 
     let raw =
@@ -256,7 +257,8 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
     let string_ref = input as i32;
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return 0;
     }
 
     let raw_data = get_string_raw_data(string_ref);
@@ -420,3 +422,4 @@ pub(super) extern "system" fn release_string_critical(
     // TODO(GC): Unpin object and re-enable GC here
     release_string_chars(env, str, carray);
 }
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
