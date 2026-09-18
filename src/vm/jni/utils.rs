@@ -1,3 +1,4 @@
+use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
@@ -35,10 +36,27 @@ macro_rules! to_mutf8_data {
     }};
 }
 
-pub(super) fn get_method_id_impl(
+pub(super) fn get_instance_method_id_impl(
     clazz: jclass,
     name: *const c_char,
     sig: *const c_char,
+) -> jmethodID {
+    get_method_id_impl(clazz, name, sig, lookup::lookup_instance_method)
+}
+
+pub(super) fn get_static_method_id_impl(
+    clazz: jclass,
+    name: *const c_char,
+    sig: *const c_char,
+) -> jmethodID {
+    get_method_id_impl(clazz, name, sig, lookup::lookup_static_method)
+}
+
+fn get_method_id_impl(
+    clazz: jclass,
+    name: *const c_char,
+    sig: *const c_char,
+    lookup_method: fn(&str, &str) -> Result<Option<Arc<JavaMethod>>>,
 ) -> jmethodID {
     let name_str = from_mutf8_ptr!(name).expect("Failed to convert method name from CESU-8");
     let sig_str = from_mutf8_ptr!(sig).expect("Failed to convert method signature from CESU-8");
@@ -49,7 +67,7 @@ pub(super) fn get_method_id_impl(
 
     // Look up the method implementation in the class/interface hierarchy.
     let klass_name = declaring_klass.this_class_name().clone();
-    let method_id = lookup::lookup_method(&klass_name, &full_signature)
+    let method_id = lookup_method(&klass_name, &full_signature)
         .unwrap_or_else(|e| panic!("Failed to find implementation of {full_signature}: {e}"))
         .and_then(|method| {
             let found_class_name = method.class_name();

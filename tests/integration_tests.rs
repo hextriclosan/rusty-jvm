@@ -4147,6 +4147,10 @@ Caught NoSuchFieldError: nonexistentStaticField
 Caught NoSuchMethodError: nonexistentMethod:()V
 === GetStaticMethodID: nonexistent method ===
 Caught NoSuchMethodError: nonexistentStaticMethod:()V
+=== GetMethodID: static method ===
+Caught NoSuchMethodError: lookupNonexistentStaticMethodId:()V
+=== GetStaticMethodID: instance method ===
+Caught NoSuchMethodError: lookupNonexistentMethodId:()V
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniNoSuchIdDemo in an unnamed module

@@ -225,11 +225,12 @@ fn run_thread(this: i32) {
 /// overrides) and invokes it.
 fn invoke_run(this: i32) -> Result<Vec<i32>> {
     let actual_class = HEAP.get_instance_name(this)?;
-    let run_method = lookup::lookup_method(&actual_class, "run:()V")?.ok_or_else(|| {
-        Error::new_execution(&format!(
-            "run:()V not found for thread class {actual_class}"
-        ))
-    })?;
+    let run_method =
+        lookup::lookup_instance_method(&actual_class, "run:()V")?.ok_or_else(|| {
+            Error::new_execution(&format!(
+                "run:()V not found for thread class {actual_class}"
+            ))
+        })?;
     Executor::invoke_non_static_method(run_method.class_name(), "run:()V", this, &[])
 }
 

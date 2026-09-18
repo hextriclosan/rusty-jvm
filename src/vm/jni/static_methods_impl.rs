@@ -2,7 +2,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_invoke::jni_invoke;
 use crate::vm::jni::jni_value::JNIValue;
-use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
+use crate::vm::jni::utils::{decode_method_id, get_static_method_id_impl, transform_args_to_vec};
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
     jvalue, JNIEnv,
@@ -15,7 +15,7 @@ pub(super) extern "system" fn get_static_method_id(
     name: *const c_char,
     sig: *const c_char,
 ) -> jmethodID {
-    get_method_id_impl(clazz, name, sig)
+    get_static_method_id_impl(clazz, name, sig)
 }
 
 macro_rules! get_static_method_a_impl {
