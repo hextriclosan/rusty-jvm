@@ -129,6 +129,21 @@ pub(super) fn set_pending_array_index_out_of_bounds_exception(index: jsize, len:
     );
 }
 
+pub(super) fn set_pending_array_region_out_of_bounds_exception(
+    start: jsize,
+    len: jsize,
+    array_len: jsize,
+) {
+    // Same messages as HotSpot's check_bounds in jni.cpp
+    let message = if len < 0 {
+        format!("Length {len} is negative")
+    } else {
+        let end = start as i64 + len as i64;
+        format!("Array region {start}..{end} out of bounds for length {array_len}")
+    };
+    set_pending_error("java/lang/ArrayIndexOutOfBoundsException", &message);
+}
+
 pub(crate) fn set_pending_internal_error(message: &str) {
     set_pending_error("java/lang/InternalError", message);
 }

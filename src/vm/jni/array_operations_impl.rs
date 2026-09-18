@@ -1,7 +1,8 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::utils::{
-    set_pending_array_index_out_of_bounds_exception, set_pending_negative_array_size_exception,
+    set_pending_array_index_out_of_bounds_exception,
+    set_pending_array_region_out_of_bounds_exception, set_pending_negative_array_size_exception,
     set_pending_null_pointer_exception,
 };
 use jni_sys::{
@@ -304,25 +305,8 @@ fn set_primitive_type_array_region<T>(
     buf: *const T,
 ) {
     let array_ref = array as i32;
-    if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
-    }
-
-    let array_len = get_array_length(_env, array) as usize;
-    if start < 0 {
-        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if len < 0 {
-        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-
-    if start as usize > array_len {
-        panic!("Start index out of bounds: start={start}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if (start + len) as usize > array_len {
-        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
+    if !validate_array_region(array_ref, start, len) {
+        return;
     }
 
     if len == 0 {
@@ -330,7 +314,8 @@ fn set_primitive_type_array_region<T>(
     }
     let byte_buf = buf as *const u8;
     if byte_buf.is_null() {
-        panic!("Invalid buffer: null pointer with non-zero length");
+        set_pending_null_pointer_exception("Buffer is null");
+        return;
     }
     let start_in_bytes = start as usize * size_of::<T>();
     let len_in_bytes = len as usize * size_of::<T>();
@@ -358,7 +343,7 @@ impl_get_array_region!(get_int_array_region, jint, jintArray);
 impl_get_array_region!(get_long_array_region, jlong, jlongArray);
 impl_get_array_region!(get_float_array_region, jfloat, jfloatArray);
 impl_get_array_region!(get_double_array_region, jdouble, jdoubleArray);
-pub(super) extern "system" fn get_primitive_type_array_region<T>(
+fn get_primitive_type_array_region<T>(
     _env: *mut JNIEnv,
     array: jarray,
     start: jsize,
@@ -366,25 +351,8 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
     buf: *mut T,
 ) {
     let array_ref = array as i32;
-    if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
-    }
-
-    let array_len = get_array_length(_env, array) as usize;
-    if start < 0 {
-        panic!("Negative start index: {start}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if len < 0 {
-        panic!("Negative length: {len}"); // todo throw ArrayIndexOutOfBoundsException here
-    }
-
-    if start as usize > array_len {
-        panic!("Start index out of bounds: start={start}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
-    }
-    if (start + len) as usize > array_len {
-        panic!("End index out of bounds: start={start}, len={len}, array length={array_len}");
-        // todo throw ArrayIndexOutOfBoundsException here
+    if !validate_array_region(array_ref, start, len) {
+        return;
     }
 
     if len == 0 {
@@ -392,11 +360,27 @@ pub(super) extern "system" fn get_primitive_type_array_region<T>(
     }
     let byte_buf = buf as *mut u8;
     if byte_buf.is_null() {
-        panic!("Invalid buffer: null pointer with non-zero length");
+        set_pending_null_pointer_exception("Buffer is null");
+        return;
     }
     let start_in_bytes = start as usize * size_of::<T>();
     let len_in_bytes = len as usize * size_of::<T>();
     read_from_array(array_ref, byte_buf, start_in_bytes, len_in_bytes);
+}
+
+fn validate_array_region(array_ref: i32, start: jsize, len: jsize) -> bool {
+    if array_ref == 0 {
+        set_pending_null_pointer_exception("Array is null");
+        return false;
+    }
+    let array_len = HEAP
+        .get_array_len(array_ref)
+        .expect("Failed to get array length");
+    if len < 0 || start < 0 || start > array_len - len {
+        set_pending_array_region_out_of_bounds_exception(start, len, array_len);
+        return false;
+    }
+    true
 }
 
 fn free_buffer(elems: *mut u8, len: usize) {
