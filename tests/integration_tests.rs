@@ -1079,6 +1079,20 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_rename_file() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let source = temp.path().join("source.txt");
+    let destination = temp.path().join("destination.txt");
+    std::fs::write(&source, b"renamed").unwrap();
+    utils::assert_success_with_args(
+        "samples.io.renamefile.RenameFile",
+        &[source.to_str().unwrap(), destination.to_str().unwrap()],
+        "true\nfalse\ntrue\n",
+    );
+    assert_eq!(std::fs::read(destination).unwrap(), b"renamed");
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();

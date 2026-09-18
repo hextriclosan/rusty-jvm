@@ -152,6 +152,14 @@ pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
     }
 }
 
+pub(crate) fn rename0(_this: i32, source_ref: i32, destination_ref: i32) -> Result<bool> {
+    let source_path_ref = extract_path(source_ref)?;
+    let destination_path_ref = extract_path(destination_ref)?;
+    let source = get_utf8_string_by_ref(source_path_ref)?;
+    let destination = get_utf8_string_by_ref(destination_path_ref)?;
+    Ok(std::fs::rename(source, destination).is_ok())
+}
+
 /// Get the length of the file in bytes.
 ///
 /// Return 0 if metadata cannot be retrieved (e.g., file not found, permission denied, I/O error).
