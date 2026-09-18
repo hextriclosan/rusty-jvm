@@ -779,7 +779,20 @@ pub(crate) fn set_memory0(
     value: i8,
 ) -> Result<()> {
     if obj_ref != 0 {
-        unimplemented!("implement this for objects")
+        let class_name = HEAP.get_instance_name(obj_ref)?;
+        if !class_name.starts_with('[') {
+            return Err(Error::new_execution("setMemory object must be an array"));
+        }
+        let start = usize::try_from(offset)
+            .map_err(|_| Error::new_execution("setMemory offset is negative"))?;
+        let len = usize::try_from(bytes)
+            .map_err(|_| Error::new_execution("setMemory length is negative"))?;
+        let mut data = HEAP.get_entire_raw_data_mut(obj_ref)?;
+        let region = data
+            .get_mut(start..start.saturating_add(len))
+            .ok_or_else(|| Error::new_execution("setMemory range is out of bounds"))?;
+        region.fill(value as u8);
+        return Ok(());
     }
 
     let dst_ptr = offset as *mut u8;
