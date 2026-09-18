@@ -511,7 +511,7 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn getLong(obj: object, offset: long) -> long => sn::unsafe_::get_long;
     "jdk/internal/misc/Unsafe": instance fn getLongVolatile(obj: object, offset: long) -> long => sn::unsafe_::get_long_volatile;
     "jdk/internal/misc/Unsafe": instance fn arrayIndexScale0(clazz: class) -> int => sn::unsafe_::array_index_scale0;
-    "jdk/internal/misc/Unsafe": instance fn fullFence() -> void => sn::unsafe_::full_fence; // todo: implement me
+    "jdk/internal/misc/Unsafe": instance fn fullFence() -> void => sn::unsafe_::full_fence;
     "jdk/internal/misc/Unsafe": instance fn park(is_absolute: boolean, time: long) -> void => sn::unsafe_::park; // LockSupport.park
     "jdk/internal/misc/Unsafe": instance fn unpark(thread: object) -> void => sn::unsafe_::unpark; // LockSupport.unpark
     "jdk/internal/misc/Unsafe": instance fn getReference(obj: object, offset: long) -> object => sn::unsafe_::get_reference;
