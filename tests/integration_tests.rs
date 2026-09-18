@@ -1445,6 +1445,20 @@ fn should_delete_empty_directory() {
         "samples.io.deletedirectory.DeleteDirectory",
         &[path],
         "true\nfalse\n",
+fn should_report_file_last_modified_time() {
+    let (file_path, _guard) = tmp_file("last-modified.txt");
+    std::fs::write(&file_path, b"timestamp").unwrap();
+    let modified = std::fs::metadata(&file_path)
+        .unwrap()
+        .modified()
+        .unwrap()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    utils::assert_success_with_args(
+        "samples.io.filelastmodified.FileLastModified",
+        &[&file_path],
+        &format!("{modified}\n"),
     );
 }
 

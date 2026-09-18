@@ -606,6 +606,7 @@ builtin_natives! {
     "java/io/UnixFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
     "java/io/UnixFileSystem": instance fn getNameMax0(name: string) -> long => sn::file_system::unix::get_name_max0;
     "java/io/UnixFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
+    "java/io/UnixFileSystem": instance fn getLastModifiedTime0(file: file) -> long => sn::file_system::get_last_modified_time0;
     }
 
     #[cfg(windows)]
@@ -620,6 +621,7 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
     "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => sn::file_system::winnt::get_name_max0;
     "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
+    "java/io/WinNTFileSystem": instance fn getLastModifiedTime0(file: file) -> long => sn::file_system::get_last_modified_time0;
     }
 
     #[cfg(unix)]
