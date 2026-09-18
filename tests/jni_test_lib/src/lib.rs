@@ -8,6 +8,7 @@ mod inherited_fields_demo;
 mod instance_methods_demo;
 mod is_instance_of_demo;
 mod is_same_object_demo;
+mod is_virtual_thread_demo;
 mod jni_no_such_id_demo;
 mod object_fields_demo;
 mod object_operations_demo;

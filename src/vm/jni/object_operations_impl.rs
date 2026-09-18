@@ -6,6 +6,7 @@ use crate::vm::jni::utils::{
     set_pending_illegal_access_exception, set_pending_instantiation_exception,
     set_pending_internal_error, set_pending_null_pointer_exception,
 };
+use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::class::class_is_instance;
 use jclassmodel::modifiers::ClassModifier;
@@ -40,6 +41,24 @@ pub(super) extern "system" fn is_instance_of(
         Ok(matches) => matches as jboolean,
         Err(error) => {
             set_pending_internal_error(&format!("Failed to check object instance: {error}"));
+            false as jboolean
+        }
+    }
+}
+
+pub(super) extern "system" fn is_virtual_thread(_env: *mut JNIEnv, thread: jobject) -> jboolean {
+    if thread.is_null() {
+        return false as jboolean;
+    }
+
+    match HEAP
+        .get_instance_name(thread as i32)
+        .and_then(|class_name| {
+            InstanceChecker::checkcast(&class_name, "java/lang/BaseVirtualThread")
+        }) {
+        Ok(is_virtual) => is_virtual as jboolean,
+        Err(error) => {
+            set_pending_internal_error(&format!("Failed to inspect thread type: {error}"));
             false as jboolean
         }
     }
