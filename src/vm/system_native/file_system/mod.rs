@@ -186,6 +186,12 @@ pub(crate) fn create_directory0(_this: i32, file_ref: i32) -> Result<bool> {
     let path_ref = extract_path(file_ref)?;
     let path = get_utf8_string_by_ref(path_ref)?;
     Ok(std::fs::create_dir(path).is_ok())
+pub(crate) fn rename0(_this: i32, source_ref: i32, destination_ref: i32) -> Result<bool> {
+    let source_path_ref = extract_path(source_ref)?;
+    let destination_path_ref = extract_path(destination_ref)?;
+    let source = get_utf8_string_by_ref(source_path_ref)?;
+    let destination = get_utf8_string_by_ref(destination_path_ref)?;
+    Ok(std::fs::rename(source, destination).is_ok())
 }
 
 /// Get the length of the file in bytes.
