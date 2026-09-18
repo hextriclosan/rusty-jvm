@@ -2,7 +2,7 @@ use crate::vm::error::Result;
 
 /// `java.lang.Runtime.maxMemory()J`
 pub(crate) fn max_memory(_this: i32) -> Result<i64> {
-    Ok(i64::MAX) // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
+    Ok(i64::try_from(sysinfo::System::new_all().total_memory()).unwrap_or(i64::MAX))
 }
 
 /// `java.lang.Runtime.availableProcessors()I`
