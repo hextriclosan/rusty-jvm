@@ -674,57 +674,41 @@ pub(crate) fn copy_swap_memory0(
     bytes: i64,
     elem_size: i64,
 ) -> Result<()> {
-    let total_bytes = bytes as usize;
-    let elem_size = elem_size as usize;
+    let total_bytes = usize::try_from(bytes)
+        .map_err(|_| Error::new_execution("copySwapMemory length is negative"))?;
+    let elem_size = usize::try_from(elem_size)
+        .map_err(|_| Error::new_execution("copySwapMemory element size is negative"))?;
 
     if elem_size == 0 || total_bytes % elem_size != 0 {
         return Err(Error::new_execution("Invalid elem_size or bytes"));
     }
 
-    // ---------------------------
-    // Resolve source
-    // ---------------------------
-    if src_base_ref == 0 {
-        unimplemented!("src_base_ref == 0 not supported yet");
-    }
-
-    // Collect source bytes into a local Vec before acquiring the dest guard to avoid
-    // deadlock when src and dest are in the same DashMap shard.
-    let src_data: Vec<u8> = {
+    let src_data = if src_base_ref == 0 {
+        unsafe {
+            std::slice::from_raw_parts(src_offset as usize as *const u8, total_bytes).to_vec()
+        }
+    } else {
         let src_raw = HEAP.get_entire_raw_data(src_base_ref)?;
         let src_start = src_offset as usize;
         src_raw[src_start..src_start + total_bytes].to_vec()
     };
 
-    // ---------------------------
-    // Resolve destination
-    // ---------------------------
+    let swapped = src_data
+        .chunks_exact(elem_size)
+        .flat_map(|chunk| chunk.iter().rev().copied())
+        .collect::<Vec<_>>();
     if dest_base_ref == 0 {
-        unimplemented!("dest_base_ref == 0 not supported yet");
-    }
-
-    let mut dest_raw = HEAP.get_entire_raw_data_mut(dest_base_ref)?;
-    let dest_start = dest_offset as usize;
-
-    // ---------------------------
-    // Copy + swap
-    // ---------------------------
-    let mut byte_index = 0;
-
-    while byte_index < total_bytes {
-        let src_chunk_start = byte_index;
-        let src_chunk_end = src_chunk_start + elem_size;
-
-        let src_chunk = &src_data[src_chunk_start..src_chunk_end];
-
-        for j in 0..elem_size {
-            let value = src_chunk[elem_size - 1 - j]; // swap
-            let dst_index = dest_start + byte_index + j;
-
-            dest_raw[dst_index] = value;
+        unsafe {
+            ptr::copy(
+                swapped.as_ptr(),
+                dest_offset as usize as *mut u8,
+                swapped.len(),
+            );
         }
-
-        byte_index += elem_size;
+    } else {
+        let mut dest_raw = HEAP.get_entire_raw_data_mut(dest_base_ref)?;
+        let dest_start = dest_offset as usize;
+        dest_raw[dest_start..dest_start + total_bytes].copy_from_slice(&swapped);
     }
 
     Ok(())
