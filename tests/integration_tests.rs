@@ -1114,6 +1114,16 @@ fn should_resize_random_access_file() {
 }
 
 #[test]
+fn should_report_random_access_file_pointer() {
+    let (file_path, _guard) = tmp_file("pointer.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilepointer.RandomAccessFilePointer",
+        &[&file_path],
+        "4\n1\n2\n",
+    );
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();

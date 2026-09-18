@@ -60,6 +60,19 @@ pub(crate) fn seek0(obj_ref: i32, offset: i64) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn get_file_pointer(obj_ref: i32) -> Result<i64> {
+    let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
+        return Ok(-1);
+    };
+    match file.stream_position() {
+        Ok(position) => Ok(position.min(i64::MAX as u64) as i64),
+        Err(error) => {
+            set_pending_io_exception(&error.to_string())?;
+            Ok(-1)
+        }
+    }
+}
+
 /// `java.io.RandomAccessFile.writeBytes0([BII)V`
 pub(crate) fn write_bytes0(obj_ref: i32, bytes_ref: i32, offset: i32, len: i32) -> Result<()> {
     if !check_bounds(bytes_ref, offset, len)? {
