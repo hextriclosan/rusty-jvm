@@ -1,8 +1,13 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
 use jni_sys::{jboolean, jclass, jobject, JNIEnv};
+use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
+    if obj.is_null() {
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return null_mut();
+    }
     let instance_name = HEAP
         .get_instance_name(obj as i32)
         .expect("Failed to get instance name from reference");
@@ -16,3 +21,4 @@ pub(super) extern "system" fn is_same_object(
 ) -> jboolean {
     (first == second) as jboolean
 }
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
