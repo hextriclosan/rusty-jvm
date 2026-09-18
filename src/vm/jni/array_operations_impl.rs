@@ -9,7 +9,8 @@ use jni_sys::{
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
     let array_ref = input as i32;
     if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return 0;
     }
 
     HEAP.get_array_len(array_ref).unwrap_or(0) as jint // OpenJDK returns 0 for non-arrays
@@ -375,3 +376,4 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
+use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;
