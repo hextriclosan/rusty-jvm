@@ -6,6 +6,7 @@ use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::lookup;
+use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
 use jni_sys::{jclass, jmethodID, jsize, jvalue};
@@ -116,6 +117,31 @@ pub(super) fn set_pending_array_index_out_of_bounds_exception(index: jsize, len:
         "java/lang/ArrayIndexOutOfBoundsException",
         &format!("Index {index} out of bounds for length {len}"),
     );
+}
+
+pub(super) fn set_pending_array_store_exception(
+    value_class: &str,
+    array_class: &str,
+    index: jsize,
+) {
+    // Same message as HotSpot's SetObjectArrayElement: the innermost element type,
+    // the index, and then a "[]" for each further dimension
+    let dimensions = array_class.bytes().take_while(|&byte| byte == b'[').count();
+    let element = &array_class[dimensions..];
+    let element = match PRIMITIVE_TYPE_BY_CODE.get(element) {
+        Some(primitive) => primitive,
+        None => element
+            .strip_prefix('L')
+            .and_then(|name| name.strip_suffix(';'))
+            .unwrap_or(element),
+    };
+    let message = format!(
+        "type mismatch: can not store {} to {}[{index}]{}",
+        value_class.replace('/', "."),
+        element.replace('/', "."),
+        "[]".repeat(dimensions.saturating_sub(1))
+    );
+    set_pending_error("java/lang/ArrayStoreException", &message);
 }
 
 pub(super) fn set_pending_array_region_out_of_bounds_exception(

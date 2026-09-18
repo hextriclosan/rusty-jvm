@@ -5006,6 +5006,41 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_check_jni_object_array_store_types() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.arrayops.JniObjectArrayStoreDemo",
+        &[],
+        r#"same class ok [value, null]
+subclass ok [null, 42]
+null ok [null, old]
+interface ok [task, null]
+primitive array as Object ok [[1], null]
+array as Cloneable ok [[1], null]
+array as Serializable ok [[a], null]
+nested array ok [[a], null]
+unrelated class -> java.lang.ArrayStoreException: type mismatch: can not store java.lang.Integer to java.lang.String[1] [old, old]
+not an interface implementor -> java.lang.ArrayStoreException: type mismatch: can not store java.lang.String to java.lang.Runnable[0] [null, null]
+superclass into subclass array -> java.lang.ArrayStoreException: type mismatch: can not store java.lang.Object to java.lang.Integer[0] [null, null]
+primitive array as Object[] -> java.lang.ArrayStoreException: type mismatch: can not store [I to java.lang.Object[1][] [null, null]
+object into primitive arrays -> java.lang.ArrayStoreException: type mismatch: can not store java.lang.String to int[0][] [null, null]
+object into nested arrays -> java.lang.ArrayStoreException: type mismatch: can not store java.lang.String to java.lang.String[0][][] [null, null]
+out of bounds before type check -> java.lang.ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2 [null, null]
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.arrayops.JniObjectArrayStoreDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_support_thread_pool_executor() {
     assert_success(
         "samples.concurrency.advancedpooldemo.AdvancedPoolDemo",
