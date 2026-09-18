@@ -449,6 +449,7 @@ builtin_natives! {
     "java/io/RandomAccessFile": instance fn writeBytes0(b: byte_array, off: int, len: int) -> void => sn::random_access_file::write_bytes0;
     "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => sn::random_access_file::read_bytes0;
     "java/io/RandomAccessFile": instance fn length0() -> long => sn::random_access_file::length0;
+    "java/io/RandomAccessFile": instance fn setLength0(new_length: long) -> void => sn::random_access_file::set_length0;
 
     "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
     "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539

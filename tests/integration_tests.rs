@@ -1079,6 +1079,17 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_resize_random_access_file() {
+    let (file_path, _guard) = tmp_file("resized.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilesetlength.RandomAccessFileSetLength",
+        &[&file_path],
+        "4\n6\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"abcX\0\0");
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();
