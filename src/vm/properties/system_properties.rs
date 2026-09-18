@@ -1,9 +1,10 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::properties::classpath::classpath;
 use crate::vm::system_native::properties_provider::properties::{
-    data_model, endianness, file_separator, java_home, line_separator, os_arch, os_name,
-    os_version, path_separator, sun_boot_library_path, sun_jnu_encoding, tmp_dir,
-    unicode_encoding, user_dir, user_home, user_name,
+    data_model, endianness, file_separator, java_home, line_separator, locale_country,
+    locale_language, locale_script, locale_variant, os_arch, os_name, os_version, path_separator,
+    sun_boot_library_path, sun_jnu_encoding, tmp_dir, unicode_encoding, user_dir, user_home,
+    user_name,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
@@ -11,15 +12,15 @@ use std::sync::LazyLock;
 
 static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| {
     IndexMap::from([
-        ("display.country", "display.country_VALUE"),
-        ("display.language", "display.language_VALUE"),
-        ("display.script", "display.script_VALUE"),
-        ("display.variant", "display.variant_VALUE"),
+        ("display.country", locale_country()),
+        ("display.language", locale_language()),
+        ("display.script", locale_script()),
+        ("display.variant", locale_variant()),
         ("file.separator", file_separator()),
-        ("format.country", "format.country_VALUE"),
-        ("format.language", "format.language_VALUE"),
-        ("format.script", "format.script_VALUE"),
-        ("format.variant", "format.variant_VALUE"),
+        ("format.country", locale_country()),
+        ("format.language", locale_language()),
+        ("format.script", locale_script()),
+        ("format.variant", locale_variant()),
         ("ftp.nonProxyHosts", "ftp.nonProxyHosts_VALUE"),
         ("ftp.proxyHost", "ftp.proxyHost_VALUE"),
         ("ftp.proxyPort", "ftp.proxyPort_VALUE"),

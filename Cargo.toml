@@ -42,6 +42,7 @@ miniz_oxide = "0.9.1"
 crc32fast = "1.5.0"
 strum = { version = "0.28.0", features = ["derive"] }
 sysinfo = { version = "0.40.1", default-features = false, features = ["system"] }
+sys-locale = "0.3.2"
 rand = "0.10.1"
 page_size = "0.6.0"
 memmap2 = "0.9.10"
