@@ -324,15 +324,20 @@ pub(super) extern "system" fn get_string_region(
     buf: *mut jchar,
 ) {
     if str.is_null() || buf.is_null() {
-        panic!("Null pointer in GetStringRegion"); // todo throw NullPointerException
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return;
     }
 
     let string_len = get_string_length(_env, str) as jsize;
 
     // Check bounds (using overflow-safe comparison)
     if start < 0 || len < 0 || start > string_len || len > string_len - start {
-        panic!("Invalid string region: start={start}, len={len}, string_len={string_len}");
-        // todo throw StringIndexOutOfBoundsException
+        set_pending_string_index_out_of_bounds_exception(&format!(
+            "Range [{start}, {}) out of bounds for length {string_len}",
+            start.saturating_add(len)
+        ))
+        .expect("Failed to create StringIndexOutOfBoundsException");
+        return;
     }
 
     // Get the raw UTF-16 data
@@ -357,15 +362,20 @@ pub(super) extern "system" fn get_string_utf_region(
     buf: *mut c_char,
 ) {
     if str.is_null() || buf.is_null() {
-        panic!("Null pointer in GetStringUTFRegion"); // todo throw NullPointerException
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return;
     }
 
     let string_len = get_string_length(_env, str) as jsize;
 
     // Check bounds (using overflow-safe comparison)
     if start < 0 || len < 0 || start > string_len || len > string_len - start {
-        panic!("Invalid string region: start={start}, len={len}, string_len={string_len}");
-        // todo throw StringIndexOutOfBoundsException
+        set_pending_string_index_out_of_bounds_exception(&format!(
+            "Range [{start}, {}) out of bounds for length {string_len}",
+            start.saturating_add(len)
+        ))
+        .expect("Failed to create StringIndexOutOfBoundsException");
+        return;
     }
 
     // Get the raw UTF-16 data and extract the region
@@ -420,3 +430,6 @@ pub(super) extern "system" fn release_string_critical(
     // TODO(GC): Unpin object and re-enable GC here
     release_string_chars(env, str, carray);
 }
+use crate::vm::exception::pending_helpers::{
+    set_pending_null_pointer_exception, set_pending_string_index_out_of_bounds_exception,
+};
