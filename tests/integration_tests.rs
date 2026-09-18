@@ -1490,6 +1490,18 @@ fn should_rename_file() {
     );
     assert_eq!(std::fs::read(destination).unwrap(), b"renamed");
     assert_eq!(modified, MODIFIED_MILLIS);
+fn should_set_file_read_only() {
+    let (file_path, _guard) = tmp_file("read-only.txt");
+    std::fs::write(&file_path, b"immutable").unwrap();
+    utils::assert_success_with_args(
+        "samples.io.setfilereadonly.SetFileReadOnly",
+        &[&file_path],
+        "true\n",
+    );
+    let mut permissions = std::fs::metadata(&file_path).unwrap().permissions();
+    assert!(permissions.readonly());
+    permissions.set_readonly(false);
+    std::fs::set_permissions(file_path, permissions).unwrap();
 }
 
 #[test]

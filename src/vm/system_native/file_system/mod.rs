@@ -245,4 +245,13 @@ pub(crate) fn set_last_modified_time0(
         .and_then(|file| file.set_times(FileTimes::new().set_modified(modified)));
 
     Ok(result.is_ok())
+pub(crate) fn set_read_only0(_this: i32, file_ref: i32) -> Result<bool> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let mut permissions = match std::fs::metadata(&path) {
+        Ok(metadata) => metadata.permissions(),
+        Err(_) => return Ok(false),
+    };
+    permissions.set_readonly(true);
+    Ok(std::fs::set_permissions(path, permissions).is_ok())
 }

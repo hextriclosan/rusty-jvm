@@ -610,6 +610,7 @@ builtin_natives! {
     "java/io/UnixFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
     "java/io/UnixFileSystem": instance fn getLastModifiedTime0(file: file) -> long => sn::file_system::get_last_modified_time0;
     "java/io/UnixFileSystem": instance fn setLastModifiedTime0(file: file, time: long) -> boolean => sn::file_system::set_last_modified_time0;
+    "java/io/UnixFileSystem": instance fn setReadOnly0(file: file) -> boolean => sn::file_system::set_read_only0;
     }
 
     #[cfg(windows)]
@@ -628,6 +629,7 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
     "java/io/WinNTFileSystem": instance fn getLastModifiedTime0(file: file) -> long => sn::file_system::get_last_modified_time0;
     "java/io/WinNTFileSystem": instance fn setLastModifiedTime0(file: file, time: long) -> boolean => sn::file_system::set_last_modified_time0;
+    "java/io/WinNTFileSystem": instance fn setReadOnly0(file: file) -> boolean => sn::file_system::set_read_only0;
     }
 
     #[cfg(unix)]
