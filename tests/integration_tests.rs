@@ -1079,6 +1079,19 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_delete_empty_directory() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let directory = temp.path().join("delete-me");
+    std::fs::create_dir(&directory).unwrap();
+    let path = directory.to_str().unwrap();
+    utils::assert_success_with_args(
+        "samples.io.deletedirectory.DeleteDirectory",
+        &[path],
+        "true\nfalse\n",
+    );
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();

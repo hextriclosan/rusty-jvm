@@ -146,7 +146,13 @@ pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
         return Ok(false);
     }
 
-    match std::fs::remove_file(path) {
+    let result = if path.is_dir() {
+        std::fs::remove_dir(path)
+    } else {
+        std::fs::remove_file(path)
+    };
+
+    match result {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
     }
