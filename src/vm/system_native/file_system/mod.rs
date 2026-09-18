@@ -134,6 +134,49 @@ pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bo
     Ok(check_access(path, access_flags))
 }
 
+pub(crate) fn set_permission0(
+    _this: i32,
+    file_ref: i32,
+    access: i32,
+    enable: bool,
+    _owner_only: bool,
+) -> Result<bool> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let mut permissions = match std::fs::metadata(&path) {
+        Ok(metadata) => metadata.permissions(),
+        Err(_) => return Ok(false),
+    };
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mask = match Access::from_bits(access) {
+            Some(Access::ACCESS_READ) => 0o400 | if _owner_only { 0 } else { 0o044 },
+            Some(Access::ACCESS_WRITE) => 0o200 | if _owner_only { 0 } else { 0o022 },
+            Some(Access::ACCESS_EXECUTE) => 0o100 | if _owner_only { 0 } else { 0o011 },
+            _ => return Ok(false),
+        };
+        let mode = if enable {
+            permissions.mode() | mask
+        } else {
+            permissions.mode() & !mask
+        };
+        permissions.set_mode(mode);
+    }
+
+    #[cfg(windows)]
+    {
+        if access != Access::ACCESS_WRITE.bits() {
+            return Ok(enable);
+        }
+        permissions.set_readonly(!enable);
+    }
+
+    Ok(std::fs::set_permissions(path, permissions).is_ok())
+}
+
 /// `java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z`
 /// `java.io.UnixFileSystem.delete0(Ljava/io/File;)Z`
 pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
