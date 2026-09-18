@@ -604,6 +604,7 @@ builtin_natives! {
     "java/io/UnixFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => sn::file_system::check_access0;
     "java/io/UnixFileSystem": instance fn delete0(file: file) -> boolean => sn::file_system::delete0;
     "java/io/UnixFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
+    "java/io/UnixFileSystem": instance fn createDirectory0(file: file) -> boolean => sn::file_system::create_directory0;
     "java/io/UnixFileSystem": instance fn getNameMax0(name: string) -> long => sn::file_system::unix::get_name_max0;
     "java/io/UnixFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
     "java/io/UnixFileSystem": instance fn getLastModifiedTime0(file: file) -> long => sn::file_system::get_last_modified_time0;
@@ -619,6 +620,7 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => sn::file_system::winnt::get_final_path0; // JDK 25
     "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::delete0;
     "java/io/WinNTFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
+    "java/io/WinNTFileSystem": instance fn createDirectory0(file: file) -> boolean => sn::file_system::create_directory0;
     "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => sn::file_system::winnt::get_name_max0;
     "java/io/WinNTFileSystem": instance fn getLength0(file: file) -> long => sn::file_system::get_length0;
     "java/io/WinNTFileSystem": instance fn getLastModifiedTime0(file: file) -> long => sn::file_system::get_last_modified_time0;
