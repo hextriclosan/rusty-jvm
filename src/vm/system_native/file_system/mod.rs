@@ -6,6 +6,7 @@ use crate::vm::system_native::string::get_utf8_string_by_ref;
 use bitflags::bitflags;
 use path_absolutize::Absolutize;
 use std::path::Path;
+use std::time::UNIX_EPOCH;
 #[cfg(unix)]
 use unix::check_access_unix_impl as check_access;
 #[cfg(unix)]
@@ -169,4 +170,17 @@ pub(crate) fn get_length0(_this: i32, file_ref: i32) -> Result<i64> {
         .unwrap_or(0);
 
     Ok(len as i64)
+}
+
+pub(crate) fn get_last_modified_time0(_this: i32, file_ref: i32) -> Result<i64> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let modified = std::fs::metadata(path)
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
+        .unwrap_or(0);
+
+    Ok(modified)
 }
