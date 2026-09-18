@@ -1449,6 +1449,16 @@ fn should_report_file_last_modified_time() {
     let (file_path, _guard) = tmp_file("last-modified.txt");
     std::fs::write(&file_path, b"timestamp").unwrap();
     let modified = std::fs::metadata(&file_path)
+fn should_set_file_last_modified_time() {
+    const MODIFIED_MILLIS: u128 = 1_600_000_000_000;
+    let (file_path, _guard) = tmp_file("set-last-modified.txt");
+    std::fs::write(&file_path, b"timestamp").unwrap();
+    utils::assert_success_with_args(
+        "samples.io.setfilelastmodified.SetFileLastModified",
+        &[&file_path, &MODIFIED_MILLIS.to_string()],
+        "true\n",
+    );
+    let modified = std::fs::metadata(file_path)
         .unwrap()
         .modified()
         .unwrap()
@@ -1479,6 +1489,7 @@ fn should_rename_file() {
         "true\nfalse\ntrue\n",
     );
     assert_eq!(std::fs::read(destination).unwrap(), b"renamed");
+    assert_eq!(modified, MODIFIED_MILLIS);
 }
 
 #[test]
