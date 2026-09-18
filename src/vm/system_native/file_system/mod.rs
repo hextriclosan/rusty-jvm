@@ -5,7 +5,9 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use bitflags::bitflags;
 use path_absolutize::Absolutize;
+use std::fs::{FileTimes, OpenOptions};
 use std::path::Path;
+use std::time::{Duration, UNIX_EPOCH};
 #[cfg(unix)]
 use unix::check_access_unix_impl as check_access;
 #[cfg(unix)]
@@ -169,4 +171,25 @@ pub(crate) fn get_length0(_this: i32, file_ref: i32) -> Result<i64> {
         .unwrap_or(0);
 
     Ok(len as i64)
+}
+
+pub(crate) fn set_last_modified_time0(
+    _this: i32,
+    file_ref: i32,
+    time_millis: i64,
+) -> Result<bool> {
+    if time_millis < 0 {
+        return Ok(false);
+    }
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let Some(modified) = UNIX_EPOCH.checked_add(Duration::from_millis(time_millis as u64)) else {
+        return Ok(false);
+    };
+    let result = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .and_then(|file| file.set_times(FileTimes::new().set_modified(modified)));
+
+    Ok(result.is_ok())
 }
