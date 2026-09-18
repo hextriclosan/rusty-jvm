@@ -60,6 +60,31 @@ pub(crate) fn seek0(obj_ref: i32, offset: i64) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn write0(obj_ref: i32, byte: i32) -> Result<()> {
+    let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
+        return Ok(());
+    };
+    if let Err(error) = file.write_all(&[byte as u8]) {
+        set_pending_io_exception(&error.to_string())?;
+    }
+    Ok(())
+}
+
+pub(crate) fn read0(obj_ref: i32) -> Result<i32> {
+    let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
+        return Ok(-1);
+    };
+    let mut byte = [0u8; 1];
+    match file.read(&mut byte) {
+        Ok(0) => Ok(-1),
+        Ok(_) => Ok(byte[0] as i32),
+        Err(error) => {
+            set_pending_io_exception(&error.to_string())?;
+            Ok(-1)
+        }
+    }
+}
+
 /// `java.io.RandomAccessFile.writeBytes0([BII)V`
 pub(crate) fn write_bytes0(obj_ref: i32, bytes_ref: i32, offset: i32, len: i32) -> Result<()> {
     if !check_bounds(bytes_ref, offset, len)? {
