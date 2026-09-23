@@ -864,6 +864,14 @@ After copySwapMemory: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8]
         ),
     );
 }
+
+#[test]
+fn should_execute_var_handle_full_fence() {
+    assert_success(
+        "samples.javacore.varhandle.fullfence.VarHandleFullFence",
+        "completed\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
