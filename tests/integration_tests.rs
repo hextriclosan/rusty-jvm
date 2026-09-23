@@ -864,6 +864,14 @@ After copySwapMemory: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8]
         ),
     );
 }
+
+#[test]
+fn should_read_subword_fields_with_unsafe() {
+    assert_success(
+        "samples.jdkinternal.unsafe.subwordfields.UnsafeSubwordFields",
+        "byte=-7\nshort=1234\nchar=Я\nstatic byte=9\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }

@@ -242,7 +242,7 @@ pub(crate) fn get_byte(_this: i32, obj_ref: i32, offset: i64) -> Result<i8> {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 1)?;
             Ok(result[0] as i8)
         } else {
-            todo!("implement get_byte for class field");
+            Ok(get_field_raw_value(obj_ref, offset)?[0] as i8)
         }
     } else {
         let addr = offset as usize as *const u8;
@@ -258,7 +258,7 @@ pub(crate) fn get_short(_this: i32, obj_ref: i32, offset: i64) -> Result<i16> {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 2)?;
             Ok(result[0] as i16)
         } else {
-            todo!("implement get_short for class field");
+            Ok(get_field_raw_value(obj_ref, offset)?[0] as i16)
         }
     } else {
         let addr = offset as usize as *const i16;
@@ -274,11 +274,23 @@ pub(crate) fn get_char(_this: i32, obj_ref: i32, offset: i64) -> Result<u16> {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 2)?;
             Ok(result[0] as u16)
         } else {
-            todo!("implement get_char for class field");
+            Ok(get_field_raw_value(obj_ref, offset)?[0] as u16)
         }
     } else {
         todo!("implement get_char for null object");
     }
+}
+
+fn get_field_raw_value(obj_ref: i32, offset: i64) -> Result<Vec<i32>> {
+    let class_name = HEAP.get_instance_name(obj_ref)?;
+    if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+        return klass(obj_ref)?
+            .get_static_field_by_offset(offset)?
+            .raw_value();
+    }
+    let class = CLASSES.get(&class_name)?;
+    let (declaring_class, field_name) = class.get_field_name_by_offset(offset)?;
+    HEAP.get_object_field_value(obj_ref, &declaring_class, &field_name)
 }
 
 /// `jdk.internal.misc.Unsafe.getInt(Ljava/lang/Object;J)I`
