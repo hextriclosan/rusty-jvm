@@ -76,6 +76,10 @@ pub(super) fn set_pending_no_such_field_error(field_name: &str) {
     set_pending_error("java/lang/NoSuchFieldError", field_name);
 }
 
+pub(super) fn set_pending_instantiation_exception(class_name: &str) {
+    set_pending_error("java/lang/InstantiationException", class_name);
+}
+
 pub(super) fn set_pending_no_class_def_found_error(message: &str) {
     set_pending_error("java/lang/NoClassDefFoundError", message);
 }
