@@ -133,7 +133,7 @@ compile_error!("src/vm/jni/utils.rs requires a 64-bit target because jmethodID v
 /// Layout (64-bit):
 ///   bits 63–32: declaring class heap reference (i32, zero-extended to u32)
 ///   bits 31–0: per-class method index (truncated to u32)
-fn encode_method_id(class_ref: i32, method_index: usize) -> usize {
+pub(super) fn encode_method_id(class_ref: i32, method_index: usize) -> usize {
     let class_bits = (class_ref as u32 as u64) << 32;
     let index_bits = method_index as u32 as u64; // mask to 32 bits to keep encoding contract
     (class_bits | index_bits) as usize
