@@ -64,12 +64,17 @@ pub(super) extern "system" fn get_object_array_element(
 ) -> jobject {
     let array_ref = array as i32;
     if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return std::ptr::null_mut();
     }
 
     let len = get_array_length(env, array);
     if index >= len || index < 0 {
-        panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
+        set_pending_array_index_out_of_bounds_exception(&format!(
+            "Index {index} out of bounds for length {len}"
+        ))
+        .expect("Failed to create ArrayIndexOutOfBoundsException");
+        return std::ptr::null_mut();
     }
 
     let raw = HEAP
@@ -86,12 +91,17 @@ pub(super) extern "system" fn set_object_array_element(
 ) {
     let array_ref = array as i32;
     if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        return;
     }
 
     let len = get_array_length(env, array);
     if index >= len || index < 0 {
-        panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
+        set_pending_array_index_out_of_bounds_exception(&format!(
+            "Index {index} out of bounds for length {len}"
+        ))
+        .expect("Failed to create ArrayIndexOutOfBoundsException");
+        return;
     }
 
     HEAP.set_array_value(array_ref, index, vec![value as i32])
@@ -375,3 +385,6 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
+use crate::vm::exception::pending_helpers::{
+    set_pending_array_index_out_of_bounds_exception, set_pending_null_pointer_exception,
+};
