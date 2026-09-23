@@ -30,6 +30,7 @@ use crate::vm::jni::instance_methods_impl::{
     get_method_id,
 };
 use crate::vm::jni::java_vm_interface_impl::get_java_vm;
+use crate::vm::jni::monitor_impl::{monitor_enter, monitor_exit};
 use crate::vm::jni::object_fields_impl::{
     get_boolean_field, get_byte_field, get_char_field, get_double_field, get_field_id,
     get_float_field, get_int_field, get_long_field, get_object_field, get_short_field,
@@ -227,8 +228,6 @@ jni_variadic_stub!(CallStaticVoidMethod, CallStaticVoidMethod_ptr, (jclass, jmet
 jni_stub!(CallStaticVoidMethodV(jclass, jmethodID, va_list) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
-jni_stub!(MonitorEnter(jobject) -> jint);
-jni_stub!(MonitorExit(jobject) -> jint);
 jni_stub!(GetPrimitiveArrayCritical(jarray, *mut jboolean) -> *mut c_void);
 jni_stub!(ReleasePrimitiveArrayCritical(jarray, *mut c_void, jint) -> ());
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
@@ -463,8 +462,8 @@ static VTABLE: Wrapper = {
     ni.v24.SetDoubleArrayRegion = set_double_array_region;
     ni.v24.RegisterNatives = RegisterNatives;
     ni.v24.UnregisterNatives = UnregisterNatives;
-    ni.v24.MonitorEnter = MonitorEnter;
-    ni.v24.MonitorExit = MonitorExit;
+    ni.v24.MonitorEnter = monitor_enter;
+    ni.v24.MonitorExit = monitor_exit;
     ni.v24.GetJavaVM = get_java_vm;
     ni.v24.GetStringRegion = get_string_region;
     ni.v24.GetStringUTFRegion = get_string_utf_region;
