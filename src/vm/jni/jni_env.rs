@@ -4,14 +4,15 @@ use crate::vm::jni::array_operations_impl::{
     get_char_array_region, get_double_array_elements, get_double_array_region,
     get_float_array_elements, get_float_array_region, get_int_array_elements,
     get_int_array_region, get_long_array_elements, get_long_array_region,
-    get_object_array_element, get_short_array_elements, get_short_array_region, new_boolean_array,
-    new_byte_array, new_char_array, new_double_array, new_float_array, new_int_array,
-    new_long_array, new_object_array, new_short_array, release_boolean_array_elements,
-    release_byte_array_elements, release_char_array_elements, release_double_array_elements,
-    release_float_array_elements, release_int_array_elements, release_long_array_elements,
-    release_short_array_elements, set_boolean_array_region, set_byte_array_region,
-    set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
-    set_long_array_region, set_object_array_element, set_short_array_region,
+    get_object_array_element, get_primitive_array_critical, get_short_array_elements,
+    get_short_array_region, new_boolean_array, new_byte_array, new_char_array, new_double_array,
+    new_float_array, new_int_array, new_long_array, new_object_array, new_short_array,
+    release_boolean_array_elements, release_byte_array_elements, release_char_array_elements,
+    release_double_array_elements, release_float_array_elements, release_int_array_elements,
+    release_long_array_elements, release_primitive_array_critical, release_short_array_elements,
+    set_boolean_array_region, set_byte_array_region, set_char_array_region,
+    set_double_array_region, set_float_array_region, set_int_array_region, set_long_array_region,
+    set_object_array_element, set_short_array_region,
 };
 use crate::vm::jni::class_operations_impl::{find_class, get_superclass, is_assignable_from};
 use crate::vm::jni::exception_impl::{
@@ -59,8 +60,8 @@ use crate::vm::jni::string_operations_impl::{
 };
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
-    jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
-    jobject, jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
+    jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
+    jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
     JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
@@ -229,8 +230,6 @@ jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
 jni_stub!(MonitorExit(jobject) -> jint);
-jni_stub!(GetPrimitiveArrayCritical(jarray, *mut jboolean) -> *mut c_void);
-jni_stub!(ReleasePrimitiveArrayCritical(jarray, *mut c_void, jint) -> ());
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);
@@ -468,8 +467,8 @@ static VTABLE: Wrapper = {
     ni.v24.GetJavaVM = get_java_vm;
     ni.v24.GetStringRegion = get_string_region;
     ni.v24.GetStringUTFRegion = get_string_utf_region;
-    ni.v24.GetPrimitiveArrayCritical = GetPrimitiveArrayCritical;
-    ni.v24.ReleasePrimitiveArrayCritical = ReleasePrimitiveArrayCritical;
+    ni.v24.GetPrimitiveArrayCritical = get_primitive_array_critical;
+    ni.v24.ReleasePrimitiveArrayCritical = release_primitive_array_critical;
     ni.v24.GetStringCritical = get_string_critical;
     ni.v24.ReleaseStringCritical = release_string_critical;
     ni.v24.NewWeakGlobalRef = NewWeakGlobalRef;
