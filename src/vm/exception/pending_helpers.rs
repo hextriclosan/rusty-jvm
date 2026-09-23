@@ -38,6 +38,10 @@ pub(crate) fn set_pending_array_index_out_of_bounds_exception(message: &str) -> 
     set_pending_exception_with_message("java/lang/ArrayIndexOutOfBoundsException", message)
 }
 
+pub(crate) fn set_pending_string_index_out_of_bounds_exception(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/lang/StringIndexOutOfBoundsException", message)
+}
+
 /// Sets a pending `ClassNotFoundException` with the given message.
 pub(crate) fn set_pending_class_not_found_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/ClassNotFoundException", message)
