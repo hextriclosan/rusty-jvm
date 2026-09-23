@@ -620,6 +620,8 @@ pub(crate) fn copy_memory0(
     dest_offset: i64,
     bytes: i64,
 ) -> Result<()> {
+    let bytes = usize::try_from(bytes)
+        .map_err(|_| Error::new_execution("copyMemory length is negative"))?;
     if src_base_ref != 0 {
         // Collect source bytes into a local Vec before acquiring the dest guard to avoid
         // deadlock when src and dest are in the same DashMap shard.
@@ -628,7 +630,7 @@ pub(crate) fn copy_memory0(
             let raw = HEAP.get_entire_raw_data(src_base_ref)?;
             raw.iter()
                 .skip(src_offset as usize)
-                .take(bytes as usize)
+                .take(bytes)
                 .copied()
                 .collect::<Vec<_>>()
         };
@@ -643,20 +645,25 @@ pub(crate) fn copy_memory0(
             }
         } else {
             let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
-            let input = &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+            let input = &mut arr_copy_to[dest_offset as usize..dest_offset as usize + bytes];
             input.copy_from_slice(to_copy.as_slice());
         }
     } else {
         if dest_base_ref == 0 {
-            unimplemented!("dest_base_ref == null not supported yet");
+            unsafe {
+                ptr::copy(
+                    src_offset as usize as *const u8,
+                    dest_offset as usize as *mut u8,
+                    bytes,
+                );
+            }
         } else {
             let ptr_copy_from = src_offset as usize as *const u8;
             let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
             unsafe {
-                let output =
-                    &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+                let output = &mut arr_copy_to[dest_offset as usize..dest_offset as usize + bytes];
 
-                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
+                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes);
             }
         }
     }
