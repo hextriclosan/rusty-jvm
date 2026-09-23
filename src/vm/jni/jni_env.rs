@@ -14,6 +14,9 @@ use crate::vm::jni::array_operations_impl::{
     set_long_array_region, set_object_array_element, set_short_array_region,
 };
 use crate::vm::jni::class_operations_impl::{find_class, get_superclass, is_assignable_from};
+use crate::vm::jni::direct_buffer_impl::{
+    get_direct_buffer_address, get_direct_buffer_capacity, new_direct_byte_buffer,
+};
 use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
@@ -233,9 +236,6 @@ jni_stub!(GetPrimitiveArrayCritical(jarray, *mut jboolean) -> *mut c_void);
 jni_stub!(ReleasePrimitiveArrayCritical(jarray, *mut c_void, jint) -> ());
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
-jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);
-jni_stub!(GetDirectBufferAddress(jobject) -> *mut c_void);
-jni_stub!(GetDirectBufferCapacity(jobject) -> jlong);
 jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
 jni_stub!(GetModule(jclass) -> jobject);
 jni_stub!(IsVirtualThread(jobject) -> jboolean);
@@ -475,9 +475,9 @@ static VTABLE: Wrapper = {
     ni.v24.NewWeakGlobalRef = NewWeakGlobalRef;
     ni.v24.DeleteWeakGlobalRef = DeleteWeakGlobalRef;
     ni.v24.ExceptionCheck = exception_check;
-    ni.v24.NewDirectByteBuffer = NewDirectByteBuffer;
-    ni.v24.GetDirectBufferAddress = GetDirectBufferAddress;
-    ni.v24.GetDirectBufferCapacity = GetDirectBufferCapacity;
+    ni.v24.NewDirectByteBuffer = new_direct_byte_buffer;
+    ni.v24.GetDirectBufferAddress = get_direct_buffer_address;
+    ni.v24.GetDirectBufferCapacity = get_direct_buffer_capacity;
     ni.v24.GetObjectRefType = GetObjectRefType;
     ni.v24.GetModule = GetModule;
     ni.v24.IsVirtualThread = IsVirtualThread;
