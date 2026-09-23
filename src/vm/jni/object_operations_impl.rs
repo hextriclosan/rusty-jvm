@@ -1,6 +1,6 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
-use jni_sys::{jboolean, jclass, jobject, JNIEnv};
+use jni_sys::{jboolean, jclass, jobject, jobjectRefType, JNIEnv};
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
     let instance_name = HEAP
@@ -15,4 +15,15 @@ pub(super) extern "system" fn is_same_object(
     second: jobject,
 ) -> jboolean {
     (first == second) as jboolean
+}
+
+pub(super) extern "system" fn get_object_ref_type(
+    _env: *mut JNIEnv,
+    object: jobject,
+) -> jobjectRefType {
+    if object.is_null() || HEAP.get_instance_name(object as i32).is_err() {
+        jobjectRefType::JNIInvalidRefType
+    } else {
+        jobjectRefType::JNILocalRefType
+    }
 }
