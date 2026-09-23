@@ -13,6 +13,7 @@ use crate::vm::threads;
 use dashmap::DashMap;
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr;
+use std::sync::atomic::{AtomicI32, AtomicI64, Ordering};
 use std::sync::LazyLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -143,6 +144,13 @@ fn compare_and_x_int(
     expected: i32,
     x: i32,
 ) -> Result<(bool, i32)> {
+    if obj_ref == 0 {
+        let atomic = unsafe { &*(offset as usize as *const AtomicI32) };
+        return match atomic.compare_exchange(expected, x, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(witness) => Ok((true, witness)),
+            Err(witness) => Ok((false, witness)),
+        };
+    }
     let class_name = HEAP.get_instance_name(obj_ref)?;
     let (old, swapped) = if class_name.starts_with("[") {
         HEAP.compare_and_exchange_array_by_raw_offset(
@@ -395,12 +403,10 @@ fn compare_and_x_long(
     x: i64,
 ) -> Result<(bool, i64)> {
     if obj_ref == 0 {
-        let old_value: i64 = read_raw(offset);
-        return if old_value == expected {
-            write_raw(offset, x);
-            Ok((true, old_value))
-        } else {
-            Ok((false, old_value))
+        let atomic = unsafe { &*(offset as usize as *const AtomicI64) };
+        return match atomic.compare_exchange(expected, x, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(witness) => Ok((true, witness)),
+            Err(witness) => Ok((false, witness)),
         };
     }
 
