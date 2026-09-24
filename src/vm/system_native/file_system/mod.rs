@@ -170,3 +170,18 @@ pub(crate) fn get_length0(_this: i32, file_ref: i32) -> Result<i64> {
 
     Ok(len as i64)
 }
+
+pub(crate) fn get_space0(_this: i32, file_ref: i32, space_type: i32) -> Result<i64> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let space = match space_type {
+        0 => fs2::total_space(path),
+        1 => fs2::free_space(path),
+        2 => fs2::available_space(path),
+        _ => return Ok(0),
+    }
+    .unwrap_or(0)
+    .min(i64::MAX as u64);
+
+    Ok(space as i64)
+}
