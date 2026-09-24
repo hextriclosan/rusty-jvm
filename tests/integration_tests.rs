@@ -1789,6 +1789,13 @@ fn should_return_system_properties() {
         tmp_dir,
         env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
     );
+
+    let home_variable = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    assert_eq!(
+        json["user.home"],
+        env::var(home_variable).expect("User home is not set")
+    );
+    assert_eq!(json["user.name"], whoami::username().unwrap());
 }
 
 #[test]
