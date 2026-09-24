@@ -1789,6 +1789,14 @@ fn should_return_system_properties() {
         tmp_dir,
         env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
     );
+
+    let language = json["display.language"].as_str().unwrap();
+    assert!(!language.is_empty());
+    assert!(!language.ends_with("_VALUE"));
+    assert_eq!(json["format.language"], language);
+    assert_eq!(json["format.country"], json["display.country"]);
+    assert_eq!(json["format.script"], json["display.script"]);
+    assert_eq!(json["format.variant"], json["display.variant"]);
 }
 
 #[test]
