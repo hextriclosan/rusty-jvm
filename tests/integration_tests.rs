@@ -1092,6 +1092,32 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_update_file_permissions() {
+    let (file_path, _guard) = tmp_file("permissions.txt");
+    std::fs::write(&file_path, b"permissions").unwrap();
+    utils::assert_success_with_args(
+        "samples.io.setfilepermission.SetFilePermission",
+        &[&file_path],
+        "true\n",
+    );
+
+    let mut permissions = std::fs::metadata(&file_path).unwrap().permissions();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        assert_eq!(permissions.mode() & 0o222, 0);
+        permissions.set_mode(permissions.mode() | 0o200);
+    }
+    #[cfg(windows)]
+    {
+        assert!(permissions.readonly());
+        permissions.set_readonly(false);
+    }
+    std::fs::set_permissions(file_path, permissions).unwrap();
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();
