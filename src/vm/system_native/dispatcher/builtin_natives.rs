@@ -428,6 +428,7 @@ builtin_natives! {
     "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => sn::file_descriptor::get_handle;
     "java/io/FileDescriptor": static fn getAppend(fd: int) -> boolean => sn::file_descriptor::get_append;
     "java/io/FileDescriptor": instance fn close0() -> void => sn::file_descriptor::close0;
+    "java/io/FileDescriptor": instance fn sync0() -> void => sn::file_descriptor::sync0;
 
     "java/io/FileInputStream": static fn initIDs() -> void => sn::file_input_stream::init_ids;
     "java/io/FileInputStream": instance fn open0(name: string) -> void => sn::file_input_stream::open0;
