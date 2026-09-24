@@ -12,6 +12,8 @@ public class JniNoSuchIdDemo {
     private static native void lookupNonexistentStaticFieldId();
     private native void lookupNonexistentMethodId();
     private static native void lookupNonexistentStaticMethodId();
+    private native void lookupStaticMethodAsInstance();
+    private static native void lookupInstanceMethodAsStatic();
 
     public static void main(String[] args) {
         JniNoSuchIdDemo obj = new JniNoSuchIdDemo();
@@ -43,6 +45,22 @@ public class JniNoSuchIdDemo {
         System.out.println("=== GetStaticMethodID: nonexistent method ===");
         try {
             lookupNonexistentStaticMethodId();
+            System.out.println("ERROR: expected NoSuchMethodError");
+        } catch (NoSuchMethodError e) {
+            System.out.println("Caught NoSuchMethodError: " + e.getMessage());
+        }
+
+        System.out.println("=== GetMethodID: static method ===");
+        try {
+            obj.lookupStaticMethodAsInstance();
+            System.out.println("ERROR: expected NoSuchMethodError");
+        } catch (NoSuchMethodError e) {
+            System.out.println("Caught NoSuchMethodError: " + e.getMessage());
+        }
+
+        System.out.println("=== GetStaticMethodID: instance method ===");
+        try {
+            lookupInstanceMethodAsStatic();
             System.out.println("ERROR: expected NoSuchMethodError");
         } catch (NoSuchMethodError e) {
             System.out.println("Caught NoSuchMethodError: " + e.getMessage());
