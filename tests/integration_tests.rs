@@ -1792,6 +1792,23 @@ fn should_return_system_properties() {
 }
 
 #[test]
+fn should_match_host_jnu_encoding() {
+    let class_name = "samples.system.encoding.SunJnuEncoding";
+    let java = Path::new(&env::var("JAVA_HOME").expect("JAVA_HOME is not set"))
+        .join("bin")
+        .join(if cfg!(windows) { "java.exe" } else { "java" });
+    let host_output = Command::new(java)
+        .current_dir(utils::TEST_PATH.as_path())
+        .arg(class_name)
+        .output()
+        .expect("Failed to execute host JVM");
+    assert!(host_output.status.success());
+
+    let expected = String::from_utf8(host_output.stdout).expect("Host JVM output is not UTF-8");
+    assert_eq!(get_output(class_name), expected.replace("\r\n", "\n"));
+}
+
+#[test]
 fn should_return_overridden_system_properties() {
     let args = [
         "-Dother.property=other_value",
