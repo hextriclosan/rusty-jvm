@@ -65,6 +65,37 @@ pub(crate) fn lookup_for_static_field(
     }
 }
 
+pub(crate) fn lookup_for_static_field_by_descriptor(
+    class_name: &str,
+    field_name: &str,
+    descriptor: &TypeDescriptor,
+) -> Result<Option<(String, Arc<FieldValue>)>> {
+    let klass = CLASSES.get(class_name)?;
+
+    if let (Some(field), Some(field_info)) =
+        (klass.static_field(field_name), klass.field_info(field_name))
+    {
+        if field_info.type_descriptor() == descriptor {
+            return Ok(Some((class_name.to_string(), field)));
+        }
+    }
+
+    for interface_name in klass.interfaces() {
+        if let Some(field) =
+            lookup_for_static_field_by_descriptor(interface_name, field_name, descriptor)?
+        {
+            return Ok(Some(field));
+        }
+    }
+
+    match klass.parent() {
+        Some(parent_name) => {
+            lookup_for_static_field_by_descriptor(parent_name, field_name, descriptor)
+        }
+        None => Ok(None),
+    }
+}
+
 /// Returns the [`TypeDescriptor`] for an instance field by walking up the class hierarchy.
 pub(crate) fn lookup_for_field_descriptor(
     class_name: &str,
