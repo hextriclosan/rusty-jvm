@@ -1092,6 +1092,19 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_list_directory_entries() {
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::write(temp.path().join("zeta.txt"), b"z").unwrap();
+    std::fs::write(temp.path().join("alpha.txt"), b"a").unwrap();
+    std::fs::create_dir(temp.path().join("nested")).unwrap();
+    utils::assert_success_with_args(
+        "samples.io.listdirectory.ListDirectory",
+        &[temp.path().to_str().unwrap()],
+        "[alpha.txt, nested, zeta.txt]\n",
+    );
+}
+
+#[test]
 fn should_support_file_output_stream_exceptions() {
     let (file_path, tmp_dir) = tmp_file("test.txt");
     let dir_path = tmp_dir.as_ref().display().to_string();
