@@ -2,7 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::properties::classpath::classpath;
 use crate::vm::system_native::properties_provider::properties::{
     endianness, file_separator, java_home, line_separator, os_name, os_version, path_separator,
-    sun_boot_library_path, tmp_dir, user_dir,
+    sun_boot_library_path, tmp_dir, unicode_encoding, user_dir,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
@@ -44,7 +44,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::n
         ("sun.arch.data.model", "sun.arch.data.model_VALUE"),
         ("sun.cpu.endian", endianness()),
         ("sun.cpu.isalist", "sun.cpu.isalist_VALUE"),
-        ("sun.io.unicode.encoding", "sun.io.unicode.encoding_VALUE"),
+        ("sun.io.unicode.encoding", unicode_encoding()),
         ("sun.jnu.encoding", "UTF-8"), // todo https://github.com/hextriclosan/rusty-jvm/issues/566
         ("sun.os.patch.level", "sun.os.patch.level_VALUE"),
         ("user.dir", user_dir()),
