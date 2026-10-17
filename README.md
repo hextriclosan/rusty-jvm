@@ -103,8 +103,8 @@ graph TD
 
 ## Java Standard Library Classes
 
-This project relies on standard library classes from the **JDK 25 (LTS)**.
-To run the Java code, you must have **JDK 25 (LTS)** installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
+This project relies on standard library classes from the **JDK 25 (LTS) or newer**.
+To run the Java code, you must have **JDK 25 or newer** installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
 
 ## Getting Started
 
@@ -114,7 +114,7 @@ Ensure the following are set up:
 
 - A machine running **Windows**, **MacOS**, or **Linux**
 - **Rust** installed
-- **JDK 25 (LTS)** installed with the `JAVA_HOME` environment variable set
+- **JDK 25 or newer** installed with the `JAVA_HOME` environment variable set
 
 ### Example Program: Count Fruits
 Create a file named `FruitCount.java` with the following content:

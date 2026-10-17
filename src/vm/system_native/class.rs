@@ -7,6 +7,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
+use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use jclassmodel::modifiers::ClassModifier;
 
@@ -61,12 +62,18 @@ pub(crate) fn init_class_name(class_ref: i32) -> Result<i32> {
 }
 
 /// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;`
-pub(crate) fn for_name0(
+/// (JDK 25)
+pub(crate) fn for_name0_with_caller(
     name_ref: i32,
     initialize: bool,
     loader_ref: i32,
     _caller_ref: i32,
 ) -> Result<i32> {
+    for_name0(name_ref, initialize, loader_ref)
+}
+
+/// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;` (JDK 26+)
+pub(crate) fn for_name0(name_ref: i32, initialize: bool, loader_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = name.replace('.', "/");
     let reflection_ref = if loader_ref == 0 {
@@ -294,7 +301,7 @@ pub(crate) fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> R
 pub(crate) fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     const NAME: &str = "jdk/internal/reflect/ConstantPool";
     let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
-    HEAP.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])?;
+    HEAP.set_object_field_value(constant_pool_ref, NAME, CONSTANT_POOL_OOP, vec![clazz_ref])?;
 
     Ok(constant_pool_ref)
 }
