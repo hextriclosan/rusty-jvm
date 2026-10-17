@@ -1,5 +1,14 @@
 //! # jimage-rs
 //! A fast and efficient Rust library for working with `jimage` files used by the Java Platform Module System.
+//! ## Supported jimage Versions
+//! | Version | JDK releases | Changes                                                                  |
+//! |---------|--------------|--------------------------------------------------------------------------|
+//! | 1.0     | 9 - 26       | Original format.                                                         |
+//! | 1.1     | 27+          | Preview mode: the `PREVIEW_FLAGS` location attribute and preview versions of resources under `/<module>/META-INF/preview/`. |
+//!
+//! Preview mode itself is not implemented: lookups resolve the regular, non-preview resources, while
+//! preview versions are ordinary entries under their full `/<module>/META-INF/preview/...` names.
+//! Files of any other version are rejected with [`error::JImageError::Version`].
 //! ## Example
 //! ```rust
 //! use std::env;
