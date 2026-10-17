@@ -635,6 +635,7 @@ builtin_natives! {
     "sun/nio/fs/UnixNativeDispatcher": static fn unlink0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix::unlink0;
     "sun/nio/fs/UnixNativeDispatcher": static fn rmdir0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix::rmdir0;
     "sun/nio/fs/UnixNativeDispatcher": static fn realpath0(path_ptr: long) -> byte_array => sn::platform_native_dispatcher::unix::realpath0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn strerror(errnum: int) -> byte_array => sn::platform_native_dispatcher::unix::strerror;
     }
 
     #[cfg(windows)]
