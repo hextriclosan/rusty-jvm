@@ -6,7 +6,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
 use nix::errno::Errno;
 use nix::fcntl::{open, OFlag};
-use nix::libc::{c_char, fstatat, mode_t, rmdir};
+use nix::libc::{c_char, fstatat, mode_t, rmdir, strerror_r};
 use nix::sys::stat::{lstat, stat, FileStat, Mode};
 use nix::unistd::{access, getcwd, mkdir, unlink, AccessFlags};
 use realpath_ext::{realpath, RealpathFlags};
@@ -240,4 +240,26 @@ pub(crate) fn realpath0(path_ptr: i64) -> Result<i32> {
     let array_ref = HEAP.create_array_with_values("[B", &path_bytes);
 
     Ok(array_ref)
+}
+
+/// `sun.nio.fs.UnixNativeDispatcher.strerror(I)[B`
+///
+/// The message `UnixException` reports for `errnum`, e.g. `Not a directory`.
+pub(crate) fn strerror(errnum: i32) -> Result<i32> {
+    let mut buf = [0 as c_char; 1024];
+    // Safety: `buf` is writable for its whole length, which is passed along.
+    if unsafe { strerror_r(errnum, buf.as_mut_ptr(), buf.len()) } != 0 {
+        return Err(Error::new_native(&format!(
+            "strerror_r failed for errno {errnum}"
+        )));
+    }
+    // Safety: on success `strerror_r` has written a NUL-terminated string into `buf`.
+    let message = unsafe { CStr::from_ptr(buf.as_ptr()) };
+    let bytes = message
+        .to_bytes()
+        .iter()
+        .map(|&b| b as i8 as i32)
+        .collect::<Vec<_>>();
+
+    Ok(HEAP.create_array_with_values("[B", &bytes))
 }
