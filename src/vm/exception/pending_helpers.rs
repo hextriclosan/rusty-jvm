@@ -28,6 +28,11 @@ pub(crate) fn set_pending_null_pointer_exception_with_message(message: &str) -> 
     set_pending_exception_with_message("java/lang/NullPointerException", message)
 }
 
+/// Sets a pending `InternalError` (no message).
+pub(crate) fn set_pending_internal_error() -> Result<()> {
+    set_pending_exception("java/lang/InternalError", "<init>:()V", &[])
+}
+
 /// Sets a pending `ArrayStoreException` with the given message.
 pub(crate) fn set_pending_array_store_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/ArrayStoreException", message)

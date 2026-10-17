@@ -914,6 +914,17 @@ Fields are compared and set successfully
 }
 
 #[test]
+fn should_report_unsafe_object_field_offset_of_static_and_missing_fields() {
+    // JDK 25 returns a static field's offset and throws a bare InternalError for a missing one,
+    // while JDK 26+ throws InternalErrors naming the field for both
+    utils::assert_same_as_reference_jvm(
+        &["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"],
+        "samples.jdkinternal.unsafe.objectfieldoffseterrors.UnsafeObjectFieldOffsetErrors",
+        Success,
+    );
+}
+
+#[test]
 fn should_support_wide_instructions() {
     assert_success(
         "samples.javacore.wide.instructions.trivial.WideInstructionsExample",
@@ -2540,7 +2551,7 @@ fn should_print_info_about_unhandled_exception() {
     const ENTRY: &str = "samples.javacore.unhandledexception.UnhandledExceptionExample";
     // `String`'s line numbers differ between JDK releases, so take them from the reference JVM's
     // trace (which can't be compared as a whole: unlike ours, it prefixes frames with module names)
-    let reference_stderr = utils::run_reference_jvm(ENTRY).stderr;
+    let reference_stderr = utils::run_reference_jvm(&[], ENTRY).stderr;
     let string_line = |method: &str| {
         Regex::new(&format!(
             r"java\.lang\.String\.{method}\(String\.java:(\d+)\)"
@@ -3332,7 +3343,11 @@ Age: 30
 #[test]
 fn should_return_info_about_modules() {
     // java.base's module graph differs between JDK releases
-    utils::assert_same_as_reference_jvm("samples.module.inspectmodule.InspectModule", Success);
+    utils::assert_same_as_reference_jvm(
+        &[],
+        "samples.module.inspectmodule.InspectModule",
+        Success,
+    );
 }
 
 #[test]

@@ -175,7 +175,9 @@ pub struct ReferenceOutput {
 }
 
 /// Runs `entry` on the reference `java` of `JAVA_HOME`, from the same directory as the VM under test.
-pub fn run_reference_jvm(entry: &str) -> ReferenceOutput {
+/// `jvm_args` go to the reference JVM only, e.g. `--add-exports`, whose module encapsulation the VM
+/// under test doesn't enforce.
+pub fn run_reference_jvm(jvm_args: &[&str], entry: &str) -> ReferenceOutput {
     let java_home = env::var("JAVA_HOME").expect("JAVA_HOME is not set");
     let mut java = PathBuf::from(java_home).join("bin").join("java");
     if cfg!(windows) {
@@ -188,6 +190,7 @@ pub fn run_reference_jvm(entry: &str) -> ReferenceOutput {
         .env_remove("JAVA_TOOL_OPTIONS")
         .env_remove("_JAVA_OPTIONS")
         .env_remove("JDK_JAVA_OPTIONS")
+        .args(jvm_args)
         .arg(entry)
         .output()
         .expect("Failed to run the reference JVM");
@@ -208,9 +211,14 @@ pub fn run_reference_jvm(entry: &str) -> ReferenceOutput {
 
 /// Asserts that the VM runs `entry` exactly like the reference `java` of `JAVA_HOME`: same stdout,
 /// stderr and exit code. Meant for programs whose output is data of the JDK release itself (the
-/// module graph, ...), which would otherwise need a separate expectation for every supported JDK.
-pub fn assert_same_as_reference_jvm(entry: &str, expected_result: ExecutionResult) {
-    let reference = run_reference_jvm(entry);
+/// module graph, ...), or whose behavior differs between JDK releases, which would otherwise need a
+/// separate expectation for every supported JDK. `reference_jvm_args` are as in [`run_reference_jvm`].
+pub fn assert_same_as_reference_jvm(
+    reference_jvm_args: &[&str],
+    entry: &str,
+    expected_result: ExecutionResult,
+) {
+    let reference = run_reference_jvm(reference_jvm_args, entry);
     assert_with_all_args(
         &[],
         entry,

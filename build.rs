@@ -88,6 +88,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeGetLongUnalignedExample.java",
         "UnsafeUsage.java",
         "UnsafeObjectFieldOffset.java",
+        "UnsafeObjectFieldOffsetErrors.java",
         "UnsafePutReferenceVolatileExample.java",
         "UnsafeZeroAllocation.java",
         "UserPerfCounterExample.java",
@@ -204,6 +205,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "-d",
             ],
             "UnsafeObjectFieldOffset.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
+            "UnsafeObjectFieldOffsetErrors.java",
         ),
         (
             &[
