@@ -3127,6 +3127,33 @@ Target{byteField=127, booleanField=true, shortField=32767, charField=є, intFiel
 }
 
 #[test]
+fn should_box_return_values_of_natively_accessed_methods() {
+    // forces Method.invoke through the VM's NativeAccessor.invoke0
+    utils::assert_with_all_args(
+        &["-Djdk.reflect.useNativeAccessorOnly=true"],
+        "samples.reflection.nativeaccessorreturnvalues.NativeAccessorReturnValues",
+        &[],
+        r#"aBoolean -> true (Boolean)
+aFalse -> false (Boolean)
+aByte -> -7 (Byte)
+aChar -> x (Character)
+aShort -> 1234 (Short)
+anInt -> 42 (Integer)
+aLong -> 1099511627776 (Long)
+aFloat -> 1.5 (Float)
+aDouble -> -2.25 (Double)
+aString -> str (String)
+aVoid -> null
+instanceLong -> 8589934607
+"#,
+        "",
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_invoke_method_via_reflection() {
     assert_success(
         "samples.reflection.directmethodhandleaccessor.DirectMethodHandleAccessorExample",
