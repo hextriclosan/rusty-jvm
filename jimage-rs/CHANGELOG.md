@@ -1,3 +1,8 @@
+# 0.0.5
+## What's Changed
+* Support version 1.1 of the JImage file format (JDK 27+).
+
+
 # 0.0.4
 ## What's Changed
 * Added support for lower-level API to read raw resource data from the JImage file.
