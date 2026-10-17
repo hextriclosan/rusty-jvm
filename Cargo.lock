@@ -629,20 +629,6 @@ dependencies = [
 [[package]]
 name = "jimage-rs"
 version = "0.0.4"
-dependencies = [
- "assert_matches",
- "byteorder",
- "clap",
- "flate2",
- "memchr",
- "memmap2",
- "rstest",
- "snafu 0.9.2",
-]
-
-[[package]]
-name = "jimage-rs"
-version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "051be579ca70b934979ca3d663edb76ff48b61a04ce806c4ed11f803aae0bb46"
 dependencies = [
@@ -652,6 +638,20 @@ dependencies = [
  "memchr",
  "memmap2",
  "snafu 0.8.9",
+]
+
+[[package]]
+name = "jimage-rs"
+version = "0.0.5"
+dependencies = [
+ "assert_matches",
+ "byteorder",
+ "clap",
+ "flate2",
+ "memchr",
+ "memmap2",
+ "rstest",
+ "snafu 0.9.2",
 ]
 
 [[package]]
@@ -1406,7 +1406,7 @@ dependencies = [
  "itertools",
  "jclassmodel 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jdescriptor 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jimage-rs 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jimage-rs 0.0.4",
  "jni-sys",
  "jniname 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libffi",
