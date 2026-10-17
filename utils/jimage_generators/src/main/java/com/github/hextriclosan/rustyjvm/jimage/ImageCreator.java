@@ -52,7 +52,8 @@ public class ImageCreator implements Callable<Integer> {
 
         var plugins = plugins(compress);
         ImagePluginStack imagePluginStack = new ImagePluginStack(builder, plugins, null);
-        ImageFileCreator.create(archives, endianness, imagePluginStack);
+        // no tracking of non-class resources, which only linking from a run-time image needs
+        ImageFileCreator.create(archives, endianness, imagePluginStack, false);
 
         System.out.println("JImage file created successfully with " + endianness + " byte order and compression " + (compress ? "enabled" : "disabled") + ".");
         return 0;
