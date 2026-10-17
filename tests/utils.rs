@@ -167,6 +167,62 @@ pub fn assert_with_all_args(
     assert_eq!(actual_exit_code, expected_exit_code);
 }
 
+/// Output of the reference `java` of `JAVA_HOME` running `entry`, with normalized line endings.
+pub struct ReferenceOutput {
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: i32,
+}
+
+/// Runs `entry` on the reference `java` of `JAVA_HOME`, from the same directory as the VM under test.
+pub fn run_reference_jvm(entry: &str) -> ReferenceOutput {
+    let java_home = env::var("JAVA_HOME").expect("JAVA_HOME is not set");
+    let mut java = PathBuf::from(java_home).join("bin").join("java");
+    if cfg!(windows) {
+        java.set_extension("exe");
+    }
+    let output = std::process::Command::new(&java)
+        .current_dir(TEST_PATH.as_path())
+        // options the VM under test doesn't read, which would also make the launcher print
+        // "Picked up ..." notices to stderr
+        .env_remove("JAVA_TOOL_OPTIONS")
+        .env_remove("_JAVA_OPTIONS")
+        .env_remove("JDK_JAVA_OPTIONS")
+        .arg(entry)
+        .output()
+        .expect("Failed to run the reference JVM");
+    let to_string = |bytes: Vec<u8>| {
+        String::from_utf8(bytes)
+            .expect("Failed to convert output to string")
+            .replace("\r\n", "\n")
+    };
+    ReferenceOutput {
+        stdout: to_string(output.stdout),
+        stderr: to_string(output.stderr),
+        exit_code: output
+            .status
+            .code()
+            .expect("Reference JVM exit code is None: it may have been terminated by a signal"),
+    }
+}
+
+/// Asserts that the VM runs `entry` exactly like the reference `java` of `JAVA_HOME`: same stdout,
+/// stderr and exit code. Meant for programs whose output is data of the JDK release itself (the
+/// module graph, ...), which would otherwise need a separate expectation for every supported JDK.
+pub fn assert_same_as_reference_jvm(entry: &str, expected_result: ExecutionResult) {
+    let reference = run_reference_jvm(entry);
+    assert_with_all_args(
+        &[],
+        entry,
+        &[],
+        &reference.stdout,
+        &reference.stderr,
+        expected_result,
+        reference.exit_code,
+        HashMap::default(),
+    );
+}
+
 pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected_stdout: &str) {
     assert_success_with_args_with_stderr(entry, arguments, expected_stdout, "")
 }

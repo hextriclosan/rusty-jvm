@@ -4,12 +4,14 @@ use crate::vm::exception::pending_helpers_unix::{
 };
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
+use nix::errno::Errno;
 use nix::fcntl::{open, OFlag};
-use nix::libc::{c_char, mode_t, rmdir};
+use nix::libc::{c_char, fstatat, mode_t, rmdir};
 use nix::sys::stat::{lstat, stat, FileStat, Mode};
 use nix::unistd::{access, getcwd, mkdir, unlink, AccessFlags};
 use realpath_ext::{realpath, RealpathFlags};
 use std::ffi::{CStr, CString, OsString};
+use std::mem::MaybeUninit;
 use std::os::fd::IntoRawFd;
 use std::os::unix::prelude::OsStringExt;
 use std::path::Path;
@@ -109,6 +111,28 @@ pub(crate) fn lstat0(path_ptr: i64, attr_ref: i32) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// `sun.nio.fs.UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)I` (JDK 26+)
+pub(crate) fn fstatat0(dfd: i32, path_ptr: i64, flag: i32, attr_ref: i32) -> Result<i32> {
+    let path = cstring_from_i64(path_ptr)?;
+
+    let mut stat = MaybeUninit::<FileStat>::uninit();
+    // Safety: `path` is a valid NUL-terminated string and `stat` is a writable `struct stat`.
+    if unsafe { fstatat(dfd, path.as_ptr(), stat.as_mut_ptr(), flag) } != 0 {
+        return Ok(Errno::last_raw());
+    }
+    // Safety: `fstatat` succeeded, so it has fully initialized `stat`.
+    copy_stat_attributes(attr_ref, unsafe { stat.assume_init() })?;
+    Ok(0)
+}
+
+/// `sun.nio.fs.UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V` (JDK 25)
+pub(crate) fn fstatat0_throwing(dfd: i32, path_ptr: i64, flag: i32, attr_ref: i32) -> Result<()> {
+    match fstatat0(dfd, path_ptr, flag, attr_ref)? {
+        0 => Ok(()),
+        errno => set_pending_unix_exception_with_errno(errno),
+    }
 }
 
 /// `sun.nio.fs.UnixNativeDispatcher.mkdir0(JI)V`

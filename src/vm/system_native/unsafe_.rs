@@ -6,7 +6,8 @@ use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::java_class::STATIC_FIELDS_START;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::object_offset::offset_utils::{
-    object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
+    known_object_field_offset_by_refs, object_field_offset_by_names, object_field_offset_by_refs,
+    static_field_offset_by_names,
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::threads;
@@ -87,6 +88,18 @@ pub(crate) fn object_field_offset0(_this: i32, field_ref: i32) -> Result<i64> {
 /// `jdk.internal.misc.Unsafe.objectFieldOffset1(Ljava/lang/Class;Ljava/lang/String;)J`
 pub(crate) fn object_field_offset1(_this: i32, class_ref: i32, string_ref: i32) -> Result<i64> {
     object_field_offset_by_refs(class_ref, string_ref)
+}
+
+/// `jdk.internal.misc.Unsafe.knownObjectFieldOffset0(Ljava/lang/Class;Ljava/lang/String;)J`
+///
+/// JDK 26+ replacement of `objectFieldOffset1`: reports a missing field as `-1` and a static one as
+/// `-2` instead of throwing, leaving the Java side to raise the error.
+pub(crate) fn known_object_field_offset0(
+    _this: i32,
+    class_ref: i32,
+    string_ref: i32,
+) -> Result<i64> {
+    known_object_field_offset_by_refs(class_ref, string_ref)
 }
 
 /// `jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J`
