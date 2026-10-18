@@ -1103,6 +1103,17 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_read_and_write_single_random_access_file_byte() {
+    let (file_path, _guard) = tmp_file("single-byte.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilesinglebyte.RandomAccessFileSingleByte",
+        &[&file_path],
+        "65\n-1\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"A");
+}
+
+#[test]
 fn should_report_random_access_file_pointer() {
     let (file_path, _guard) = tmp_file("pointer.bin");
     utils::assert_success_with_args(

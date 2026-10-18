@@ -452,6 +452,8 @@ builtin_natives! {
     "java/io/RandomAccessFile": static fn initIDs() -> void => sn::random_access_file::init_ids;
     "java/io/RandomAccessFile": instance fn open0(name: string, mode: int) -> void => sn::random_access_file::open0;
     "java/io/RandomAccessFile": instance fn seek0(offset: long) -> void => sn::random_access_file::seek0;
+    "java/io/RandomAccessFile": instance fn write0(byte: int) -> void => sn::random_access_file::write0;
+    "java/io/RandomAccessFile": instance fn read0() -> int => sn::random_access_file::read0;
     "java/io/RandomAccessFile": instance fn getFilePointer() -> long => sn::random_access_file::get_file_pointer;
     "java/io/RandomAccessFile": instance fn writeBytes0(b: byte_array, off: int, len: int) -> void => sn::random_access_file::write_bytes0;
     "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => sn::random_access_file::read_bytes0;
