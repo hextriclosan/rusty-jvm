@@ -1103,6 +1103,16 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_report_random_access_file_pointer() {
+    let (file_path, _guard) = tmp_file("pointer.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilepointer.RandomAccessFilePointer",
+        &[&file_path],
+        "4\n1\n2\n",
+    );
+}
+
+#[test]
 fn should_resize_random_access_file() {
     let (file_path, _guard) = tmp_file("resized.bin");
     utils::assert_success_with_args(
