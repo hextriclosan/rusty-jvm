@@ -222,7 +222,7 @@ macro_rules! builtin_wrapper {
 
 /// Declaratively defines the built-in native registry from a single source of
 /// truth. For every entry it generates a type-safe `extern "system"` wrapper and
-/// registers its address under the JNI long (descriptor-mangled) C-name.
+/// registers its address under the full method signature (see [`register`]).
 ///
 /// The entries are organized into one or more **braced groups**. A group may
 /// carry outer attributes (e.g. `#[cfg(windows)]`) that apply to *every* entry
@@ -315,14 +315,15 @@ macro_rules! builtin_natives {
     };
 }
 
-// Registry of built-in native methods implemented in Rust, keyed by their JNI
-// C-name and resolving to the function address invoked via libffi.
+// Registry of built-in native methods implemented in Rust, keyed by their full
+// method signature and resolving to the function address invoked via libffi.
 builtin_natives! {
     {
     "java/lang/Class": instance fn getSuperclass() -> class => sn::class::get_superclass;
     "java/lang/Class": static fn getPrimitiveClass(content: string) -> class => sn::class::get_primitive_class;
     "java/lang/Class": static fn desiredAssertionStatus0(clazz: class) -> boolean => sn::class::desired_assertion_status0; // setting all classes to have assertions enabled. todo: implement -ea and -da flags
-    "java/lang/Class": static fn forName0(name: string, initialize: boolean, loader: class_loader, caller: class) -> class => sn::class::for_name0;
+    "java/lang/Class": static fn forName0(name: string, initialize: boolean, loader: class_loader, caller: class) -> class => sn::class::for_name0_with_caller; // JDK 25
+    "java/lang/Class": static fn forName0(name: string, initialize: boolean, loader: class_loader) -> class => sn::class::for_name0; // JDK 26+
     "java/lang/Class": static fn registerNatives() -> void => sn::class::register_natives; // todo: implement me
     "java/lang/Class": instance fn initClassName() -> string => sn::class::init_class_name;
     "java/lang/Class": instance fn getInterfaces0() -> class_object_array => sn::class::get_interfaces0;
@@ -391,6 +392,9 @@ builtin_natives! {
     "java/lang/Thread": static fn registerNatives() -> void => sn::thread::register_natives;
     "java/lang/Thread": static fn currentThread() -> thread => sn::thread::current_thread;
     "java/lang/Thread": static fn currentCarrierThread() -> thread => sn::thread::current_carrier_thread;  //todo: use current carrier thread here (no matter what it is)
+    "java/lang/Thread": static fn scopedValueCache() -> object_array => sn::thread::scoped_value_cache;
+    "java/lang/Thread": static fn setScopedValueCache(cache: object_array) -> void => sn::thread::set_scoped_value_cache;
+    "java/lang/Thread": static fn findScopedValueBindings() -> object => sn::thread::find_scoped_value_bindings;
     "java/lang/Thread": static fn holdsLock(o: object) -> boolean => sn::thread::holds_lock; // todo: implement me
     "java/lang/Thread": static fn getNextThreadIdOffset() -> long => sn::thread::get_next_threadid_offset; // todo: `NEXT_TID_OFFSET` should have volatile semantics
     "java/lang/Thread": instance fn setPriority0(p: int) -> void => sn::thread::set_priority0;
@@ -398,7 +402,8 @@ builtin_natives! {
     "java/lang/Thread": static fn sleepNanos0(nanos: long) -> void => sn::thread::sleep_nanos0;
     "java/lang/Thread": static fn yield0() -> void => sn::thread::yield0;
     "java/lang/Thread": instance fn interrupt0() -> void => sn::thread::interrupt0;
-    "java/lang/Thread": instance fn getStackTrace0() -> object => sn::thread::get_stack_trace0;
+    "java/lang/Thread": instance fn getStackTrace0() -> object => sn::thread::get_stack_trace0; // JDK 25-26
+    "java/lang/Thread": instance fn getStackTrace0() -> stack_trace_element_array => sn::thread::get_stack_trace0; // JDK 27+
     "java/lang/Thread": static fn clearInterruptEvent() -> void => sn::thread::clear_interrupt_event;
     "java/lang/Thread": instance fn start0() -> void => sn::thread::start0;
 
@@ -418,6 +423,7 @@ builtin_natives! {
 
     "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0; // todo: this should be implemented with GC
 
+    "java/lang/ref/Reference": instance fn get0() -> object => sn::reference::get0; // JDK 26+
     "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0; // todo: this should be implemented with GC
     "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0; // todo: this should be implemented with GC
     "java/lang/ref/Reference": static fn waitForReferencePendingList() -> void => sn::reference::wait_for_reference_pending_list; // no GC: the Reference Handler daemon parks here forever
@@ -446,9 +452,13 @@ builtin_natives! {
     "java/io/RandomAccessFile": static fn initIDs() -> void => sn::random_access_file::init_ids;
     "java/io/RandomAccessFile": instance fn open0(name: string, mode: int) -> void => sn::random_access_file::open0;
     "java/io/RandomAccessFile": instance fn seek0(offset: long) -> void => sn::random_access_file::seek0;
+    "java/io/RandomAccessFile": instance fn write0(byte: int) -> void => sn::random_access_file::write0;
+    "java/io/RandomAccessFile": instance fn read0() -> int => sn::random_access_file::read0;
+    "java/io/RandomAccessFile": instance fn getFilePointer() -> long => sn::random_access_file::get_file_pointer;
     "java/io/RandomAccessFile": instance fn writeBytes0(b: byte_array, off: int, len: int) -> void => sn::random_access_file::write_bytes0;
     "java/io/RandomAccessFile": instance fn readBytes0(b: byte_array, off: int, len: int) -> int => sn::random_access_file::read_bytes0;
     "java/io/RandomAccessFile": instance fn length0() -> long => sn::random_access_file::length0;
+    "java/io/RandomAccessFile": instance fn setLength0(new_length: long) -> void => sn::random_access_file::set_length0;
 
     "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
     "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
@@ -492,7 +502,8 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": static fn registerNatives() -> void => sn::unsafe_::register_natives; // todo: implement me
     "jdk/internal/misc/Unsafe": instance fn arrayBaseOffset0(array_class: class) -> int => sn::unsafe_::array_base_offset0;
     "jdk/internal/misc/Unsafe": instance fn objectFieldOffset0(f: field) -> long => sn::unsafe_::object_field_offset0;
-    "jdk/internal/misc/Unsafe": instance fn objectFieldOffset1(clazz: class, name: string) -> long => sn::unsafe_::object_field_offset1;
+    "jdk/internal/misc/Unsafe": instance fn objectFieldOffset1(clazz: class, name: string) -> long => sn::unsafe_::object_field_offset1; // JDK 25
+    "jdk/internal/misc/Unsafe": instance fn knownObjectFieldOffset0(clazz: class, name: string) -> long => sn::unsafe_::known_object_field_offset0; // JDK 26+
     "jdk/internal/misc/Unsafe": instance fn staticFieldOffset0(f: field) -> long => sn::unsafe_::static_field_offset0;
     "jdk/internal/misc/Unsafe": instance fn staticFieldBase0(f: field) -> object => sn::unsafe_::static_field_base0;
     "jdk/internal/misc/Unsafe": instance fn compareAndSetInt(obj: object, offset: long, expected: int, x: int) -> boolean => sn::unsafe_::compare_and_set_int;
@@ -537,15 +548,18 @@ builtin_natives! {
     "jdk/internal/perf/Perf": instance fn createLong(name: string, var: int, units: int, value: long) -> byte_buffer => sn::perf::create_long;
     "jdk/internal/perf/Perf": instance fn createByteArray(name: string, var: int, units: int, value: byte_array, mlen: int) -> byte_buffer => sn::perf::create_byte_array;
 
-    "jdk/internal/reflect/ConstantPool": instance fn getUTF8At0(cp: object, index: int) -> string => sn::constant_pool::get_utf8_at0;
-    "jdk/internal/reflect/ConstantPool": instance fn getSize0(cp: object) -> int => sn::constant_pool::get_size0;
-    "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(cp: object, index: int) -> byte => sn::constant_pool::get_tag_at0;
+    "jdk/internal/reflect/ConstantPool": instance fn getUTF8At0(cp: object, index: int) -> string => sn::constant_pool::get_utf8_at0_with_oop; // JDK 25
+    "jdk/internal/reflect/ConstantPool": instance fn getSize0(cp: object) -> int => sn::constant_pool::get_size0_with_oop; // JDK 25
+    "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(cp: object, index: int) -> byte => sn::constant_pool::get_tag_at0_with_oop; // JDK 25
+    "jdk/internal/reflect/ConstantPool": instance fn getUTF8At0(index: int) -> string => sn::constant_pool::get_utf8_at0; // JDK 26+
+    "jdk/internal/reflect/ConstantPool": instance fn getSize0() -> int => sn::constant_pool::get_size0; // JDK 26+
+    "jdk/internal/reflect/ConstantPool": instance fn getTagAt0(index: int) -> byte => sn::constant_pool::get_tag_at0; // JDK 26+
 
     "jdk/internal/reflect/DirectConstructorHandleAccessor$NativeAccessor": static fn newInstance0(c: constructor, args: object_array) -> object => sn::method_handle_natives::native_accessor::new_instance0;
     "jdk/internal/reflect/DirectMethodHandleAccessor$NativeAccessor": static fn invoke0(m: method, obj: object, args: object_array) -> object => sn::method_handle_natives::native_accessor::invoke0;
 
     "jdk/internal/reflect/Reflection": static fn getCallerClass() -> class => sn::reflecton::get_caller_class;
-    "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags;
+    "jdk/internal/reflect/Reflection": static fn getClassAccessFlags(c: class) -> int => sn::reflecton::get_class_access_flags; // JDK 25
     "jdk/internal/reflect/Reflection": static fn areNestMates(current: class, member: class) -> boolean => sn::reflecton::are_nest_mates;
 
     "jdk/internal/util/SystemProps$Raw": static fn platformProperties() -> string_array => sn::system_props_raw::platform_properties;
@@ -578,7 +592,7 @@ builtin_natives! {
     "java/io/WinNTFileSystem": instance fn createFileExclusively0(name: string) -> boolean => sn::file_system::create_file_exclusively0;
     "java/io/WinNTFileSystem": instance fn getBooleanAttributes0(file: file) -> int => sn::file_system::get_boolean_attributes0;
     "java/io/WinNTFileSystem": instance fn checkAccess0(file: file, mode: int) -> boolean => sn::file_system::check_access0;
-    "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => sn::file_system::winnt::get_final_path0;
+    "java/io/WinNTFileSystem": instance fn getFinalPath0(name: string) -> string => sn::file_system::winnt::get_final_path0; // JDK 25
     "java/io/WinNTFileSystem": instance fn delete0(file: file, allow_delete_readonly: boolean) -> boolean => sn::file_system::winnt::delete0;
     "java/io/WinNTFileSystem": instance fn list0(file: file) -> string_array => sn::file_system::list0;
     "java/io/WinNTFileSystem": instance fn getNameMax0(name: string) -> int => sn::file_system::winnt::get_name_max0;
@@ -621,15 +635,19 @@ builtin_natives! {
     "sun/nio/fs/UnixNativeDispatcher": static fn access0(path_ptr: long, mode: int) -> int => sn::platform_native_dispatcher::unix::access0;
     "sun/nio/fs/UnixNativeDispatcher": static fn stat0(path_ptr: long, attrs: unix_file_attrs) -> int => sn::platform_native_dispatcher::unix::stat0;
     "sun/nio/fs/UnixNativeDispatcher": static fn lstat0(path_ptr: long, attrs: unix_file_attrs) -> void => sn::platform_native_dispatcher::unix::lstat0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn fstatat0(dfd: int, path_ptr: long, flag: int, attrs: unix_file_attrs) -> void => sn::platform_native_dispatcher::unix::fstatat0_throwing; // JDK 25
+    "sun/nio/fs/UnixNativeDispatcher": static fn fstatat0(dfd: int, path_ptr: long, flag: int, attrs: unix_file_attrs) -> int => sn::platform_native_dispatcher::unix::fstatat0; // JDK 26+
     "sun/nio/fs/UnixNativeDispatcher": static fn mkdir0(path_ptr: long, mode: int) -> void => sn::platform_native_dispatcher::unix::mkdir0;
     "sun/nio/fs/UnixNativeDispatcher": static fn unlink0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix::unlink0;
     "sun/nio/fs/UnixNativeDispatcher": static fn rmdir0(path_ptr: long) -> void => sn::platform_native_dispatcher::unix::rmdir0;
     "sun/nio/fs/UnixNativeDispatcher": static fn realpath0(path_ptr: long) -> byte_array => sn::platform_native_dispatcher::unix::realpath0;
+    "sun/nio/fs/UnixNativeDispatcher": static fn strerror(errnum: int) -> byte_array => sn::platform_native_dispatcher::unix::strerror;
     }
 
     #[cfg(windows)]
     {
-    "sun/nio/fs/WindowsNativeDispatcher": static fn initIDs() -> void => sn::platform_native_dispatcher::win::init_ids; // todo: implement me
+    "sun/nio/fs/WindowsNativeDispatcher": static fn initIDs() -> void => sn::platform_native_dispatcher::win::init_ids; // JDK 25-26
+    "sun/nio/fs/WindowsNativeDispatcher": static fn init() -> int => sn::platform_native_dispatcher::win::init; // JDK 27+
     "sun/nio/fs/WindowsNativeDispatcher": static fn CreateDirectory0(path_ptr: long, sd_ptr: long) -> void => sn::platform_native_dispatcher::win::create_directory0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn GetFileAttributesEx0(name_ptr: long, output_ptr: long) -> void => sn::platform_native_dispatcher::win::get_file_attributes_ex0;
     "sun/nio/fs/WindowsNativeDispatcher": static fn DeleteFile0(name_ptr: long) -> void => sn::platform_native_dispatcher::win::delete_file0;
@@ -676,6 +694,9 @@ fn build_descriptor(params: &[&str], ret: &str) -> String {
     format!("({}){}", params.concat(), ret)
 }
 
+/// Keys by `class:method:descriptor` rather than the JNI long C-name: the latter omits the return
+/// type, so it can't tell apart overloads that differ only in it (e.g. `fstatat0` returning `void`
+/// in JDK 25 but `int` in JDK 26).
 fn register(
     table: &mut HashMap<String, i64>,
     class_name: &str,
@@ -683,14 +704,37 @@ fn register(
     descriptor: &str,
     address: i64,
 ) {
-    let (_short_name, long_name) = jniname::c_name(class_name, method_name, descriptor)
-        .expect("built-in native must have a valid class/method/descriptor");
-    table.insert(long_name, address);
+    let key = format!("{class_name}:{method_name}:{descriptor}");
+    let previous = table.insert(key, address);
+    assert!(
+        previous.is_none(),
+        "built-in native {class_name}.{method_name}:{descriptor} is registered twice"
+    );
 }
 
-pub(super) fn find_builtin_native(long_name: &str) -> Option<i64> {
-    BUILTIN_NATIVE_TABLE.get(long_name).copied()
+/// Looks up a built-in native by its `class:method:descriptor` signature.
+pub(super) fn find_builtin_native(method_signature: &str) -> Option<i64> {
+    BUILTIN_NATIVE_TABLE.get(method_signature).copied()
 }
+
+/// Built-in natives that only some of the supported JDK releases declare (added, removed, turned
+/// into plain Java, or with a changed signature). Every variant is registered, so whichever one the
+/// running JDK declares resolves; the others are simply never looked up.
+const RELEASE_SPECIFIC_NATIVES: &[(&str, &str)] = &[
+    ("java/io/WinNTFileSystem", "getFinalPath0"),
+    ("java/lang/Class", "forName0"),
+    ("java/lang/Thread", "getStackTrace0"),
+    ("java/lang/ref/Reference", "get0"),
+    ("jdk/internal/misc/Unsafe", "objectFieldOffset1"),
+    ("jdk/internal/misc/Unsafe", "knownObjectFieldOffset0"),
+    ("jdk/internal/reflect/ConstantPool", "getUTF8At0"),
+    ("jdk/internal/reflect/ConstantPool", "getSize0"),
+    ("jdk/internal/reflect/ConstantPool", "getTagAt0"),
+    ("jdk/internal/reflect/Reflection", "getClassAccessFlags"),
+    ("sun/nio/fs/UnixNativeDispatcher", "fstatat0"),
+    ("sun/nio/fs/WindowsNativeDispatcher", "initIDs"),
+    ("sun/nio/fs/WindowsNativeDispatcher", "init"),
+];
 
 /// Verifies that every built-in native declared in [`builtin_natives!`] matches a
 /// real, `native` method of its JDK class, with the exact declared descriptor.
@@ -703,11 +747,14 @@ pub(super) fn find_builtin_native(long_name: &str) -> Option<i64> {
 ///
 /// This runs against loaded JDK classes and turns such a mistake into a clear,
 /// deterministic error instead of a silent resolution failure at first use.
+///
+/// Natives listed in [`RELEASE_SPECIFIC_NATIVES`] may be absent, or not native, in the running JDK.
 pub(crate) fn validate_builtin_natives() -> Result<()> {
     for (class_name, method_name, descriptor) in BUILTIN_SPECS.iter() {
         let signature = format!("{method_name}:{descriptor}");
         match lookup_method(class_name, &signature)? {
             Some(method) if method.is_native() => {}
+            _ if RELEASE_SPECIFIC_NATIVES.contains(&(*class_name, *method_name)) => {}
             Some(_) => {
                 return Err(Error::new_native(&format!(
                     "Built-in native '{class_name}.{signature}' resolves to a non-native JDK \

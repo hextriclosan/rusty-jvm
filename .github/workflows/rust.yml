@@ -112,6 +112,53 @@ jobs:
       - name: Run tests
         run: cargo nextest run --workspace --locked --no-fail-fast --jobs 16
 
+  test-on-newer-jdks:
+    needs:
+      - should-run
+      - build-and-test
+
+    if: |
+      always() &&
+      needs.build-and-test.result == 'success' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'schedule'
+      )
+
+    name: build-and-test (${{ matrix.os }}, JDK ${{ matrix.java }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        java: [ 26, 27 ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      - name: Run tests
+        run: cargo nextest run --workspace --locked --no-fail-fast --jobs 16
+
   test-on-s390x:
     needs:
       - should-run

@@ -3,7 +3,7 @@
 //! A Java Virtual Machine (JVM) interpreter written in Rust from scratch — with no dependency on existing JVMs.
 //!
 //! `rusty-jvm` executes Java bytecode in interpreted mode and aims to support as much of the Java language as possible.
-//! It currently supports a broad set of language features of Java 25, with garbage collection and multithreading planned for future releases.
+//! It currently supports a broad set of language features of Java 25 and newer, with garbage collection and multithreading planned for future releases.
 //!
 //! ## Features
 //! See the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.5.0/README.md#implemented-key-features) for the full list of implemented features.

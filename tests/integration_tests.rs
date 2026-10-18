@@ -864,6 +864,14 @@ After copySwapMemory: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8]
         ),
     );
 }
+
+#[test]
+fn should_return_zero_for_zero_byte_unsafe_allocation() {
+    assert_success(
+        "samples.jdkinternal.unsafe.zeroallocation.UnsafeZeroAllocation",
+        "true\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
@@ -906,6 +914,17 @@ Fields are compared and set successfully
 }
 
 #[test]
+fn should_report_unsafe_object_field_offset_of_static_and_missing_fields() {
+    // JDK 25 returns a static field's offset and throws a bare InternalError for a missing one,
+    // while JDK 26+ throws InternalErrors naming the field for both
+    utils::assert_same_as_reference_jvm(
+        &["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"],
+        "samples.jdkinternal.unsafe.objectfieldoffseterrors.UnsafeObjectFieldOffsetErrors",
+        Success,
+    );
+}
+
+#[test]
 fn should_support_wide_instructions() {
     assert_success(
         "samples.javacore.wide.instructions.trivial.WideInstructionsExample",
@@ -930,6 +949,11 @@ fn should_get_caller_class() {
 #[test]
 fn should_initialize_system_on_load() {
     assert_success("samples.system.load.SystemLoad", "4321\n");
+}
+
+#[test]
+fn should_replace_system_input_stream() {
+    assert_success("samples.system.setin.SystemSetInExample", "65\n66\n");
 }
 
 #[test]
@@ -1089,6 +1113,38 @@ fn should_list_directory_entries() {
         &[temp.path().to_str().unwrap()],
         "[alpha.txt, nested, zeta.txt]\n",
     );
+}
+
+#[test]  
+fn should_read_and_write_single_random_access_file_byte() {
+    let (file_path, _guard) = tmp_file("single-byte.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilesinglebyte.RandomAccessFileSingleByte",
+        &[&file_path],
+        "65\n-1\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"A");
+}
+
+#[test]
+fn should_report_random_access_file_pointer() {
+    let (file_path, _guard) = tmp_file("pointer.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilepointer.RandomAccessFilePointer",
+        &[&file_path],
+        "4\n1\n2\n",
+    );
+}
+
+#[test]
+fn should_resize_random_access_file() {
+    let (file_path, _guard) = tmp_file("resized.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilesetlength.RandomAccessFileSetLength",
+        &[&file_path],
+        "4\n6\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"abcX\0\0");
 }
 
 #[test]
@@ -2537,10 +2593,26 @@ fn should_start_trace_at_call_site_when_fill_in_stack_trace_called_explicitly() 
 
 #[test]
 fn should_print_info_about_unhandled_exception() {
+    const ENTRY: &str = "samples.javacore.unhandledexception.UnhandledExceptionExample";
+    // `String`'s line numbers differ between JDK releases, so take them from the reference JVM's
+    // trace (which can't be compared as a whole: unlike ours, it prefixes frames with module names)
+    let reference_stderr = utils::run_reference_jvm(&[], ENTRY).stderr;
+    let string_line = |method: &str| {
+        Regex::new(&format!(
+            r"java\.lang\.String\.{method}\(String\.java:(\d+)\)"
+        ))
+        .unwrap()
+        .captures(&reference_stderr)
+        .unwrap_or_else(|| panic!("No String.{method} frame in: {reference_stderr}"))[1]
+            .to_string()
+    };
+    let check_bounds_line = string_line("checkBoundsBeginEnd");
+    let substring_line = string_line("substring");
     utils::assert_failure_with_stderr(
-        "samples.javacore.unhandledexception.UnhandledExceptionExample",
+        ENTRY,
         r#""#,
-        r#"Exception in thread "main" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
+        &format!(
+            r#"Exception in thread "main" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
 	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:55)
 	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:52)
 	at jdk.internal.util.Preconditions$4.apply(Preconditions.java:213)
@@ -2548,13 +2620,32 @@ fn should_print_info_about_unhandled_exception() {
 	at jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:98)
 	at jdk.internal.util.Preconditions.outOfBoundsCheckFromToIndex(Preconditions.java:112)
 	at jdk.internal.util.Preconditions.checkFromToIndex(Preconditions.java:349)
-	at java.lang.String.checkBoundsBeginEnd(String.java:4937)
-	at java.lang.String.substring(String.java:2899)
+	at java.lang.String.checkBoundsBeginEnd(String.java:{check_bounds_line})
+	at java.lang.String.substring(String.java:{substring_line})
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun3(UnhandledExceptionExample.java:18)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun2(UnhandledExceptionExample.java:13)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun1(UnhandledExceptionExample.java:9)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.main(UnhandledExceptionExample.java:5)
 
+"#
+        ),
+    );
+}
+
+#[test]
+fn should_support_scoped_values() {
+    assert_success(
+        "samples.concurrency.scopedvalue.ScopedValueExample",
+        r#"bound outside: false
+user: alice
+user: alice
+user: alice
+nested: bob level 2
+restored: alice, level bound: false
+call result: CAROL
+orElse outside: nobody
+unbound get: NoSuchElementException
+bound in new thread: false
 "#,
     );
 }
@@ -3127,6 +3218,33 @@ Target{byteField=127, booleanField=true, shortField=32767, charField=є, intFiel
 }
 
 #[test]
+fn should_box_return_values_of_natively_accessed_methods() {
+    // forces Method.invoke through the VM's NativeAccessor.invoke0
+    utils::assert_with_all_args(
+        &["-Djdk.reflect.useNativeAccessorOnly=true"],
+        "samples.reflection.nativeaccessorreturnvalues.NativeAccessorReturnValues",
+        &[],
+        r#"aBoolean -> true (Boolean)
+aFalse -> false (Boolean)
+aByte -> -7 (Byte)
+aChar -> x (Character)
+aShort -> 1234 (Short)
+anInt -> 42 (Integer)
+aLong -> 1099511627776 (Long)
+aFloat -> 1.5 (Float)
+aDouble -> -2.25 (Double)
+aString -> str (String)
+aVoid -> null
+instanceLong -> 8589934607
+"#,
+        "",
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_invoke_method_via_reflection() {
     assert_success(
         "samples.reflection.directmethodhandleaccessor.DirectMethodHandleAccessorExample",
@@ -3269,178 +3387,11 @@ Age: 30
 
 #[test]
 fn should_return_info_about_modules() {
-    assert_success(
+    // java.base's module graph differs between JDK releases
+    utils::assert_same_as_reference_jvm(
+        &[],
         "samples.module.inspectmodule.InspectModule",
-        r#"Class: class java.lang.String
-  Module name: java.base
-    ModuleDescriptor:
-      name: java.base
-      modifiers: []
-      requires: []
-      exports:
-        com.sun.crypto.provider [jdk.crypto.cryptoki] []
-        com.sun.security.ntlm [java.security.sasl] []
-        java.io [] []
-        java.lang [] []
-        java.lang.annotation [] []
-        java.lang.classfile [] []
-        java.lang.classfile.attribute [] []
-        java.lang.classfile.constantpool [] []
-        java.lang.classfile.instruction [] []
-        java.lang.constant [] []
-        java.lang.foreign [] []
-        java.lang.invoke [] []
-        java.lang.module [] []
-        java.lang.ref [] []
-        java.lang.reflect [] []
-        java.lang.runtime [] []
-        java.math [] []
-        java.net [] []
-        java.net.spi [] []
-        java.nio [] []
-        java.nio.channels [] []
-        java.nio.channels.spi [] []
-        java.nio.charset [] []
-        java.nio.charset.spi [] []
-        java.nio.file [] []
-        java.nio.file.attribute [] []
-        java.nio.file.spi [] []
-        java.security [] []
-        java.security.cert [] []
-        java.security.interfaces [] []
-        java.security.spec [] []
-        java.text [] []
-        java.text.spi [] []
-        java.time [] []
-        java.time.chrono [] []
-        java.time.format [] []
-        java.time.temporal [] []
-        java.time.zone [] []
-        java.util [] []
-        java.util.concurrent [] []
-        java.util.concurrent.atomic [] []
-        java.util.concurrent.locks [] []
-        java.util.function [] []
-        java.util.jar [] []
-        java.util.random [] []
-        java.util.regex [] []
-        java.util.spi [] []
-        java.util.stream [] []
-        java.util.zip [] []
-        javax.crypto [] []
-        javax.crypto.interfaces [] []
-        javax.crypto.spec [] []
-        javax.net [] []
-        javax.net.ssl [] []
-        javax.security.auth [] []
-        javax.security.auth.callback [] []
-        javax.security.auth.login [] []
-        javax.security.auth.spi [] []
-        javax.security.auth.x500 [] []
-        javax.security.cert [] []
-        jdk.internal [jdk.incubator.vector] []
-        jdk.internal.access [java.desktop, java.logging, java.management, java.rmi, jdk.charsets, jdk.crypto.cryptoki, jdk.jartool, jdk.jfr, jdk.jlink, jdk.management, jdk.net, jdk.sctp] []
-        jdk.internal.classfile.components [jdk.jfr] []
-        jdk.internal.event [jdk.jfr] []
-        jdk.internal.foreign [jdk.incubator.vector] []
-        jdk.internal.io [jdk.internal.le, jdk.jshell] []
-        jdk.internal.javac [java.compiler, java.desktop, jdk.compiler, jdk.incubator.vector, jdk.jartool, jdk.jdeps, jdk.jfr, jdk.jlink, jdk.jshell] []
-        jdk.internal.jimage [jdk.jlink] []
-        jdk.internal.jimage.decompressor [jdk.jlink] []
-        jdk.internal.jmod [jdk.compiler, jdk.jlink] []
-        jdk.internal.loader [java.instrument, java.logging, java.naming] []
-        jdk.internal.logger [java.logging] []
-        jdk.internal.misc [java.desktop, java.logging, java.management, java.naming, java.net.http, java.rmi, java.security.jgss, jdk.attach, jdk.charsets, jdk.compiler, jdk.crypto.cryptoki, jdk.graal.compiler, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jfr, jdk.jshell, jdk.nio.mapmode, jdk.unsupported] []
-        jdk.internal.module [java.instrument, java.management.rmi, jdk.compiler, jdk.jartool, jdk.jfr, jdk.jlink, jdk.jpackage] []
-        jdk.internal.org.xml.sax [jdk.jfr] []
-        jdk.internal.org.xml.sax.helpers [jdk.jfr] []
-        jdk.internal.perf [java.management, jdk.internal.jvmstat, jdk.management.agent] []
-        jdk.internal.platform [jdk.jfr, jdk.management] []
-        jdk.internal.ref [java.desktop, java.net.http, jdk.naming.dns] []
-        jdk.internal.reflect [java.logging, java.sql, java.sql.rowset, jdk.dynalink, jdk.internal.vm.ci, jdk.unsupported] []
-        jdk.internal.util [java.desktop, java.naming, java.net.http, java.prefs, java.rmi, java.security.jgss, java.smartcardio, jdk.charsets, jdk.httpserver, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jlink, jdk.jpackage, jdk.net] []
-        jdk.internal.util.xml [jdk.jfr] []
-        jdk.internal.util.xml.impl [jdk.jfr] []
-        jdk.internal.vm [java.management, jdk.internal.jvmstat, jdk.internal.vm.ci, jdk.jfr, jdk.management, jdk.management.agent] []
-        jdk.internal.vm.annotation [java.instrument, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jfr, jdk.unsupported] []
-        jdk.internal.vm.vector [jdk.incubator.vector] []
-        sun.invoke.util [jdk.compiler] []
-        sun.net [java.net.http, jdk.naming.dns] []
-        sun.net.dns [java.security.jgss, jdk.naming.dns] []
-        sun.net.ext [jdk.net] []
-        sun.net.util [java.net.http, jdk.jconsole, jdk.sctp] []
-        sun.net.www [java.net.http, jdk.jartool] []
-        sun.net.www.protocol.http [java.security.jgss] []
-        sun.nio.ch [java.management, jdk.crypto.cryptoki, jdk.net, jdk.sctp] []
-        sun.nio.fs [jdk.net] []
-        sun.reflect.annotation [jdk.compiler] []
-        sun.reflect.generics.reflectiveObjects [java.desktop] []
-        sun.reflect.misc [java.desktop, java.management] []
-        sun.security.internal.interfaces [jdk.crypto.cryptoki] []
-        sun.security.jca [java.smartcardio, jdk.crypto.cryptoki, jdk.naming.dns] []
-        sun.security.pkcs [jdk.jartool] []
-        sun.security.provider [java.security.jgss, jdk.crypto.cryptoki, jdk.security.auth] []
-        sun.security.provider.certpath [java.naming, jdk.jartool] []
-        sun.security.timestamp [jdk.jartool] []
-        sun.security.tools [jdk.jartool] []
-        sun.security.validator [jdk.jartool] []
-        sun.security.x509 [jdk.crypto.cryptoki, jdk.jartool] []
-        sun.util.cldr [jdk.jlink] []
-        sun.util.locale.provider [java.desktop, jdk.jlink, jdk.localedata] []
-        sun.util.logging [java.desktop, java.logging, java.prefs] []
-        sun.util.resources [jdk.localedata] []
-      opens: []
-      uses: [java.lang.System$LoggerFinder, java.net.ContentHandlerFactory, java.net.spi.InetAddressResolverProvider, java.net.spi.URLStreamHandlerProvider, java.nio.channels.spi.AsynchronousChannelProvider, java.nio.channels.spi.SelectorProvider, java.nio.charset.spi.CharsetProvider, java.nio.file.spi.FileSystemProvider, java.nio.file.spi.FileTypeDetector, java.security.Provider, java.text.spi.BreakIteratorProvider, java.text.spi.CollatorProvider, java.text.spi.DateFormatProvider, java.text.spi.DateFormatSymbolsProvider, java.text.spi.DecimalFormatSymbolsProvider, java.text.spi.NumberFormatProvider, java.time.chrono.AbstractChronology, java.time.chrono.Chronology, java.time.zone.ZoneRulesProvider, java.util.spi.CalendarDataProvider, java.util.spi.CalendarNameProvider, java.util.spi.CurrencyNameProvider, java.util.spi.LocaleNameProvider, java.util.spi.ResourceBundleControlProvider, java.util.spi.ResourceBundleProvider, java.util.spi.TimeZoneNameProvider, java.util.spi.ToolProvider, javax.security.auth.spi.LoginModule, jdk.internal.io.JdkConsoleProvider, jdk.internal.logger.DefaultLoggerFinder, sun.text.spi.JavaTimeDateTimePatternProvider, sun.util.locale.provider.LocaleDataMetaInfo, sun.util.resources.LocaleData$CommonResourceBundleProvider, sun.util.resources.LocaleData$SupplementaryResourceBundleProvider, sun.util.spi.CalendarProvider]
-      provides: [java.nio.file.spi.FileSystemProvider with [jdk.internal.jrtfs.JrtFileSystemProvider]]
-
-Class: interface org.xml.sax.XMLReader
-  Module name: java.xml
-    ModuleDescriptor:
-      name: java.xml
-      modifiers: []
-      requires: [mandated java.base]
-      exports:
-        com.sun.org.apache.xml.internal.dtm [java.xml.crypto] []
-        com.sun.org.apache.xml.internal.utils [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.compiler [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.functions [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.objects [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.res [java.xml.crypto] []
-        javax.xml [] []
-        javax.xml.catalog [] []
-        javax.xml.datatype [] []
-        javax.xml.namespace [] []
-        javax.xml.parsers [] []
-        javax.xml.stream [] []
-        javax.xml.stream.events [] []
-        javax.xml.stream.util [] []
-        javax.xml.transform [] []
-        javax.xml.transform.dom [] []
-        javax.xml.transform.sax [] []
-        javax.xml.transform.stax [] []
-        javax.xml.transform.stream [] []
-        javax.xml.validation [] []
-        javax.xml.xpath [] []
-        org.w3c.dom [] []
-        org.w3c.dom.bootstrap [] []
-        org.w3c.dom.events [] []
-        org.w3c.dom.ls [] []
-        org.w3c.dom.ranges [] []
-        org.w3c.dom.traversal [] []
-        org.w3c.dom.views [] []
-        org.xml.sax [] []
-        org.xml.sax.ext [] []
-        org.xml.sax.helpers [] []
-      opens: []
-      uses: [javax.xml.datatype.DatatypeFactory, javax.xml.parsers.DocumentBuilderFactory, javax.xml.parsers.SAXParserFactory, javax.xml.stream.XMLEventFactory, javax.xml.stream.XMLInputFactory, javax.xml.stream.XMLOutputFactory, javax.xml.transform.TransformerFactory, javax.xml.validation.SchemaFactory, javax.xml.xpath.XPathFactory, org.xml.sax.XMLReader]
-      provides: []
-
-Class: class samples.module.inspectmodule.InspectModule
-  Module name: unnamed module
-No ModuleDescriptor
-
-"#,
+        Success,
     );
 }
 
@@ -4249,6 +4200,30 @@ object and null=false
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniIsSameObjectDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_resolve_inherited_jni_fields_by_name_and_signature() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.inheritedfields.JniInheritedFieldsDemo",
+        &[],
+        r#"inherited=7
+hidden int=11
+hidden long=22
+first field ID is non-null=true
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.inheritedfields.JniInheritedFieldsDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 
