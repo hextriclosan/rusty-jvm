@@ -1112,6 +1112,7 @@ fn should_report_random_access_file_pointer() {
     );
 }
 
+#[test]
 fn should_resize_random_access_file() {
     let (file_path, _guard) = tmp_file("resized.bin");
     utils::assert_success_with_args(
