@@ -6,6 +6,8 @@
 package java.lang;
 
 // This example mimics the way StringConcatFactory uses StringConcatHelper internally.
+// Only entry points that are stable across JDK releases are used here: the lower-level
+// mix/prepend/newString helpers they delegate to change their signatures between releases.
 public class StringConcatHelperExample {
     public static void main(String[] args) {
         System.out.println(concat("a", "b", "c"));
@@ -15,30 +17,17 @@ public class StringConcatHelperExample {
      * Concatenates the given objects into a single string.
      * <p>
      * This method is a test helper that mimics the internal usage of
-     * {@code StringConcatHelper}. It converts
-     * each object to a string, calculates the required buffer size, and
-     * constructs the final concatenated string using {@code StringConcatHelper}.
+     * {@code StringConcatHelper}. It converts each object to a string and
+     * folds them together using {@code StringConcatHelper.simpleConcat}.
      *
      * @param objs the objects to concatenate
      * @return the concatenated string
      */
     private static String concat(Object... objs) {
-        String[] toConcat = new String[objs.length];
-        for (int i = 0; i < objs.length; i++) {
-            toConcat[i] = StringConcatHelper.stringOf(objs[i]);
+        String result = "";
+        for (Object obj : objs) {
+            result = StringConcatHelper.simpleConcat(result, StringConcatHelper.stringOf(obj));
         }
-
-        long lengthCoder = 0;
-        for (int i = toConcat.length - 1; i >= 0; i--) {
-            lengthCoder = StringConcatHelper.mix(lengthCoder, toConcat[i]);
-        }
-
-        byte[] buf = StringConcatHelper.newArray(lengthCoder);
-
-        for (int i = toConcat.length - 1; i >= 0; i--) {
-            lengthCoder = StringConcatHelper.prepend(lengthCoder, buf, toConcat[i], "");
-        }
-
-        return StringConcatHelper.newString(buf, lengthCoder);
+        return result;
     }
 }

@@ -85,6 +85,19 @@ pub(crate) fn read0(obj_ref: i32) -> Result<i32> {
     }
 }
 
+pub(crate) fn get_file_pointer(obj_ref: i32) -> Result<i64> {
+    let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
+        return Ok(-1);
+    };
+    match file.stream_position() {
+        Ok(position) => Ok(position.min(i64::MAX as u64) as i64),
+        Err(error) => {
+            set_pending_io_exception(&error.to_string())?;
+            Ok(-1)
+        }
+    }
+}
+
 /// `java.io.RandomAccessFile.writeBytes0([BII)V`
 pub(crate) fn write_bytes0(obj_ref: i32, bytes_ref: i32, offset: i32, len: i32) -> Result<()> {
     if !check_bounds(bytes_ref, offset, len)? {
@@ -134,4 +147,28 @@ pub(crate) fn read_bytes0(obj_ref: i32, bytes_ref: i32, offset: i32, len: i32) -
 pub(crate) fn length0(obj_ref: i32) -> Result<i64> {
     let len = length(obj_ref, RandomAccessFile)?.unwrap_or(-1);
     Ok(len)
+}
+
+pub(crate) fn set_length0(obj_ref: i32, new_length: i64) -> Result<()> {
+    if new_length < 0 {
+        set_pending_io_exception(&format!("Negative length {new_length}"))?;
+        return Ok(());
+    }
+    let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
+        return Ok(());
+    };
+    if let Err(error) = file.set_len(new_length as u64) {
+        set_pending_io_exception(&error.to_string())?;
+        return Ok(());
+    }
+    match file.stream_position() {
+        Ok(position) if position > new_length as u64 => {
+            if let Err(error) = file.seek(std::io::SeekFrom::Start(new_length as u64)) {
+                set_pending_io_exception(&error.to_string())?;
+            }
+        }
+        Ok(_) => {}
+        Err(error) => set_pending_io_exception(&error.to_string())?,
+    }
+    Ok(())
 }
