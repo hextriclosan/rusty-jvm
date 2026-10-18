@@ -72,3 +72,30 @@ fn delete_file(path: &str) {
         &format!("Deleted: {path}\n"),
     );
 }
+
+#[cfg(not(windows))]
+#[test]
+fn should_check_file_types() {
+    let temp_dir = TempDir::new().expect("failed to create temp dir");
+    let dir = temp_dir.path();
+    std::fs::write(dir.join("file.txt"), "Hello").expect("failed to write file");
+    std::fs::create_dir(dir.join("dir")).expect("failed to create dir");
+    std::os::unix::fs::symlink("file.txt", dir.join("link")).expect("failed to create symlink");
+
+    assert_success_with_args(
+        "samples.nio.filetypechecks.FileTypeChecksExample",
+        &[dir.to_str().expect("dir is not UTF-8")],
+        r#"file.txt is regular file: true
+file.txt is directory: false
+dir is directory: true
+dir is regular file: false
+link is regular file: true
+link is regular file (nofollow): false
+missing.txt is regular file: false
+file.txt/child is directory: false
+link is same file as file.txt: true
+dir is same file as file.txt: false
+too long name attributes: java.nio.file.FileSystemException: File name too long
+"#,
+    );
+}
