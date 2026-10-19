@@ -2152,9 +2152,44 @@ fn should_support_system_get_constant_pool() {
 
 #[test]
 fn should_support_assertions() {
-    assert_success(
+    utils::assert_with_all_args(
+        &["-ea"],
         "samples.javacore.assertions.trivial.AssertionExample",
+        &[],
         "Assertions: enabled\n",
+        "",
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[rstest]
+#[case::by_default(&[])]
+#[case::ea(&["-ea"])]
+#[case::enableassertions(&["-enableassertions"])]
+#[case::ea_then_da(&["-ea", "-da"])]
+#[case::package_and_subpackages(&["-ea:samples.javacore.assertions.status..."])]
+#[case::subpackage(&["-ea:samples.javacore.assertions.status.sub..."])]
+#[case::class(&["-ea:samples.javacore.assertions.status.SamePackageAssertions"])]
+#[case::nested_class(&["-ea:samples.javacore.assertions.status.AssertionStatusExample$Nested"])]
+#[case::outer_class_not_nested(&["-ea:samples.javacore.assertions.status.AssertionStatusExample"])]
+#[case::package_name_without_dots_is_a_class(&["-ea:samples.javacore.assertions.status"])]
+#[case::root_package(&["-ea:samples..."])]
+#[case::empty_name(&["-ea:"])]
+#[case::package_more_specific_than_default(&["-ea", "-da:samples.javacore.assertions.status.sub..."])]
+#[case::class_more_specific_than_package(&["-da:samples...", "-ea:samples.javacore.assertions.status.SamePackageAssertions"])]
+#[case::later_option_wins(&["-ea:samples...", "-da:samples..."])]
+#[case::unnamed_package(&["-ea:..."])]
+#[case::esa(&["-esa"])]
+#[case::esa_then_dsa(&["-esa", "-dsa"])]
+#[case::system_package(&["-ea:java.lang..."])]
+#[case::system_class(&["-ea:java.lang.String"])]
+#[case::long_forms(&["-enableassertions:samples...", "-disableassertions:samples.javacore.assertions.status.SamePackageAssertions", "-enablesystemassertions"])]
+fn should_resolve_assertion_status_like_hotspot(#[case] options: &[&str]) {
+    utils::assert_same_as_reference_jvm_with_options(
+        options,
+        "samples.javacore.assertions.status.AssertionStatusExample",
     );
 }
 

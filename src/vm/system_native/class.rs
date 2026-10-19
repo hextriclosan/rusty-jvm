@@ -1,3 +1,4 @@
+use crate::vm::assertions::java_assertions;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::pending_helpers::set_pending_class_not_found_exception;
 use crate::vm::execution_engine::executor::Executor;
@@ -6,7 +7,7 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
 use crate::vm::method_area::instance_checker::InstanceChecker;
-use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
+use crate::vm::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
 use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use jclassmodel::modifiers::ClassModifier;
@@ -43,8 +44,18 @@ fn map_primitive_class(primitive_type: &str) -> Result<&str> {
 }
 
 /// `java.lang.Class.desiredAssertionStatus0(Ljava/lang/Class)Z`
-pub(crate) fn desired_assertion_status0(_class_ref: i32) -> Result<bool> {
-    Ok(true) // setting all classes to have assertions enabled. todo: implement -ea and -da flags
+///
+/// Whether the `-ea`/`-da`/`-esa`/`-dsa` options enable assertions for the class, which counts as
+/// a system class when the bootstrap class loader loaded it. Never for primitive and array classes.
+pub(crate) fn desired_assertion_status0(class_ref: i32) -> Result<bool> {
+    let klass = klass(class_ref)?;
+    let name = klass.this_class_name();
+    if name.starts_with('[') || PRIMITIVE_TYPE_BY_CODE.contains_key(name.as_str()) {
+        return Ok(false);
+    }
+    let class_loader_ref =
+        HEAP.get_object_field_value(class_ref, "java/lang/Class", "classLoader")?[0];
+    Ok(java_assertions().enabled(name, class_loader_ref == 0))
 }
 
 /// `java.lang.Class.initClassName()Ljava/lang/String;`

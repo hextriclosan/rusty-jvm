@@ -141,6 +141,7 @@ jni_types! {
     void                      : void  | ()   | ()           | "V";
 
     // objects
+    assertion_directives      : ref   | i32  | jobject      | "Ljava/lang/AssertionStatusDirectives;";
     class                     : ref   | i32  | jclass       | "Ljava/lang/Class;";
     class_loader              : ref   | i32  | jobject      | "Ljava/lang/ClassLoader;";
     module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
@@ -321,7 +322,7 @@ builtin_natives! {
     {
     "java/lang/Class": instance fn getSuperclass() -> class => sn::class::get_superclass;
     "java/lang/Class": static fn getPrimitiveClass(content: string) -> class => sn::class::get_primitive_class;
-    "java/lang/Class": static fn desiredAssertionStatus0(clazz: class) -> boolean => sn::class::desired_assertion_status0; // setting all classes to have assertions enabled. todo: implement -ea and -da flags
+    "java/lang/Class": static fn desiredAssertionStatus0(clazz: class) -> boolean => sn::class::desired_assertion_status0;
     "java/lang/Class": static fn forName0(name: string, initialize: boolean, loader: class_loader, caller: class) -> class => sn::class::for_name0_with_caller; // JDK 25
     "java/lang/Class": static fn forName0(name: string, initialize: boolean, loader: class_loader) -> class => sn::class::for_name0; // JDK 26+
     "java/lang/Class": static fn registerNatives() -> void => sn::class::register_natives; // todo: implement me
@@ -346,6 +347,7 @@ builtin_natives! {
     "java/lang/ClassLoader": static fn defineClass1(cl: class_loader, name: string, buf: byte_array, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class1;
     "java/lang/ClassLoader": static fn defineClass2(cl: class_loader, name: string, buf: byte_buffer, off: int, len: int, pd: protection_domain, source: string) -> class => sn::class_loader::define_class2;
     "java/lang/ClassLoader": static fn findBootstrapClass(name: string) -> class => sn::class_loader::find_bootstrap_class;
+    "java/lang/ClassLoader": static fn retrieveDirectives() -> assertion_directives => sn::class_loader::retrieve_directives;
     "java/lang/ClassLoader": instance fn findLoadedClass0(name: string) -> class => sn::class_loader::find_loaded_class0;
 
     "java/lang/Double": static fn doubleToRawLongBits(d: double) -> long => sn::double::double_to_raw_long_bits;
