@@ -328,6 +328,7 @@ builtin_natives! {
     "java/lang/Class": static fn registerNatives() -> void => sn::class::register_natives; // todo: implement me
     "java/lang/Class": instance fn initClassName() -> string => sn::class::init_class_name;
     "java/lang/Class": instance fn getInterfaces0() -> class_object_array => sn::class::get_interfaces0;
+    "java/lang/Class": instance fn getPermittedSubclasses0() -> class_object_array => sn::class::get_permitted_subclasses0;
     "java/lang/Class": instance fn getDeclaringClass0() -> class => sn::class::get_declaring_class0;
     "java/lang/Class": instance fn getDeclaredFields0(flag: boolean) -> field_object_array => sn::class::get_declared_fields0;
     "java/lang/Class": instance fn getDeclaredMethods0(flag: boolean) -> method_object_array => sn::class::get_declared_methods0;

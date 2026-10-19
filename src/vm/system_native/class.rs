@@ -147,6 +147,28 @@ pub(crate) fn get_interfaces0(class_ref: i32) -> Result<i32> {
     Ok(result_ref)
 }
 
+/// `java.lang.Class.getPermittedSubclasses0()[Ljava/lang/Class;`
+pub(crate) fn get_permitted_subclasses0(class_ref: i32) -> Result<i32> {
+    let klass = klass(class_ref)?;
+    let Some(subclasses) = klass
+        .attributes()
+        .get_permitted_subclasses(klass.constant_pool())?
+    else {
+        // not sealed
+        return Ok(0);
+    };
+
+    // As in HotSpot, a permitted subclass that fails to load is left out rather than failing the
+    // call, and so is one that names an array class
+    let subclass_refs = subclasses
+        .iter()
+        .filter(|subclass| !subclass.starts_with('['))
+        .filter_map(|subclass| clazz_ref(subclass).ok())
+        .collect::<Vec<_>>();
+
+    Ok(HEAP.create_array_with_values("[Ljava/lang/Class;", &subclass_refs))
+}
+
 /// `java.lang.Class.getDeclaringClass0()Ljava/lang/Class;`
 pub(crate) fn get_declaring_class0(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;
