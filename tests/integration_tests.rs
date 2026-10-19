@@ -2164,32 +2164,80 @@ fn should_support_assertions() {
     );
 }
 
+// Classes `AssertionStatusExample` reports on, as it names them
+const EXAMPLE: &str = "AssertionStatusExample";
+const SAME_PACKAGE: &str = "SamePackageAssertions";
+const SUB_PACKAGE: &str = "sub.SubPackageAssertions";
+const NESTED: &str = "AssertionStatusExample.Nested";
+const STRING: &str = "String";
+
+/// Output of `AssertionStatusExample` when the classes in `enabled` have assertions enabled
+fn assertion_status_output(enabled: &[&str]) -> String {
+    let desired = |class: &str| enabled.contains(&class);
+    let mut output = String::new();
+    for class in [EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED] {
+        // javac makes the asserts of a nested class follow its top-level class
+        let top_level = if class == NESTED { EXAMPLE } else { class };
+        output += &format!(
+            "{class}: desired {}, assert run {}\n",
+            desired(class),
+            desired(top_level)
+        );
+    }
+    for class in [STRING, "int", "int[]"] {
+        output += &format!("{class}: desired {}\n", desired(class));
+    }
+    // the class loader starts from the same options, so only LateAssertions changes
+    output += "-- after setClassAssertionStatus(LateAssertions, true)\n";
+    for class in [EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED] {
+        output += &format!("{class}: desired {}\n", desired(class));
+    }
+    output += "LateAssertions: desired true, assert run true\n";
+    output
+}
+
 #[rstest]
-#[case::by_default(&[])]
-#[case::ea(&["-ea"])]
-#[case::enableassertions(&["-enableassertions"])]
-#[case::ea_then_da(&["-ea", "-da"])]
-#[case::package_and_subpackages(&["-ea:samples.javacore.assertions.status..."])]
-#[case::subpackage(&["-ea:samples.javacore.assertions.status.sub..."])]
-#[case::class(&["-ea:samples.javacore.assertions.status.SamePackageAssertions"])]
-#[case::nested_class(&["-ea:samples.javacore.assertions.status.AssertionStatusExample$Nested"])]
-#[case::outer_class_not_nested(&["-ea:samples.javacore.assertions.status.AssertionStatusExample"])]
-#[case::package_name_without_dots_is_a_class(&["-ea:samples.javacore.assertions.status"])]
-#[case::root_package(&["-ea:samples..."])]
-#[case::empty_name(&["-ea:"])]
-#[case::package_more_specific_than_default(&["-ea", "-da:samples.javacore.assertions.status.sub..."])]
-#[case::class_more_specific_than_package(&["-da:samples...", "-ea:samples.javacore.assertions.status.SamePackageAssertions"])]
-#[case::later_option_wins(&["-ea:samples...", "-da:samples..."])]
-#[case::unnamed_package(&["-ea:..."])]
-#[case::esa(&["-esa"])]
-#[case::esa_then_dsa(&["-esa", "-dsa"])]
-#[case::system_package(&["-ea:java.lang..."])]
-#[case::system_class(&["-ea:java.lang.String"])]
-#[case::long_forms(&["-enableassertions:samples...", "-disableassertions:samples.javacore.assertions.status.SamePackageAssertions", "-enablesystemassertions"])]
-fn should_resolve_assertion_status_like_hotspot(#[case] options: &[&str]) {
-    utils::assert_same_as_reference_jvm_with_options(
+#[case::by_default(&[], &[])]
+#[case::ea(&["-ea"], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::enableassertions(&["-enableassertions"], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::ea_then_da(&["-ea", "-da"], &[])]
+#[case::package_and_subpackages(&["-ea:samples.javacore.assertions.status..."], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::subpackage(&["-ea:samples.javacore.assertions.status.sub..."], &[SUB_PACKAGE])]
+#[case::class(&["-ea:samples.javacore.assertions.status.SamePackageAssertions"], &[SAME_PACKAGE])]
+#[case::nested_class(&["-ea:samples.javacore.assertions.status.AssertionStatusExample$Nested"], &[NESTED])]
+#[case::outer_class_not_nested(&["-ea:samples.javacore.assertions.status.AssertionStatusExample"], &[EXAMPLE])]
+#[case::package_name_without_dots_is_a_class(&["-ea:samples.javacore.assertions.status"], &[])]
+#[case::root_package(&["-ea:samples..."], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::empty_name(&["-ea:"], &[])]
+#[case::package_more_specific_than_default(&["-ea", "-da:samples.javacore.assertions.status.sub..."], &[EXAMPLE, SAME_PACKAGE, NESTED])]
+#[case::class_more_specific_than_package(&["-da:samples...", "-ea:samples.javacore.assertions.status.SamePackageAssertions"], &[SAME_PACKAGE])]
+#[case::later_option_wins(&["-ea:samples...", "-da:samples..."], &[])]
+#[case::unnamed_package(&["-ea:..."], &[])]
+#[case::esa(&["-esa"], &[STRING])]
+#[case::esa_then_dsa(&["-esa", "-dsa"], &[])]
+#[case::system_package(&["-ea:java.lang..."], &[STRING])]
+#[case::system_class(&["-ea:java.lang.String"], &[STRING])]
+#[case::long_forms(&["-enableassertions:samples...", "-disableassertions:samples.javacore.assertions.status.SamePackageAssertions", "-enablesystemassertions"], &[EXAMPLE, SUB_PACKAGE, NESTED, STRING])]
+fn should_resolve_assertion_status_like_hotspot(
+    #[case] options: &[&str],
+    #[case] enabled: &[&str],
+) {
+    const ENTRY: &str = "samples.javacore.assertions.status.AssertionStatusExample";
+    let expected = assertion_status_output(enabled);
+    assert_eq!(
+        utils::run_reference_jvm(options, ENTRY).stdout,
+        expected,
+        "the reference JVM disagrees with the expectation for {options:?}"
+    );
+    utils::assert_with_all_args(
         options,
-        "samples.javacore.assertions.status.AssertionStatusExample",
+        ENTRY,
+        &[],
+        &expected,
+        "",
+        Success,
+        0,
+        HashMap::default(),
     );
 }
 

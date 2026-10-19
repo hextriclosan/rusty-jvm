@@ -231,26 +231,6 @@ pub fn assert_same_as_reference_jvm(
     );
 }
 
-/// Like [`assert_same_as_reference_jvm`], for `vm_options` that both VMs take: runs both with them.
-pub fn assert_same_as_reference_jvm_with_options(vm_options: &[&str], entry: &str) {
-    let reference = run_reference_jvm(vm_options, entry);
-    let expected_result = if reference.exit_code == 0 {
-        ExecutionResult::Success
-    } else {
-        ExecutionResult::Failure
-    };
-    assert_with_all_args(
-        vm_options,
-        entry,
-        &[],
-        &reference.stdout,
-        &reference.stderr,
-        expected_result,
-        reference.exit_code,
-        HashMap::default(),
-    );
-}
-
 pub fn assert_success_with_args(entry: &str, arguments: &[&str], expected_stdout: &str) {
     assert_success_with_args_with_stderr(entry, arguments, expected_stdout, "")
 }

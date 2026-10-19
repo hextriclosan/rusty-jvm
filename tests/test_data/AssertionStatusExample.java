@@ -54,7 +54,7 @@ class SamePackageAssertions {
     }
 }
 
-    class LateAssertions {
+class LateAssertions {
     static boolean assertionsRun() {
         boolean run = false;
         assert run = true;
