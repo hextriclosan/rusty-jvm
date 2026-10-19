@@ -10,6 +10,8 @@ use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
+use std::sync::LazyLock;
+use std::time::Instant;
 
 /// `java.lang.System.currentTimeMillis()J`
 pub(crate) fn current_time_millis() -> Result<i64> {
@@ -18,11 +20,12 @@ pub(crate) fn current_time_millis() -> Result<i64> {
     Ok(since_the_epoch.as_millis() as i64)
 }
 
+/// Fixed origin of [`nano_time`], shared by all threads of the VM.
+static NANO_TIME_ORIGIN: LazyLock<Instant> = LazyLock::new(Instant::now);
+
 /// `java.lang.System.nanoTime()J`
 pub(crate) fn nano_time() -> Result<i64> {
-    let now = std::time::SystemTime::now();
-    let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
-    Ok(since_the_epoch.as_nanos() as i64)
+    Ok(NANO_TIME_ORIGIN.elapsed().as_nanos() as i64)
 }
 
 /// `java.lang.System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V`
