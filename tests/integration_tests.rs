@@ -120,6 +120,31 @@ fn should_check_if_class_is_interface() {
 }
 
 #[test]
+fn should_report_sealed_classes_and_their_permitted_subclasses() {
+    const ENTRY: &str = "samples.reflection.sealed.SealedClassesExample";
+    const EXPECTED: &str = r#"Shape: sealed true, permits [Shape$Circle, Square, Polygon]
+Shape$Circle: sealed false, permits null
+Square: sealed false, permits null
+Polygon: sealed false, permits null
+Hexagon: sealed false, permits null
+Vehicle: sealed true, permits [Car, Truck]
+Car: sealed false, permits null
+Direction: sealed true, permits [Direction$1]
+Planet: sealed false, permits null
+SealedClassesExample: sealed false, permits null
+[LShape;: sealed false, permits null
+int: sealed false, permits null
+annotation: labelled method
+"#;
+    assert_eq!(
+        utils::run_reference_jvm(&[], ENTRY).stdout,
+        EXPECTED,
+        "the reference JVM disagrees with the expectation"
+    );
+    assert_success(ENTRY, EXPECTED);
+}
+
+#[test]
 fn should_clone_cloneables() {
     assert_success(
         "samples.javacore.cloneable.trivial.CloneExample",
