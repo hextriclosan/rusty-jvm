@@ -11,13 +11,25 @@ use crate::vm::method_area::lookup;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::LazyLock;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
+/// Nanoseconds of `time` since the Unix epoch, negative when `time` is before it.
+pub(crate) fn epoch_nanos(time: SystemTime) -> i128 {
+    match time.duration_since(UNIX_EPOCH) {
+        Ok(since) => since.as_nanos() as i128,
+        Err(before) => -(before.duration().as_nanos() as i128),
+    }
+}
+
+/// Milliseconds of `time` since the Unix epoch, rounded down like HotSpot's, so a time before
+/// the epoch gives a negative value instead of an error.
+fn epoch_millis(time: SystemTime) -> i64 {
+    epoch_nanos(time).div_euclid(1_000_000) as i64
+}
 
 /// `java.lang.System.currentTimeMillis()J`
 pub(crate) fn current_time_millis() -> Result<i64> {
-    let now = std::time::SystemTime::now();
-    let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH)?;
-    Ok(since_the_epoch.as_millis() as i64)
+    Ok(epoch_millis(SystemTime::now()))
 }
 
 /// Fixed origin of [`nano_time`], shared by all threads of the VM.
@@ -243,4 +255,21 @@ pub(crate) fn map_library_name(name_ref: i32) -> Result<i32> {
 pub(crate) fn register_natives() -> Result<()> {
     // todo implement me
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn epoch_millis_is_negative_before_the_epoch() {
+        assert_eq!(epoch_millis(UNIX_EPOCH + Duration::from_millis(1500)), 1500);
+        assert_eq!(
+            epoch_millis(UNIX_EPOCH - Duration::from_millis(1500)),
+            -1500
+        );
+        // rounded down, as HotSpot does (1 µs, as Windows' SystemTime counts in 100 ns steps)
+        assert_eq!(epoch_millis(UNIX_EPOCH - Duration::from_micros(1)), -1);
+    }
 }
