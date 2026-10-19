@@ -543,6 +543,7 @@ builtin_natives! {
     "jdk/internal/misc/Unsafe": instance fn freeMemory0(address: long) -> void => sn::unsafe_::free_memory0;
 
     "jdk/internal/misc/VM": static fn initialize() -> void => sn::vm::initialize; // todo: implement me
+    "jdk/internal/misc/VM": static fn getNanoTimeAdjustment(offset_in_seconds: long) -> long => sn::vm::get_nano_time_adjustment;
 
     "jdk/internal/perf/Perf": static fn registerNatives() -> void => sn::perf::register_natives; // todo: implement me
     "jdk/internal/perf/Perf": instance fn createLong(name: string, var: int, units: int, value: long) -> byte_buffer => sn::perf::create_long;

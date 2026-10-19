@@ -420,6 +420,16 @@ fn should_support_native_call_on_system_current_time() {
 }
 
 #[test]
+fn should_read_wall_clock_through_java_time() {
+    assert_success(
+        "samples.nativecall.system.wallclock.WallClockExample",
+        r#"Instant.now() agrees with currentTimeMillis: true
+Clock.systemUTC() agrees with currentTimeMillis: true
+"#,
+    );
+}
+
+#[test]
 fn should_support_operations_with_floats() {
     assert_success(
         "samples.arithmetics.operations.floats.FloatOperations",
