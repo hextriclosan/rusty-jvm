@@ -1,3 +1,4 @@
+mod assertions;
 mod commons;
 mod error;
 mod exception;
@@ -16,6 +17,7 @@ mod system_native;
 mod threads;
 mod validation;
 
+use crate::vm::assertions::init_java_assertions;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
@@ -60,6 +62,8 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     resolve_classpath(arguments)?;
 
     init_system_properties(arguments.system_properties().clone())?;
+
+    init_java_assertions(arguments.java_standard_options())?;
 
     init_perf_file(arguments)?;
 
