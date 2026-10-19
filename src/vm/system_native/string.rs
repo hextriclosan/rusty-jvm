@@ -24,8 +24,9 @@ pub(crate) fn get_utf8_string_by_ref(string_ref: i32) -> Result<String> {
     let (is_latin, array_ref) = get_raw_string_info(string_ref)?;
 
     let result = if is_latin {
-        let data = { HEAP.get_entire_raw_data(array_ref)?.to_vec() };
-        String::from_utf8(data)?
+        // Each Latin-1 byte is the code point of its character
+        let guard = HEAP.get_entire_raw_data(array_ref)?;
+        guard.iter().map(|&byte| char::from(byte)).collect()
     } else {
         let guard = HEAP.get_entire_raw_data(array_ref)?;
         if guard.len() % 2 != 0 {

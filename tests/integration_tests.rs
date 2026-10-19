@@ -1115,6 +1115,10 @@ fn should_list_directory_entries() {
     let missing = temp.path().join("missing");
     let regular_file = temp.path().join("file.txt");
     std::fs::write(&regular_file, b"f").unwrap();
+    // Stored as a compact Latin-1 Java string, which isn't valid UTF-8
+    let latin1 = temp.path().join("caf\u{e9}");
+    std::fs::create_dir(&latin1).unwrap();
+    std::fs::write(latin1.join("entry.txt"), b"e").unwrap();
 
     utils::assert_success_with_args(
         "samples.io.listdirectory.ListDirectory",
@@ -1123,8 +1127,9 @@ fn should_list_directory_entries() {
             empty.to_str().unwrap(),
             missing.to_str().unwrap(),
             regular_file.to_str().unwrap(),
+            latin1.to_str().unwrap(),
         ],
-        "[alpha.txt, nested, zeta.txt]\n[]\nnull\nnull\n",
+        "[alpha.txt, nested, zeta.txt]\n[]\nnull\nnull\n[entry.txt]\n",
     );
 }
 
