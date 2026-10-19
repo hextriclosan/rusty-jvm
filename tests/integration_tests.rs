@@ -1105,17 +1105,47 @@ fn should_write_file_to_fs() {
 #[test]
 fn should_list_directory_entries() {
     let temp = tempfile::TempDir::new().unwrap();
-    std::fs::write(temp.path().join("zeta.txt"), b"z").unwrap();
-    std::fs::write(temp.path().join("alpha.txt"), b"a").unwrap();
-    std::fs::create_dir(temp.path().join("nested")).unwrap();
+    let populated = temp.path().join("populated");
+    std::fs::create_dir(&populated).unwrap();
+    std::fs::write(populated.join("zeta.txt"), b"z").unwrap();
+    std::fs::write(populated.join("alpha.txt"), b"a").unwrap();
+    std::fs::create_dir(populated.join("nested")).unwrap();
+    let empty = temp.path().join("empty");
+    std::fs::create_dir(&empty).unwrap();
+    let missing = temp.path().join("missing");
+    let regular_file = temp.path().join("file.txt");
+    std::fs::write(&regular_file, b"f").unwrap();
+
     utils::assert_success_with_args(
         "samples.io.listdirectory.ListDirectory",
-        &[temp.path().to_str().unwrap()],
-        "[alpha.txt, nested, zeta.txt]\n",
+        &[
+            populated.to_str().unwrap(),
+            empty.to_str().unwrap(),
+            missing.to_str().unwrap(),
+            regular_file.to_str().unwrap(),
+        ],
+        "[alpha.txt, nested, zeta.txt]\n[]\nnull\nnull\n",
     );
 }
 
-#[test]  
+#[test]
+#[cfg(target_os = "linux")] // macOS and Windows file systems reject names that aren't valid Unicode
+fn should_list_directory_entries_with_non_utf8_names() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::write(temp.path().join(OsStr::from_bytes(b"bad-\xff.txt")), b"b").unwrap();
+    std::fs::write(temp.path().join("good.txt"), b"g").unwrap();
+
+    utils::assert_success_with_args(
+        "samples.io.listdirectory.ListDirectory",
+        &[temp.path().to_str().unwrap()],
+        "[bad-\\uFFFD.txt, good.txt]\n",
+    );
+}
+
+#[test]
 fn should_read_and_write_single_random_access_file_byte() {
     let (file_path, _guard) = tmp_file("single-byte.bin");
     utils::assert_success_with_args(

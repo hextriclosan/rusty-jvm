@@ -152,6 +152,11 @@ pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
     }
 }
 
+/// `java.io.WinNTFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;`
+/// `java.io.UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;`
+///
+/// Return null (0) if the directory cannot be read. Names that aren't valid Unicode are decoded
+/// with replacement characters instead of hiding the whole listing.
 pub(crate) fn list0(_this: i32, file_ref: i32) -> Result<i32> {
     let path_ref = extract_path(file_ref)?;
     let path = get_utf8_string_by_ref(path_ref)?;
@@ -166,10 +171,7 @@ pub(crate) fn list0(_this: i32, file_ref: i32) -> Result<i32> {
             Err(_) => return Ok(0),
         };
         let file_name = entry.file_name();
-        let Some(file_name) = file_name.to_str() else {
-            return Ok(0);
-        };
-        names.push(StringPoolHelper::get_string(file_name)?);
+        names.push(StringPoolHelper::get_string(&file_name.to_string_lossy())?);
     }
 
     Ok(HEAP.create_array_with_values("[Ljava/lang/String;", &names))
