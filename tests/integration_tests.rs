@@ -387,7 +387,7 @@ use itertools::Itertools;
 use regex::Regex;
 use rstest::rstest;
 use serde_json::Value;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
 #[test]
@@ -397,9 +397,10 @@ fn should_support_native_call_on_system_current_time() {
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
     let expected_millis = since_the_epoch.as_millis() as i64;
-    let expected_nanos = since_the_epoch.as_nanos() as i64;
 
+    let launch = Instant::now();
     let output = get_output("samples.nativecall.system.NativeCallSystemCurrentTimeMillis");
+    let run_nanos = launch.elapsed().as_nanos() as i64;
     let json: Value = serde_json::from_str(&output).expect("Output is not valid JSON");
 
     let actual_millis = json["currentTimeMillis"]
@@ -411,9 +412,11 @@ fn should_support_native_call_on_system_current_time() {
 
     let timeout_mins = 10;
     let timeout_millis = Duration::from_secs(timeout_mins * 60).as_millis() as i64;
-    let timeout_nanos = Duration::from_secs(timeout_mins * 60).as_nanos() as i64;
     assert!((expected_millis..expected_millis + timeout_millis).contains(&actual_millis));
-    assert!((expected_nanos..expected_nanos + timeout_nanos).contains(&actual_nanos));
+    // nanoTime counts from a fixed point the VM takes during this run
+    assert!((0..=run_nanos).contains(&actual_nanos));
+    assert_eq!(json["nanoTimeMonotonic"], true);
+    assert_eq!(json["nanoTimeMeasuresSleep"], true);
 }
 
 #[test]
