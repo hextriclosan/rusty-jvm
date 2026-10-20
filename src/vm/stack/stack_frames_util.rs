@@ -102,12 +102,14 @@ impl StackFramesUtil {
         if InstanceChecker::checkcast(class_name, METHOD_ACCESSOR_IMPL)? {
             return Ok(true);
         }
-        Ok(method.is_polymorphic_signature()
-            || (method.has_annotation(LAMBDA_FORM_COMPILED) && Self::is_privileged(class_name)?))
+        let method_handle_adapter =
+            method.is_polymorphic_signature() || method.has_annotation(LAMBDA_FORM_COMPILED);
+        Ok(method_handle_adapter && Self::is_privileged(class_name)?)
     }
 
     /// Whether `class_name` was defined by the bootstrap or platform class loader: HotSpot
-    /// ignores `@CallerSensitive` and `@LambdaForm.Compiled` on any other class.
+    /// ignores `@CallerSensitive`, `@PolymorphicSignature` and `@LambdaForm.Compiled` on any other
+    /// class.
     fn is_privileged(class_name: &str) -> Result<bool> {
         let mirror_ref = CLASSES.get(class_name)?.mirror_clazz_ref()?;
         let loader_ref =
