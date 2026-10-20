@@ -34,10 +34,6 @@ pub(crate) struct StackFrame {
     current_class_name: Arc<String>,
     line_numbers: Arc<BTreeMap<u16, u16>>,
     exception_table: Arc<ExceptionTable>,
-    /// `true` for the synthetic frame of a currently executing native method (see
-    /// [`StackFrame::new_native`]). Such frames carry no bytecode and are skipped by stack walks
-    /// that only care about interpreted frames (e.g. caller-class resolution).
-    is_native: bool,
 }
 
 #[derive(Debug, new)]
@@ -152,7 +148,6 @@ impl StackFrame {
             current_class_name,
             line_numbers,
             exception_table,
-            is_native: false,
         }
     }
 
@@ -198,12 +193,7 @@ impl StackFrame {
             current_class_name,
             line_numbers: Arc::new(BTreeMap::new()),
             exception_table: Arc::new(ExceptionTable::new(Vec::new())),
-            is_native: true,
         }
-    }
-
-    pub fn is_native(&self) -> bool {
-        self.is_native
     }
 
     pub fn pc(&self) -> usize {
@@ -509,7 +499,6 @@ mod tests {
             vec![Slot::Ref(3), Slot::Ref(8), Slot::Value(64)],
         );
 
-        assert!(frame.is_native());
         assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![3, 8]);
     }
 
