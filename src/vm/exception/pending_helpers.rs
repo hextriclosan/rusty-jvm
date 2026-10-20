@@ -33,6 +33,11 @@ pub(crate) fn set_pending_internal_error() -> Result<()> {
     set_pending_exception("java/lang/InternalError", "<init>:()V", &[])
 }
 
+/// Sets a pending `InternalError` with the given message.
+pub(crate) fn set_pending_internal_error_with_message(message: &str) -> Result<()> {
+    set_pending_exception_with_message("java/lang/InternalError", message)
+}
+
 /// Sets a pending `ArrayStoreException` with the given message.
 pub(crate) fn set_pending_array_store_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/ArrayStoreException", message)

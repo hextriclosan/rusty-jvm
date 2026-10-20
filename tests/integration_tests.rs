@@ -978,10 +978,33 @@ Testing GOTO_W
 
 #[test]
 fn should_get_caller_class() {
-    assert_success(
-        "samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample",
-        "1\n",
+    const ENTRY: &str =
+        "samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample";
+    const EXPECTED: &str = r#"direct: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+from another class: samples.jdkinternal.reflection.getcallerclass.Caller
+from a nested class: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample$Nested
+from a lambda: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+from a deeper frame of the same class: samples.jdkinternal.reflection.getcallerclass.Caller
+caller-sensitive method through reflection: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+its caller through reflection: samples.jdkinternal.reflection.getcallerclass.Caller
+caller-sensitive method through a method handle: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+its caller through a method handle: samples.jdkinternal.reflection.getcallerclass.Caller
+called from a method that is not caller-sensitive: java.lang.InternalError: CallerSensitive annotation expected at frame 1
+called from an annotated method outside the JDK: java.lang.InternalError: CallerSensitive annotation expected at frame 1
+"#;
+    assert_eq!(
+        utils::run_reference_jvm(
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.reflect=ALL-UNNAMED"
+            ],
+            ENTRY
+        )
+        .stdout,
+        EXPECTED,
+        "the reference JVM disagrees with the expectation"
     );
+    assert_success(ENTRY, EXPECTED);
 }
 
 #[test]
