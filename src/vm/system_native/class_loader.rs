@@ -1,4 +1,7 @@
+use crate::vm::assertions::{java_assertions, AssertionOption};
 use crate::vm::error::Result;
+use crate::vm::execution_engine::static_init::StaticInit;
+use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, vec_to_i64};
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -13,6 +16,57 @@ static COUNTER: AtomicU32 = AtomicU32::new(1);
 /// `java/lang/ClassLoader:registerNatives:()V`
 pub(crate) fn register_natives() -> Result<()> {
     Ok(()) // todo: implement me
+}
+
+const ASSERTION_STATUS_DIRECTIVES: &str = "java/lang/AssertionStatusDirectives";
+
+/// `java/lang/ClassLoader:retrieveDirectives:()Ljava/lang/AssertionStatusDirectives;`
+///
+/// The `-ea`/`-da` options, which a class loader takes over once a program changes its assertion
+/// status (e.g. `ClassLoader.setPackageAssertionStatus`). As in HotSpot, the options keep their
+/// command-line order, so later ones override earlier ones, and names use dots.
+pub(crate) fn retrieve_directives() -> Result<i32> {
+    StaticInit::initialize(ASSERTION_STATUS_DIRECTIVES)?;
+    let directives = with_method_area(|method_area| {
+        method_area.create_instance_with_default_fields(ASSERTION_STATUS_DIRECTIVES)
+    })?;
+    let directives_ref = HEAP.create_instance(directives);
+
+    let assertions = java_assertions();
+    let (packages, package_enabled) = to_java_arrays(assertions.packages())?;
+    let (classes, class_enabled) = to_java_arrays(assertions.classes())?;
+    let fields = [
+        ("packages", packages),
+        ("packageEnabled", package_enabled),
+        ("classes", classes),
+        ("classEnabled", class_enabled),
+        ("deflt", assertions.user_default() as i32),
+    ];
+    for (name, value) in fields {
+        HEAP.set_object_field_value(
+            directives_ref,
+            ASSERTION_STATUS_DIRECTIVES,
+            name,
+            vec![value],
+        )?;
+    }
+    Ok(directives_ref)
+}
+
+/// The parallel `String[]` names and `boolean[]` statuses of `options`.
+fn to_java_arrays(options: &[AssertionOption]) -> Result<(i32, i32)> {
+    let names = options
+        .iter()
+        .map(|option| StringPoolHelper::get_string(&option.name.replace('/', ".")))
+        .collect::<Result<Vec<_>>>()?;
+    let enabled = options
+        .iter()
+        .map(|option| option.enabled as i32)
+        .collect::<Vec<_>>();
+    Ok((
+        HEAP.create_array_with_values("[Ljava/lang/String;", &names),
+        HEAP.create_array_with_values("[Z", &enabled),
+    ))
 }
 
 /// `java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;`

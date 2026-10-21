@@ -80,6 +80,28 @@ pub(crate) fn lookup_for_field_descriptor(
     }
 }
 
+pub(crate) fn lookup_for_instance_field(
+    class_name: &str,
+    field_name: &str,
+    descriptor: &TypeDescriptor,
+) -> Result<Option<String>> {
+    let klass = CLASSES.get(class_name)?;
+
+    if klass
+        .instance_field_descriptor(field_name)
+        .is_some_and(|field_descriptor| field_descriptor == descriptor)
+    {
+        return Ok(Some(class_name.to_string()));
+    }
+
+    match klass.parent() {
+        Some(parent_class_name) => {
+            lookup_for_instance_field(parent_class_name, field_name, descriptor)
+        }
+        None => Ok(None),
+    }
+}
+
 /// Populates `instance_fields_hierarchy` with the ordered per-class field maps by
 /// walking up the class hierarchy from the root down to `class_name`.
 pub(crate) fn lookup_and_fill_instance_fields_hierarchy(

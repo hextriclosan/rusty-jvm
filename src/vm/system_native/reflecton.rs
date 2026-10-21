@@ -1,11 +1,18 @@
 use crate::vm::error::Result;
+use crate::vm::exception::pending_helpers::set_pending_internal_error_with_message;
 use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
-use crate::vm::stack::stack_frames_util::StackFramesUtil;
+use crate::vm::stack::stack_frames_util::{CallerClass, StackFramesUtil};
 
 /// `jdk.internal.reflect.Reflection.getCallerClass()Ljava/lang/Class;`
 pub(crate) fn get_caller_class() -> Result<i32> {
-    let caller_name = StackFramesUtil::get_caller_class_name()?;
-    clazz_ref(&caller_name)
+    match StackFramesUtil::get_caller_class_name()? {
+        CallerClass::Found(caller_name) => clazz_ref(&caller_name),
+        CallerClass::NotFound => Ok(0),
+        CallerClass::Misuse(message) => {
+            set_pending_internal_error_with_message(&message)?;
+            Ok(0)
+        }
+    }
 }
 
 /// `jdk.internal.reflect.Reflection.getClassAccessFlags(Ljava/lang/Class;)I`

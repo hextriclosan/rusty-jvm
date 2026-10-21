@@ -136,6 +136,9 @@ declaring your own dependency on it.
 | `Attribute::EnclosingMethod` | `EnclosingMethodInfo` | Two indexes become an enclosing class name plus an `Option` method name and descriptor, since JVMS §4.7.7 allows `method_index` to be zero |
 | `Attribute::Exceptions` | `MethodModel::exceptions` | `exception_index_table: Vec<u16>` becomes `Vec<String>` of thrown class names, in declaration order |
 | `Attribute::SourceFile` | `ClassModel::source_file` | Index becomes `Option<String>` |
+| `Attribute::NestHost` | `Attributes::get_nest_host` | Host class index becomes `Option<String>`; `None` means the class hosts its own nest |
+| `Attribute::NestMembers` | `Attributes::get_nest_members` | `classes: Vec<u16>` becomes `Option<Vec<String>>` of member class names |
+| `Attribute::PermittedSubclasses` | `Attributes::get_permitted_subclasses` | `classes: Vec<u16>` becomes `Option<Vec<String>>`; `None` (not sealed) is kept apart from an empty list |
 | `Attribute::RuntimeVisibleAnnotations` | `runtime_visible_annotations: HashSet<String>` | Annotation type indexes become type names; the raw bytes stay available as `annotations_raw` for reflection |
 | `ClassFlags` | `ClassModifier` | Same bits, owned by this crate so `jclassfile` stays private |
 | `MethodFlags` | `MethodModifier` | Same bits, plus `MethodModel::is_polymorphic_signature()` for the `MethodHandle` case |
@@ -155,9 +158,7 @@ Needed by a JVM eventually, roughly in that order:
 | Attribute | What it unblocks |
 | --- | --- |
 | `ConstantValue` | Static final initializers. JVMS §5.4.2 has the JVM set these during preparation and javac emits no `<clinit>` store for them, so today they are visible only because javac inlines compile-time constants at their use sites; a reflective field read would see the default value |
-| `NestHost`, `NestMembers` | Nestmate access control for private members (Java 11+) |
 | `Record` | Reflection over record components |
-| `PermittedSubclasses` | Sealed class checks |
 | `Signature` | Generic type information for reflection |
 
 Deliberately out of scope for now: `StackMapTable`. It exists for the bytecode verifier, so it is
