@@ -12,6 +12,16 @@ use std::os::fd::{AsFd, FromRawFd, IntoRawFd};
 pub struct PlatformFile {}
 
 impl PlatformFile {
+    pub fn sync(file_descriptor_ref: i32) -> Result<()> {
+        let raw_fd = get_handle(file_descriptor_ref)?;
+        if raw_fd == -1 {
+            return Err(Error::new_native("Stream Closed"));
+        }
+        let file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) });
+        file.sync_all()?;
+        Ok(())
+    }
+
     pub fn close(file_descriptor_ref: i32) -> Result<()> {
         let raw_fd = get_handle(file_descriptor_ref)?;
 

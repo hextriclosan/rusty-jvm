@@ -1164,6 +1164,17 @@ fn should_write_file_to_fs() {
 }
 
 #[test]
+fn should_sync_file_descriptor() {
+    let (file_path, _guard) = tmp_file("synced.txt");
+    utils::assert_success_with_args(
+        "samples.io.filedescriptorsync.FileDescriptorSync",
+        &[&file_path],
+        "completed\nSyncFailedException\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"synced");
+}
+
+#[test]
 fn should_list_directory_entries() {
     let temp = tempfile::TempDir::new().unwrap();
     let populated = temp.path().join("populated");
