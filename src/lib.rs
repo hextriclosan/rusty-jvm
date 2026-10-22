@@ -6,7 +6,7 @@
 //! It currently supports a broad set of language features of Java 25 and newer, with garbage collection and multithreading planned for future releases.
 //!
 //! ## Features
-//! See the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.5.0/README.md#implemented-key-features) for the full list of implemented features.
+//! See the [README.md](https://github.com/hextriclosan/rusty-jvm/blob/rusty_jvm-v0.6.0/README.md#implemented-key-features) for the full list of implemented features.
 //!
 //! ## Usage
 //!

@@ -116,6 +116,13 @@ Ensure the following are set up:
 - **Rust** installed
 - **JDK 25 or newer** installed with the `JAVA_HOME` environment variable set
 
+### Installation
+
+Install the latest release from [crates.io][crate-link]:
+```sh
+cargo install rusty-jvm
+```
+
 ### Example Program: Count Fruits
 Create a file named `FruitCount.java` with the following content:
 ```java
@@ -145,8 +152,31 @@ public class FruitCount {
 
 2. Run it using rusty-jvm:
    ```sh
+   rusty-jvm FruitCount
+   ```
+   Or, from a clone of this repository:
+   ```sh
    cargo run -- FruitCount
    ```
+
+### Command-Line Options
+
+```
+rusty-jvm [options] <mainclass> [args...]
+rusty-jvm [options] -jar <jarfile> [args...]
+```
+
+| Option | Description |
+|---|---|
+| `-cp <path>`, `-classpath <path>` | Class search path of directories and JAR files |
+| `-jar <jarfile>` | Run the main class of a JAR file (from its manifest) |
+| `-D<name>=<value>` | Set a system property |
+| `-ea[:<package>...\|:<class>]`, `-enableassertions` | Enable assertions, optionally for a package or class only |
+| `-da[:<package>...\|:<class>]`, `-disableassertions` | Disable assertions, optionally for a package or class only |
+| `-esa`, `-enablesystemassertions` | Enable assertions in system classes |
+| `-dsa`, `-disablesystemassertions` | Disable assertions in system classes |
+| `-h`, `--help` | Show the help message |
+| `-V`, `--version` | Show version information |
 
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).
