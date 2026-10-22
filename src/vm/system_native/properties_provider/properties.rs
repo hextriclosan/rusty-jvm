@@ -6,6 +6,63 @@ use std::env;
 use std::string::ToString;
 use std::sync::LazyLock;
 
+struct LocaleParts {
+    language: String,
+    script: String,
+    country: String,
+    variant: String,
+}
+
+static LOCALE: LazyLock<LocaleParts> = LazyLock::new(|| {
+    let locale = sys_locale::get_locale().unwrap_or_else(|| "en-US".to_string());
+    let (base, suffix) = locale.split_once('@').unwrap_or((&locale, ""));
+    let base = base.split('.').next().unwrap_or(base).replace('_', "-");
+    let mut language = String::new();
+    let mut script = String::new();
+    let mut country = String::new();
+    let mut variants = Vec::new();
+    for (index, part) in base.split('-').filter(|part| !part.is_empty()).enumerate() {
+        if index == 0 {
+            language = part.to_ascii_lowercase();
+        } else if part.len() == 4 && script.is_empty() {
+            let mut chars = part.chars();
+            script = chars
+                .next()
+                .map(|first| first.to_ascii_uppercase().to_string() + chars.as_str())
+                .unwrap_or_default();
+        } else if matches!(part.len(), 2 | 3) && country.is_empty() {
+            country = part.to_ascii_uppercase();
+        } else {
+            variants.push(part.to_string());
+        }
+    }
+    if !suffix.is_empty() {
+        variants.push(suffix.to_string());
+    }
+    LocaleParts {
+        language,
+        script,
+        country,
+        variant: variants.join("_"),
+    }
+});
+
+pub(crate) fn locale_language() -> &'static str {
+    &LOCALE.language
+}
+
+pub(crate) fn locale_script() -> &'static str {
+    &LOCALE.script
+}
+
+pub(crate) fn locale_country() -> &'static str {
+    &LOCALE.country
+}
+
+pub(crate) fn locale_variant() -> &'static str {
+    &LOCALE.variant
+}
+
 pub(crate) fn is_bigendian() -> bool {
     #[cfg(target_endian = "big")]
     {
