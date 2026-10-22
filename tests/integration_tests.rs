@@ -3001,7 +3001,7 @@ Options:
 
 #[test]
 fn should_print_version_message() {
-    let expected_stdout = "rusty-jvm 0.5.0\n";
+    let expected_stdout = "rusty-jvm 0.6.0\n";
     utils::assert_with_all_args(
         &["--version"],
         "",
