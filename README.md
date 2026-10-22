@@ -171,8 +171,8 @@ rusty-jvm [options] -jar <jarfile> [args...]
 | `-cp <path>`, `-classpath <path>` | Class search path of directories and JAR files |
 | `-jar <jarfile>` | Run the main class of a JAR file (from its manifest) |
 | `-D<name>=<value>` | Set a system property |
-| `-ea[:<package>...\|:<class>]`, `-enableassertions` | Enable assertions, optionally for a package or class only |
-| `-da[:<package>...\|:<class>]`, `-disableassertions` | Disable assertions, optionally for a package or class only |
+| `-ea`, `-ea:<package>...`, `-ea:<class>`, `-enableassertions` | Enable assertions, optionally for a package or class only |
+| `-da`, `-da:<package>...`, `-da:<class>`, `-disableassertions` | Disable assertions, optionally for a package or class only |
 | `-esa`, `-enablesystemassertions` | Enable assertions in system classes |
 | `-dsa`, `-disablesystemassertions` | Disable assertions in system classes |
 | `-h`, `--help` | Show the help message |
