@@ -53,7 +53,7 @@ whoami = "2.1.2"
 cesu8 = "1.1.0"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef", "fileapi", "winnt", "minwinbase", "securitybaseapi", "processthreadsapi", "sysinfoapi", "winerror", "handleapi", "errhandlingapi", "ntdef"] }
+winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef", "fileapi", "winnt", "minwinbase", "securitybaseapi", "processthreadsapi", "sysinfoapi", "winerror", "handleapi", "errhandlingapi", "ntdef", "winnls"] }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31.1", features = ["fs", "uio"] }
