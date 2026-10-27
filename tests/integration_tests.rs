@@ -107,6 +107,19 @@ fn should_call_interface_default_method() {
 }
 
 #[test]
+fn should_not_resolve_instance_call_to_static_interface_method() {
+    assert_success(
+        "samples.inheritance.staticanddefaultmethodsamesignature.StaticAndDefaultMethodSameSignature",
+        r#"default WithDefault.describe
+default WithDefault.describe
+default WithDefault.describe
+static WithStatic.describe
+static Impl.describeStatically
+"#,
+    );
+}
+
+#[test]
 fn should_call_object_methods() {
     assert_success("samples.javacore.object.trivial.ObjectMethods", "1\n");
 }

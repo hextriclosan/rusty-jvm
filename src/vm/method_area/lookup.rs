@@ -8,11 +8,9 @@ use indexmap::{IndexMap, IndexSet};
 use jdescriptor::TypeDescriptor;
 use std::sync::Arc;
 
-/// Resolves a method for the given class by first consulting the per-class vtable
-/// cached in [`JavaClass`] and then falling back to a hierarchy/interface walk when
-/// needed. This helper is used for general method resolution, not only virtual
-/// dispatch; the fallback is also required for polymorphic-signature methods whose
-/// descriptor varies per call site.
+/// Resolves a method of either kind, preferring an instance method and falling back
+/// to a static one. Use [`lookup_instance_method`] or [`lookup_static_method`] when
+/// the kind of method is known from the call site.
 pub(crate) fn lookup_method(
     class_name: &str,
     full_method_signature: &str,
@@ -24,6 +22,10 @@ pub(crate) fn lookup_method(
     lookup_static_method(class_name, full_method_signature)
 }
 
+/// Resolves an instance method for the given class by first consulting the per-class
+/// vtable cached in [`JavaClass`] and then falling back to a hierarchy/interface walk
+/// when needed. Static methods are never returned. This helper is used for general
+/// instance method resolution, not only virtual dispatch.
 pub(crate) fn lookup_instance_method(
     class_name: &str,
     full_method_signature: &str,
@@ -35,12 +37,16 @@ pub(crate) fn lookup_instance_method(
         return Ok(Some(Arc::clone(method)));
     }
 
+    // Fall back for polymorphic signature methods whose descriptor varies per call site
     Ok(
         lookup_for_instance_implementation(class_name, full_method_signature)
             .or_else(|| lookup_for_implementation_interface(class_name, full_method_signature)),
     )
 }
 
+/// Resolves a static method by walking the class and its superclasses. Instance
+/// methods are never returned, and static methods of superinterfaces are not
+/// inherited, so interfaces are only searched when `class_name` is one itself.
 pub(crate) fn lookup_static_method(
     class_name: &str,
     full_method_signature: &str,
