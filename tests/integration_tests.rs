@@ -107,6 +107,19 @@ fn should_call_interface_default_method() {
 }
 
 #[test]
+fn should_not_resolve_instance_call_to_static_interface_method() {
+    assert_success(
+        "samples.inheritance.staticanddefaultmethodsamesignature.StaticAndDefaultMethodSameSignature",
+        r#"default WithDefault.describe
+default WithDefault.describe
+default WithDefault.describe
+static WithStatic.describe
+static Impl.describeStatically
+"#,
+    );
+}
+
+#[test]
 fn should_call_object_methods() {
     assert_success("samples.javacore.object.trivial.ObjectMethods", "1\n");
 }
@@ -4296,6 +4309,10 @@ Caught NoSuchFieldError: nonexistentStaticField
 Caught NoSuchMethodError: nonexistentMethod:()V
 === GetStaticMethodID: nonexistent method ===
 Caught NoSuchMethodError: nonexistentStaticMethod:()V
+=== GetMethodID: static method ===
+Caught NoSuchMethodError: lookupNonexistentStaticMethodId:()V
+=== GetStaticMethodID: instance method ===
+Caught NoSuchMethodError: lookupNonexistentMethodId:()V
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniNoSuchIdDemo in an unnamed module
