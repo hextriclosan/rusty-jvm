@@ -1,3 +1,4 @@
+use crate::vm::assertions::java_assertions;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::pending_helpers::set_pending_class_not_found_exception;
 use crate::vm::execution_engine::executor::Executor;
@@ -6,7 +7,8 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
 use crate::vm::method_area::instance_checker::InstanceChecker;
-use crate::vm::method_area::primitives_helper::PRIMITIVE_CODE_BY_TYPE;
+use crate::vm::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
+use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use jclassmodel::modifiers::ClassModifier;
 
@@ -42,8 +44,18 @@ fn map_primitive_class(primitive_type: &str) -> Result<&str> {
 }
 
 /// `java.lang.Class.desiredAssertionStatus0(Ljava/lang/Class)Z`
-pub(crate) fn desired_assertion_status0(_class_ref: i32) -> Result<bool> {
-    Ok(true) // setting all classes to have assertions enabled. todo: implement -ea and -da flags
+///
+/// Whether the `-ea`/`-da`/`-esa`/`-dsa` options enable assertions for the class, which counts as
+/// a system class when the bootstrap class loader loaded it. Never for primitive and array classes.
+pub(crate) fn desired_assertion_status0(class_ref: i32) -> Result<bool> {
+    let klass = klass(class_ref)?;
+    let name = klass.this_class_name();
+    if name.starts_with('[') || PRIMITIVE_TYPE_BY_CODE.contains_key(name.as_str()) {
+        return Ok(false);
+    }
+    let class_loader_ref =
+        HEAP.get_object_field_value(class_ref, "java/lang/Class", "classLoader")?[0];
+    Ok(java_assertions().enabled(name, class_loader_ref == 0))
 }
 
 /// `java.lang.Class.initClassName()Ljava/lang/String;`
@@ -61,12 +73,18 @@ pub(crate) fn init_class_name(class_ref: i32) -> Result<i32> {
 }
 
 /// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;`
-pub(crate) fn for_name0(
+/// (JDK 25)
+pub(crate) fn for_name0_with_caller(
     name_ref: i32,
     initialize: bool,
     loader_ref: i32,
     _caller_ref: i32,
 ) -> Result<i32> {
+    for_name0(name_ref, initialize, loader_ref)
+}
+
+/// `java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;` (JDK 26+)
+pub(crate) fn for_name0(name_ref: i32, initialize: bool, loader_ref: i32) -> Result<i32> {
     let name = get_utf8_string_by_ref(name_ref)?;
     let internal_name = name.replace('.', "/");
     let reflection_ref = if loader_ref == 0 {
@@ -127,6 +145,28 @@ pub(crate) fn get_interfaces0(class_ref: i32) -> Result<i32> {
 
     let result_ref = HEAP.create_array_with_values("[Ljava/lang/Class;", &interface_refs);
     Ok(result_ref)
+}
+
+/// `java.lang.Class.getPermittedSubclasses0()[Ljava/lang/Class;`
+pub(crate) fn get_permitted_subclasses0(class_ref: i32) -> Result<i32> {
+    let klass = klass(class_ref)?;
+    let Some(subclasses) = klass
+        .attributes()
+        .get_permitted_subclasses(klass.constant_pool())?
+    else {
+        // not sealed
+        return Ok(0);
+    };
+
+    // As in HotSpot, a permitted subclass that fails to load is left out rather than failing the
+    // call, and so is one that names an array class
+    let subclass_refs = subclasses
+        .iter()
+        .filter(|subclass| !subclass.starts_with('['))
+        .filter_map(|subclass| clazz_ref(subclass).ok())
+        .collect::<Vec<_>>();
+
+    Ok(HEAP.create_array_with_values("[Ljava/lang/Class;", &subclass_refs))
 }
 
 /// `java.lang.Class.getDeclaringClass0()Ljava/lang/Class;`
@@ -294,7 +334,7 @@ pub(crate) fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> R
 pub(crate) fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     const NAME: &str = "jdk/internal/reflect/ConstantPool";
     let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
-    HEAP.set_object_field_value(constant_pool_ref, NAME, "constantPoolOop", vec![clazz_ref])?;
+    HEAP.set_object_field_value(constant_pool_ref, NAME, CONSTANT_POOL_OOP, vec![clazz_ref])?;
 
     Ok(constant_pool_ref)
 }

@@ -40,7 +40,8 @@ impl Header {
     const SIZE: usize = 28;
     pub(crate) fn from_bytes(raw_header: &[u8]) -> Result<Self> {
         const SUPPORTED_MAJOR_VER: u16 = 1;
-        const SUPPORTED_MINOR_VER: u16 = 0;
+        // 1.0 up to JDK 26; 1.1 (JDK 27+) adds the per-location preview flags attribute.
+        const MAX_SUPPORTED_MINOR_VER: u16 = 1;
 
         let endianness = detect_endianness_header(raw_header)?;
 
@@ -48,7 +49,7 @@ impl Header {
         let version_pair: u32 = read_integer_mut(raw_header, &mut pos, &endianness)?;
         let major_version = (version_pair >> 16) as u16;
         let minor_version = (version_pair & 0xFFFF) as u16;
-        if major_version != SUPPORTED_MAJOR_VER || minor_version != SUPPORTED_MINOR_VER {
+        if major_version != SUPPORTED_MAJOR_VER || minor_version > MAX_SUPPORTED_MINOR_VER {
             return Err(JImageError::Version {
                 major_version,
                 minor_version,
@@ -188,6 +189,20 @@ mod tests {
     }
 
     #[test]
+    fn from_bytes_accepts_version_1_1() {
+        // jimage 1.1 (JDK 27+) keeps the 1.0 header layout
+        let bytes = build_header_bytes_be(1, 1, 0, 0, 4, 100, 200);
+        let h = Header::from_bytes(&bytes).unwrap();
+        assert_eq!(h.endianness(), &Endianness::Big);
+        assert_eq!(h.items_count(), 4);
+
+        let bytes = build_header_bytes_le(1, 1, 0, 0, 8, 50, 60);
+        let h = Header::from_bytes(&bytes).unwrap();
+        assert_eq!(h.endianness(), &Endianness::Little);
+        assert_eq!(h.items_count(), 8);
+    }
+
+    #[test]
     fn from_bytes_rejects_unsupported_version() {
         let bytes = build_header_bytes_be(2, 0, 0, 0, 0, 0, 0);
         assert!(matches!(
@@ -197,12 +212,12 @@ mod tests {
                 minor_version: 0
             })
         ));
-        let bytes = build_header_bytes_be(1, 1, 0, 0, 0, 0, 0);
+        let bytes = build_header_bytes_be(1, 2, 0, 0, 0, 0, 0);
         assert!(matches!(
             Header::from_bytes(&bytes),
             Err(JImageError::Version {
                 major_version: 1,
-                minor_version: 1
+                minor_version: 2
             })
         ));
     }
