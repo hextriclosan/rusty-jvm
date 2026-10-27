@@ -4257,6 +4257,10 @@ fn should_support_jni_is_instance_of() {
 string/char-sequence=true
 string/number=false
 int-array/object=true
+string-array/object-array=true
+string-array/char-sequence-array=true
+string-array/integer-array=false
+int-array/object-array=false
 null/number=true
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
