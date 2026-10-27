@@ -1944,6 +1944,12 @@ fn should_return_system_properties() {
 }
 
 #[test]
+fn should_match_host_jnu_encoding() {
+    // sun.jnu.encoding depends on the host's locale / code page
+    utils::assert_same_as_reference_jvm(&[], "samples.system.encoding.SunJnuEncoding", Success);
+}
+
+#[test]
 fn should_return_overridden_system_properties() {
     let args = [
         "-Dother.property=other_value",
