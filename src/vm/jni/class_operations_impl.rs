@@ -106,23 +106,7 @@ pub(super) extern "system" fn is_assignable_from(
 }
 
 pub(super) extern "system" fn get_module(_env: *mut JNIEnv, clazz: jclass) -> jobject {
-    let target = klass(clazz as i32).expect("Failed to get class from reference");
-    let module_owner = if let Ok(TypeDescriptor::Array(component, _)) =
-        target.this_class_name().parse::<TypeDescriptor>()
-    {
-        match component.as_ref() {
-            TypeDescriptor::Object(class_name) => {
-                clazz_ref(class_name).expect("Failed to get array component class")
-            }
-            _ => clazz_ref("java/lang/Object").expect("Failed to get Object class"),
-        }
-    } else if PRIMITIVE_TYPE_BY_CODE.contains_key(target.this_class_name().as_str()) {
-        clazz_ref("java/lang/Object").expect("Failed to get Object class")
-    } else {
-        clazz as i32
-    };
-
-    HEAP.get_object_field_value(module_owner, "java/lang/Class", "module")
+    HEAP.get_object_field_value(clazz as i32, "java/lang/Class", "module")
         .expect("Failed to get module from class")
         .first()
         .copied()

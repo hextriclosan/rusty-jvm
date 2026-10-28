@@ -10,13 +10,17 @@ public class JniGetModuleDemo {
     public static void main(String[] args) {
         printModule(String.class);
         printModule(int.class);
+        printModule(int[].class);
         printModule(String[].class);
+        printModule(String[][].class);
         printModule(JniGetModuleDemo[].class);
         printModule(JniGetModuleDemo.class);
     }
 
     private static void printModule(Class<?> target) {
-        Module module = getModule(target);
-        System.out.println(target.getName() + "=" + module.getName());
+        Module jniModule = getModule(target);
+        Module javaModule = target.getModule();
+        System.out.println(target.getName() + "=" + jniModule.getName()
+                + " sameAsJava=" + (jniModule == javaModule));
     }
 }

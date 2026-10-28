@@ -4253,11 +4253,13 @@ fn should_support_jni_get_module() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.classops.JniGetModuleDemo",
         &[],
-        r#"java.lang.String=java.base
-int=java.base
-[Ljava.lang.String;=java.base
-[Lsamples.javacore.loadlibrary.classops.JniGetModuleDemo;=null
-samples.javacore.loadlibrary.classops.JniGetModuleDemo=null
+        r#"java.lang.String=java.base sameAsJava=true
+int=java.base sameAsJava=true
+[I=java.base sameAsJava=true
+[Ljava.lang.String;=java.base sameAsJava=true
+[[Ljava.lang.String;=java.base sameAsJava=true
+[Lsamples.javacore.loadlibrary.classops.JniGetModuleDemo;=null sameAsJava=true
+samples.javacore.loadlibrary.classops.JniGetModuleDemo=null sameAsJava=true
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.classops.JniGetModuleDemo in an unnamed module
