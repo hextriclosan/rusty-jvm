@@ -1,6 +1,8 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
-use crate::vm::jni::utils::set_pending_null_pointer_exception;
+use crate::vm::jni::utils::{
+    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
+};
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
@@ -31,7 +33,8 @@ pub(super) extern "system" fn new_object_array(
     }
 
     if len < 0 {
-        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return std::ptr::null_mut();
     }
 
     if HEAP
@@ -134,7 +137,8 @@ pub(super) extern "system" fn new_double_array(_env: *mut JNIEnv, len: jsize) ->
 
 fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
     if len < 0 {
-        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return std::ptr::null_mut();
     }
 
     HEAP.create_array(type_name, len) as jarray
