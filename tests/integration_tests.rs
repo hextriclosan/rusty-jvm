@@ -4525,7 +4525,10 @@ fn should_support_jni_primitive_array_critical() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.arrayops.JniPrimitiveArrayCriticalDemo",
         &[],
-        "is copy=true\n[40, 20, 60]\n",
+        r#"is copy=true
+[40, 20, 60]
+[100, 2, 3]
+"#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.arrayops.JniPrimitiveArrayCriticalDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module

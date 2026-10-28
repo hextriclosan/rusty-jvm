@@ -240,6 +240,8 @@ pub(super) extern "system" fn get_primitive_array_critical(
     array: jarray,
     is_copy: *mut jboolean,
 ) -> *mut c_void {
+    // No GC yet, so this is equivalent to Get<PrimitiveType>ArrayElements
+    // TODO(GC): Pin object and disable GC here
     get_primitive_type_array_elements::<u8>(array as i32, is_copy).cast()
 }
 
@@ -249,6 +251,7 @@ pub(super) extern "system" fn release_primitive_array_critical(
     elements: *mut c_void,
     mode: jint,
 ) {
+    // TODO(GC): Unpin object and re-enable GC here
     let array_ref = array as i32;
     let len = HEAP
         .get_entire_raw_data(array_ref)
