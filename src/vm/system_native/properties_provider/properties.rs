@@ -3,6 +3,8 @@ use crate::vm::JAVA_HOME;
 use os_info::Type;
 use os_info::Version::Semantic;
 use std::env;
+#[cfg(all(unix, not(target_os = "macos")))]
+use std::ffi::CStr;
 use std::string::ToString;
 use std::sync::LazyLock;
 
@@ -59,6 +61,84 @@ pub(crate) fn file_separator() -> &'static str {
     {
         "/"
     }
+}
+
+#[cfg(windows)]
+fn windows_encoding(code_page: u32) -> String {
+    match code_page {
+        0 | 65001 => "UTF-8".to_string(),
+        950 if windows_has_hkscs() => "MS950_HKSCS_XP".to_string(),
+        936 if windows_has_gb18030() => "GB18030".to_string(),
+        874 | 932 | 936 | 949 | 950 | 1361 => format!("MS{code_page}"),
+        54936 => "GB18030".to_string(),
+        _ => format!("Cp{code_page}"),
+    }
+}
+
+/// Traditional Chinese Windows with the HKSCS patch maps MS950 0xFA41 to U+92DB instead of U+E001
+#[cfg(windows)]
+fn windows_has_hkscs() -> bool {
+    use winapi::um::stringapiset::MultiByteToWideChar;
+    use winapi::um::winnls::CP_ACP;
+
+    let mb_char = [0xFAu8 as i8, 0x41];
+    let mut unicode_char = 0u16;
+    let converted =
+        unsafe { MultiByteToWideChar(CP_ACP, 0, mb_char.as_ptr(), 2, &mut unicode_char, 1) };
+    converted != 0 && unicode_char == 0x92DB
+}
+
+/// Simplified Chinese Windows with the GB18030 patch has code page 54936 and the SimSun18030 font
+#[cfg(windows)]
+fn windows_has_gb18030() -> bool {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::OsStringExt;
+    use std::path::PathBuf;
+    use winapi::shared::minwindef::MAX_PATH;
+    use winapi::um::sysinfoapi::GetWindowsDirectoryW;
+    use winapi::um::winnls::IsValidCodePage;
+
+    if unsafe { IsValidCodePage(54936) } == 0 {
+        return false;
+    }
+    let mut buffer = [0u16; MAX_PATH + 1];
+    let len = unsafe { GetWindowsDirectoryW(buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
+    if len == 0 || len > buffer.len() {
+        return false;
+    }
+    PathBuf::from(OsString::from_wide(&buffer[..len]))
+        .join("Fonts")
+        .join("SimSun18030.ttc")
+        .is_file()
+}
+
+#[cfg(windows)]
+static SUN_JNU_ENCODING: LazyLock<String> =
+    LazyLock::new(|| windows_encoding(unsafe { winapi::um::winnls::GetACP() }));
+
+#[cfg(target_os = "macos")]
+static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| "UTF-8".to_string());
+
+#[cfg(all(unix, not(target_os = "macos")))]
+static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| unsafe {
+    // like OpenJDK, ignore a failed activation: the still-active locale (e.g. "C") gives the codeset
+    nix::libc::setlocale(nix::libc::LC_ALL, c"".as_ptr());
+
+    let encoding = nix::libc::nl_langinfo(nix::libc::CODESET);
+    if encoding.is_null() {
+        return "ISO8859-1".to_string();
+    }
+
+    match CStr::from_ptr(encoding).to_string_lossy().as_ref() {
+        "" => "ISO8859-1".to_string(),
+        "646" => "ISO646-US".to_string(),
+        "EUC-JP" => "EUC-JP-LINUX".to_string(),
+        encoding => encoding.to_string(),
+    }
+});
+
+pub(crate) fn sun_jnu_encoding() -> &'static str {
+    &SUN_JNU_ENCODING
 }
 
 static OS_VERSION: LazyLock<String> = LazyLock::new(|| {
@@ -160,4 +240,18 @@ static SUN_BOOT_LIBRARY_PATH: LazyLock<String> = LazyLock::new(|| {
 });
 pub(crate) fn sun_boot_library_path() -> &'static str {
     &SUN_BOOT_LIBRARY_PATH
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::windows_encoding;
+
+    #[test]
+    fn should_map_windows_code_pages_to_java_charset_names() {
+        assert_eq!(windows_encoding(0), "UTF-8");
+        assert_eq!(windows_encoding(65001), "UTF-8");
+        assert_eq!(windows_encoding(932), "MS932");
+        assert_eq!(windows_encoding(54936), "GB18030");
+        assert_eq!(windows_encoding(1251), "Cp1251");
+    }
 }

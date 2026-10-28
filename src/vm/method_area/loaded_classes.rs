@@ -34,6 +34,7 @@ struct ClassEntry {
 
 const OBJECT: &str = "java/lang/Object";
 const CLASS: &str = "java/lang/Class";
+const CLASS_FILE_ACCESS_FLAGS: &str = "classFileAccessFlags";
 
 impl LoadedClasses {
     /// Checks if class is already loaded
@@ -250,6 +251,18 @@ impl LoadedClasses {
         )?;
         let class_modifiers = klass.reflection_modifiers();
         class_instance.set_field_value(CLASS, "modifiers", vec![class_modifiers as i32])?;
+        // JDK 26+ keeps the raw class file access flags in the mirror instead of fetching them
+        // through the `Reflection.getClassAccessFlags` native.
+        if class_klass
+            .instance_field_descriptor(CLASS_FILE_ACCESS_FLAGS)
+            .is_some()
+        {
+            class_instance.set_field_value(
+                CLASS,
+                CLASS_FILE_ACCESS_FLAGS,
+                vec![klass.class_modifiers().bits() as i32],
+            )?;
+        }
 
         class_instance.set_field_value(
             CLASS,

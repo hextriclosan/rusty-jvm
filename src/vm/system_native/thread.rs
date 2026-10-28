@@ -34,6 +34,27 @@ pub(crate) fn current_carrier_thread() -> Result<i32> {
     current_thread() //todo: use current carrier thread here (no matter what it is)
 }
 
+/// `java/lang/Thread.scopedValueCache()[Ljava/lang/Object;`
+pub(crate) fn scoped_value_cache() -> Result<i32> {
+    Ok(JavaThread::scoped_value_cache())
+}
+
+/// `java/lang/Thread.setScopedValueCache([Ljava/lang/Object;)V`
+pub(crate) fn set_scoped_value_cache(cache_ref: i32) -> Result<()> {
+    JavaThread::set_scoped_value_cache(cache_ref);
+    Ok(())
+}
+
+/// `java/lang/Thread.findScopedValueBindings()Ljava/lang/Object;`
+///
+/// HotSpot recovers the bindings from the `bindings` local of the innermost `Thread.runWith` frame
+/// on the stack. That is only needed when the thread's `scopedValueBindings` field has been reset,
+/// which this VM never does: `runWith` keeps the field current, so there is nothing to recover and
+/// null ("no bindings") is the answer.
+pub(crate) fn find_scoped_value_bindings() -> Result<i32> {
+    Ok(0)
+}
+
 /// `java/lang/Thread.holdsLock(Ljava/lang/Object;)Z`
 pub(crate) fn holds_lock(object_ref: i32) -> Result<bool> {
     if object_ref == 0 {
@@ -100,7 +121,8 @@ pub(crate) fn interrupt0(this: i32) -> Result<()> {
     Ok(())
 }
 
-/// `java/lang/Thread.getStackTrace0()Ljava/lang/Object;`
+/// `java/lang/Thread.getStackTrace0()Ljava/lang/Object;` (JDK 25-26) and
+/// `java/lang/Thread.getStackTrace0()[Ljava/lang/StackTraceElement;` (JDK 27+)
 ///
 /// Returns this thread's stack as a `StackTraceElement[]` (or null → the caller reports an empty
 /// trace). For another thread, the stack is snapshotted by driving it to a [`safepoint`]; a thread
@@ -225,11 +247,12 @@ fn run_thread(this: i32) {
 /// overrides) and invokes it.
 fn invoke_run(this: i32) -> Result<Vec<i32>> {
     let actual_class = HEAP.get_instance_name(this)?;
-    let run_method = lookup::lookup_method(&actual_class, "run:()V")?.ok_or_else(|| {
-        Error::new_execution(&format!(
-            "run:()V not found for thread class {actual_class}"
-        ))
-    })?;
+    let run_method =
+        lookup::lookup_instance_method(&actual_class, "run:()V")?.ok_or_else(|| {
+            Error::new_execution(&format!(
+                "run:()V not found for thread class {actual_class}"
+            ))
+        })?;
     Executor::invoke_non_static_method(run_method.class_name(), "run:()V", this, &[])
 }
 

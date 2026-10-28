@@ -152,6 +152,31 @@ pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
     }
 }
 
+/// `java.io.WinNTFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;`
+/// `java.io.UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;`
+///
+/// Return null (0) if the directory cannot be read. Names that aren't valid Unicode are decoded
+/// with replacement characters instead of hiding the whole listing.
+pub(crate) fn list0(_this: i32, file_ref: i32) -> Result<i32> {
+    let path_ref = extract_path(file_ref)?;
+    let path = get_utf8_string_by_ref(path_ref)?;
+    let entries = match std::fs::read_dir(path) {
+        Ok(entries) => entries,
+        Err(_) => return Ok(0),
+    };
+    let mut names = Vec::new();
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => return Ok(0),
+        };
+        let file_name = entry.file_name();
+        names.push(StringPoolHelper::get_string(&file_name.to_string_lossy())?);
+    }
+
+    Ok(HEAP.create_array_with_values("[Ljava/lang/String;", &names))
+}
+
 /// Get the length of the file in bytes.
 ///
 /// Return 0 if metadata cannot be retrieved (e.g., file not found, permission denied, I/O error).

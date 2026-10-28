@@ -1,3 +1,19 @@
+# 0.6.0
+
+## What's Changed
+* Java Native Interface: loading shared libraries and a broad set of JNI functions (strings, arrays, fields, method calls, exceptions, class lookup)
+* Multithreading: proper main thread, monitors, `wait`/`notify`/`notifyAll`, thread interruption, `Thread.State`, safe-points
+* `-cp` and `-jar` options, `-ea`/`-da`/`-esa`/`-dsa` assertion options
+* Helpful NullPointerExceptions (JEP 358)
+* Support for JDK 26 and 27 core library classes (jimage format 1.1)
+* Extended `java.io`/`java.nio` support: `RandomAccessFile`, `File` directory listing, memory-mapped files, `FileChannel`
+* Reflection improvements: `Class.getPermittedSubclasses0`, HotSpot-compatible `Reflection.getCallerClass`, boxing of primitive results
+* Monotonic `System.nanoTime` and wall clock before 1970
+* Locales, `ClassLoader`, shutdown hooks
+* Switch to the `jclassmodel` crate
+* Fixes for big-endian platforms and Windows
+
+
 # 0.5.0
 
 ## What's Changed
