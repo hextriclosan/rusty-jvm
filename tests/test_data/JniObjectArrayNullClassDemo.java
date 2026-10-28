@@ -11,7 +11,7 @@ public class JniObjectArrayNullClassDemo {
         try {
             create(null);
         } catch (NullPointerException exception) {
-            System.out.println("null component caught");
+            System.out.println("null component caught: " + exception.getMessage());
         }
     }
 }

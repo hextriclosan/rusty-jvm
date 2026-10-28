@@ -1,5 +1,6 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
+use crate::vm::jni::utils::set_pending_null_pointer_exception;
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
@@ -25,7 +26,7 @@ pub(super) extern "system" fn new_object_array(
     let init_obj_ref = init as i32;
 
     if clazz_ref == 0 {
-        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        set_pending_null_pointer_exception("Element class is null");
         return std::ptr::null_mut();
     }
 
@@ -376,4 +377,3 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
-use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception;

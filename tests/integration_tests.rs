@@ -4419,7 +4419,7 @@ fn should_throw_for_null_jni_object_array_component() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.arrayops.JniObjectArrayNullClassDemo",
         &[],
-        "null component caught\n",
+        "null component caught: Element class is null\n",
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.arrayops.JniObjectArrayNullClassDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
