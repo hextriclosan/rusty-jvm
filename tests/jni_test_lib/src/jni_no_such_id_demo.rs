@@ -62,3 +62,34 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo
         );
     }
 }
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo_lookupStaticMethodAsInstance(
+    env: *mut JNIEnv,
+    obj: jobject,
+) {
+    unsafe {
+        let class = ((*(*env)).v24.GetObjectClass)(env, obj);
+        ((*(*env)).v24.GetMethodID)(
+            env,
+            class,
+            b"lookupNonexistentStaticMethodId\0".as_ptr() as *const c_char,
+            b"()V\0".as_ptr() as *const c_char,
+        );
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_example_JniNoSuchIdDemo_lookupInstanceMethodAsStatic(
+    env: *mut JNIEnv,
+    class: jclass,
+) {
+    unsafe {
+        ((*(*env)).v24.GetStaticMethodID)(
+            env,
+            class,
+            b"lookupNonexistentMethodId\0".as_ptr() as *const c_char,
+            b"()V\0".as_ptr() as *const c_char,
+        );
+    }
+}
