@@ -8,7 +8,7 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::lookup;
 use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
-use jni_sys::{jclass, jmethodID, jvalue};
+use jni_sys::{jclass, jmethodID, jsize, jvalue};
 use std::ffi::c_char;
 use std::ptr::null_mut;
 use std::sync::Arc;
@@ -100,6 +100,14 @@ pub(super) fn set_pending_no_class_def_found_error(message: &str) {
 
 pub(super) fn set_pending_class_format_error(message: &str) {
     set_pending_error("java/lang/ClassFormatError", message);
+}
+
+pub(super) fn set_pending_null_pointer_exception(message: &str) {
+    set_pending_error("java/lang/NullPointerException", message);
+}
+
+pub(super) fn set_pending_negative_array_size_exception(len: jsize) {
+    set_pending_error("java/lang/NegativeArraySizeException", &len.to_string());
 }
 
 pub(crate) fn set_pending_internal_error(message: &str) {

@@ -1,5 +1,8 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
+use crate::vm::jni::utils::{
+    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
+};
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
@@ -25,11 +28,13 @@ pub(super) extern "system" fn new_object_array(
     let init_obj_ref = init as i32;
 
     if clazz_ref == 0 {
-        panic!("Class reference is null"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("Element class is null");
+        return std::ptr::null_mut();
     }
 
     if len < 0 {
-        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return std::ptr::null_mut();
     }
 
     if HEAP
@@ -132,7 +137,8 @@ pub(super) extern "system" fn new_double_array(_env: *mut JNIEnv, len: jsize) ->
 
 fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
     if len < 0 {
-        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return std::ptr::null_mut();
     }
 
     HEAP.create_array(type_name, len) as jarray
