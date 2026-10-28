@@ -271,7 +271,7 @@ impl LoadedClasses {
         )?;
 
         let (module_ref, patch) = with_method_area(|a| {
-            let file_name = format!("{}.class", klass.this_class_name());
+            let file_name = format!("{}.class", Self::module_owner(klass.this_class_name()));
             if let Some(package) = a.modules_mapping().get(&file_name) {
                 let modules = a.modules();
                 let registry = modules.registry();
@@ -303,6 +303,22 @@ impl LoadedClasses {
         })?;
 
         klass.inject_mirror_clazz_ref(class_instance_id)
+    }
+
+    /// Returns the class whose module the given class belongs to: arrays belong to the module of
+    /// their innermost element class, primitives (and primitive arrays) belong to `java.base`.
+    fn module_owner(class_name: &str) -> &str {
+        let element_name = class_name.trim_start_matches('[');
+        let element_name = element_name
+            .strip_prefix('L')
+            .and_then(|name| name.strip_suffix(';'))
+            .unwrap_or(element_name);
+
+        if PRIMITIVE_TYPE_BY_CODE.contains_key(element_name) {
+            OBJECT
+        } else {
+            element_name
+        }
     }
 
     /// Pre-construction initialization

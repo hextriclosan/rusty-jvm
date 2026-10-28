@@ -1,6 +1,7 @@
 mod array_operations_demo;
 mod class_operations_demo;
 mod exception_demo;
+mod get_module_demo;
 mod inherited_fields_demo;
 mod instance_methods_demo;
 mod is_instance_of_demo;
