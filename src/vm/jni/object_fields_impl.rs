@@ -5,6 +5,8 @@ use crate::vm::helper::klass;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::set_pending_no_such_field_error;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::method_area::lookup;
+use jdescriptor::TypeDescriptor;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jobject, jshort,
     JNIEnv,
@@ -16,18 +18,35 @@ pub(super) extern "system" fn get_field_id(
     _env: *mut JNIEnv,
     clazz: jclass,
     name_mutf8: *const c_char,
-    _sig_mutf8: *const c_char,
+    sig_mutf8: *const c_char,
 ) -> jfieldID {
     let field_name =
         from_mutf8_ptr!(name_mutf8).expect("Failed to convert field name from CESU-8");
+    let field_signature =
+        from_mutf8_ptr!(sig_mutf8).expect("Failed to convert field signature from CESU-8");
     let klass = klass(clazz as i32).expect("Failed to get class from reference");
-    let class_name = klass.this_class_name();
     StaticInit::initialize_java_class(&klass)
         .expect("Failed to initialize class before getting field ID");
-    // TODO: get_field_offset returns a 0-based index, so the first field encodes to 0, which is
-    // indistinguishable from the null jfieldID used to signal failure (JNI spec: null == failure).
-    match klass.get_field_offset(&format!("{class_name}.{field_name}")) {
-        Ok(offset) => offset as jfieldID,
+
+    let descriptor = match field_signature.parse::<TypeDescriptor>() {
+        Ok(descriptor) => descriptor,
+        Err(_) => {
+            set_pending_no_such_field_error(&field_name);
+            return null_mut();
+        }
+    };
+    let declaring_class_name =
+        match lookup::lookup_for_instance_field(klass.this_class_name(), &field_name, &descriptor)
+        {
+            Ok(Some(class_name)) => class_name,
+            Ok(None) | Err(_) => {
+                set_pending_no_such_field_error(&field_name);
+                return null_mut();
+            }
+        };
+
+    match klass.get_field_offset(&format!("{declaring_class_name}.{field_name}")) {
+        Ok(offset) => encode_field_id(offset),
         Err(_) => {
             set_pending_no_such_field_error(&field_name);
             null_mut()
@@ -67,7 +86,7 @@ pub(super) extern "system" fn get_field<T: JNIValue>(
         .get(&instance_name)
         .expect("Failed to get class from instance name");
     let (class_name, field_name) = klass
-        .get_field_name_by_offset(field_id as i64)
+        .get_field_name_by_offset(decode_field_id(field_id))
         .expect("Failed to get field name by offset");
     let raw = HEAP
         .get_object_field_value(obj as i32, &class_name, &field_name)
@@ -110,11 +129,19 @@ pub(super) extern "system" fn set_field<T: JNIValue>(
         .get(&instance_name)
         .expect("Failed to get class from instance name");
     let (class_name, field_name) = klass
-        .get_field_name_by_offset(field_id as i64)
+        .get_field_name_by_offset(decode_field_id(field_id))
         .expect("Failed to get field name by offset");
 
     let raw_value = value.to_vec();
 
     HEAP.set_object_field_value(obj as i32, &class_name, &field_name, raw_value)
         .expect("Failed to set object field value");
+}
+
+fn encode_field_id(offset: i64) -> jfieldID {
+    (offset + 1) as usize as jfieldID
+}
+
+fn decode_field_id(field_id: jfieldID) -> i64 {
+    field_id as usize as i64 - 1
 }

@@ -24,6 +24,8 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rustc-env=JNI_TEST_LIB_PATH={}", path.display());
 
     println!("cargo:rerun-if-changed=tests/test_data");
+    // the test classes are compiled by, and must match, the JDK under `JAVA_HOME`
+    println!("cargo:rerun-if-env-changed=JAVA_HOME");
     let dest_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or(String::from("target")))
         .join("java_classes_for_tests");
     create_dir_all(&dest_dir)?;
@@ -65,8 +67,13 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         .stdout(Stdio::piped())
         .output()?;
     let version_str = String::from_utf8_lossy(&output.stdout);
-    if !version_str.contains("25") {
-        anyhow::bail!("javac version is not 25: {}", version_str.trim());
+    let major = javac_major_version(&version_str)
+        .with_context(|| format!("unable to parse javac version: {}", version_str.trim()))?;
+    if major < MIN_JAVA_VERSION {
+        anyhow::bail!(
+            "javac version {major} is not supported, {MIN_JAVA_VERSION} or newer is required: {}",
+            version_str.trim()
+        );
     }
     println!("javac version OK: {}", version_str.trim());
 
@@ -81,7 +88,9 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeGetLongUnalignedExample.java",
         "UnsafeUsage.java",
         "UnsafeObjectFieldOffset.java",
+        "UnsafeObjectFieldOffsetErrors.java",
         "UnsafePutReferenceVolatileExample.java",
+        "UnsafeZeroAllocation.java",
         "UserPerfCounterExample.java",
         "ClasspathDemo.java",
         "HelpfulNpeDebugInfo.java",
@@ -203,7 +212,23 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "java.base/jdk.internal.misc=ALL-UNNAMED",
                 "-d",
             ],
+            "UnsafeObjectFieldOffsetErrors.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
             "UnsafePutReferenceVolatileExample.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
+            "UnsafeZeroAllocation.java",
         ),
         (
             &[
@@ -227,6 +252,17 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+/// Minimal JDK feature release whose core library classes the VM supports.
+const MIN_JAVA_VERSION: u32 = 25;
+
+/// Extracts the feature release from `javac -version` output, e.g. `javac 25.0.2` -> 25,
+/// `javac 26-ea` -> 26.
+fn javac_major_version(version_str: &str) -> Option<u32> {
+    let version = version_str.split_whitespace().nth(1)?;
+    let major: String = version.chars().take_while(|c| c.is_ascii_digit()).collect();
+    major.parse().ok()
 }
 
 fn run(javac: &PathBuf, args: &[&str]) -> anyhow::Result<()> {

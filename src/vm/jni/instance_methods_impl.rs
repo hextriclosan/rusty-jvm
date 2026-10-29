@@ -3,7 +3,9 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::jni_invoke::jni_invoke;
 use crate::vm::jni::jni_value::JNIValue;
-use crate::vm::jni::utils::{decode_method_id, get_method_id_impl, transform_args_to_vec};
+use crate::vm::jni::utils::{
+    decode_method_id, get_instance_method_id_impl, transform_args_to_vec,
+};
 use crate::vm::method_area::lookup;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfloat, jint, jlong, jmethodID, jobject, jshort,
@@ -17,7 +19,7 @@ pub(super) extern "system" fn get_method_id(
     name: *const c_char,
     sig: *const c_char,
 ) -> jmethodID {
-    get_method_id_impl(clazz, name, sig)
+    get_instance_method_id_impl(clazz, name, sig)
 }
 
 macro_rules! call_method_a_impl {
@@ -65,7 +67,7 @@ fn call_method_a<T: JNIValue>(
     let instance_name = HEAP
         .get_instance_name(this_ref)
         .expect("Failed to get instance name from reference");
-    let implementation = lookup::lookup_method(&instance_name, &name_signature)
+    let implementation = lookup::lookup_instance_method(&instance_name, &name_signature)
         .unwrap_or_else(|e| {
             panic!("Failed to find implementation of {name_signature} for {instance_name}: {e}")
         })
