@@ -4598,7 +4598,17 @@ fn should_support_jni_direct_byte_buffers() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.nio.JniDirectBufferDemo",
         &[],
-        "direct=true\ncapacity=4\naddress nonzero=true\nvalues=12,34\n",
+        r#"direct=true
+capacity=4
+address nonzero=true
+values=12,34
+filled=7,7
+int view capacity=1
+heap address=0 capacity=-1
+string address=0 capacity=-1
+empty capacity=0
+negative capacity: JNI NewDirectByteBuffer passed capacity < 0: (-1)
+"#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.nio.JniDirectBufferDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
