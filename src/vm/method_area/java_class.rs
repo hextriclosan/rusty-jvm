@@ -338,6 +338,12 @@ impl JavaClass {
         &self,
         instance_field_name_type: &str,
     ) -> Option<&TypeDescriptor> {
+        if !self
+            .instance_fields_template
+            .contains_key(instance_field_name_type)
+        {
+            return None;
+        }
         let field_info = self.fields_info.get(instance_field_name_type)?;
 
         Some(field_info.type_descriptor())
@@ -369,15 +375,20 @@ impl JavaClass {
     }
 
     pub fn get_field_offset(&self, fully_qualified_field_name: &str) -> Result<i64> {
-        let offset = self
-            .fields_offset_mapping()?
-            .get_index_of(fully_qualified_field_name)
+        self.find_field_offset(fully_qualified_field_name)?
             .ok_or_else(|| {
                 Error::new_execution(&format!(
                     "Failed to get offset by name {fully_qualified_field_name}"
                 ))
-            })?;
-        Ok(offset as i64 * FIELD_OFFSET_SCALE)
+            })
+    }
+
+    /// Like [`Self::get_field_offset`], but yields `None` when there is no such instance field.
+    pub fn find_field_offset(&self, fully_qualified_field_name: &str) -> Result<Option<i64>> {
+        let offset = self
+            .fields_offset_mapping()?
+            .get_index_of(fully_qualified_field_name);
+        Ok(offset.map(|offset| offset as i64 * FIELD_OFFSET_SCALE))
     }
 
     pub fn get_static_field_offset(&self, field_name: &str) -> Result<i64> {

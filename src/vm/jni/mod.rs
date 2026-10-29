@@ -1,5 +1,6 @@
 mod array_operations_impl;
 mod class_operations_impl;
+mod direct_buffer_impl;
 mod exception_impl;
 mod global_and_local_references_impl;
 mod instance_methods_impl;
@@ -11,6 +12,7 @@ mod jni_value;
 mod monitor_impl;
 mod object_fields_impl;
 mod object_operations_impl;
+mod reflection_impl;
 mod static_fields_impl;
 mod static_methods_impl;
 mod string_operations_impl;

@@ -100,6 +100,30 @@ pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec
     }
 }
 
+/// Backs the signature-polymorphic `VarHandle.getOpaque`, e.g. `AtomicReferenceArray.getOpaque`,
+/// which `ZoneOffset.ofTotalSeconds` reads its cache with.
+pub(crate) fn var_handle_get_opaque(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec<i32>> {
+    let name = HEAP.get_instance_name(handle_ref)?;
+
+    let mut all_args = vec![handle_ref];
+    all_args.extend_from_slice(args_to_get);
+    let all_args = all_args
+        .into_iter()
+        .map(|a| a.into())
+        .collect::<Vec<StackValueKind>>();
+    if name == "java/lang/invoke/VarHandleReferences$Array" {
+        Executor::invoke_static_method(
+            &name,
+            "getOpaque:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;I)Ljava/lang/Object;",
+            &all_args,
+        )
+    } else {
+        Err(crate::vm::error::Error::new_execution(&format!(
+            "var_handle_get_opaque - Unsupported VarHandle type: {name}"
+        )))
+    }
+}
+
 pub(crate) fn var_handle_compare_and_set(
     handle_ref: i32,
     args_to_process: &[i32],
@@ -171,6 +195,13 @@ pub(crate) fn var_handle_compare_and_exchange(
         Executor::invoke_static_method(
             &name,
             "compareAndExchange:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;II)I",
+            &all_args,
+        )
+    } else if name == "java/lang/invoke/VarHandleReferences$Array" {
+        // e.g. `AtomicReferenceArray.compareAndExchange`, which fills `ZoneOffset`'s cache.
+        Executor::invoke_static_method(
+            &name,
+            "compareAndExchange:(Ljava/lang/invoke/VarHandle;Ljava/lang/Object;ILjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             &all_args,
         )
     } else {

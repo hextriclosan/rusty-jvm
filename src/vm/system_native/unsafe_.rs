@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::exception::pending_helpers::set_pending_internal_error;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{i64_to_vec, klass, vec_to_i64};
@@ -6,7 +7,8 @@ use crate::vm::method_area::java_class::InnerState::Initialized;
 use crate::vm::method_area::java_class::STATIC_FIELDS_START;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::object_offset::offset_utils::{
-    object_field_offset_by_names, object_field_offset_by_refs, static_field_offset_by_names,
+    declared_field_offset_by_refs, object_field_offset_by_names, static_field_offset_by_names,
+    DeclaredField,
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::threads;
@@ -84,9 +86,40 @@ pub(crate) fn object_field_offset0(_this: i32, field_ref: i32) -> Result<i64> {
     object_field_offset_by_names(klass.this_class_name(), &field_name)
 }
 
-/// `jdk.internal.misc.Unsafe.objectFieldOffset1(Ljava/lang/Class;Ljava/lang/String;)J`
+/// `jdk.internal.misc.Unsafe.objectFieldOffset1(Ljava/lang/Class;Ljava/lang/String;)J` (JDK 25)
+///
+/// Like HotSpot, takes any field the class declares under that name, static ones included, and
+/// raises an `InternalError` without a message when there is none.
 pub(crate) fn object_field_offset1(_this: i32, class_ref: i32, string_ref: i32) -> Result<i64> {
-    object_field_offset_by_refs(class_ref, string_ref)
+    match declared_field_offset_by_refs(class_ref, string_ref)? {
+        DeclaredField::Instance(offset) | DeclaredField::Static(offset) => Ok(offset),
+        DeclaredField::NotFound => {
+            set_pending_internal_error()?;
+            Ok(0)
+        }
+    }
+}
+
+/// `jdk.internal.misc.Unsafe.knownObjectFieldOffset0(Ljava/lang/Class;Ljava/lang/String;)J`
+/// (JDK 26+)
+///
+/// Replacement of `objectFieldOffset1`: reports a missing field as `-1` and a static one as `-2`
+/// instead of throwing, leaving the Java side to raise the error.
+pub(crate) fn known_object_field_offset0(
+    _this: i32,
+    class_ref: i32,
+    string_ref: i32,
+) -> Result<i64> {
+    const NOT_FOUND: i64 = -1;
+    const STATIC_FIELD: i64 = -2;
+
+    Ok(
+        match declared_field_offset_by_refs(class_ref, string_ref)? {
+            DeclaredField::Instance(offset) => offset,
+            DeclaredField::Static(_) => STATIC_FIELD,
+            DeclaredField::NotFound => NOT_FOUND,
+        },
+    )
 }
 
 /// `jdk.internal.misc.Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J`
@@ -578,6 +611,9 @@ pub(crate) fn should_be_initialized0(_this: i32, class_ref: i32) -> Result<bool>
 
 /// `jdk.internal.misc.Unsafe.allocateMemory0(J)J`
 pub(crate) fn allocate_memory0(_this: i32, bytes: i64) -> Result<i64> {
+    if bytes == 0 {
+        return Ok(0);
+    }
     let size = bytes as usize;
     let layout =
         Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory allocation"))?;

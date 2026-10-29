@@ -1,0 +1,24 @@
+use jni::sys::{jclass, jint, jobject, jstring, jvalue, JNIEnv};
+use std::ffi::c_char;
+
+/// Looks up `constructor_owner.<init>(int, String)` and passes that ID to `NewObjectA` with `target`.
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_objectops_JniNewObjectADemo_create(
+    env: *mut JNIEnv,
+    _class: jclass,
+    target: jclass,
+    constructor_owner: jclass,
+    number: jint,
+    text: jstring,
+) -> jobject {
+    let arguments = [jvalue { i: number }, jvalue { l: text }];
+    unsafe {
+        let constructor = ((*(*env)).v24.GetMethodID)(
+            env,
+            constructor_owner,
+            b"<init>\0".as_ptr().cast::<c_char>(),
+            b"(ILjava/lang/String;)V\0".as_ptr().cast::<c_char>(),
+        );
+        ((*(*env)).v24.NewObjectA)(env, target, constructor, arguments.as_ptr())
+    }
+}
