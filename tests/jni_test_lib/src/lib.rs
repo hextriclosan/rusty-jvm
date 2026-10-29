@@ -14,6 +14,7 @@ mod jni_no_such_id_demo;
 mod object_fields_demo;
 mod object_operations_demo;
 mod primitive_array_critical_demo;
+mod reflected_methods_demo;
 mod static_fields_demo;
 mod static_methods_demo;
 mod string_operations_demo;
