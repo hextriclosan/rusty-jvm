@@ -5,6 +5,7 @@ use crate::vm::heap::java_instance::Array;
 use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::stack::stack_value::{StackValue, StackValueKind};
+use jdescriptor::TypeDescriptor;
 use std::sync::Arc;
 
 /// `jdk.internal.reflect.DirectMethodHandleAccessor$NativeAccessor.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;`
@@ -12,36 +13,68 @@ pub(crate) fn invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> Result<i3
     let (method, args) = resolve_method_and_args(method_ref, args_ref)?;
 
     let ret = if obj_ref == 0 {
-        Executor::invoke_static_method(method.class_name(), method.name_signature(), &args)?[0]
+        Executor::invoke_static_method(method.class_name(), method.name_signature(), &args)?
     } else {
-        let ret = Executor::invoke_non_static_method(
+        Executor::invoke_non_static_method(
             method.class_name(),
             method.name_signature(),
             obj_ref,
             &args,
-        )?;
-        match ret.len() {
-            0 => 0,
-            1 => ret[0],
-            2 => {
-                return Err(Error::new_execution(&format!(
-                    "Method {}.{} returned multiple values, which is not supported (yet)",
-                    method.class_name(),
-                    method.name_signature()
-                )))
-            }
-            _ => {
-                return Err(Error::new_execution(&format!(
-                    "Method {}.{} returned unexpected number of values: {}",
-                    method.class_name(),
-                    method.name_signature(),
-                    ret.len()
-                )))
-            }
-        }
+        )?
     };
 
-    Ok(ret)
+    box_return_value(&method, &ret)
+}
+
+/// Turns the raw result slots of a reflective call into the `Object` that `Method.invoke` returns:
+/// the wrapper of a primitive, `null` for `void`, or the reference itself.
+fn box_return_value(method: &JavaMethod, ret: &[i32]) -> Result<i32> {
+    let (wrapper, value_of, value) = match method.get_method_descriptor().return_type() {
+        TypeDescriptor::Void => return Ok(0),
+        TypeDescriptor::Object(_) | TypeDescriptor::Array(..) => return Ok(ret[0]),
+        TypeDescriptor::Boolean => (
+            "java/lang/Boolean",
+            "valueOf:(Z)Ljava/lang/Boolean;",
+            StackValueKind::I32(ret[0]),
+        ),
+        TypeDescriptor::Byte => (
+            "java/lang/Byte",
+            "valueOf:(B)Ljava/lang/Byte;",
+            StackValueKind::I32(ret[0]),
+        ),
+        TypeDescriptor::Char => (
+            "java/lang/Character",
+            "valueOf:(C)Ljava/lang/Character;",
+            StackValueKind::I32(ret[0]),
+        ),
+        TypeDescriptor::Short => (
+            "java/lang/Short",
+            "valueOf:(S)Ljava/lang/Short;",
+            StackValueKind::I32(ret[0]),
+        ),
+        TypeDescriptor::Integer => (
+            "java/lang/Integer",
+            "valueOf:(I)Ljava/lang/Integer;",
+            StackValueKind::I32(ret[0]),
+        ),
+        TypeDescriptor::Float => (
+            "java/lang/Float",
+            "valueOf:(F)Ljava/lang/Float;",
+            StackValueKind::F32(f32::from_vec(ret)),
+        ),
+        TypeDescriptor::Long => (
+            "java/lang/Long",
+            "valueOf:(J)Ljava/lang/Long;",
+            StackValueKind::I64(i64::from_vec(ret)),
+        ),
+        TypeDescriptor::Double => (
+            "java/lang/Double",
+            "valueOf:(D)Ljava/lang/Double;",
+            StackValueKind::F64(f64::from_vec(ret)),
+        ),
+    };
+
+    Ok(Executor::invoke_static_method(wrapper, value_of, &[value])?[0])
 }
 
 /// `jdk.internal.reflect.DirectConstructorHandleAccessor$NativeAccessor.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;`

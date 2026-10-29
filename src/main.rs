@@ -50,7 +50,7 @@ fn handle_execution(arguments: Arguments) -> Result<(), String> {
     }
 
     let java_home = PathBuf::from(env::var("JAVA_HOME")
-        .map_err(|_| "The JAVA_HOME environment variable is not set.\nSet JAVA_HOME to an existing JDK 25 directory.".to_string())?);
+        .map_err(|_| "The JAVA_HOME environment variable is not set.\nSet JAVA_HOME to an existing JDK 25 (or newer) directory.".to_string())?);
     if !java_home.exists() {
         return Err(format!("JAVA_HOME path does not exist: {:?}", java_home));
     }

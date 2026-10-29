@@ -14,6 +14,7 @@ import jdk.tools.jlink.plugin.Plugin;
 import picocli.CommandLine;
 
 import java.nio.ByteOrder;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +41,12 @@ public class ImageCreator implements Callable<Integer> {
             description = "Enable compression")
     private boolean compress;
 
+    @CommandLine.Option(
+            names = "--module-dir",
+            defaultValue = "../../jimage-rs/tests/test_data/mods/java.base",
+            description = "Exploded java.base module to pack, e.g. mods_preview/java.base for preview resources")
+    private Path moduleDir;
+
     @Override
     public Integer call() throws Exception {
         ImageBuilder builder = new DefaultImageBuilder(
@@ -48,11 +55,12 @@ public class ImageCreator implements Callable<Integer> {
                 new Platform(OperatingSystem.WINDOWS, Architecture.X64));
 
         Set<Archive> archives = Set.of(
-                new DirArchive(Paths.get("../../jimage-rs/tests/test_data/mods/java.base"), "java.base"));
+                new DirArchive(moduleDir, "java.base"));
 
         var plugins = plugins(compress);
         ImagePluginStack imagePluginStack = new ImagePluginStack(builder, plugins, null);
-        ImageFileCreator.create(archives, endianness, imagePluginStack);
+        // no tracking of non-class resources, which only linking from a run-time image needs
+        ImageFileCreator.create(archives, endianness, imagePluginStack, false);
 
         System.out.println("JImage file created successfully with " + endianness + " byte order and compression " + (compress ? "enabled" : "disabled") + ".");
         return 0;
