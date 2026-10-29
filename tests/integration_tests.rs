@@ -4628,7 +4628,17 @@ fn should_round_trip_reflected_methods_through_jni_ids() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.reflection.JniReflectedMethodsDemo",
         &[],
-        "instance=true\nstatic=true\nconstructor=true\n",
+        r#"instance=true
+static=true
+constructor=true
+instance id=true
+static id=true
+constructor id=true
+inherited id=true
+invoke instance=1
+invoke overridden=3
+invoke static=2
+"#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.reflection.JniReflectedMethodsDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
