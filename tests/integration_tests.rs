@@ -4672,6 +4672,31 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_construct_objects_with_jni_new_object_a() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.objectops.JniNewObjectADemo",
+        &[],
+        r#"plain -> ConstructedSample 42:value
+super constructor -> DerivedSample 7:base extra=0
+throwing constructor -> java.lang.IllegalArgumentException: negative: -1
+abstract -> java.lang.InstantiationException: samples.javacore.loadlibrary.objectops.AbstractConstructedSample
+null -> java.lang.NullPointerException: Class is null
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniNewObjectADemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_support_thread_pool_executor() {
     assert_success(
         "samples.concurrency.advancedpooldemo.AdvancedPoolDemo",

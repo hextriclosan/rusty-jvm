@@ -44,7 +44,7 @@ use crate::vm::jni::object_fields_impl::{
 };
 use crate::vm::jni::object_operations_impl::{
     alloc_object, get_object_class, get_object_ref_type, is_instance_of, is_same_object,
-    is_virtual_thread,
+    is_virtual_thread, new_object_a,
 };
 use crate::vm::jni::reflection_impl::{from_reflected_method, to_reflected_method};
 use crate::vm::jni::static_fields_impl::{
@@ -70,7 +70,7 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
-    jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_,
+    jshort, jsize, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_,
     JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
@@ -170,7 +170,6 @@ jni_stub!(NewLocalRef(jobject) -> jobject);
 jni_stub!(EnsureLocalCapacity(jint) -> jint);
 jni_variadic_stub!(NewObject, NewObject_ptr, (jclass, jmethodID) -> jobject);
 jni_stub!(NewObjectV(jclass, jmethodID, va_list) -> jobject);
-jni_stub!(NewObjectA(jclass, jmethodID, *const jvalue) -> jobject);
 jni_variadic_stub!(CallObjectMethod, CallObjectMethod_ptr, (jobject, jmethodID) -> jobject);
 jni_stub!(CallObjectMethodV(jobject, jmethodID, va_list) -> jobject);
 jni_variadic_stub!(CallBooleanMethod, CallBooleanMethod_ptr, (jobject, jmethodID) -> jboolean);
@@ -274,7 +273,7 @@ static VTABLE: Wrapper = {
     ni.v24.AllocObject = alloc_object;
     ni.v24.NewObject = NewObject_ptr;
     ni.v24.NewObjectV = NewObjectV;
-    ni.v24.NewObjectA = NewObjectA;
+    ni.v24.NewObjectA = new_object_a;
     ni.v24.GetObjectClass = get_object_class;
     ni.v24.IsInstanceOf = is_instance_of;
     ni.v24.GetMethodID = get_method_id;

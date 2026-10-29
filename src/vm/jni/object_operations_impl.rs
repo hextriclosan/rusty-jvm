@@ -1,16 +1,18 @@
 use crate::vm::error::Result;
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::jni::utils::{
-    set_pending_illegal_access_exception, set_pending_instantiation_exception,
-    set_pending_internal_error, set_pending_null_pointer_exception,
+    decode_method_id, set_pending_illegal_access_exception, set_pending_instantiation_exception,
+    set_pending_internal_error, set_pending_null_pointer_exception, transform_args_to_vec,
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::class::class_is_instance;
 use jclassmodel::modifiers::ClassModifier;
-use jni_sys::{jboolean, jclass, jobject, jobjectRefType, JNIEnv};
+use jni_sys::{jboolean, jclass, jmethodID, jobject, jobjectRefType, jvalue, JNIEnv};
 use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
@@ -112,4 +114,43 @@ fn alloc_object_impl(clazz_ref: i32) -> Result<i32> {
         method_area.create_instance_with_default_fields(target.this_class_name())
     })?;
     Ok(HEAP.create_instance(instance))
+}
+
+/// Allocates like [`alloc_object`] and then runs the constructor `method_id` names on the new
+/// object, like HotSpot's `NewObjectA`.
+pub(super) extern "system" fn new_object_a(
+    env: *mut JNIEnv,
+    clazz: jclass,
+    method_id: jmethodID,
+    args: *const jvalue,
+) -> jobject {
+    let obj = alloc_object(env, clazz);
+    if obj.is_null() {
+        return null_mut();
+    }
+
+    let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
+    let constructor = match klass(declaring_class_ref)
+        .and_then(|class| class.get_method_by_index(method_index))
+    {
+        Ok(constructor) => constructor,
+        Err(error) => {
+            set_pending_internal_error(&format!("Failed to resolve constructor: {error}"));
+            return null_mut();
+        }
+    };
+    let arguments = transform_args_to_vec(&constructor, args);
+    let context = format!(
+        "{}.{}",
+        constructor.class_name(),
+        constructor.name_signature()
+    );
+    let result = Executor::invoke_non_static_method(
+        constructor.class_name(),
+        constructor.name_signature(),
+        obj as i32,
+        &arguments,
+    )
+    .map(|_| obj as i32);
+    jni_invoke_scalar(result, &context)
 }
