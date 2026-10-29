@@ -1,11 +1,13 @@
 use crate::from_mutf8_ptr;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::utils::{
-    set_pending_class_format_error, set_pending_internal_error,
+    set_pending_class_format_error, set_pending_internal_error, set_pending_linkage_error,
     set_pending_no_class_def_found_error,
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use jclassmodel::parse;
@@ -13,6 +15,7 @@ use jdescriptor::TypeDescriptor;
 use jni_sys::{jboolean, jbyte, jclass, jobject, jsize, JNIEnv};
 use std::ffi::{c_char, CStr};
 use std::ptr::null_mut;
+use tracing::warn;
 
 pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c_char) -> jclass {
     if name_mutf8.is_null() {
@@ -45,6 +48,8 @@ pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c
     }
 }
 
+/// Defines a class from raw classfile bytes, like HotSpot's `jni_DefineClass`: the class name is
+/// taken from the bytes, and a non-null `name_mutf8` must match it.
 pub(super) extern "system" fn define_class(
     _env: *mut JNIEnv,
     name_mutf8: *const c_char,
@@ -57,37 +62,56 @@ pub(super) extern "system" fn define_class(
         return null_mut();
     }
     let bytecode = unsafe { std::slice::from_raw_parts(buffer.cast::<u8>(), length as usize) };
-    let name = if name_mutf8.is_null() {
-        match parse(bytecode) {
-            Ok(parsed) => match parsed.this_class_name() {
-                Some(name) => name,
-                None => {
-                    set_pending_class_format_error("Class name is missing");
-                    return null_mut();
-                }
-            },
-            Err(error) => {
-                set_pending_class_format_error(&error.to_string());
-                return null_mut();
-            }
+    let class_name = match parse(bytecode).map(|parsed| parsed.this_class_name()) {
+        Ok(Some(class_name)) => class_name,
+        Ok(None) => {
+            set_pending_class_format_error("Class name is missing");
+            return null_mut();
         }
-    } else {
-        match from_mutf8_ptr!(name_mutf8) {
-            Ok(name) => name.to_string(),
-            Err(error) => {
-                set_pending_class_format_error(&error.to_string());
-                return null_mut();
-            }
+        Err(error) => {
+            set_pending_class_format_error(&error.to_string());
+            return null_mut();
         }
     };
+    if !name_mutf8.is_null() {
+        match from_mutf8_ptr!(name_mutf8) {
+            Ok(name) if name == class_name => {}
+            Ok(name) => {
+                set_pending_no_class_def_found_error(&format!(
+                    "{name} (wrong name: {class_name})"
+                ));
+                return null_mut();
+            }
+            Err(error) => {
+                set_pending_class_format_error(&error.to_string());
+                return null_mut();
+            }
+        }
+    }
+    // `create_metaclass` hands back an already loaded class as is, so reject redefinitions here.
+    if CLASSES.is_loaded(&class_name) {
+        set_pending_linkage_error(&format!(
+            "attempted duplicate class definition for {}",
+            class_name.replace('/', ".")
+        ));
+        return null_mut();
+    }
+
     let result = with_method_area(|method_area| {
-        method_area.create_metaclass(&name, bytecode, loader as i32)
+        method_area.create_metaclass(&class_name, bytecode, loader as i32)
     })
     .and_then(|(class_name, _)| clazz_ref(&class_name));
     match result {
         Ok(class_ref) => class_ref as jclass,
         Err(error) => {
-            set_pending_class_format_error(&error.to_string());
+            match error.throwable_ref() {
+                Some(throwable_ref) => {
+                    if let Err(e) = JavaThread::try_set_pending_exception(throwable_ref) {
+                        warn!("Dropping exception thrown while defining {class_name}: {e}");
+                    }
+                }
+                None => set_pending_class_format_error(&error.to_string()),
+            }
             null_mut()
         }
     }

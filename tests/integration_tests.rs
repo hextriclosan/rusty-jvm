@@ -4703,7 +4703,12 @@ fn should_define_classes_from_jni_byte_buffers() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.classops.JniDefineClassDemo",
         &[],
-        "samples.javacore.loadlibrary.classops.DefinedByJni\ndefined through JNI\n",
+        r#"samples.javacore.loadlibrary.classops.DefinedRenamed1 loader=true message=defined through JNI
+samples.javacore.loadlibrary.classops.DefinedRenamed2 loader=true message=defined through JNI
+wrong name -> java.lang.NoClassDefFoundError
+duplicate -> java.lang.LinkageError
+malformed -> java.lang.ClassFormatError
+"#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.classops.JniDefineClassDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module

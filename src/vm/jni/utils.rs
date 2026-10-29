@@ -110,6 +110,10 @@ pub(super) fn set_pending_class_format_error(message: &str) {
     set_pending_error("java/lang/ClassFormatError", message);
 }
 
+pub(super) fn set_pending_linkage_error(message: &str) {
+    set_pending_error("java/lang/LinkageError", message);
+}
+
 pub(super) fn set_pending_null_pointer_exception(message: &str) {
     set_pending_error("java/lang/NullPointerException", message);
 }
