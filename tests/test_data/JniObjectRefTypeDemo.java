@@ -7,10 +7,13 @@ public class JniObjectRefTypeDemo {
 
     private static native int refType(Object object);
 
+    private static native int danglingRefType();
+
     public static void main(String[] args) {
         System.out.println("object=" + refType(new Object()));
         System.out.println("array=" + refType(new int[1]));
         System.out.println("class=" + refType(String.class));
         System.out.println("null=" + refType(null));
+        System.out.println("dangling=" + danglingRefType());
     }
 }

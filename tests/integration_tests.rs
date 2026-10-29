@@ -4658,7 +4658,7 @@ fn should_report_jni_object_reference_types() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.objectops.JniObjectRefTypeDemo",
         &[],
-        "object=1\narray=1\nclass=1\nnull=0\n",
+        "object=1\narray=1\nclass=1\nnull=0\ndangling=0\n",
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniObjectRefTypeDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
