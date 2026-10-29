@@ -1,3 +1,4 @@
+mod assertions;
 mod commons;
 mod error;
 mod exception;
@@ -16,6 +17,7 @@ mod system_native;
 mod threads;
 mod validation;
 
+use crate::vm::assertions::init_java_assertions;
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
@@ -29,6 +31,7 @@ use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::perf_data::init_perf_file;
 use crate::vm::properties::resolve_classpath;
 use crate::vm::properties::system_properties::init_system_properties;
+use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
 use crate::Arguments;
@@ -59,6 +62,8 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     resolve_classpath(arguments)?;
 
     init_system_properties(arguments.system_properties().clone())?;
+
+    init_java_assertions(arguments.java_standard_options())?;
 
     init_perf_file(arguments)?;
 
@@ -161,6 +166,19 @@ fn init_logger() -> Result<()> {
 
 fn init() -> Result<()> {
     put_synthetic_instance_field("java/lang/invoke/ResolvedMethodName", "vmtarget", "J", 0)?;
+    // JDK 26+ no longer declares the holder field of `ConstantPool`; like HotSpot, inject it.
+    if CLASSES
+        .get("jdk/internal/reflect/ConstantPool")?
+        .instance_field_descriptor(CONSTANT_POOL_OOP)
+        .is_none()
+    {
+        put_synthetic_instance_field(
+            "jdk/internal/reflect/ConstantPool",
+            CONSTANT_POOL_OOP,
+            "Ljava/lang/Object;",
+            0,
+        )?;
+    }
     StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
 
     let lc = CLASSES.get("jdk/internal/misc/UnsafeConstants")?;

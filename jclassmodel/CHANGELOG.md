@@ -1,3 +1,10 @@
+# 0.1.1
+## What's Changed
+* `Attributes::get_nest_host`, `get_nest_members` and `get_permitted_subclasses` resolve the
+  `NestHost`, `NestMembers` and `PermittedSubclasses` attributes into class names, telling an
+  absent attribute (`Ok(None)`) from an empty one and reporting an unresolvable class as an error.
+
+
 # 0.1.0
 
 Initial release. Extracted from the [rusty-jvm](https://github.com/hextriclosan/rusty-jvm) project,

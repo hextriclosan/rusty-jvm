@@ -340,6 +340,48 @@ impl Attributes {
         }
     }
 
+    /// The host of the nest this class belongs to (`NestHost`), or `Ok(None)` when the class
+    /// names none and so hosts its own nest; an error when the host does not resolve.
+    pub fn get_nest_host<T: ConstantPoolLookup>(
+        &self,
+        constant_pool: &T,
+    ) -> Result<Option<String>> {
+        match self.data.get(&AttributeType::NestHost) {
+            Some(Attribute::NestHost { host_class_index }) => {
+                resolve_class_name(constant_pool, *host_class_index, "nest host").map(Some)
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// The other members of the nest this class hosts (`NestMembers`), or `Ok(None)` when the
+    /// class lists none; an error when a member does not resolve.
+    pub fn get_nest_members<T: ConstantPoolLookup>(
+        &self,
+        constant_pool: &T,
+    ) -> Result<Option<Vec<String>>> {
+        match self.data.get(&AttributeType::NestMembers) {
+            Some(Attribute::NestMembers { classes }) => {
+                resolve_class_names(constant_pool, classes, "nest member").map(Some)
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// The classes a sealed class permits to extend or implement it (`PermittedSubclasses`), or
+    /// `Ok(None)` when the class is not sealed; an error when a subclass does not resolve.
+    pub fn get_permitted_subclasses<T: ConstantPoolLookup>(
+        &self,
+        constant_pool: &T,
+    ) -> Result<Option<Vec<String>>> {
+        match self.data.get(&AttributeType::PermittedSubclasses) {
+            Some(Attribute::PermittedSubclasses { classes }) => {
+                resolve_class_names(constant_pool, classes, "permitted subclass").map(Some)
+            }
+            _ => Ok(None),
+        }
+    }
+
     pub fn get_annotations(
         &self,
         constant_pool: &ConstantPool,
@@ -356,6 +398,27 @@ impl Attributes {
             _ => None,
         }
     }
+}
+
+fn resolve_class_names<T: ConstantPoolLookup>(
+    constant_pool: &T,
+    indexes: &[u16],
+    what: &str,
+) -> Result<Vec<String>> {
+    indexes
+        .iter()
+        .map(|index| resolve_class_name(constant_pool, *index, what))
+        .collect()
+}
+
+fn resolve_class_name<T: ConstantPoolLookup>(
+    constant_pool: &T,
+    index: u16,
+    what: &str,
+) -> Result<String> {
+    constant_pool
+        .get_class_name(index)
+        .ok_or_else(|| Error::constant_pool(format!("Error getting {what} by index={index}")))
 }
 
 #[cfg(test)]
@@ -594,5 +657,106 @@ mod tests {
         mock.expect_get_method_handle().never();
 
         assert_eq!(None, nested_attributes.get_bootstrap_method(&mock, 1337));
+    }
+
+    /// A lookup resolving each class index to `Class<index>`, and failing for any index in
+    /// `unresolvable`.
+    fn class_names(unresolvable: &'static [u16]) -> MockConstantPoolLookup {
+        let mut mock = MockConstantPoolLookup::new();
+        mock.expect_get_class_name().returning(move |index| {
+            (!unresolvable.contains(&index)).then(|| format!("Class{index}"))
+        });
+        mock
+    }
+
+    #[test]
+    fn should_return_nest_host() {
+        let attributes = Attributes::new(&[Attribute::NestHost {
+            host_class_index: 7,
+        }]);
+
+        assert_eq!(
+            Some("Class7".to_string()),
+            attributes.get_nest_host(&class_names(&[])).unwrap()
+        );
+    }
+
+    #[test]
+    fn should_return_nest_members() {
+        let attributes = Attributes::new(&[Attribute::NestMembers {
+            classes: vec![3, 5],
+        }]);
+
+        assert_eq!(
+            Some(vec!["Class3".to_string(), "Class5".to_string()]),
+            attributes.get_nest_members(&class_names(&[])).unwrap()
+        );
+    }
+
+    #[test]
+    fn should_return_permitted_subclasses() {
+        let attributes = Attributes::new(&[Attribute::PermittedSubclasses {
+            classes: vec![9, 4],
+        }]);
+
+        assert_eq!(
+            Some(vec!["Class9".to_string(), "Class4".to_string()]),
+            attributes
+                .get_permitted_subclasses(&class_names(&[]))
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn should_return_none_for_absent_nest_and_permitted_subclasses() {
+        let attributes = Attributes::empty();
+        let mut mock = MockConstantPoolLookup::new();
+        mock.expect_get_class_name().never();
+
+        assert_eq!(None, attributes.get_nest_host(&mock).unwrap());
+        assert_eq!(None, attributes.get_nest_members(&mock).unwrap());
+        assert_eq!(None, attributes.get_permitted_subclasses(&mock).unwrap());
+    }
+
+    #[test]
+    fn should_keep_empty_permitted_subclasses_apart_from_absent_ones() {
+        let attributes = Attributes::new(&[Attribute::PermittedSubclasses { classes: vec![] }]);
+
+        assert_eq!(
+            Some(vec![]),
+            attributes
+                .get_permitted_subclasses(&class_names(&[]))
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn should_reject_unresolvable_nest_and_permitted_subclasses() {
+        let attributes = Attributes::new(&[
+            Attribute::NestHost {
+                host_class_index: 7,
+            },
+            Attribute::NestMembers {
+                classes: vec![3, 7],
+            },
+            Attribute::PermittedSubclasses {
+                classes: vec![7, 4],
+            },
+        ]);
+        let mock = class_names(&[7]);
+
+        let errors = [
+            attributes.get_nest_host(&mock).map(|_| ()),
+            attributes.get_nest_members(&mock).map(|_| ()),
+            attributes.get_permitted_subclasses(&mock).map(|_| ()),
+        ];
+        for error in errors {
+            assert_eq!(
+                ErrorKind::ConstantPool,
+                error
+                    .expect_err("an unresolvable class should be an error")
+                    .kind()
+            );
+        }
     }
 }
