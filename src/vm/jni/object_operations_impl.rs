@@ -10,7 +10,7 @@ use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::system_native::class::class_is_instance;
 use jclassmodel::modifiers::ClassModifier;
-use jni_sys::{jboolean, jclass, jobject, JNIEnv};
+use jni_sys::{jboolean, jclass, jobject, jobjectRefType, JNIEnv};
 use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
@@ -26,6 +26,17 @@ pub(super) extern "system" fn is_same_object(
     second: jobject,
 ) -> jboolean {
     (first == second) as jboolean
+}
+
+pub(super) extern "system" fn get_object_ref_type(
+    _env: *mut JNIEnv,
+    object: jobject,
+) -> jobjectRefType {
+    if object.is_null() || HEAP.get_instance_name(object as i32).is_err() {
+        jobjectRefType::JNIInvalidRefType
+    } else {
+        jobjectRefType::JNILocalRefType
+    }
 }
 
 pub(super) extern "system" fn is_instance_of(

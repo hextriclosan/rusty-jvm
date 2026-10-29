@@ -13,6 +13,7 @@ mod is_virtual_thread_demo;
 mod jni_no_such_id_demo;
 mod object_fields_demo;
 mod object_operations_demo;
+mod object_ref_type_demo;
 mod primitive_array_critical_demo;
 mod reflected_methods_demo;
 mod static_fields_demo;

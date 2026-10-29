@@ -43,7 +43,8 @@ use crate::vm::jni::object_fields_impl::{
     set_int_field, set_long_field, set_object_field, set_short_field,
 };
 use crate::vm::jni::object_operations_impl::{
-    alloc_object, get_object_class, is_instance_of, is_same_object, is_virtual_thread,
+    alloc_object, get_object_class, get_object_ref_type, is_instance_of, is_same_object,
+    is_virtual_thread,
 };
 use crate::vm::jni::reflection_impl::{from_reflected_method, to_reflected_method};
 use crate::vm::jni::static_fields_impl::{
@@ -69,8 +70,8 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
-    jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
-    JNINativeInterface_, JNINativeMethod, JavaVM,
+    jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_,
+    JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
 
@@ -236,7 +237,6 @@ jni_stub!(MonitorEnter(jobject) -> jint);
 jni_stub!(MonitorExit(jobject) -> jint);
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
-jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
 
 jni_vm_stub!(DestroyJavaVM() -> jint);
 jni_vm_stub!(AttachCurrentThread(*mut *mut c_void, *mut c_void) -> jint);
@@ -476,7 +476,7 @@ static VTABLE: Wrapper = {
     ni.v24.NewDirectByteBuffer = new_direct_byte_buffer;
     ni.v24.GetDirectBufferAddress = get_direct_buffer_address;
     ni.v24.GetDirectBufferCapacity = get_direct_buffer_capacity;
-    ni.v24.GetObjectRefType = GetObjectRefType;
+    ni.v24.GetObjectRefType = get_object_ref_type;
     ni.v24.GetModule = get_module;
     ni.v24.IsVirtualThread = is_virtual_thread;
     ni.v24.GetStringUTFLengthAsLong = get_string_utf_length_as_long;
