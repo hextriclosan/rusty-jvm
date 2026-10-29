@@ -4472,7 +4472,17 @@ fn should_support_jni_alloc_object_without_constructor() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.objectops.JniAllocObjectDemo",
         &[],
-        "value=0\nconstructor calls=0\n",
+        r#"value=0 inherited=0 name=null
+constructor calls=0
+initialized before=false
+initialized after=true
+abstract -> java.lang.InstantiationException: samples.javacore.loadlibrary.objectops.AbstractSample
+interface -> java.lang.InstantiationException: java.lang.Runnable
+primitive -> java.lang.InstantiationException: int
+array -> java.lang.InstantiationException: [I
+Class -> java.lang.IllegalAccessException: java.lang.Class
+null -> java.lang.NullPointerException: Class is null
+"#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniAllocObjectDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
