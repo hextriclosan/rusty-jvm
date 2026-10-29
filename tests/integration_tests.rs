@@ -4678,7 +4678,12 @@ fn should_construct_objects_with_jni_new_object_a() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.objectops.JniNewObjectADemo",
         &[],
-        "42:value\n",
+        r#"plain -> ConstructedSample 42:value
+super constructor -> DerivedSample 7:base extra=0
+throwing constructor -> java.lang.IllegalArgumentException: negative: -1
+abstract -> java.lang.InstantiationException: samples.javacore.loadlibrary.objectops.AbstractConstructedSample
+null -> java.lang.NullPointerException: Class is null
+"#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniNewObjectADemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module

@@ -116,31 +116,41 @@ fn alloc_object_impl(clazz_ref: i32) -> Result<i32> {
     Ok(HEAP.create_instance(instance))
 }
 
+/// Allocates like [`alloc_object`] and then runs the constructor `method_id` names on the new
+/// object, like HotSpot's `NewObjectA`.
 pub(super) extern "system" fn new_object_a(
-    _env: *mut JNIEnv,
+    env: *mut JNIEnv,
     clazz: jclass,
     method_id: jmethodID,
     args: *const jvalue,
 ) -> jobject {
-    let target = klass(clazz as i32).expect("Failed to get class from reference");
-    StaticInit::initialize_java_class(&target).expect("Failed to initialize class");
+    let obj = alloc_object(env, clazz);
+    if obj.is_null() {
+        return null_mut();
+    }
+
     let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
-    let constructor = klass(declaring_class_ref)
+    let constructor = match klass(declaring_class_ref)
         .and_then(|class| class.get_method_by_index(method_index))
-        .expect("Failed to get constructor from method ID");
+    {
+        Ok(constructor) => constructor,
+        Err(error) => {
+            set_pending_internal_error(&format!("Failed to resolve constructor: {error}"));
+            return null_mut();
+        }
+    };
     let arguments = transform_args_to_vec(&constructor, args);
     let context = format!(
         "{}.{}",
-        target.this_class_name(),
+        constructor.class_name(),
         constructor.name_signature()
     );
-    jni_invoke_scalar(
-        Executor::invoke_args_constructor(
-            target.this_class_name(),
-            constructor.name_signature(),
-            &arguments,
-            Some(&context),
-        ),
-        &context,
+    let result = Executor::invoke_non_static_method(
+        constructor.class_name(),
+        constructor.name_signature(),
+        obj as i32,
+        &arguments,
     )
+    .map(|_| obj as i32);
+    jni_invoke_scalar(result, &context)
 }
