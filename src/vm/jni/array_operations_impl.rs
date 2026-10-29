@@ -8,6 +8,7 @@ use jni_sys::{
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
     jshort, jshortArray, jsize, JNIEnv, JNI_ABORT, JNI_COMMIT, JNI_TRUE,
 };
+use std::ffi::c_void;
 
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
     let array_ref = input as i32;
@@ -232,6 +233,41 @@ fn release_primitive_type_array_elements<T>(
         }
         _ => panic!("Invalid mode: {mode}"),
     };
+}
+
+pub(super) extern "system" fn get_primitive_array_critical(
+    _env: *mut JNIEnv,
+    array: jarray,
+    is_copy: *mut jboolean,
+) -> *mut c_void {
+    // No GC yet, so this is equivalent to Get<PrimitiveType>ArrayElements
+    // TODO(GC): Pin object and disable GC here
+    get_primitive_type_array_elements::<u8>(array as i32, is_copy).cast()
+}
+
+pub(super) extern "system" fn release_primitive_array_critical(
+    _env: *mut JNIEnv,
+    array: jarray,
+    elements: *mut c_void,
+    mode: jint,
+) {
+    // TODO(GC): Unpin object and re-enable GC here
+    let array_ref = array as i32;
+    let len = HEAP
+        .get_entire_raw_data(array_ref)
+        .expect("Failed to get critical array length")
+        .len();
+    let elements = elements.cast::<u8>();
+
+    match mode {
+        0 => {
+            write_to_array(array_ref, elements, 0, len);
+            free_buffer(elements, len);
+        }
+        JNI_COMMIT => write_to_array(array_ref, elements, 0, len),
+        JNI_ABORT => free_buffer(elements, len),
+        _ => panic!("Invalid mode: {mode}"),
+    }
 }
 
 macro_rules! impl_set_array_region {
