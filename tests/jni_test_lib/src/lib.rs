@@ -2,6 +2,7 @@ mod alloc_object_demo;
 mod array_allocation_demo;
 mod array_operations_demo;
 mod class_operations_demo;
+mod define_class_demo;
 mod direct_buffer_demo;
 mod exception_demo;
 mod get_module_demo;
