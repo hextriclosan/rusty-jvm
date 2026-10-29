@@ -1,3 +1,4 @@
+use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
@@ -7,7 +8,7 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::lookup;
 use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
-use jni_sys::{jclass, jmethodID, jvalue};
+use jni_sys::{jclass, jmethodID, jsize, jvalue};
 use std::ffi::c_char;
 use std::ptr::null_mut;
 use std::sync::Arc;
@@ -35,10 +36,27 @@ macro_rules! to_mutf8_data {
     }};
 }
 
-pub(super) fn get_method_id_impl(
+pub(super) fn get_instance_method_id_impl(
     clazz: jclass,
     name: *const c_char,
     sig: *const c_char,
+) -> jmethodID {
+    get_method_id_impl(clazz, name, sig, lookup::lookup_instance_method)
+}
+
+pub(super) fn get_static_method_id_impl(
+    clazz: jclass,
+    name: *const c_char,
+    sig: *const c_char,
+) -> jmethodID {
+    get_method_id_impl(clazz, name, sig, lookup::lookup_static_method)
+}
+
+fn get_method_id_impl(
+    clazz: jclass,
+    name: *const c_char,
+    sig: *const c_char,
+    lookup_method: fn(&str, &str) -> Result<Option<Arc<JavaMethod>>>,
 ) -> jmethodID {
     let name_str = from_mutf8_ptr!(name).expect("Failed to convert method name from CESU-8");
     let sig_str = from_mutf8_ptr!(sig).expect("Failed to convert method signature from CESU-8");
@@ -49,7 +67,7 @@ pub(super) fn get_method_id_impl(
 
     // Look up the method implementation in the class/interface hierarchy.
     let klass_name = declaring_klass.this_class_name().clone();
-    let method_id = lookup::lookup_method(&klass_name, &full_signature)
+    let method_id = lookup_method(&klass_name, &full_signature)
         .unwrap_or_else(|e| panic!("Failed to find implementation of {full_signature}: {e}"))
         .and_then(|method| {
             let found_class_name = method.class_name();
@@ -76,12 +94,28 @@ pub(super) fn set_pending_no_such_field_error(field_name: &str) {
     set_pending_error("java/lang/NoSuchFieldError", field_name);
 }
 
+pub(super) fn set_pending_instantiation_exception(class_name: &str) {
+    set_pending_error("java/lang/InstantiationException", class_name);
+}
+
+pub(super) fn set_pending_illegal_access_exception(class_name: &str) {
+    set_pending_error("java/lang/IllegalAccessException", class_name);
+}
+
 pub(super) fn set_pending_no_class_def_found_error(message: &str) {
     set_pending_error("java/lang/NoClassDefFoundError", message);
 }
 
 pub(super) fn set_pending_class_format_error(message: &str) {
     set_pending_error("java/lang/ClassFormatError", message);
+}
+
+pub(super) fn set_pending_null_pointer_exception(message: &str) {
+    set_pending_error("java/lang/NullPointerException", message);
+}
+
+pub(super) fn set_pending_negative_array_size_exception(len: jsize) {
+    set_pending_error("java/lang/NegativeArraySizeException", &len.to_string());
 }
 
 pub(crate) fn set_pending_internal_error(message: &str) {

@@ -21,7 +21,7 @@ This guide explains how to build the project, run the tests, and extend the VM w
 ### Prerequisites
 
 - **Rust** (stable) - install via [rustup](https://rustup.rs/)
-- **JDK 25 (LTS)** - must be installed and `JAVA_HOME` must point to it
+- **JDK 25 or newer** - must be installed and `JAVA_HOME` must point to it
 - **cargo-nextest** (recommended for running tests) - `cargo install cargo-nextest`
 
 ```sh
