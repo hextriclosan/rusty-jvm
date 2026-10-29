@@ -1,12 +1,17 @@
 mod alloc_object_demo;
+mod array_allocation_demo;
 mod array_operations_demo;
 mod class_operations_demo;
 mod exception_demo;
+mod get_module_demo;
+mod inherited_fields_demo;
 mod instance_methods_demo;
+mod is_instance_of_demo;
 mod is_same_object_demo;
 mod jni_no_such_id_demo;
 mod object_fields_demo;
 mod object_operations_demo;
+mod primitive_array_critical_demo;
 mod static_fields_demo;
 mod static_methods_demo;
 mod string_operations_demo;

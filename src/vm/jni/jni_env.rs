@@ -4,16 +4,19 @@ use crate::vm::jni::array_operations_impl::{
     get_char_array_region, get_double_array_elements, get_double_array_region,
     get_float_array_elements, get_float_array_region, get_int_array_elements,
     get_int_array_region, get_long_array_elements, get_long_array_region,
-    get_object_array_element, get_short_array_elements, get_short_array_region, new_boolean_array,
-    new_byte_array, new_char_array, new_double_array, new_float_array, new_int_array,
-    new_long_array, new_object_array, new_short_array, release_boolean_array_elements,
-    release_byte_array_elements, release_char_array_elements, release_double_array_elements,
-    release_float_array_elements, release_int_array_elements, release_long_array_elements,
-    release_short_array_elements, set_boolean_array_region, set_byte_array_region,
-    set_char_array_region, set_double_array_region, set_float_array_region, set_int_array_region,
-    set_long_array_region, set_object_array_element, set_short_array_region,
+    get_object_array_element, get_primitive_array_critical, get_short_array_elements,
+    get_short_array_region, new_boolean_array, new_byte_array, new_char_array, new_double_array,
+    new_float_array, new_int_array, new_long_array, new_object_array, new_short_array,
+    release_boolean_array_elements, release_byte_array_elements, release_char_array_elements,
+    release_double_array_elements, release_float_array_elements, release_int_array_elements,
+    release_long_array_elements, release_primitive_array_critical, release_short_array_elements,
+    set_boolean_array_region, set_byte_array_region, set_char_array_region,
+    set_double_array_region, set_float_array_region, set_int_array_region, set_long_array_region,
+    set_object_array_element, set_short_array_region,
 };
-use crate::vm::jni::class_operations_impl::{find_class, get_superclass, is_assignable_from};
+use crate::vm::jni::class_operations_impl::{
+    find_class, get_module, get_superclass, is_assignable_from,
+};
 use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
@@ -36,7 +39,9 @@ use crate::vm::jni::object_fields_impl::{
     set_boolean_field, set_byte_field, set_char_field, set_double_field, set_float_field,
     set_int_field, set_long_field, set_object_field, set_short_field,
 };
-use crate::vm::jni::object_operations_impl::{alloc_object, get_object_class, is_same_object};
+use crate::vm::jni::object_operations_impl::{
+    alloc_object, get_object_class, is_instance_of, is_same_object,
+};
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -59,8 +64,8 @@ use crate::vm::jni::string_operations_impl::{
 };
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
-    jarray, jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID,
-    jobject, jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
+    jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
+    jobjectRefType, jshort, jsize, jvalue, jweak, va_list, JNIEnv, JNIInvokeInterface_,
     JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::{c_char, c_void};
@@ -163,7 +168,6 @@ jni_stub!(EnsureLocalCapacity(jint) -> jint);
 jni_variadic_stub!(NewObject, NewObject_ptr, (jclass, jmethodID) -> jobject);
 jni_stub!(NewObjectV(jclass, jmethodID, va_list) -> jobject);
 jni_stub!(NewObjectA(jclass, jmethodID, *const jvalue) -> jobject);
-jni_stub!(IsInstanceOf(jobject, jclass) -> jboolean);
 jni_variadic_stub!(CallObjectMethod, CallObjectMethod_ptr, (jobject, jmethodID) -> jobject);
 jni_stub!(CallObjectMethodV(jobject, jmethodID, va_list) -> jobject);
 jni_variadic_stub!(CallBooleanMethod, CallBooleanMethod_ptr, (jobject, jmethodID) -> jboolean);
@@ -228,15 +232,12 @@ jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(MonitorEnter(jobject) -> jint);
 jni_stub!(MonitorExit(jobject) -> jint);
-jni_stub!(GetPrimitiveArrayCritical(jarray, *mut jboolean) -> *mut c_void);
-jni_stub!(ReleasePrimitiveArrayCritical(jarray, *mut c_void, jint) -> ());
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 jni_stub!(NewDirectByteBuffer(*mut c_void, jlong) -> jobject);
 jni_stub!(GetDirectBufferAddress(jobject) -> *mut c_void);
 jni_stub!(GetDirectBufferCapacity(jobject) -> jlong);
 jni_stub!(GetObjectRefType(jobject) -> jobjectRefType);
-jni_stub!(GetModule(jclass) -> jobject);
 jni_stub!(IsVirtualThread(jobject) -> jboolean);
 
 jni_vm_stub!(DestroyJavaVM() -> jint);
@@ -277,7 +278,7 @@ static VTABLE: Wrapper = {
     ni.v24.NewObjectV = NewObjectV;
     ni.v24.NewObjectA = NewObjectA;
     ni.v24.GetObjectClass = get_object_class;
-    ni.v24.IsInstanceOf = IsInstanceOf;
+    ni.v24.IsInstanceOf = is_instance_of;
     ni.v24.GetMethodID = get_method_id;
     ni.v24.CallObjectMethod = CallObjectMethod_ptr;
     ni.v24.CallObjectMethodV = CallObjectMethodV;
@@ -467,8 +468,8 @@ static VTABLE: Wrapper = {
     ni.v24.GetJavaVM = get_java_vm;
     ni.v24.GetStringRegion = get_string_region;
     ni.v24.GetStringUTFRegion = get_string_utf_region;
-    ni.v24.GetPrimitiveArrayCritical = GetPrimitiveArrayCritical;
-    ni.v24.ReleasePrimitiveArrayCritical = ReleasePrimitiveArrayCritical;
+    ni.v24.GetPrimitiveArrayCritical = get_primitive_array_critical;
+    ni.v24.ReleasePrimitiveArrayCritical = release_primitive_array_critical;
     ni.v24.GetStringCritical = get_string_critical;
     ni.v24.ReleaseStringCritical = release_string_critical;
     ni.v24.NewWeakGlobalRef = NewWeakGlobalRef;
@@ -478,7 +479,7 @@ static VTABLE: Wrapper = {
     ni.v24.GetDirectBufferAddress = GetDirectBufferAddress;
     ni.v24.GetDirectBufferCapacity = GetDirectBufferCapacity;
     ni.v24.GetObjectRefType = GetObjectRefType;
-    ni.v24.GetModule = GetModule;
+    ni.v24.GetModule = get_module;
     ni.v24.IsVirtualThread = IsVirtualThread;
     ni.v24.GetStringUTFLengthAsLong = get_string_utf_length_as_long;
 

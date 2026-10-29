@@ -34,6 +34,7 @@ struct ClassEntry {
 
 const OBJECT: &str = "java/lang/Object";
 const CLASS: &str = "java/lang/Class";
+const CLASS_FILE_ACCESS_FLAGS: &str = "classFileAccessFlags";
 
 impl LoadedClasses {
     /// Checks if class is already loaded
@@ -250,6 +251,18 @@ impl LoadedClasses {
         )?;
         let class_modifiers = klass.reflection_modifiers();
         class_instance.set_field_value(CLASS, "modifiers", vec![class_modifiers as i32])?;
+        // JDK 26+ keeps the raw class file access flags in the mirror instead of fetching them
+        // through the `Reflection.getClassAccessFlags` native.
+        if class_klass
+            .instance_field_descriptor(CLASS_FILE_ACCESS_FLAGS)
+            .is_some()
+        {
+            class_instance.set_field_value(
+                CLASS,
+                CLASS_FILE_ACCESS_FLAGS,
+                vec![klass.class_modifiers().bits() as i32],
+            )?;
+        }
 
         class_instance.set_field_value(
             CLASS,
@@ -258,7 +271,7 @@ impl LoadedClasses {
         )?;
 
         let (module_ref, patch) = with_method_area(|a| {
-            let file_name = format!("{}.class", klass.this_class_name());
+            let file_name = format!("{}.class", Self::module_owner(klass.this_class_name()));
             if let Some(package) = a.modules_mapping().get(&file_name) {
                 let modules = a.modules();
                 let registry = modules.registry();
@@ -290,6 +303,22 @@ impl LoadedClasses {
         })?;
 
         klass.inject_mirror_clazz_ref(class_instance_id)
+    }
+
+    /// Returns the class whose module the given class belongs to: arrays belong to the module of
+    /// their innermost element class, primitives (and primitive arrays) belong to `java.base`.
+    fn module_owner(class_name: &str) -> &str {
+        let element_name = class_name.trim_start_matches('[');
+        let element_name = element_name
+            .strip_prefix('L')
+            .and_then(|name| name.strip_suffix(';'))
+            .unwrap_or(element_name);
+
+        if PRIMITIVE_TYPE_BY_CODE.contains_key(element_name) {
+            OBJECT
+        } else {
+            element_name
+        }
     }
 
     /// Pre-construction initialization

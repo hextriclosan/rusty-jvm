@@ -1,4 +1,5 @@
 use crate::from_mutf8_ptr;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::jni::utils::{
     set_pending_class_format_error, set_pending_internal_error,
@@ -7,7 +8,7 @@ use crate::vm::jni::utils::{
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use jdescriptor::TypeDescriptor;
-use jni_sys::{jboolean, jclass, JNIEnv};
+use jni_sys::{jboolean, jclass, jobject, JNIEnv};
 use std::ffi::{c_char, CStr};
 use std::ptr::null_mut;
 
@@ -102,4 +103,12 @@ pub(super) extern "system" fn is_assignable_from(
             false
         }
     }
+}
+
+pub(super) extern "system" fn get_module(_env: *mut JNIEnv, clazz: jclass) -> jobject {
+    HEAP.get_object_field_value(clazz as i32, "java/lang/Class", "module")
+        .expect("Failed to get module from class")
+        .first()
+        .copied()
+        .expect("Class module field has no value") as jobject
 }

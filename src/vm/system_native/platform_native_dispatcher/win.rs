@@ -30,10 +30,18 @@ use winapi::um::winnt::{
     PSECURITY_DESCRIPTOR, SECURITY_INFORMATION, WCHAR,
 };
 
-/// `sun.nio.fs.WindowsNativeDispatcher.initIDs()V`
+/// `sun.nio.fs.WindowsNativeDispatcher.initIDs()V` (JDK 25-26)
 pub(crate) fn init_ids() -> Result<()> {
     // todo: implement me
     Ok(())
+}
+
+/// `sun.nio.fs.WindowsNativeDispatcher.init()I` (JDK 27+)
+///
+/// Reports the optional Windows APIs the dispatcher may use. None are claimed, so the JDK never
+/// calls `GetFileInformationByName0` and takes its fallback path instead.
+pub(crate) fn init() -> Result<i32> {
+    Ok(0)
 }
 
 /// `sun.nio.fs.WindowsNativeDispatcher.createDirectory0(JJ)V`
