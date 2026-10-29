@@ -49,8 +49,15 @@ enum AttributeKind {
     OFFSET,
     COMPRESSED,
     UNCOMPRESSED,
+    /// Preview mode flags of a location (jimage 1.1+). Only preview mode, which is not supported,
+    /// needs them: the regular, non-preview resources are found under their usual names.
+    #[allow(dead_code)] // only ever produced by `TryFrom<u8>` while parsing
+    PREVIEW,
     COUNT,
 }
+
+/// Values of all attributes of a location, indexed by [`AttributeKind`].
+type Attributes = [u64; AttributeKind::COUNT as usize];
 
 impl TryFrom<u8> for AttributeKind {
     type Error = JImageError;
@@ -151,7 +158,7 @@ impl JImage {
 
     fn get_str_for_attribute(
         &self,
-        attribute: [u64; 8],
+        attribute: Attributes,
         kind: AttributeKind,
     ) -> Result<Cow<'_, str>> {
         let offset = attribute[kind as usize] as usize;
@@ -206,10 +213,10 @@ impl JImage {
         Ok(value)
     }
 
-    fn attributes(&self, index: i32) -> Result<[u64; 8]> {
+    fn attributes(&self, index: i32) -> Result<Attributes> {
         let offset = self.header.attributes(index as usize);
 
-        let mut attributes = [0u64; 8];
+        let mut attributes = [0u64; AttributeKind::COUNT as usize];
         let mut pos = offset;
         loop {
             let value = &self.mmap[pos];
@@ -230,7 +237,7 @@ impl JImage {
         Ok(attributes)
     }
 
-    fn get_resource(&self, attributes: &[u64; 8]) -> Result<Option<Cow<'_, [u8]>>> {
+    fn get_resource(&self, attributes: &Attributes) -> Result<Option<Cow<'_, [u8]>>> {
         let offset = attributes[AttributeKind::OFFSET as usize] as usize;
         let compressed_size = attributes[AttributeKind::COMPRESSED as usize] as usize;
         let uncompressed_size = attributes[AttributeKind::UNCOMPRESSED as usize] as usize;
@@ -267,7 +274,7 @@ impl JImage {
 
     /// Verify the attributes of the resource.
     /// Full path format: /{module}/{parent}/{base}.{extension}
-    fn verify(&self, attributes: &[u64; 8], full_name: &str) -> Result<bool> {
+    fn verify(&self, attributes: &Attributes, full_name: &str) -> Result<bool> {
         let parts_to_check = [
             (AttributeKind::MODULE, "/"),
             (AttributeKind::PARENT, "/"),
@@ -321,7 +328,7 @@ mod tests {
 
     #[test]
     fn attribute_kind_try_from_valid_values() {
-        // All valid values are below COUNT (=8).
+        // All valid values are below COUNT (=9).
         for raw in 0u8..AttributeKind::COUNT as u8 {
             let kind = AttributeKind::try_from(raw).expect("valid attribute kind");
             assert_eq!(kind as u8, raw);

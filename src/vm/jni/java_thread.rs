@@ -28,6 +28,9 @@ pub(crate) struct JavaThread {
     /// This is what `Thread.currentThread()` returns, making thread identity a per-OS-thread fact
     /// rather than a single VM-wide global — the precondition for spawning real threads.
     current_thread: Cell<Option<i32>>,
+    /// Heap reference to this thread's `ScopedValue` lookup cache (an `Object[]`), or `0` when there
+    /// is none; read and written by `Thread.scopedValueCache`/`setScopedValueCache`.
+    scoped_value_cache: Cell<i32>,
     /// Chain of live [`StackFrames`] *segments* for the calling thread, ordered oldest → newest.
     ///
     /// Each `Engine::execute` invocation owns one `StackFrames` and registers a pointer to it here
@@ -62,6 +65,7 @@ thread_local! {
         env: jni_native_interface(),
         exception_pending: Cell::new(None),
         current_thread: Cell::new(None),
+        scoped_value_cache: Cell::new(0),
         stack_frames: RefCell::new(Vec::new()),
         safepoint: Safepoint::new(),
         temp_roots: RefCell::new(Vec::new()),
@@ -186,6 +190,16 @@ impl JavaThread {
             // Publish this thread's safepoint under its identity so it can be targeted for a stack dump.
             safepoint::register(thread_ref, Arc::clone(&t.safepoint));
         });
+    }
+
+    /// Returns the calling thread's `ScopedValue` cache, or `0` (null) if it has none.
+    pub(crate) fn scoped_value_cache() -> i32 {
+        JAVA_THREAD.with(|t| t.scoped_value_cache.get())
+    }
+
+    /// Replaces the calling thread's `ScopedValue` cache; `0` (null) clears it.
+    pub(crate) fn set_scoped_value_cache(cache_ref: i32) {
+        JAVA_THREAD.with(|t| t.scoped_value_cache.set(cache_ref));
     }
 
     /// Keeps `slots` reachable for a root scan until the returned guard drops.
