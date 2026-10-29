@@ -16,10 +16,19 @@ pub extern "system" fn Java_samples_javacore_loadlibrary_monitor_JniMonitorDemo_
 }
 
 #[no_mangle]
-pub extern "system" fn Java_samples_javacore_loadlibrary_monitor_JniMonitorDemo_exitWithoutOwnership(
+pub extern "system" fn Java_samples_javacore_loadlibrary_monitor_JniMonitorDemo_exit(
     env: *mut JNIEnv,
     _class: jclass,
     object: jobject,
 ) -> jint {
     unsafe { ((*(*env)).v24.MonitorExit)(env, object) }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_samples_javacore_loadlibrary_monitor_JniMonitorDemo_enter(
+    env: *mut JNIEnv,
+    _class: jclass,
+    object: jobject,
+) -> jint {
+    unsafe { ((*(*env)).v24.MonitorEnter)(env, object) }
 }
