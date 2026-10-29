@@ -1,3 +1,4 @@
+mod alloc_object_demo;
 mod array_allocation_demo;
 mod array_operations_demo;
 mod class_operations_demo;
