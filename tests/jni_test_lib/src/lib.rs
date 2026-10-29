@@ -12,6 +12,7 @@ mod is_instance_of_demo;
 mod is_same_object_demo;
 mod is_virtual_thread_demo;
 mod jni_no_such_id_demo;
+mod monitor_demo;
 mod new_object_a_demo;
 mod object_fields_demo;
 mod object_operations_demo;
