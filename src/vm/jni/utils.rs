@@ -122,6 +122,13 @@ pub(super) fn set_pending_negative_array_size_exception(len: jsize) {
     set_pending_error("java/lang/NegativeArraySizeException", &len.to_string());
 }
 
+pub(super) fn set_pending_array_index_out_of_bounds_exception(index: jsize, len: jsize) {
+    set_pending_error(
+        "java/lang/ArrayIndexOutOfBoundsException",
+        &format!("Index {index} out of bounds for length {len}"),
+    );
+}
+
 pub(crate) fn set_pending_internal_error(message: &str) {
     set_pending_error("java/lang/InternalError", message);
 }

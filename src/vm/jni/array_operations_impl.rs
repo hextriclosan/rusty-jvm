@@ -1,7 +1,8 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::utils::{
-    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
+    set_pending_array_index_out_of_bounds_exception, set_pending_negative_array_size_exception,
+    set_pending_null_pointer_exception,
 };
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
@@ -76,10 +77,7 @@ pub(super) extern "system" fn get_object_array_element(
 
     let len = get_array_length(env, array);
     if index >= len || index < 0 {
-        set_pending_array_index_out_of_bounds_exception(&format!(
-            "Index {index} out of bounds for length {len}"
-        ))
-        .expect("Failed to create ArrayIndexOutOfBoundsException");
+        set_pending_array_index_out_of_bounds_exception(index, len);
         return std::ptr::null_mut();
     }
 
@@ -103,10 +101,7 @@ pub(super) extern "system" fn set_object_array_element(
 
     let len = get_array_length(env, array);
     if index >= len || index < 0 {
-        set_pending_array_index_out_of_bounds_exception(&format!(
-            "Index {index} out of bounds for length {len}"
-        ))
-        .expect("Failed to create ArrayIndexOutOfBoundsException");
+        set_pending_array_index_out_of_bounds_exception(index, len);
         return;
     }
 
@@ -427,4 +422,3 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
-use crate::vm::exception::pending_helpers::set_pending_array_index_out_of_bounds_exception;

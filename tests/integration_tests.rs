@@ -4757,10 +4757,15 @@ fn should_throw_for_invalid_jni_object_array_access() {
         &[&lib_dir_path],
         "samples.javacore.loadlibrary.arrayops.JniObjectArrayBoundsDemo",
         &[],
-        r#"get negative=ArrayIndexOutOfBoundsException
-set at length=ArrayIndexOutOfBoundsException
-get null=NullPointerException
-set null=NullPointerException
+        r#"set in bounds ok
+got value
+get in bounds ok
+get negative -> java.lang.ArrayIndexOutOfBoundsException: Index -1 out of bounds for length 2
+get at length -> java.lang.ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2
+set negative -> java.lang.ArrayIndexOutOfBoundsException: Index -1 out of bounds for length 2
+set at length -> java.lang.ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2
+get null -> java.lang.NullPointerException: Array is null
+set null -> java.lang.NullPointerException: Array is null
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.arrayops.JniObjectArrayBoundsDemo in an unnamed module
