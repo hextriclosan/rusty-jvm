@@ -14,6 +14,7 @@ mod is_virtual_thread_demo;
 mod jni_no_such_id_demo;
 mod monitor_demo;
 mod new_object_a_demo;
+mod object_array_bounds_demo;
 mod object_fields_demo;
 mod object_operations_demo;
 mod object_ref_type_demo;

@@ -1,7 +1,8 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::utils::{
-    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
+    set_pending_array_index_out_of_bounds_exception, set_pending_negative_array_size_exception,
+    set_pending_null_pointer_exception,
 };
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
@@ -70,12 +71,14 @@ pub(super) extern "system" fn get_object_array_element(
 ) -> jobject {
     let array_ref = array as i32;
     if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("Array is null");
+        return std::ptr::null_mut();
     }
 
     let len = get_array_length(env, array);
     if index >= len || index < 0 {
-        panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
+        set_pending_array_index_out_of_bounds_exception(index, len);
+        return std::ptr::null_mut();
     }
 
     let raw = HEAP
@@ -92,12 +95,14 @@ pub(super) extern "system" fn set_object_array_element(
 ) {
     let array_ref = array as i32;
     if array_ref == 0 {
-        panic!("Invalid array reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("Array is null");
+        return;
     }
 
     let len = get_array_length(env, array);
     if index >= len || index < 0 {
-        panic!("Out of bounds array index: index={index}, length={len}"); // todo: throw java.lang.ArrayIndexOutOfBoundsException here
+        set_pending_array_index_out_of_bounds_exception(index, len);
+        return;
     }
 
     HEAP.set_array_value(array_ref, index, vec![value as i32])
