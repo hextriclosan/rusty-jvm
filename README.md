@@ -103,8 +103,8 @@ graph TD
 
 ## Java Standard Library Classes
 
-This project relies on standard library classes from the **JDK 25 (LTS)**.
-To run the Java code, you must have **JDK 25 (LTS)** installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
+This project relies on standard library classes from the **JDK 25 (LTS) or newer**.
+To run the Java code, you must have **JDK 25 or newer** installed on your machine and ensure the `JAVA_HOME` environment variable is properly set.
 
 ## Getting Started
 
@@ -114,7 +114,14 @@ Ensure the following are set up:
 
 - A machine running **Windows**, **MacOS**, or **Linux**
 - **Rust** installed
-- **JDK 25 (LTS)** installed with the `JAVA_HOME` environment variable set
+- **JDK 25 or newer** installed with the `JAVA_HOME` environment variable set
+
+### Installation
+
+Install the latest release from [crates.io][crate-link]:
+```sh
+cargo install rusty-jvm
+```
 
 ### Example Program: Count Fruits
 Create a file named `FruitCount.java` with the following content:
@@ -145,8 +152,31 @@ public class FruitCount {
 
 2. Run it using rusty-jvm:
    ```sh
+   rusty-jvm FruitCount
+   ```
+   Or, from a clone of this repository:
+   ```sh
    cargo run -- FruitCount
    ```
+
+### Command-Line Options
+
+```
+rusty-jvm [options] <mainclass> [args...]
+rusty-jvm [options] -jar <jarfile> [args...]
+```
+
+| Option | Description |
+|---|---|
+| `-cp <path>`, `-classpath <path>` | Class search path of directories and JAR files |
+| `-jar <jarfile>` | Run the main class of a JAR file (from its manifest) |
+| `-D<name>=<value>` | Set a system property |
+| `-ea`, `-ea:<package>...`, `-ea:<class>`, `-enableassertions` | Enable assertions, optionally for a package or class only |
+| `-da`, `-da:<package>...`, `-da:<class>`, `-disableassertions` | Disable assertions, optionally for a package or class only |
+| `-esa`, `-enablesystemassertions` | Enable assertions in system classes |
+| `-dsa`, `-disablesystemassertions` | Disable assertions in system classes |
+| `-h`, `--help` | Show the help message |
+| `-V`, `--version` | Show version information |
 
 ## License
 `rusty-jvm` is licensed under the [MIT License](LICENSE).

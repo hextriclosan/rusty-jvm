@@ -107,6 +107,19 @@ fn should_call_interface_default_method() {
 }
 
 #[test]
+fn should_not_resolve_instance_call_to_static_interface_method() {
+    assert_success(
+        "samples.inheritance.staticanddefaultmethodsamesignature.StaticAndDefaultMethodSameSignature",
+        r#"default WithDefault.describe
+default WithDefault.describe
+default WithDefault.describe
+static WithStatic.describe
+static Impl.describeStatically
+"#,
+    );
+}
+
+#[test]
 fn should_call_object_methods() {
     assert_success("samples.javacore.object.trivial.ObjectMethods", "1\n");
 }
@@ -117,6 +130,31 @@ fn should_check_if_class_is_interface() {
         "samples.reflection.trivial.classisinterface.ClassIsInterfaceExample",
         "1\n",
     );
+}
+
+#[test]
+fn should_report_sealed_classes_and_their_permitted_subclasses() {
+    const ENTRY: &str = "samples.reflection.sealed.SealedClassesExample";
+    const EXPECTED: &str = r#"Shape: sealed true, permits [Shape$Circle, Square, Polygon]
+Shape$Circle: sealed false, permits null
+Square: sealed false, permits null
+Polygon: sealed false, permits null
+Hexagon: sealed false, permits null
+Vehicle: sealed true, permits [Car, Truck]
+Car: sealed false, permits null
+Direction: sealed true, permits [Direction$1]
+Planet: sealed false, permits null
+SealedClassesExample: sealed false, permits null
+[LShape;: sealed false, permits null
+int: sealed false, permits null
+annotation: labelled method
+"#;
+    assert_eq!(
+        utils::run_reference_jvm(&[], ENTRY).stdout,
+        EXPECTED,
+        "the reference JVM disagrees with the expectation"
+    );
+    assert_success(ENTRY, EXPECTED);
 }
 
 #[test]
@@ -387,7 +425,7 @@ use itertools::Itertools;
 use regex::Regex;
 use rstest::rstest;
 use serde_json::Value;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tempfile::NamedTempFile;
 
 #[test]
@@ -397,9 +435,10 @@ fn should_support_native_call_on_system_current_time() {
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
     let expected_millis = since_the_epoch.as_millis() as i64;
-    let expected_nanos = since_the_epoch.as_nanos() as i64;
 
+    let launch = Instant::now();
     let output = get_output("samples.nativecall.system.NativeCallSystemCurrentTimeMillis");
+    let run_nanos = launch.elapsed().as_nanos() as i64;
     let json: Value = serde_json::from_str(&output).expect("Output is not valid JSON");
 
     let actual_millis = json["currentTimeMillis"]
@@ -411,9 +450,21 @@ fn should_support_native_call_on_system_current_time() {
 
     let timeout_mins = 10;
     let timeout_millis = Duration::from_secs(timeout_mins * 60).as_millis() as i64;
-    let timeout_nanos = Duration::from_secs(timeout_mins * 60).as_nanos() as i64;
     assert!((expected_millis..expected_millis + timeout_millis).contains(&actual_millis));
-    assert!((expected_nanos..expected_nanos + timeout_nanos).contains(&actual_nanos));
+    // nanoTime counts from a fixed point the VM takes during this run
+    assert!((0..=run_nanos).contains(&actual_nanos));
+    assert_eq!(json["nanoTimeMonotonic"], true);
+    assert_eq!(json["nanoTimeMeasuresSleep"], true);
+}
+
+#[test]
+fn should_read_wall_clock_through_java_time() {
+    assert_success(
+        "samples.nativecall.system.wallclock.WallClockExample",
+        r#"Instant.now() agrees with currentTimeMillis: true
+Clock.systemUTC() agrees with currentTimeMillis: true
+"#,
+    );
 }
 
 #[test]
@@ -864,6 +915,14 @@ After copySwapMemory: [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8]
         ),
     );
 }
+
+#[test]
+fn should_return_zero_for_zero_byte_unsafe_allocation() {
+    assert_success(
+        "samples.jdkinternal.unsafe.zeroallocation.UnsafeZeroAllocation",
+        "true\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
@@ -906,6 +965,17 @@ Fields are compared and set successfully
 }
 
 #[test]
+fn should_report_unsafe_object_field_offset_of_static_and_missing_fields() {
+    // JDK 25 returns a static field's offset and throws a bare InternalError for a missing one,
+    // while JDK 26+ throws InternalErrors naming the field for both
+    utils::assert_same_as_reference_jvm(
+        &["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"],
+        "samples.jdkinternal.unsafe.objectfieldoffseterrors.UnsafeObjectFieldOffsetErrors",
+        Success,
+    );
+}
+
+#[test]
 fn should_support_wide_instructions() {
     assert_success(
         "samples.javacore.wide.instructions.trivial.WideInstructionsExample",
@@ -921,15 +991,43 @@ Testing GOTO_W
 
 #[test]
 fn should_get_caller_class() {
-    assert_success(
-        "samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample",
-        "1\n",
+    const ENTRY: &str =
+        "samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample";
+    const EXPECTED: &str = r#"direct: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+from another class: samples.jdkinternal.reflection.getcallerclass.Caller
+from a nested class: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample$Nested
+from a lambda: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+from a deeper frame of the same class: samples.jdkinternal.reflection.getcallerclass.Caller
+caller-sensitive method through reflection: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+its caller through reflection: samples.jdkinternal.reflection.getcallerclass.Caller
+caller-sensitive method through a method handle: samples.jdkinternal.reflection.getcallerclass.ReflectionGetCallerClassExample
+its caller through a method handle: samples.jdkinternal.reflection.getcallerclass.Caller
+called from a method that is not caller-sensitive: java.lang.InternalError: CallerSensitive annotation expected at frame 1
+called from an annotated method outside the JDK: java.lang.InternalError: CallerSensitive annotation expected at frame 1
+"#;
+    assert_eq!(
+        utils::run_reference_jvm(
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.reflect=ALL-UNNAMED"
+            ],
+            ENTRY
+        )
+        .stdout,
+        EXPECTED,
+        "the reference JVM disagrees with the expectation"
     );
+    assert_success(ENTRY, EXPECTED);
 }
 
 #[test]
 fn should_initialize_system_on_load() {
     assert_success("samples.system.load.SystemLoad", "4321\n");
+}
+
+#[test]
+fn should_replace_system_input_stream() {
+    assert_success("samples.system.setin.SystemSetInExample", "65\n66\n");
 }
 
 #[test]
@@ -1076,6 +1174,86 @@ fn should_write_file_to_fs() {
         "CAFEBABE",
         "",
     )
+}
+
+#[test]
+fn should_list_directory_entries() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let populated = temp.path().join("populated");
+    std::fs::create_dir(&populated).unwrap();
+    std::fs::write(populated.join("zeta.txt"), b"z").unwrap();
+    std::fs::write(populated.join("alpha.txt"), b"a").unwrap();
+    std::fs::create_dir(populated.join("nested")).unwrap();
+    let empty = temp.path().join("empty");
+    std::fs::create_dir(&empty).unwrap();
+    let missing = temp.path().join("missing");
+    let regular_file = temp.path().join("file.txt");
+    std::fs::write(&regular_file, b"f").unwrap();
+    // Stored as a compact Latin-1 Java string, which isn't valid UTF-8
+    let latin1 = temp.path().join("caf\u{e9}");
+    std::fs::create_dir(&latin1).unwrap();
+    std::fs::write(latin1.join("entry.txt"), b"e").unwrap();
+
+    utils::assert_success_with_args(
+        "samples.io.listdirectory.ListDirectory",
+        &[
+            populated.to_str().unwrap(),
+            empty.to_str().unwrap(),
+            missing.to_str().unwrap(),
+            regular_file.to_str().unwrap(),
+            latin1.to_str().unwrap(),
+        ],
+        "[alpha.txt, nested, zeta.txt]\n[]\nnull\nnull\n[entry.txt]\n",
+    );
+}
+
+#[test]
+#[cfg(target_os = "linux")] // macOS and Windows file systems reject names that aren't valid Unicode
+fn should_list_directory_entries_with_non_utf8_names() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::write(temp.path().join(OsStr::from_bytes(b"bad-\xff.txt")), b"b").unwrap();
+    std::fs::write(temp.path().join("good.txt"), b"g").unwrap();
+
+    utils::assert_success_with_args(
+        "samples.io.listdirectory.ListDirectory",
+        &[temp.path().to_str().unwrap()],
+        "[bad-\\uFFFD.txt, good.txt]\n",
+    );
+}
+
+#[test]
+fn should_read_and_write_single_random_access_file_byte() {
+    let (file_path, _guard) = tmp_file("single-byte.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilesinglebyte.RandomAccessFileSingleByte",
+        &[&file_path],
+        "65\n-1\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"A");
+}
+
+#[test]
+fn should_report_random_access_file_pointer() {
+    let (file_path, _guard) = tmp_file("pointer.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilepointer.RandomAccessFilePointer",
+        &[&file_path],
+        "4\n1\n2\n",
+    );
+}
+
+#[test]
+fn should_resize_random_access_file() {
+    let (file_path, _guard) = tmp_file("resized.bin");
+    utils::assert_success_with_args(
+        "samples.io.randomaccessfilesetlength.RandomAccessFileSetLength",
+        &[&file_path],
+        "4\n6\n",
+    );
+    assert_eq!(std::fs::read(file_path).unwrap(), b"abcX\0\0");
 }
 
 #[test]
@@ -1779,6 +1957,12 @@ fn should_return_system_properties() {
 }
 
 #[test]
+fn should_match_host_jnu_encoding() {
+    // sun.jnu.encoding depends on the host's locale / code page
+    utils::assert_same_as_reference_jvm(&[], "samples.system.encoding.SunJnuEncoding", Success);
+}
+
+#[test]
 fn should_return_overridden_system_properties() {
     let args = [
         "-Dother.property=other_value",
@@ -2035,9 +2219,92 @@ fn should_support_system_get_constant_pool() {
 
 #[test]
 fn should_support_assertions() {
-    assert_success(
+    utils::assert_with_all_args(
+        &["-ea"],
         "samples.javacore.assertions.trivial.AssertionExample",
+        &[],
         "Assertions: enabled\n",
+        "",
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+// Classes `AssertionStatusExample` reports on, as it names them
+const EXAMPLE: &str = "AssertionStatusExample";
+const SAME_PACKAGE: &str = "SamePackageAssertions";
+const SUB_PACKAGE: &str = "sub.SubPackageAssertions";
+const NESTED: &str = "AssertionStatusExample.Nested";
+const STRING: &str = "String";
+
+/// Output of `AssertionStatusExample` when the classes in `enabled` have assertions enabled
+fn assertion_status_output(enabled: &[&str]) -> String {
+    let desired = |class: &str| enabled.contains(&class);
+    let mut output = String::new();
+    for class in [EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED] {
+        // javac makes the asserts of a nested class follow its top-level class
+        let top_level = if class == NESTED { EXAMPLE } else { class };
+        output += &format!(
+            "{class}: desired {}, assert run {}\n",
+            desired(class),
+            desired(top_level)
+        );
+    }
+    for class in [STRING, "int", "int[]"] {
+        output += &format!("{class}: desired {}\n", desired(class));
+    }
+    // the class loader starts from the same options, so only LateAssertions changes
+    output += "-- after setClassAssertionStatus(LateAssertions, true)\n";
+    for class in [EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED] {
+        output += &format!("{class}: desired {}\n", desired(class));
+    }
+    output += "LateAssertions: desired true, assert run true\n";
+    output
+}
+
+#[rstest]
+#[case::by_default(&[], &[])]
+#[case::ea(&["-ea"], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::enableassertions(&["-enableassertions"], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::ea_then_da(&["-ea", "-da"], &[])]
+#[case::package_and_subpackages(&["-ea:samples.javacore.assertions.status..."], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::subpackage(&["-ea:samples.javacore.assertions.status.sub..."], &[SUB_PACKAGE])]
+#[case::class(&["-ea:samples.javacore.assertions.status.SamePackageAssertions"], &[SAME_PACKAGE])]
+#[case::nested_class(&["-ea:samples.javacore.assertions.status.AssertionStatusExample$Nested"], &[NESTED])]
+#[case::outer_class_not_nested(&["-ea:samples.javacore.assertions.status.AssertionStatusExample"], &[EXAMPLE])]
+#[case::package_name_without_dots_is_a_class(&["-ea:samples.javacore.assertions.status"], &[])]
+#[case::root_package(&["-ea:samples..."], &[EXAMPLE, SAME_PACKAGE, SUB_PACKAGE, NESTED])]
+#[case::empty_name(&["-ea:"], &[])]
+#[case::package_more_specific_than_default(&["-ea", "-da:samples.javacore.assertions.status.sub..."], &[EXAMPLE, SAME_PACKAGE, NESTED])]
+#[case::class_more_specific_than_package(&["-da:samples...", "-ea:samples.javacore.assertions.status.SamePackageAssertions"], &[SAME_PACKAGE])]
+#[case::later_option_wins(&["-ea:samples...", "-da:samples..."], &[])]
+#[case::unnamed_package(&["-ea:..."], &[])]
+#[case::esa(&["-esa"], &[STRING])]
+#[case::esa_then_dsa(&["-esa", "-dsa"], &[])]
+#[case::system_package(&["-ea:java.lang..."], &[STRING])]
+#[case::system_class(&["-ea:java.lang.String"], &[STRING])]
+#[case::long_forms(&["-enableassertions:samples...", "-disableassertions:samples.javacore.assertions.status.SamePackageAssertions", "-enablesystemassertions"], &[EXAMPLE, SUB_PACKAGE, NESTED, STRING])]
+fn should_resolve_assertion_status_like_hotspot(
+    #[case] options: &[&str],
+    #[case] enabled: &[&str],
+) {
+    const ENTRY: &str = "samples.javacore.assertions.status.AssertionStatusExample";
+    let expected = assertion_status_output(enabled);
+    assert_eq!(
+        utils::run_reference_jvm(options, ENTRY).stdout,
+        expected,
+        "the reference JVM disagrees with the expectation for {options:?}"
+    );
+    utils::assert_with_all_args(
+        options,
+        ENTRY,
+        &[],
+        &expected,
+        "",
+        Success,
+        0,
+        HashMap::default(),
     );
 }
 
@@ -2524,10 +2791,26 @@ fn should_start_trace_at_call_site_when_fill_in_stack_trace_called_explicitly() 
 
 #[test]
 fn should_print_info_about_unhandled_exception() {
+    const ENTRY: &str = "samples.javacore.unhandledexception.UnhandledExceptionExample";
+    // `String`'s line numbers differ between JDK releases, so take them from the reference JVM's
+    // trace (which can't be compared as a whole: unlike ours, it prefixes frames with module names)
+    let reference_stderr = utils::run_reference_jvm(&[], ENTRY).stderr;
+    let string_line = |method: &str| {
+        Regex::new(&format!(
+            r"java\.lang\.String\.{method}\(String\.java:(\d+)\)"
+        ))
+        .unwrap()
+        .captures(&reference_stderr)
+        .unwrap_or_else(|| panic!("No String.{method} frame in: {reference_stderr}"))[1]
+            .to_string()
+    };
+    let check_bounds_line = string_line("checkBoundsBeginEnd");
+    let substring_line = string_line("substring");
     utils::assert_failure_with_stderr(
-        "samples.javacore.unhandledexception.UnhandledExceptionExample",
+        ENTRY,
         r#""#,
-        r#"Exception in thread "main" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
+        &format!(
+            r#"Exception in thread "main" java.lang.StringIndexOutOfBoundsException: Range [2, 1) out of bounds for length 5
 	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:55)
 	at jdk.internal.util.Preconditions$1.apply(Preconditions.java:52)
 	at jdk.internal.util.Preconditions$4.apply(Preconditions.java:213)
@@ -2535,13 +2818,32 @@ fn should_print_info_about_unhandled_exception() {
 	at jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:98)
 	at jdk.internal.util.Preconditions.outOfBoundsCheckFromToIndex(Preconditions.java:112)
 	at jdk.internal.util.Preconditions.checkFromToIndex(Preconditions.java:349)
-	at java.lang.String.checkBoundsBeginEnd(String.java:4937)
-	at java.lang.String.substring(String.java:2899)
+	at java.lang.String.checkBoundsBeginEnd(String.java:{check_bounds_line})
+	at java.lang.String.substring(String.java:{substring_line})
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun3(UnhandledExceptionExample.java:18)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun2(UnhandledExceptionExample.java:13)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.fun1(UnhandledExceptionExample.java:9)
 	at samples.javacore.unhandledexception.UnhandledExceptionExample.main(UnhandledExceptionExample.java:5)
 
+"#
+        ),
+    );
+}
+
+#[test]
+fn should_support_scoped_values() {
+    assert_success(
+        "samples.concurrency.scopedvalue.ScopedValueExample",
+        r#"bound outside: false
+user: alice
+user: alice
+user: alice
+nested: bob level 2
+restored: alice, level bound: false
+call result: CAROL
+orElse outside: nobody
+unbound get: NoSuchElementException
+bound in new thread: false
 "#,
     );
 }
@@ -2718,7 +3020,7 @@ Options:
 
 #[test]
 fn should_print_version_message() {
-    let expected_stdout = "rusty-jvm 0.5.0\n";
+    let expected_stdout = "rusty-jvm 0.6.0\n";
     utils::assert_with_all_args(
         &["--version"],
         "",
@@ -3114,6 +3416,33 @@ Target{byteField=127, booleanField=true, shortField=32767, charField=є, intFiel
 }
 
 #[test]
+fn should_box_return_values_of_natively_accessed_methods() {
+    // forces Method.invoke through the VM's NativeAccessor.invoke0
+    utils::assert_with_all_args(
+        &["-Djdk.reflect.useNativeAccessorOnly=true"],
+        "samples.reflection.nativeaccessorreturnvalues.NativeAccessorReturnValues",
+        &[],
+        r#"aBoolean -> true (Boolean)
+aFalse -> false (Boolean)
+aByte -> -7 (Byte)
+aChar -> x (Character)
+aShort -> 1234 (Short)
+anInt -> 42 (Integer)
+aLong -> 1099511627776 (Long)
+aFloat -> 1.5 (Float)
+aDouble -> -2.25 (Double)
+aString -> str (String)
+aVoid -> null
+instanceLong -> 8589934607
+"#,
+        "",
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_invoke_method_via_reflection() {
     assert_success(
         "samples.reflection.directmethodhandleaccessor.DirectMethodHandleAccessorExample",
@@ -3256,178 +3585,11 @@ Age: 30
 
 #[test]
 fn should_return_info_about_modules() {
-    assert_success(
+    // java.base's module graph differs between JDK releases
+    utils::assert_same_as_reference_jvm(
+        &[],
         "samples.module.inspectmodule.InspectModule",
-        r#"Class: class java.lang.String
-  Module name: java.base
-    ModuleDescriptor:
-      name: java.base
-      modifiers: []
-      requires: []
-      exports:
-        com.sun.crypto.provider [jdk.crypto.cryptoki] []
-        com.sun.security.ntlm [java.security.sasl] []
-        java.io [] []
-        java.lang [] []
-        java.lang.annotation [] []
-        java.lang.classfile [] []
-        java.lang.classfile.attribute [] []
-        java.lang.classfile.constantpool [] []
-        java.lang.classfile.instruction [] []
-        java.lang.constant [] []
-        java.lang.foreign [] []
-        java.lang.invoke [] []
-        java.lang.module [] []
-        java.lang.ref [] []
-        java.lang.reflect [] []
-        java.lang.runtime [] []
-        java.math [] []
-        java.net [] []
-        java.net.spi [] []
-        java.nio [] []
-        java.nio.channels [] []
-        java.nio.channels.spi [] []
-        java.nio.charset [] []
-        java.nio.charset.spi [] []
-        java.nio.file [] []
-        java.nio.file.attribute [] []
-        java.nio.file.spi [] []
-        java.security [] []
-        java.security.cert [] []
-        java.security.interfaces [] []
-        java.security.spec [] []
-        java.text [] []
-        java.text.spi [] []
-        java.time [] []
-        java.time.chrono [] []
-        java.time.format [] []
-        java.time.temporal [] []
-        java.time.zone [] []
-        java.util [] []
-        java.util.concurrent [] []
-        java.util.concurrent.atomic [] []
-        java.util.concurrent.locks [] []
-        java.util.function [] []
-        java.util.jar [] []
-        java.util.random [] []
-        java.util.regex [] []
-        java.util.spi [] []
-        java.util.stream [] []
-        java.util.zip [] []
-        javax.crypto [] []
-        javax.crypto.interfaces [] []
-        javax.crypto.spec [] []
-        javax.net [] []
-        javax.net.ssl [] []
-        javax.security.auth [] []
-        javax.security.auth.callback [] []
-        javax.security.auth.login [] []
-        javax.security.auth.spi [] []
-        javax.security.auth.x500 [] []
-        javax.security.cert [] []
-        jdk.internal [jdk.incubator.vector] []
-        jdk.internal.access [java.desktop, java.logging, java.management, java.rmi, jdk.charsets, jdk.crypto.cryptoki, jdk.jartool, jdk.jfr, jdk.jlink, jdk.management, jdk.net, jdk.sctp] []
-        jdk.internal.classfile.components [jdk.jfr] []
-        jdk.internal.event [jdk.jfr] []
-        jdk.internal.foreign [jdk.incubator.vector] []
-        jdk.internal.io [jdk.internal.le, jdk.jshell] []
-        jdk.internal.javac [java.compiler, java.desktop, jdk.compiler, jdk.incubator.vector, jdk.jartool, jdk.jdeps, jdk.jfr, jdk.jlink, jdk.jshell] []
-        jdk.internal.jimage [jdk.jlink] []
-        jdk.internal.jimage.decompressor [jdk.jlink] []
-        jdk.internal.jmod [jdk.compiler, jdk.jlink] []
-        jdk.internal.loader [java.instrument, java.logging, java.naming] []
-        jdk.internal.logger [java.logging] []
-        jdk.internal.misc [java.desktop, java.logging, java.management, java.naming, java.net.http, java.rmi, java.security.jgss, jdk.attach, jdk.charsets, jdk.compiler, jdk.crypto.cryptoki, jdk.graal.compiler, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jfr, jdk.jshell, jdk.nio.mapmode, jdk.unsupported] []
-        jdk.internal.module [java.instrument, java.management.rmi, jdk.compiler, jdk.jartool, jdk.jfr, jdk.jlink, jdk.jpackage] []
-        jdk.internal.org.xml.sax [jdk.jfr] []
-        jdk.internal.org.xml.sax.helpers [jdk.jfr] []
-        jdk.internal.perf [java.management, jdk.internal.jvmstat, jdk.management.agent] []
-        jdk.internal.platform [jdk.jfr, jdk.management] []
-        jdk.internal.ref [java.desktop, java.net.http, jdk.naming.dns] []
-        jdk.internal.reflect [java.logging, java.sql, java.sql.rowset, jdk.dynalink, jdk.internal.vm.ci, jdk.unsupported] []
-        jdk.internal.util [java.desktop, java.naming, java.net.http, java.prefs, java.rmi, java.security.jgss, java.smartcardio, jdk.charsets, jdk.httpserver, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jlink, jdk.jpackage, jdk.net] []
-        jdk.internal.util.xml [jdk.jfr] []
-        jdk.internal.util.xml.impl [jdk.jfr] []
-        jdk.internal.vm [java.management, jdk.internal.jvmstat, jdk.internal.vm.ci, jdk.jfr, jdk.management, jdk.management.agent] []
-        jdk.internal.vm.annotation [java.instrument, jdk.incubator.vector, jdk.internal.vm.ci, jdk.jfr, jdk.unsupported] []
-        jdk.internal.vm.vector [jdk.incubator.vector] []
-        sun.invoke.util [jdk.compiler] []
-        sun.net [java.net.http, jdk.naming.dns] []
-        sun.net.dns [java.security.jgss, jdk.naming.dns] []
-        sun.net.ext [jdk.net] []
-        sun.net.util [java.net.http, jdk.jconsole, jdk.sctp] []
-        sun.net.www [java.net.http, jdk.jartool] []
-        sun.net.www.protocol.http [java.security.jgss] []
-        sun.nio.ch [java.management, jdk.crypto.cryptoki, jdk.net, jdk.sctp] []
-        sun.nio.fs [jdk.net] []
-        sun.reflect.annotation [jdk.compiler] []
-        sun.reflect.generics.reflectiveObjects [java.desktop] []
-        sun.reflect.misc [java.desktop, java.management] []
-        sun.security.internal.interfaces [jdk.crypto.cryptoki] []
-        sun.security.jca [java.smartcardio, jdk.crypto.cryptoki, jdk.naming.dns] []
-        sun.security.pkcs [jdk.jartool] []
-        sun.security.provider [java.security.jgss, jdk.crypto.cryptoki, jdk.security.auth] []
-        sun.security.provider.certpath [java.naming, jdk.jartool] []
-        sun.security.timestamp [jdk.jartool] []
-        sun.security.tools [jdk.jartool] []
-        sun.security.validator [jdk.jartool] []
-        sun.security.x509 [jdk.crypto.cryptoki, jdk.jartool] []
-        sun.util.cldr [jdk.jlink] []
-        sun.util.locale.provider [java.desktop, jdk.jlink, jdk.localedata] []
-        sun.util.logging [java.desktop, java.logging, java.prefs] []
-        sun.util.resources [jdk.localedata] []
-      opens: []
-      uses: [java.lang.System$LoggerFinder, java.net.ContentHandlerFactory, java.net.spi.InetAddressResolverProvider, java.net.spi.URLStreamHandlerProvider, java.nio.channels.spi.AsynchronousChannelProvider, java.nio.channels.spi.SelectorProvider, java.nio.charset.spi.CharsetProvider, java.nio.file.spi.FileSystemProvider, java.nio.file.spi.FileTypeDetector, java.security.Provider, java.text.spi.BreakIteratorProvider, java.text.spi.CollatorProvider, java.text.spi.DateFormatProvider, java.text.spi.DateFormatSymbolsProvider, java.text.spi.DecimalFormatSymbolsProvider, java.text.spi.NumberFormatProvider, java.time.chrono.AbstractChronology, java.time.chrono.Chronology, java.time.zone.ZoneRulesProvider, java.util.spi.CalendarDataProvider, java.util.spi.CalendarNameProvider, java.util.spi.CurrencyNameProvider, java.util.spi.LocaleNameProvider, java.util.spi.ResourceBundleControlProvider, java.util.spi.ResourceBundleProvider, java.util.spi.TimeZoneNameProvider, java.util.spi.ToolProvider, javax.security.auth.spi.LoginModule, jdk.internal.io.JdkConsoleProvider, jdk.internal.logger.DefaultLoggerFinder, sun.text.spi.JavaTimeDateTimePatternProvider, sun.util.locale.provider.LocaleDataMetaInfo, sun.util.resources.LocaleData$CommonResourceBundleProvider, sun.util.resources.LocaleData$SupplementaryResourceBundleProvider, sun.util.spi.CalendarProvider]
-      provides: [java.nio.file.spi.FileSystemProvider with [jdk.internal.jrtfs.JrtFileSystemProvider]]
-
-Class: interface org.xml.sax.XMLReader
-  Module name: java.xml
-    ModuleDescriptor:
-      name: java.xml
-      modifiers: []
-      requires: [mandated java.base]
-      exports:
-        com.sun.org.apache.xml.internal.dtm [java.xml.crypto] []
-        com.sun.org.apache.xml.internal.utils [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.compiler [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.functions [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.objects [java.xml.crypto] []
-        com.sun.org.apache.xpath.internal.res [java.xml.crypto] []
-        javax.xml [] []
-        javax.xml.catalog [] []
-        javax.xml.datatype [] []
-        javax.xml.namespace [] []
-        javax.xml.parsers [] []
-        javax.xml.stream [] []
-        javax.xml.stream.events [] []
-        javax.xml.stream.util [] []
-        javax.xml.transform [] []
-        javax.xml.transform.dom [] []
-        javax.xml.transform.sax [] []
-        javax.xml.transform.stax [] []
-        javax.xml.transform.stream [] []
-        javax.xml.validation [] []
-        javax.xml.xpath [] []
-        org.w3c.dom [] []
-        org.w3c.dom.bootstrap [] []
-        org.w3c.dom.events [] []
-        org.w3c.dom.ls [] []
-        org.w3c.dom.ranges [] []
-        org.w3c.dom.traversal [] []
-        org.w3c.dom.views [] []
-        org.xml.sax [] []
-        org.xml.sax.ext [] []
-        org.xml.sax.helpers [] []
-      opens: []
-      uses: [javax.xml.datatype.DatatypeFactory, javax.xml.parsers.DocumentBuilderFactory, javax.xml.parsers.SAXParserFactory, javax.xml.stream.XMLEventFactory, javax.xml.stream.XMLInputFactory, javax.xml.stream.XMLOutputFactory, javax.xml.transform.TransformerFactory, javax.xml.validation.SchemaFactory, javax.xml.xpath.XPathFactory, org.xml.sax.XMLReader]
-      provides: []
-
-Class: class samples.module.inspectmodule.InspectModule
-  Module name: unnamed module
-No ModuleDescriptor
-
-"#,
+        Success,
     );
 }
 
@@ -4147,6 +4309,10 @@ Caught NoSuchFieldError: nonexistentStaticField
 Caught NoSuchMethodError: nonexistentMethod:()V
 === GetStaticMethodID: nonexistent method ===
 Caught NoSuchMethodError: nonexistentStaticMethod:()V
+=== GetMethodID: static method ===
+Caught NoSuchMethodError: lookupNonexistentStaticMethodId:()V
+=== GetStaticMethodID: instance method ===
+Caught NoSuchMethodError: lookupNonexistentMethodId:()V
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.example.JniNoSuchIdDemo in an unnamed module
@@ -4236,6 +4402,344 @@ object and null=false
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniIsSameObjectDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_throw_for_invalid_jni_array_allocation() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.arrayops.JniArrayAllocationDemo",
+        &[],
+        r#"NewObjectArray(String, 2) -> [Ljava.lang.String;
+NewObjectArray(String, -1) -> null, pending java.lang.NegativeArraySizeException: -1
+NewIntArray(3) -> [I
+NewIntArray(-5) -> null, pending java.lang.NegativeArraySizeException: -5
+NewObjectArray(null, 1) -> null, pending java.lang.NullPointerException: Element class is null
+null component caught: Element class is null
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.arrayops.JniArrayAllocationDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_get_module() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.classops.JniGetModuleDemo",
+        &[],
+        r#"java.lang.String=java.base sameAsJava=true
+int=java.base sameAsJava=true
+[I=java.base sameAsJava=true
+[Ljava.lang.String;=java.base sameAsJava=true
+[[Ljava.lang.String;=java.base sameAsJava=true
+[Lsamples.javacore.loadlibrary.classops.JniGetModuleDemo;=null sameAsJava=true
+samples.javacore.loadlibrary.classops.JniGetModuleDemo=null sameAsJava=true
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.classops.JniGetModuleDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_alloc_object_without_constructor() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.objectops.JniAllocObjectDemo",
+        &[],
+        r#"value=0 inherited=0 name=null
+constructor calls=0
+initialized before=false
+initialized after=true
+abstract -> java.lang.InstantiationException: samples.javacore.loadlibrary.objectops.AbstractSample
+interface -> java.lang.InstantiationException: java.lang.Runnable
+primitive -> java.lang.InstantiationException: int
+array -> java.lang.InstantiationException: [I
+Class -> java.lang.IllegalAccessException: java.lang.Class
+null -> java.lang.NullPointerException: Class is null
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniAllocObjectDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_resolve_inherited_jni_fields_by_name_and_signature() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.inheritedfields.JniInheritedFieldsDemo",
+        &[],
+        r#"inherited=7
+hidden int=11
+hidden long=22
+first field ID is non-null=true
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.inheritedfields.JniInheritedFieldsDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_is_instance_of() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.objectops.JniIsInstanceOfDemo",
+        &[],
+        r#"string/object=true
+string/char-sequence=true
+string/number=false
+int-array/object=true
+string-array/object-array=true
+string-array/char-sequence-array=true
+string-array/integer-array=false
+int-array/object-array=false
+null/number=true
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniIsInstanceOfDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_primitive_array_critical() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.arrayops.JniPrimitiveArrayCriticalDemo",
+        &[],
+        r#"is copy=true
+[40, 20, 60]
+[100, 2, 3]
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.arrayops.JniPrimitiveArrayCriticalDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_is_virtual_thread() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.threadops.JniIsVirtualThreadDemo",
+        &[],
+        "platform=false\nvirtual=true\nnon-thread=false\nnull=false\n",
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.threadops.JniIsVirtualThreadDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_direct_byte_buffers() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.nio.JniDirectBufferDemo",
+        &[],
+        r#"direct=true
+capacity=4
+address nonzero=true
+values=12,34
+filled=7,7
+int view capacity=1
+heap address=0 capacity=-1
+string address=0 capacity=-1
+empty capacity=0
+negative capacity: JNI NewDirectByteBuffer passed capacity < 0: (-1)
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.nio.JniDirectBufferDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_round_trip_reflected_methods_through_jni_ids() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.reflection.JniReflectedMethodsDemo",
+        &[],
+        r#"instance=true
+static=true
+constructor=true
+instance id=true
+static id=true
+constructor id=true
+inherited id=true
+invoke instance=1
+invoke overridden=3
+invoke static=2
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.reflection.JniReflectedMethodsDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_report_jni_object_reference_types() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.objectops.JniObjectRefTypeDemo",
+        &[],
+        "object=1\narray=1\nclass=1\nnull=0\ndangling=0\n",
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniObjectRefTypeDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_construct_objects_with_jni_new_object_a() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.objectops.JniNewObjectADemo",
+        &[],
+        r#"plain -> ConstructedSample 42:value
+super constructor -> DerivedSample 7:base extra=0
+throwing constructor -> java.lang.IllegalArgumentException: negative: -1
+abstract -> java.lang.InstantiationException: samples.javacore.loadlibrary.objectops.AbstractConstructedSample
+null -> java.lang.NullPointerException: Class is null
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.objectops.JniNewObjectADemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_define_classes_from_jni_byte_buffers() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.classops.JniDefineClassDemo",
+        &[],
+        r#"samples.javacore.loadlibrary.classops.DefinedRenamed1 loader=true message=defined through JNI
+samples.javacore.loadlibrary.classops.DefinedRenamed2 loader=true message=defined through JNI
+wrong name -> java.lang.NoClassDefFoundError
+duplicate -> java.lang.LinkageError
+malformed -> java.lang.ClassFormatError
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.classops.JniDefineClassDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
+fn should_support_jni_monitor_enter_and_exit() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.monitor.JniMonitorDemo",
+        &[],
+        r#"round trip=0
+held after return=false
+illegal exit caught
+enter=0
+held after enter=true
+other thread BLOCKED, acquired=false
+exit=0
+other thread acquired after exit=true
+null enter caught
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.monitor.JniMonitorDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 

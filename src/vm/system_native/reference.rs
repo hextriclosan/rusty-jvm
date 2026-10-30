@@ -14,6 +14,13 @@ pub(crate) fn clear0(this: i32) -> Result<()> {
     HEAP.set_object_field_value(this, REFERENCE, REFERENT, vec![0])
 }
 
+/// `java.lang.ref.Reference.get0()Ljava/lang/Object;` (JDK 26+)
+///
+/// Without GC the referent is only ever cleared explicitly, so reading the field is the whole job.
+pub(crate) fn get0(this: i32) -> Result<i32> {
+    Ok(HEAP.get_object_field_value(this, REFERENCE, REFERENT)?[0])
+}
+
 /// `java.lang.ref.Reference.refersTo0(Ljava/lang/Object;)Z`
 ///
 /// True when this reference still points at `o`. Reading the `referent` field directly is correct

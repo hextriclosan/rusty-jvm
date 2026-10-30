@@ -1,10 +1,14 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
+use crate::vm::jni::utils::{
+    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
+};
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
     jshort, jshortArray, jsize, JNIEnv, JNI_ABORT, JNI_COMMIT, JNI_TRUE,
 };
+use std::ffi::c_void;
 
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
     let array_ref = input as i32;
@@ -25,11 +29,13 @@ pub(super) extern "system" fn new_object_array(
     let init_obj_ref = init as i32;
 
     if clazz_ref == 0 {
-        panic!("Class reference is null"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("Element class is null");
+        return std::ptr::null_mut();
     }
 
     if len < 0 {
-        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return std::ptr::null_mut();
     }
 
     if HEAP
@@ -64,7 +70,7 @@ pub(super) extern "system" fn get_object_array_element(
 ) -> jobject {
     let array_ref = array as i32;
     if array_ref == 0 {
-        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        set_pending_null_pointer_exception("Array is null");
         return std::ptr::null_mut();
     }
 
@@ -91,7 +97,7 @@ pub(super) extern "system" fn set_object_array_element(
 ) {
     let array_ref = array as i32;
     if array_ref == 0 {
-        set_pending_null_pointer_exception().expect("Failed to create NullPointerException");
+        set_pending_null_pointer_exception("Array is null");
         return;
     }
 
@@ -142,7 +148,8 @@ pub(super) extern "system" fn new_double_array(_env: *mut JNIEnv, len: jsize) ->
 
 fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
     if len < 0 {
-        panic!("Negative array length: {len}"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return std::ptr::null_mut();
     }
 
     HEAP.create_array(type_name, len) as jarray
@@ -236,6 +243,41 @@ fn release_primitive_type_array_elements<T>(
         }
         _ => panic!("Invalid mode: {mode}"),
     };
+}
+
+pub(super) extern "system" fn get_primitive_array_critical(
+    _env: *mut JNIEnv,
+    array: jarray,
+    is_copy: *mut jboolean,
+) -> *mut c_void {
+    // No GC yet, so this is equivalent to Get<PrimitiveType>ArrayElements
+    // TODO(GC): Pin object and disable GC here
+    get_primitive_type_array_elements::<u8>(array as i32, is_copy).cast()
+}
+
+pub(super) extern "system" fn release_primitive_array_critical(
+    _env: *mut JNIEnv,
+    array: jarray,
+    elements: *mut c_void,
+    mode: jint,
+) {
+    // TODO(GC): Unpin object and re-enable GC here
+    let array_ref = array as i32;
+    let len = HEAP
+        .get_entire_raw_data(array_ref)
+        .expect("Failed to get critical array length")
+        .len();
+    let elements = elements.cast::<u8>();
+
+    match mode {
+        0 => {
+            write_to_array(array_ref, elements, 0, len);
+            free_buffer(elements, len);
+        }
+        JNI_COMMIT => write_to_array(array_ref, elements, 0, len),
+        JNI_ABORT => free_buffer(elements, len),
+        _ => panic!("Invalid mode: {mode}"),
+    }
 }
 
 macro_rules! impl_set_array_region {
@@ -385,6 +427,4 @@ fn read_from_array(array_ref: i32, elems: *mut u8, start: usize, len: usize) {
         std::ptr::copy_nonoverlapping(slice.as_ptr(), elems, len);
     }
 }
-use crate::vm::exception::pending_helpers::{
-    set_pending_array_index_out_of_bounds_exception, set_pending_null_pointer_exception,
-};
+use crate::vm::exception::pending_helpers::set_pending_array_index_out_of_bounds_exception;
