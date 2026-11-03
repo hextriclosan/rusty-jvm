@@ -1247,7 +1247,10 @@ fn should_sync_file_descriptor() {
     utils::assert_success_with_args(
         "samples.io.filedescriptorsync.FileDescriptorSync",
         &[&file_path],
-        "completed\nSyncFailedException\n",
+        "completed\n\
+        read-only completed\n\
+        closed: java.io.SyncFailedException: sync failed\n\
+        invalid: java.io.SyncFailedException: sync failed\n",
     );
     assert_eq!(std::fs::read(file_path).unwrap(), b"synced");
 }

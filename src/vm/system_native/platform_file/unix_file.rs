@@ -5,21 +5,23 @@ use crate::vm::helper::get_handle;
 use crate::vm::system_native::platform_file::Mode;
 use nix::fcntl;
 use nix::fcntl::{FcntlArg, OFlag};
+use nix::unistd;
 use std::fs::File;
 use std::mem::ManuallyDrop;
-use std::os::fd::{AsFd, FromRawFd, IntoRawFd};
+use std::os::fd::{AsFd, BorrowedFd, FromRawFd, IntoRawFd};
 
 pub struct PlatformFile {}
 
 impl PlatformFile {
-    pub fn sync(file_descriptor_ref: i32) -> Result<()> {
+    /// Flushes the file to the storage device, returning `false` if that fails.
+    pub fn sync(file_descriptor_ref: i32) -> Result<bool> {
         let raw_fd = get_handle(file_descriptor_ref)?;
         if raw_fd == -1 {
-            return Err(Error::new_native("Stream Closed"));
+            return Ok(false); // closed
         }
-        let file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) });
-        file.sync_all()?;
-        Ok(())
+        // Plain fsync like HotSpot: `File::sync_all` uses F_FULLFSYNC on macOS
+        let fd = unsafe { BorrowedFd::borrow_raw(raw_fd) };
+        Ok(unistd::fsync(fd).is_ok())
     }
 
     pub fn close(file_descriptor_ref: i32) -> Result<()> {

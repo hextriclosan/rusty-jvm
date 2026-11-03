@@ -69,6 +69,7 @@ pub(crate) fn set_pending_io_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/io/IOException", message)
 }
 
+/// Sets a pending `SyncFailedException` with the given message.
 pub(crate) fn set_pending_sync_failed_exception(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/io/SyncFailedException", message)
 }

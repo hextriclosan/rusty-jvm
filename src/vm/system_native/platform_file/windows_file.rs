@@ -7,6 +7,7 @@ use std::fs::File;
 use std::mem::ManuallyDrop;
 use std::os::windows::io::{FromRawHandle, IntoRawHandle, RawHandle};
 use winapi::shared::minwindef::DWORD;
+use winapi::shared::winerror::ERROR_ACCESS_DENIED;
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::processenv::GetStdHandle;
 use winapi::um::winbase::{STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE};
@@ -15,16 +16,18 @@ use winapi::um::winnt::HANDLE;
 pub struct PlatformFile {}
 
 impl PlatformFile {
-    pub fn sync(file_descriptor_ref: i32) -> Result<()> {
-        let raw =
-            HEAP.get_object_field_value(file_descriptor_ref, "java/io/FileDescriptor", "handle")?;
-        let raw_handle = vec_to_i64(&raw);
-        if raw_handle == -1 {
-            return Err(Error::new_native("Stream Closed"));
+    /// Flushes the file to the storage device, returning `false` if that fails.
+    pub fn sync(file_descriptor_ref: i32) -> Result<bool> {
+        let raw_handle = get_handle(file_descriptor_ref)?;
+        if raw_handle as HANDLE == INVALID_HANDLE_VALUE {
+            return Ok(false); // closed
         }
         let file = ManuallyDrop::new(unsafe { File::from_raw_handle(raw_handle as RawHandle) });
-        file.sync_all()?;
-        Ok(())
+        match file.sync_all() {
+            Ok(()) => Ok(true),
+            // Like HotSpot, a read-only handle cannot be flushed but that is not a failure
+            Err(e) => Ok(e.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)),
+        }
     }
 
     pub fn close(file_descriptor_ref: i32) -> Result<()> {
