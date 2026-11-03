@@ -2,6 +2,7 @@ use super::charge;
 use super::heap::Heap;
 use super::java_instance::HeapValue;
 use crate::vm::gc::budget::{AllocError, AllocResult, Budget};
+use crate::vm::gc::{collector, trigger};
 use crate::vm::stack::rooted_slots::RootedSlots;
 use std::collections::HashMap;
 
@@ -32,6 +33,19 @@ pub(crate) struct Reservation<'a> {
 
 impl Heap {
     pub(crate) fn reserve(&self, charge: u64) -> AllocResult<Reservation<'_>> {
+        trigger::before_allocation();
+        match self.try_reserve(charge) {
+            Err(AllocError::Capacity) if trigger::enabled() => {
+                // try_reserve has dropped admission and created no reservation or
+                // staged payload. Collect/join once, then compete atomically again.
+                collector::collect(collector::Cause::Pressure);
+                self.try_reserve(charge)
+            }
+            result => result,
+        }
+    }
+
+    fn try_reserve(&self, charge: u64) -> AllocResult<Reservation<'_>> {
         let mut admission = self.admission.lock();
         let key = admission
             .next
@@ -50,7 +64,6 @@ impl Heap {
 
     /// The collector calls this only while its quiescent Operation is retained.
     /// Never derive a refund from a newly computed layout.
-    #[allow(dead_code)] // The task-7 sweep consumes this primitive.
     pub(crate) fn remove_recorded(&self, reference: i32) -> AllocResult<u64> {
         use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
         let mut admission = self.admission.lock();
@@ -68,7 +81,7 @@ impl Heap {
     }
 
     pub(crate) fn finish_emergency_bootstrap(&self) -> AllocResult<()> {
-        let mut admission = self.admission.lock();
+        let admission = self.admission.lock();
         if admission.budget.reserved != 0 {
             return Err(AllocError::InvalidLayout);
         }
@@ -80,9 +93,8 @@ impl Heap {
         if total > admission.budget.max {
             Err(AllocError::Capacity)
         } else {
-            // Task 6 has no collector. This is a single startup phase transition,
-            // not a per-caller exemption or a path entered during OOM delivery.
-            admission.budget.enforced = false;
+            // Remain enforced. Pressure collection is enabled only after the
+            // emergency throwable has been published as a permanent root.
             Ok(())
         }
     }
@@ -106,6 +118,7 @@ impl Reservation<'_> {
                 admission.budget.commit(self.charge, recorded)?;
                 entry.insert(reference);
                 self.active = false;
+                trigger::allocated();
                 Ok(None)
             }
         }
@@ -155,6 +168,7 @@ impl Reservation<'_> {
         admission.next = key.checked_add(1);
         destination.publish_single_ref(key);
         self.active = false;
+        trigger::allocated();
         Ok(key)
     }
 

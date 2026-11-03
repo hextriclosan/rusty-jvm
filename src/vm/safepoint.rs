@@ -88,6 +88,7 @@ pub(crate) fn dispatch_bytecode() {
     });
     if due {
         poll();
+        crate::vm::gc::trigger::at_safepoint();
     }
 }
 
@@ -133,6 +134,10 @@ pub(crate) enum Event {
     StartupClaimed,
     Retired,
     NativeFramePop,
+    #[cfg(test)]
+    ExternalNativeResolved,
+    #[cfg(test)]
+    NativeCallReturned,
 }
 
 #[inline]

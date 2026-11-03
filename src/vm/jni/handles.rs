@@ -160,7 +160,9 @@ pub(crate) fn initialize() -> Result<()> {
     })?;
     EMERGENCY_OOM.set(target).map_err(|_| {
         crate::vm::error::Error::new_execution("JNI emergency exception already initialized")
-    })
+    })?;
+    crate::vm::gc::trigger::enable();
+    Ok(())
 }
 
 pub(super) fn as_object(token: usize) -> jobject {
@@ -247,7 +249,6 @@ pub(super) fn reference_type(object: jobject) -> jobjectRefType {
 }
 
 /// Only the collector, with all mutators stopped, may supply this liveness predicate.
-#[allow(dead_code)] // Collector integration is task 7.
 pub(crate) fn clear_weak_references(mut is_live: impl FnMut(i32) -> bool) {
     for record in table().records.values_mut() {
         if record.kind == ReferenceKind::WeakGlobal

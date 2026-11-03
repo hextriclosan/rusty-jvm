@@ -64,6 +64,7 @@ struct State {
     next_id: u64,
     next_operation: u64,
     completed_epoch: u64,
+    pressure_requested: bool,
     dump_result: Option<Option<Vec<StackElement>>>,
 }
 
@@ -82,6 +83,7 @@ impl Coordinator {
                 next_id: 0,
                 next_operation: 0,
                 completed_epoch: 0,
+                pressure_requested: false,
                 dump_result: None,
             }),
             cv: Condvar::new(),
@@ -307,7 +309,23 @@ impl Coordinator {
         owner: u64,
         roots: Snapshot,
     ) -> Option<Operation> {
-        let observed = self.state.lock().completed_epoch;
+        self.request_collection_for(owner, roots, false)
+    }
+
+    pub(crate) fn request_collection_for(
+        self: &Arc<Self>,
+        owner: u64,
+        roots: Snapshot,
+        pressure: bool,
+    ) -> Option<Operation> {
+        let observed = {
+            let mut state = self.state.lock();
+            // Publish pressure BEFORE becoming Safe. An ordinary owner cannot
+            // finish its rendezvous without seeing every Running contender's
+            // policy request, even when that contender later joins its epoch.
+            state.pressure_requested |= pressure;
+            state.completed_epoch
+        };
         self.park(owner, roots, Reason::Operation);
         let mut state = self.state.lock();
         loop {
@@ -316,6 +334,7 @@ impl Coordinator {
                 self.resume(owner);
                 return None;
             }
+            state.pressure_requested |= pressure;
             if matches!(state.phase, Phase::Open) {
                 break;
             }
@@ -353,6 +372,7 @@ impl Coordinator {
             .map(|record| record.thread_ref)
             .collect();
         state.phase = Phase::Collecting { epoch, owner };
+        let pressure = state.pressure_requested;
         drop(state);
         Some(Operation {
             coordinator: Arc::clone(self),
@@ -361,6 +381,7 @@ impl Coordinator {
             snapshots,
             thread_refs,
             completed: false,
+            pressure,
         })
     }
 }
@@ -375,9 +396,14 @@ pub(crate) struct Operation {
     pub(crate) snapshots: Vec<Arc<Snapshot>>,
     thread_refs: Vec<i32>,
     completed: bool,
+    pressure: bool,
 }
 
 impl Operation {
+    pub(crate) fn pressure(&self) -> bool {
+        self.pressure
+    }
+
     /// The registry owns Thread identities even if a producer has no Java frames.
     /// Safe startup records and all blocked/native snapshots participate equally.
     pub(crate) fn root_refs(&self) -> impl Iterator<Item = i32> + '_ {
@@ -406,7 +432,11 @@ impl Drop for Operation {
         );
         if self.completed {
             state.completed_epoch = self.epoch;
+            state.pressure_requested = false;
         }
+        // An abort did not satisfy pressure. Retain it for the next elected
+        // operation, including when an ordinary waiter wins before the pressure
+        // waiter runs again. This is a policy bit, not an automatic retry.
         state.phase = Phase::Open;
         self.coordinator.requested.store(false, Ordering::Relaxed);
         self.coordinator.cv.notify_all();

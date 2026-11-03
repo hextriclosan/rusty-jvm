@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::gc::budget::{copy_slice, copy_string, AllocError, AllocResult};
 use crate::vm::gc::layout::{InstanceFields, InstanceLayout, References};
+use crate::vm::gc::references::{Reference, REFERENCE};
 use crate::vm::heap::charge;
 use crate::vm::heap::construction::{copy_fields, ArrayLayout};
 use crate::vm::heap::java_instance::JavaInstance::{Base, Class};
@@ -10,7 +11,6 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use derive_new::new;
 use getset::CopyGetters;
 use indexmap::IndexMap;
-use jdescriptor::TypeDescriptor;
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -61,35 +61,40 @@ pub(crate) struct Array {
 
 impl Array {
     pub(crate) fn references(&self) -> Result<References> {
-        let descriptor = self
-            .type_name
-            .parse::<TypeDescriptor>()
-            .map_err(|error| Error::new_execution(&format!("Invalid array layout: {error}")))?;
-        let TypeDescriptor::Array(base, dimensions) = descriptor else {
-            return Err(Error::new_execution(
-                "Array storage has a non-array descriptor",
-            ));
-        };
+        let mut references = References::default();
+        self.visit_references(|reference| {
+            references.strong.push(reference);
+            Ok(())
+        })?;
+        Ok(references)
+    }
+
+    pub(crate) fn visit_references(&self, mut visit: impl FnMut(i32) -> Result<()>) -> Result<()> {
+        // Descriptors were planned before publication. Do not parse into an owned
+        // TypeDescriptor while holding a heap shard (object descriptors allocate).
+        let component = self.type_name.trim_start_matches('[');
+        let dimensions = self.type_name.len() - component.len();
+        let valid_component = matches!(component, "B" | "C" | "D" | "F" | "I" | "J" | "S" | "Z")
+            || (component.starts_with('L') && component.ends_with(';') && component.len() > 2);
+        if dimensions == 0 || dimensions > 255 || !valid_component {
+            return Err(AllocError::InvalidLayout.into());
+        }
         // [I and [[I have identical element widths, but only the latter holds refs.
-        let references = dimensions > 1 || matches!(*base, TypeDescriptor::Object(_));
+        let references = self.type_name.starts_with("[[") || self.type_name.starts_with("[L");
         if !references {
-            return Ok(References::default());
+            return Ok(());
         }
         let chunks = self.data.chunks_exact(4);
         if !chunks.remainder().is_empty() {
-            return Err(Error::new_execution("Truncated reference array slot"));
+            return Err(AllocError::InvalidLayout.into());
         }
-        let mut strong = Vec::new();
         for chunk in chunks {
-            let reference = i32::from_ne_bytes(chunk.try_into()?);
+            let reference = i32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
             if reference != 0 {
-                strong.push(reference);
+                visit(reference)?;
             }
         }
-        Ok(References {
-            strong,
-            referent: None,
-        })
+        Ok(())
     }
 
     pub fn new(type_name: &str, len: i32) -> AllocResult<Self> {
@@ -321,6 +326,43 @@ impl HeapValue {
 }
 
 impl JavaInstance {
+    pub(crate) fn visit_references(
+        &self,
+        object: i32,
+        visit: impl FnMut(i32) -> Result<()>,
+    ) -> Result<Option<Reference>> {
+        let instance = self.get_instance();
+        let referent = instance.layout.visit_references(&instance.fields, visit)?;
+        referent
+            .map(|referent| {
+                Ok(Reference {
+                    object,
+                    kind: instance.layout.reference_kind(),
+                    referent,
+                    discovered: self.reference_field("discovered")?,
+                    next: self.reference_field("next")?,
+                })
+            })
+            .transpose()
+    }
+
+    pub(crate) fn reference_field(&self, name: &str) -> Result<i32> {
+        self.get_instance()
+            .fields
+            .get(REFERENCE)
+            .and_then(|fields| fields.get(name))
+            .ok_or(AllocError::InvalidLayout)?
+            .reference_snapshot()
+    }
+
+    pub(crate) fn set_reference_field(&self, name: &str, value: i32) -> Result<()> {
+        self.get_instance()
+            .fields
+            .get(REFERENCE)
+            .and_then(|fields| fields.get(name))
+            .ok_or(AllocError::InvalidLayout)?
+            .set_reference(value)
+    }
     #[cfg(test)]
     pub(crate) fn corrupt_field_width_for_test(
         &mut self,

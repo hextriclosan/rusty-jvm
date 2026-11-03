@@ -2,7 +2,7 @@
 //! `Thread.holdsLock`.
 //!
 //! Every Java object can act as a monitor. We inflate one lazily on first use and key it by the
-//! object's heap reference in [`MONITORS`] (objects never move — no GC yet — so the `i32` key is
+//! object's heap reference in [`MONITORS`] (objects never move, so the `i32` key is
 //! stable). A monitor is a **reentrant** lock (owner OS-thread + recursion count) plus a condition
 //! queue for `wait`/`notify`. One OS thread == one Java platform thread, so the OS `ThreadId`
 //! identifies the owning Java thread.
@@ -53,6 +53,25 @@ static MONITORS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(Dash
 /// The monitor each currently-waiting thread (by `java.lang.Thread` ref) is blocked on, so
 /// [`interrupt_waiter`] can wake exactly that thread's `Object.wait`.
 static WAIT_TARGETS: LazyLock<DashMap<i32, Arc<ObjectMonitor>>> = LazyLock::new(DashMap::new);
+
+/// Active targets are already snapshot roots. Never wait for monitor state held
+/// by a Safe thread reacquiring a lock; leave such a record for a later cycle.
+pub(crate) fn prune_idle(mut live: impl FnMut(i32) -> bool) {
+    MONITORS.retain(|reference, monitor| {
+        if live(*reference) {
+            return true;
+        }
+        match monitor.state.try_lock() {
+            Some(state) => state.owner.is_some() || state.entrants != 0 || state.waiters != 0,
+            None => true,
+        }
+    });
+}
+
+#[cfg(test)]
+pub(crate) fn has_record(reference: i32) -> bool {
+    MONITORS.contains_key(&reference)
+}
 
 /// Atomically reads and clears the calling thread's `Thread.interrupted` flag, returning its prior
 /// value (a real `getAndClearInterrupt`). `Thread.interrupt()` sets this Java field before asking the

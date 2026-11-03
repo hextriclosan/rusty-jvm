@@ -1,4 +1,4 @@
-use crate::vm::error::{Error, Result};
+use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::gc::budget::{copy_slice, AllocError, AllocResult};
@@ -49,14 +49,28 @@ impl FieldValue {
     /// Read one typed reference during a quiescent scan. Contention or malformed
     /// storage aborts the scan; it must never wait for a stopped mutator.
     pub(crate) fn reference_snapshot(&self) -> Result<i32> {
-        let value = self.value.try_read().map_err(|error| {
-            Error::new_execution(&format!("Cannot snapshot reference field: {error}"))
-        })?;
+        let value = self
+            .value
+            .try_read()
+            .map_err(|_| AllocError::InvalidLayout)?;
         match value.as_slice() {
             [reference] => Ok(*reference),
-            _ => Err(Error::new_execution(
-                "Reference field must occupy exactly one slot",
-            )),
+            _ => Err(AllocError::InvalidLayout.into()),
+        }
+    }
+
+    /// Fixed-width collector write; the complete trace validates these slots first.
+    pub(crate) fn set_reference(&self, reference: i32) -> Result<()> {
+        let mut value = self
+            .value
+            .try_write()
+            .map_err(|_| AllocError::InvalidLayout)?;
+        match value.as_mut_slice() {
+            [slot] => {
+                *slot = reference;
+                Ok(())
+            }
+            _ => Err(AllocError::InvalidLayout.into()),
         }
     }
 

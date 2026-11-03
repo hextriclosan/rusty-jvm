@@ -9,9 +9,17 @@ static ALLOCATOR: ObservedSystem = ObservedSystem;
 
 thread_local! {
     static OBSERVATION: Cell<Option<(usize, usize)>> = const { Cell::new(None) };
+    static BYTES: Cell<Option<usize>> = const { Cell::new(None) };
 }
 
 fn admitted(size: usize) -> bool {
+    BYTES
+        .try_with(|bytes| {
+            if let Some(total) = bytes.get() {
+                bytes.set(Some(total.saturating_add(size)));
+            }
+        })
+        .ok();
     OBSERVATION
         .try_with(|state| {
             if let Some((count, limit)) = state.get() {
@@ -22,6 +30,24 @@ fn admitted(size: usize) -> bool {
             }
         })
         .unwrap_or(true)
+}
+
+/// Actual allocator request bytes. For collector preflight all four allocations
+/// coexist until sweep finishes, so their sum is its scratch high-water storage.
+/// With other allocations this is an upper bound, not a retained-memory counter.
+pub(crate) fn measure_bytes<T>(operation: impl FnOnce() -> T) -> (T, usize) {
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            BYTES.with(|bytes| bytes.set(None));
+        }
+    }
+    BYTES.with(|bytes| assert!(bytes.replace(Some(0)).is_none()));
+    let reset = Reset;
+    let result = operation();
+    let bytes = BYTES.with(|bytes| bytes.get().unwrap());
+    drop(reset);
+    (result, bytes)
 }
 
 // SAFETY: all ownership, alignment and layout contracts are forwarded unchanged to

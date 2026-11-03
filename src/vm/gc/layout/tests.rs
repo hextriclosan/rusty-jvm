@@ -99,6 +99,7 @@ fn gc_roots_only_the_reference_class_referent_is_special() {
             "java/lang/ref/Reference",
             &[
                 ("referent", "Ljava/lang/Object;"),
+                ("queue", "Ljava/lang/ref/ReferenceQueue;"),
                 ("discovered", "Ljava/lang/ref/Reference;"),
                 ("next", "Ljava/lang/ref/Reference;"),
             ],

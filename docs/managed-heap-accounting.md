@@ -62,17 +62,41 @@ of `-Xmx`. Negative lengths, checked multiplication overflow and larger payloads
 are rejected before allocation. Wide array initializer slices contain consecutive
 high-word/low-word pairs; an odd slot count is invalid.
 
-## Activation and limits of this increment
+## Collection and admission
 
 Emergency `OutOfMemoryError` bootstrap uses the configured limit through common
 admission from the first heap entry: a too-small limit fails startup before an
 over-budget payload is built. Once the emergency throwable and ancestry metadata
-are prepared, one startup checkpoint switches **all** runtime paths to
-accounting-only mode. Task 6 continues recording every managed allocation, without
-partially enforcing the runtime limit on selected callers. Bounded test heaps
-exercise the real admission mechanism. Task 7 replaces that accounting-only phase
-with pressure collection and shared runtime enforcement together. Java memory
-reporting is also task 7's work.
+are permanently rooted, pressure collection is enabled; admission remains strict.
+A capacity failure releases admission without constructing a payload, requests or
+joins one pressure epoch, and retries the reservation atomically once. A skipped
+cycle or insufficient reclaimed capacity returns the existing allocation error.
+No reservation or heap shard guard crosses the rendezvous.
+Pressure is published at the coordinator before the requester becomes Safe, so an
+ordinary elected owner upgrades its policy before tracing if a pressure contender
+joins it. A pressure requester cannot accept a soft-retaining ordinary epoch.
+
+Collection retains the coordinator operation through root snapshot, iterative
+tracing, reference processing and recorded-charge sweep. A failed snapshot,
+scratch preflight or trace skips that cycle without sweeping. There is no retry
+spin. Scratch is freshly pre-reserved from the current object count and dropped
+after each cycle, rather than indexed by lifetime heap IDs. Repeated array edges
+are deduplicated into this bounded worklist without allocating under heap guards.
+
+Ordinary explicit and threshold collections retain the soft-reference closure;
+capacity pressure may clear eligible soft references. Weak and phantom references
+are cleared and published once through a null-terminated `discovered` chain whose
+head is a snapshot root. The native handler handoff establishes a JNI local root
+before clearing the head. Finalization remains disabled.
+
+Runtime reports fixed logical `totalMemory = maxMemory = max` and
+`freeMemory = max - used` from an admission-locked snapshot. Uncommitted
+reservations are not used bytes. Java's signed `long` reporting saturates at
+`Long.MAX_VALUE` for configured unsigned limits above that representable range.
+The default allocation threshold adapts to the live object count; an explicit
+`-XX:GCAllocThreshold=N` remains fixed. `-XX:+GcStressAtSafepoints` collects at
+engine polls and rooted native call boundaries. Collector logging uses the `gc`
+target and literal `[gc]` text; without opt-in logging, collection is quiet.
 
 This measures the **managed heap budget, not process resident memory (RSS)**.
 Native allocations and copied JNI buffers, JDK metadata, Rust root bookkeeping,
@@ -82,8 +106,7 @@ can report failure; infallible library/table/Arc allocation and host allocator
 aborts are not made catchable by this policy.
 
 Intern, reflection, LDC and invokedynamic caches remain strong roots. No
-unqualified bounded-live-set claim follows: future reclamation bounds apply to
+unqualified bounded-live-set claim follows: reclamation bounds apply to
 objects not reachable from these caches. Reflection/LDC/indy retention follows
 loaded-class metadata; runtime `String.intern()` can grow with program input.
-Intern retention is not an exemption from the future managed admission limit.
-Task 6 alone proves neither repeated-cycle reclamation nor collector scratch bounds.
+Intern retention is not an exemption from the managed admission limit.

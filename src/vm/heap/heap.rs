@@ -57,9 +57,7 @@ impl Default for Heap {
         Self {
             data: AutoDashMapI32::new(1), // start from 1 to avoid 0 as a valid reference
             ref_by_stringvalue: DashMap::new(),
-            // Emergency bootstrap is bounded through this same admission path.
-            // Its completion switches all runtime paths to accounting-only until
-            // task 7 enables pressure collection and enforcement together.
+            // Bootstrap and runtime use the same strict admission limit.
             admission: Mutex::new(Admission::new(
                 crate::vm::gc::get().map_or(u64::MAX, |config| config.max_heap_bytes),
                 true,

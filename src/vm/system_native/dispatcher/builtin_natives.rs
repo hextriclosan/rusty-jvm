@@ -164,6 +164,7 @@ jni_types! {
     class_loader              : ref   | i32  | jobject      | "Ljava/lang/ClassLoader;";
     module                    : ref   | i32  | jobject      | "Ljava/lang/Module;";
     object                    : ref   | i32  | jobject      | "Ljava/lang/Object;";
+    reference                 : ref   | i32  | jobject      | "Ljava/lang/ref/Reference;";
     string                    : ref   | i32  | jstring      | "Ljava/lang/String;";
     thread                    : ref   | i32  | jobject      | "Ljava/lang/Thread;";
     throwable                 : ref   | i32  | jobject      | "Ljava/lang/Throwable;";
@@ -464,10 +465,11 @@ builtin_natives! {
     "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all;
     "java/lang/Object": instance fn wait0(timeout_millis: long) -> void => sn::object::wait0;
 
-    "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
+    "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory;
     "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;
-    "java/lang/Runtime": instance fn totalMemory() -> long => sn::runtime::total_memory; // todo: implement me with GC
-    "java/lang/Runtime": instance fn freeMemory() -> long => sn::runtime::free_memory; // todo: implement me with GC
+    "java/lang/Runtime": instance fn totalMemory() -> long => sn::runtime::total_memory;
+    "java/lang/Runtime": instance fn freeMemory() -> long => sn::runtime::free_memory;
+    "java/lang/Runtime": instance fn gc() -> void => sn::runtime::gc;
 
     "java/lang/Shutdown": static fn beforeHalt() -> void => sn::shutdown::before_halt; // todo: implement me
     "java/lang/Shutdown": static fn halt0(status: int) -> void => sn::shutdown::halt0; // fixme: by doing this we skip destructors and other shutdown hooks, later it might be an issue
@@ -518,12 +520,15 @@ builtin_natives! {
 
     "java/lang/ref/Finalizer": static fn isFinalizationEnabled() -> boolean => sn::finalizer::is_finalization_enabled; // todo: this should be implemented with GC
 
-    "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0; // todo: this should be implemented with GC
+    "java/lang/ref/PhantomReference": instance fn clear0() -> void => sn::phantom_reference::clear0;
+    "java/lang/ref/PhantomReference": instance fn refersTo0(o: object) -> boolean => sn::phantom_reference::refers_to0;
 
     "java/lang/ref/Reference": instance fn get0() -> object => sn::reference::get0; // JDK 26+
-    "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0; // todo: this should be implemented with GC
-    "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0; // todo: this should be implemented with GC
-    "java/lang/ref/Reference": static fn waitForReferencePendingList() -> void => sn::reference::wait_for_reference_pending_list; // no GC: the Reference Handler daemon parks here forever
+    "java/lang/ref/Reference": instance fn clear0() -> void => sn::reference::clear0;
+    "java/lang/ref/Reference": instance fn refersTo0(o: object) -> boolean => sn::reference::refers_to0;
+    "java/lang/ref/Reference": static fn waitForReferencePendingList() -> void => sn::reference::wait_for_reference_pending_list;
+    "java/lang/ref/Reference": static fn getAndClearReferencePendingList() -> reference => sn::reference::get_and_clear_reference_pending_list;
+    "java/lang/ref/Reference": static fn hasReferencePendingList() -> boolean => sn::reference::has_reference_pending_list;
 
     "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
 

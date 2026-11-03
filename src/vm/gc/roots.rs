@@ -13,7 +13,6 @@ use crate::vm::{threads, PLATFORM_CLASSLOADER_REF, SYSTEM_CLASSLOADER_REF, UNNAM
 
 /// Only an elected, fully quiescent operation can request a complete snapshot.
 /// Thread roots are owned values collected on their owners, never remote stack reads.
-#[allow(dead_code)] // The runtime collector consumes this entrypoint in task 7.
 pub(crate) fn snapshot(operation: &Operation) -> Result<Vec<i32>> {
     let mut roots: Vec<_> = operation.root_refs().collect();
     roots.extend(CLASSES.root_refs()?);
@@ -31,8 +30,9 @@ pub(crate) fn snapshot(operation: &Operation) -> Result<Vec<i32>> {
     // Diagnostic ownership cannot overlap this operation; dump results move to
     // RootedSlots before that ownership ends. No separate dump-table scan is needed.
     //
-    // There is no VM pending-reference list yet (task 7). Reference.discovered is
-    // an ordinary strong layout edge; task 7 must add its new pending head here.
+    // The head remains a root until the native handler handoff. `discovered`
+    // is an ordinary strong edge, including across multiple undrained epochs.
+    roots.push(super::pending::PENDING.snapshot()?);
     roots.retain(|&reference| reference != 0);
     Ok(roots)
 }

@@ -238,14 +238,19 @@ fn gc_budget_prepared_destination_publication_does_not_allocate() {
 }
 
 #[test]
-fn gc_budget_bootstrap_is_bounded_before_uniform_accounting_only_runtime() {
+fn gc_budget_bootstrap_and_runtime_both_enforce_the_same_limit() {
     let heap = bounded(charge());
     heap.create_array("[I", 2, &mut RootedSlots::new()).unwrap();
     assert!(matches!(heap.reserve(charge()), Err(AllocError::Capacity)));
     assert_eq!(heap.admission.lock().budget.used, charge());
     heap.finish_emergency_bootstrap().unwrap();
-    heap.create_array_with_values("[I", &[3, 5], &mut RootedSlots::new())
-        .unwrap();
-    assert_eq!(heap.admission.lock().budget.used, charge() * 2);
+    let error = heap
+        .create_array_with_values("[I", &[3, 5], &mut RootedSlots::new())
+        .unwrap_err();
+    assert!(matches!(
+        error.kind(),
+        crate::vm::error::ErrorKind::Allocation(AllocError::Capacity)
+    ));
+    assert_eq!(heap.admission.lock().budget.used, charge());
     assert_eq!(heap.admission.lock().budget.reserved, 0);
 }

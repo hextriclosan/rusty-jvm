@@ -11,6 +11,7 @@ static CONFIG: OnceLock<GcConfig> = OnceLock::new();
 pub(crate) struct GcConfig {
     pub(crate) max_heap_bytes: u64,
     pub(crate) gc_alloc_threshold: u64,
+    pub(crate) fixed_threshold: bool,
     pub(crate) log_gc: bool,
     pub(crate) stress_at_safepoints: bool,
 }
@@ -50,6 +51,7 @@ impl GcConfig {
         Ok(Self {
             max_heap_bytes: max_heap_bytes.unwrap_or_else(default_max_heap_bytes),
             gc_alloc_threshold: gc_alloc_threshold.unwrap_or(DEFAULT_GC_ALLOC_THRESHOLD),
+            fixed_threshold: gc_alloc_threshold.is_some(),
             log_gc,
             stress_at_safepoints,
         })

@@ -15,6 +15,29 @@ fn record() -> HandleRecord {
 }
 
 #[test]
+fn gc_collect_clears_jni_weak_target_without_destroying_its_identity() {
+    use crate::vm::gc::collector::{collect, Cause};
+    use crate::vm::safepoint;
+    let _serial = safepoint::tests::SERIAL.lock().unwrap();
+    safepoint::attach();
+    let target = HEAP.create_array("[I", 1, &mut RootedSlots::new()).unwrap();
+    let weak = {
+        let _frame = NativeFrame::enter().unwrap();
+        let local = new_local(target);
+        new_reference(local, ReferenceKind::WeakGlobal)
+    };
+    collect(Cause::Explicit).unwrap();
+    assert_eq!(resolve(weak), Some(0));
+    assert!(matches!(
+        reference_type(weak),
+        jobjectRefType::JNIWeakGlobalRefType
+    ));
+    assert!(!HEAP.contains(target));
+    delete_reference(weak, ReferenceKind::WeakGlobal);
+    safepoint::retire();
+}
+
+#[test]
 fn gc_roots_jni_locals_leases_exceptions_transfers_and_strong_globals_are_complete() {
     let native = NativeFrame::enter().unwrap();
     let references: Vec<_> = (0..10)

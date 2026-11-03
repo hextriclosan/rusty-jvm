@@ -57,10 +57,12 @@ pub(crate) fn invoke(
     }
     let (symbol_address, external) = match find_builtin_native(method_signature) {
         Some(address) => (address, false),
-        None => (
-            resolve_library_symbol(clazz_ref, &short_name, &long_name)?,
-            true,
-        ),
+        None => {
+            let address = resolve_library_symbol(clazz_ref, &short_name, &long_name)?;
+            #[cfg(test)]
+            crate::vm::safepoint::event(crate::vm::safepoint::Event::ExternalNativeResolved);
+            (address, true)
+        }
     };
 
     let fun_ptr: *mut c_void =
@@ -78,6 +80,8 @@ pub(crate) fn invoke(
     let code_ptr = CodePtr(fun_ptr);
 
     let safe_cif = get_cif(&method_descriptor)?;
+    crate::vm::safepoint::poll();
+    crate::vm::gc::trigger::at_safepoint();
     let result = call_native(
         &safe_cif.0,
         code_ptr,
@@ -85,6 +89,8 @@ pub(crate) fn invoke(
         method_descriptor.return_type(),
         external,
     );
+    #[cfg(test)]
+    crate::vm::safepoint::event(crate::vm::safepoint::Event::NativeCallReturned);
     if JavaThread::get_pending_exception().is_some() {
         return Ok(());
     }
@@ -93,6 +99,8 @@ pub(crate) fn invoke(
         NativeReturn::Slots(raw) => raw,
     };
     destination.replace(typed_slots(method_descriptor.return_type(), &raw)?);
+    crate::vm::safepoint::poll();
+    crate::vm::gc::trigger::at_safepoint();
     Ok(())
 }
 
@@ -252,5 +260,116 @@ mod jni_handles_tests {
         worker.join().unwrap();
         assert!(safely_parked, "native execution must be reported Safe");
         crate::vm::safepoint::retire();
+    }
+
+    #[test]
+    fn gc_collect_completes_rendezvous_and_sweep_while_libffi_worker_is_held() {
+        use crate::vm::gc::{collector, pending, roots};
+        use crate::vm::safepoint::{self, COORDINATOR};
+        use std::time::Duration;
+        let _serial = safepoint::tests::SERIAL.lock().unwrap();
+        let target = HEAP.create_array("[I", 1, &mut RootedSlots::new()).unwrap();
+        let dead = HEAP.create_array("[I", 1, &mut RootedSlots::new()).unwrap();
+        let worker = std::thread::spawn(move || {
+            safepoint::attach();
+            let _frame = NativeFrame::enter().unwrap();
+            assert!(!handles::new_local(target).is_null());
+            let cif = Cif::new([], Type::void());
+            call_native(
+                &cif,
+                CodePtr(wait_inside_native as *mut c_void),
+                &[],
+                &TypeDescriptor::Void,
+                true,
+            );
+            assert!(HEAP.contains(target));
+            safepoint::retire();
+        });
+        NATIVE_ENTERED.wait();
+        let (done, completion) = channel();
+        let collector = std::thread::spawn(move || {
+            safepoint::attach();
+            let operation = COORDINATOR
+                .request_collection(safepoint::current().unwrap(), JavaThread::snapshot_roots())
+                .unwrap();
+            assert_eq!(operation.snapshots.len(), 2);
+            let snapshot = roots::snapshot(&operation).unwrap();
+            assert!(snapshot.contains(&target));
+            collector::collect_snapshot(
+                &HEAP,
+                &snapshot,
+                &pending::PENDING,
+                collector::Cause::Explicit,
+                &operation,
+            )
+            .unwrap();
+            operation.complete();
+            done.send((HEAP.contains(target), HEAP.contains(dead)))
+                .unwrap();
+            safepoint::retire();
+        });
+        let result = completion.recv_timeout(Duration::from_secs(5));
+        // Release even on failure: the timeout detects a stuck rendezvous, not ordering.
+        NATIVE_RELEASE.wait();
+        worker.join().unwrap();
+        collector.join().unwrap();
+        assert_eq!(result.unwrap(), (true, false));
+    }
+
+    #[test]
+    fn gc_collect_real_library_resolution_takes_the_external_safe_path() {
+        use crate::vm::safepoint::{self, Event};
+        use std::cell::Cell;
+        use std::rc::Rc;
+        let status = std::process::Command::new("cargo")
+            .args(["build", "-p", "jni_test_lib"])
+            .status()
+            .unwrap();
+        assert!(status.success());
+        let resolved = Rc::new(Cell::new(false));
+        let safe = Rc::new(Cell::new(false));
+        let calls = Rc::new(Cell::new(0));
+        let observed = Rc::clone(&calls);
+        safepoint::observe(move |event| match event {
+            Event::ExternalNativeResolved => {
+                resolved.set(true);
+                safe.set(false);
+            }
+            Event::SnapshotPublished if resolved.get() => {
+                assert!(!safepoint::COORDINATOR.running(safepoint::current().unwrap()));
+                safe.set(true);
+            }
+            Event::NativeCallReturned if resolved.replace(false) => {
+                assert!(
+                    safe.get(),
+                    "a real library hit must enter Safe inside invoke"
+                );
+                calls.set(calls.get() + 1);
+            }
+            _ => {}
+        });
+        let target = std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into());
+        let arguments = crate::Arguments::new(
+            "samples.gc.GcJniIdentityDemo".into(),
+            vec![],
+            vec![],
+            vec![],
+            [("java.library.path".into(), env!("JNI_TEST_LIB_PATH").into())]
+                .into_iter()
+                .collect(),
+            vec!["-Xmx64m".into()],
+            vec![],
+            Some(format!("{target}/java_classes_for_tests")),
+            false,
+        );
+        crate::run(
+            &arguments,
+            std::path::Path::new(&std::env::var("JAVA_HOME").unwrap()),
+        )
+        .unwrap();
+        assert!(
+            observed.get() >= 8,
+            "exercise real external library hits, not a hand-passed flag"
+        );
     }
 }

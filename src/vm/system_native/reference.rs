@@ -1,4 +1,5 @@
 use crate::vm::error::Result;
+use crate::vm::gc::pending::PENDING;
 use crate::vm::heap::heap::HEAP;
 
 const REFERENCE: &str = "java/lang/ref/Reference";
@@ -16,16 +17,14 @@ pub(crate) fn clear0(this: i32) -> Result<()> {
 
 /// `java.lang.ref.Reference.get0()Ljava/lang/Object;` (JDK 26+)
 ///
-/// Without GC the referent is only ever cleared explicitly, so reading the field is the whole job.
+/// Managed access excludes collection while reading this field.
 pub(crate) fn get0(this: i32) -> Result<i32> {
     Ok(HEAP.get_object_field_value(this, REFERENCE, REFERENT)?[0])
 }
 
 /// `java.lang.ref.Reference.refersTo0(Ljava/lang/Object;)Z`
 ///
-/// True when this reference still points at `o`. Reading the `referent` field directly is correct
-/// without GC (the referent only changes via `clear`); this is what `ThreadLocalMap.getEntry` uses
-/// to match a key, so a correct answer here is what makes `ThreadLocal` work.
+/// True when this reference still points at `o`, including null after clearing.
 pub(crate) fn refers_to0(this: i32, o: i32) -> Result<bool> {
     let referent = HEAP.get_object_field_value(this, REFERENCE, REFERENT)?[0];
     Ok(referent == o)
@@ -33,12 +32,16 @@ pub(crate) fn refers_to0(this: i32, o: i32) -> Result<bool> {
 
 /// `java.lang.ref.Reference.waitForReferencePendingList()V`
 ///
-/// The Reference Handler daemon calls this to block until the GC enqueues pending references. With
-/// no GC the list is never populated, so the daemon simply parks here forever — matching the
-/// "block until a reference is pending" contract. It is a daemon, so this never delays VM shutdown.
+/// Return Running when a batch is available; the JDK then takes and drains it.
 pub(crate) fn wait_for_reference_pending_list() -> Result<()> {
-    let _blocked = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
-    loop {
-        std::thread::park();
-    }
+    PENDING.wait();
+    Ok(())
+}
+
+pub(crate) fn get_and_clear_reference_pending_list() -> Result<i32> {
+    Ok(PENDING.take())
+}
+
+pub(crate) fn has_reference_pending_list() -> Result<bool> {
+    Ok(PENDING.has_pending())
 }
