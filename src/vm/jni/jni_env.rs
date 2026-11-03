@@ -24,7 +24,10 @@ use crate::vm::jni::exception_impl::{
     exception_check, exception_clear, exception_describe, exception_occurred, fatal_error, throw,
     throw_new,
 };
-use crate::vm::jni::global_and_local_references_impl::{pop_local_frame, push_local_frame};
+use crate::vm::jni::global_and_local_references_impl::{
+    delete_global_ref, delete_local_ref, delete_weak_global_ref, ensure_local_capacity,
+    new_global_ref, new_local_ref, new_weak_global_ref, pop_local_frame, push_local_frame,
+};
 use crate::vm::jni::instance_methods_impl::{
     call_boolean_method_a, call_byte_method_a, call_char_method_a, call_double_method_a,
     call_float_method_a, call_int_method_a, call_long_method_a, call_non_virtual_boolean_method_a,
@@ -71,8 +74,7 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
-    jshort, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod,
-    JavaVM,
+    jshort, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod, JavaVM,
 };
 use std::ffi::c_void;
 
@@ -163,11 +165,6 @@ macro_rules! jni_variadic_stub {
 
 jni_stub!(FromReflectedField(jobject) -> jfieldID);
 jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
-jni_stub!(NewGlobalRef(jobject) -> jobject);
-jni_stub!(DeleteGlobalRef(jobject) -> ());
-jni_stub!(DeleteLocalRef(jobject) -> ());
-jni_stub!(NewLocalRef(jobject) -> jobject);
-jni_stub!(EnsureLocalCapacity(jint) -> jint);
 jni_variadic_stub!(NewObject, NewObject_ptr, (jclass, jmethodID) -> jobject);
 jni_stub!(NewObjectV(jclass, jmethodID, va_list) -> jobject);
 jni_variadic_stub!(CallObjectMethod, CallObjectMethod_ptr, (jobject, jmethodID) -> jobject);
@@ -232,8 +229,6 @@ jni_variadic_stub!(CallStaticVoidMethod, CallStaticVoidMethod_ptr, (jclass, jmet
 jni_stub!(CallStaticVoidMethodV(jclass, jmethodID, va_list) -> ());
 jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
 jni_stub!(UnregisterNatives(jclass) -> jint);
-jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
-jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 
 jni_vm_stub!(DestroyJavaVM() -> jint);
 jni_vm_stub!(AttachCurrentThread(*mut *mut c_void, *mut c_void) -> jint);
@@ -262,12 +257,12 @@ static VTABLE: Wrapper = {
     ni.v24.FatalError = fatal_error;
     ni.v24.PushLocalFrame = push_local_frame;
     ni.v24.PopLocalFrame = pop_local_frame;
-    ni.v24.NewGlobalRef = NewGlobalRef;
-    ni.v24.DeleteGlobalRef = DeleteGlobalRef;
-    ni.v24.DeleteLocalRef = DeleteLocalRef;
+    ni.v24.NewGlobalRef = new_global_ref;
+    ni.v24.DeleteGlobalRef = delete_global_ref;
+    ni.v24.DeleteLocalRef = delete_local_ref;
     ni.v24.IsSameObject = is_same_object;
-    ni.v24.NewLocalRef = NewLocalRef;
-    ni.v24.EnsureLocalCapacity = EnsureLocalCapacity;
+    ni.v24.NewLocalRef = new_local_ref;
+    ni.v24.EnsureLocalCapacity = ensure_local_capacity;
     ni.v24.AllocObject = alloc_object;
     ni.v24.NewObject = NewObject_ptr;
     ni.v24.NewObjectV = NewObjectV;
@@ -467,8 +462,8 @@ static VTABLE: Wrapper = {
     ni.v24.ReleasePrimitiveArrayCritical = release_primitive_array_critical;
     ni.v24.GetStringCritical = get_string_critical;
     ni.v24.ReleaseStringCritical = release_string_critical;
-    ni.v24.NewWeakGlobalRef = NewWeakGlobalRef;
-    ni.v24.DeleteWeakGlobalRef = DeleteWeakGlobalRef;
+    ni.v24.NewWeakGlobalRef = new_weak_global_ref;
+    ni.v24.DeleteWeakGlobalRef = delete_weak_global_ref;
     ni.v24.ExceptionCheck = exception_check;
     ni.v24.NewDirectByteBuffer = new_direct_byte_buffer;
     ni.v24.GetDirectBufferAddress = get_direct_buffer_address;

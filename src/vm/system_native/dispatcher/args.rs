@@ -1,3 +1,4 @@
+use crate::vm::jni::handles;
 use jdescriptor::TypeDescriptor;
 use libffi::middle::Arg;
 use std::ffi::c_void;
@@ -42,7 +43,7 @@ pub(super) fn build_args(
     if !is_static {
         let obj_ref = args[i];
         i += 1;
-        let ptr = obj_ref as usize as *mut c_void;
+        let ptr = handles::new_local(obj_ref).cast();
         storage.push(ArgStorage::Ptr(ptr));
     }
 
@@ -100,7 +101,7 @@ pub(super) fn build_args(
             }
 
             TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => {
-                let ptr = args[i] as usize as *mut c_void;
+                let ptr = handles::new_local(args[i]).cast();
                 storage.push(ArgStorage::Ptr(ptr));
                 i += 1;
             }

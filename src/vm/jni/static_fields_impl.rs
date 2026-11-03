@@ -1,6 +1,7 @@
 use crate::from_mutf8_ptr;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::helper::klass;
+use crate::vm::jni::handles;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::set_pending_no_such_field_error;
 use jni_sys::{
@@ -17,7 +18,8 @@ pub(super) extern "system" fn get_static_field_id(
     _sig_mutf8: *const c_char,
 ) -> jfieldID {
     let name_str = from_mutf8_ptr!(name_mutf8).expect("Failed to convert field name from CESU-8");
-    let klass = klass(clazz as i32).expect("Failed to get class from reference");
+    let klass =
+        klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     StaticInit::initialize_java_class(&klass)
         .expect("Failed to initialize class before getting static field ID");
     match klass.get_static_field_offset(&name_str) {
@@ -54,7 +56,8 @@ pub(super) extern "system" fn get_static_field<T: JNIValue>(
     clazz: jclass,
     field_id: jfieldID,
 ) -> T {
-    let klass = klass(clazz as i32).expect("Failed to get class from reference");
+    let klass =
+        klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     let raw = klass
         .get_static_field_by_offset(field_id as i64)
         .expect("Failed to get static field by offset")
@@ -91,11 +94,14 @@ pub(super) extern "system" fn set_static_field<T: JNIValue>(
     field_id: jfieldID,
     value: T,
 ) {
-    let klass = klass(clazz as i32).expect("Failed to get class from reference");
+    let klass =
+        klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     let field = klass
         .get_static_field_by_offset(field_id as i64)
         .expect("Failed to get static field by offset");
-    let raw_value = value.to_vec();
+    let Some(raw_value) = value.to_vec() else {
+        return;
+    };
     field
         .set_raw_value(raw_value)
         .expect("Failed to set raw value of static field")

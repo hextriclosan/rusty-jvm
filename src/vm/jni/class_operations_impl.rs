@@ -1,6 +1,7 @@
 use crate::from_mutf8_ptr;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::jni::handles;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::utils::{
     set_pending_class_format_error, set_pending_internal_error, set_pending_linkage_error,
@@ -40,7 +41,7 @@ pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c
     }
 
     match clazz_ref(&name) {
-        Ok(clazz) => clazz as jclass,
+        Ok(clazz) => handles::new_local(clazz),
         Err(_) => {
             set_pending_no_class_def_found_error(&name);
             null_mut()
@@ -97,12 +98,13 @@ pub(super) extern "system" fn define_class(
         return null_mut();
     }
 
+    let loader = handles::resolve_or_return!(loader);
     let result = with_method_area(|method_area| {
-        method_area.create_metaclass(&class_name, bytecode, loader as i32)
+        method_area.create_metaclass(&class_name, bytecode, loader)
     })
     .and_then(|(class_name, _)| clazz_ref(&class_name));
     match result {
-        Ok(class_ref) => class_ref as jclass,
+        Ok(class_ref) => handles::new_local(class_ref),
         Err(error) => {
             match error.throwable_ref() {
                 Some(throwable_ref) => {
@@ -146,16 +148,21 @@ fn is_valid_internal_class_name(name: &str) -> bool {
 }
 
 pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> jclass {
-    let klass = klass(sub as i32).expect("Failed to get class from reference");
+    let klass =
+        klass(handles::resolve_or_return!(sub)).expect("Failed to get class from reference");
     let parent = if !klass.is_interface() {
         klass.parent().clone()
     } else {
         None
     };
 
-    parent
-        .map(|parent_name| clazz_ref(&parent_name).expect("Failed to get class from reference"))
-        .unwrap_or(0) as jclass
+    handles::new_local(
+        parent
+            .map(|parent_name| {
+                clazz_ref(&parent_name).expect("Failed to get class from reference")
+            })
+            .unwrap_or(0),
+    )
 }
 
 pub(super) extern "system" fn is_assignable_from(
@@ -163,8 +170,10 @@ pub(super) extern "system" fn is_assignable_from(
     sub: jclass,
     sup: jclass,
 ) -> jboolean {
-    let sub_klass = klass(sub as i32).expect("Failed to get class from reference");
-    let sup_klass = klass(sup as i32).expect("Failed to get class from reference");
+    let sub_klass =
+        klass(handles::resolve_or_return!(sub)).expect("Failed to get class from reference");
+    let sup_klass =
+        klass(handles::resolve_or_return!(sup)).expect("Failed to get class from reference");
 
     match InstanceChecker::checkcast(sub_klass.this_class_name(), sup_klass.this_class_name()) {
         Ok(result) => result as jboolean,
@@ -180,9 +189,15 @@ pub(super) extern "system" fn is_assignable_from(
 }
 
 pub(super) extern "system" fn get_module(_env: *mut JNIEnv, clazz: jclass) -> jobject {
-    HEAP.get_object_field_value(clazz as i32, "java/lang/Class", "module")
+    handles::new_local(
+        HEAP.get_object_field_value(
+            handles::resolve_or_return!(clazz),
+            "java/lang/Class",
+            "module",
+        )
         .expect("Failed to get module from class")
         .first()
         .copied()
-        .expect("Class module field has no value") as jobject
+        .expect("Class module field has no value"),
+    )
 }

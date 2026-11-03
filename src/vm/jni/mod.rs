@@ -1,14 +1,17 @@
 mod array_operations_impl;
+mod buffer_leases;
 mod class_operations_impl;
 mod direct_buffer_impl;
 mod exception_impl;
 mod global_and_local_references_impl;
+pub(crate) mod handles;
 mod instance_methods_impl;
 pub(crate) mod java_thread;
 mod java_vm_interface_impl;
 pub(crate) mod jni_env;
 mod jni_invoke;
 mod jni_value;
+pub(crate) mod local_frames;
 mod monitor_impl;
 mod object_fields_impl;
 mod object_operations_impl;

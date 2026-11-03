@@ -3,6 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::jni::handles;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::lookup;
@@ -60,7 +61,8 @@ fn get_method_id_impl(
 ) -> jmethodID {
     let name_str = from_mutf8_ptr!(name).expect("Failed to convert method name from CESU-8");
     let sig_str = from_mutf8_ptr!(sig).expect("Failed to convert method signature from CESU-8");
-    let declaring_klass = klass(clazz as i32).expect("Failed to get class from reference");
+    let declaring_klass =
+        klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     StaticInit::initialize_java_class(&declaring_klass)
         .expect("Failed to initialize class before getting method ID"); // todo: throw ExceptionInInitializerError here
     let full_signature = format!("{}:{}", name_str, sig_str);
@@ -182,7 +184,13 @@ fn set_pending_error(exception_class: &str, message: &str) {
             // first-wins and drop this one rather than panicking across FFI.
             Err(e) => warn!("Dropping {exception_class} ('{message}'): {e}"),
         },
-        Err(e) => panic!("Failed to construct {exception_class} for '{message}': {e}"),
+        Err(e) => {
+            if let Some(throwable) = e.throwable_ref() {
+                JavaThread::set_pending_if_empty(throwable);
+            } else {
+                handles::HandleError::OutOfMemory.set_pending();
+            }
+        }
     }
 }
 
@@ -215,28 +223,32 @@ pub(super) fn decode_method_id(method_id: usize) -> (i32, i64) {
 pub(super) fn transform_args_to_vec(
     method: &Arc<JavaMethod>,
     args: *const jvalue,
-) -> Vec<StackValueKind> {
+) -> Option<Vec<StackValueKind>> {
     let md = method.get_method_descriptor();
     let pt = md.parameter_types();
     let args_count = pt.len();
 
     if args_count == 0 {
-        return vec![];
+        return Some(vec![]);
     }
 
     if args.is_null() {
-        panic!("Null pointer passed as arguments for method that expects {args_count} arguments");
+        set_pending_null_pointer_exception("JNI method arguments are null");
+        return None;
     }
 
     let args = unsafe { std::slice::from_raw_parts(args, args_count) };
     args.iter()
         .zip(pt.iter())
         .map(|(arg, pt)| resolve_stack_kind_value(*arg, pt))
-        .collect::<Vec<_>>()
+        .collect()
 }
 
-fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> StackValueKind {
-    match type_descriptor {
+fn resolve_stack_kind_value(
+    value: jvalue,
+    type_descriptor: &TypeDescriptor,
+) -> Option<StackValueKind> {
+    Some(match type_descriptor {
         TypeDescriptor::Boolean => (if unsafe { value.z } { 1 } else { 0 }).into(),
         TypeDescriptor::Byte => (unsafe { value.b } as i32).into(),
         TypeDescriptor::Char => (unsafe { value.c } as i32).into(),
@@ -246,8 +258,8 @@ fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> 
         TypeDescriptor::Float => unsafe { value.f }.into(),
         TypeDescriptor::Double => unsafe { value.d }.into(),
         TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => {
-            StackValueKind::Ref(unsafe { value.l } as i32)
+            StackValueKind::Ref(handles::resolve(unsafe { value.l })?)
         }
-        TypeDescriptor::Void => panic!("Void type cannot be used as argument"),
-    }
+        TypeDescriptor::Void => return None,
+    })
 }

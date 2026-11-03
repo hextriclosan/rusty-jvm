@@ -3,6 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass};
+use crate::vm::jni::handles;
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::jni::utils::{
     decode_method_id, set_pending_illegal_access_exception, set_pending_instantiation_exception,
@@ -19,9 +20,11 @@ use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
     let instance_name = HEAP
-        .get_instance_name(obj as i32)
+        .get_instance_name(handles::resolve_or_return!(obj))
         .expect("Failed to get instance name from reference");
-    clazz_ref(&instance_name).expect("Failed to get class reference from instance name") as jclass
+    handles::new_local(
+        clazz_ref(&instance_name).expect("Failed to get class reference from instance name"),
+    )
 }
 
 pub(super) extern "system" fn is_same_object(
@@ -29,18 +32,16 @@ pub(super) extern "system" fn is_same_object(
     first: jobject,
     second: jobject,
 ) -> jboolean {
-    (first == second) as jboolean
+    let first = handles::resolve_or_return!(first);
+    let second = handles::resolve_or_return!(second);
+    first == second
 }
 
 pub(super) extern "system" fn get_object_ref_type(
     _env: *mut JNIEnv,
     object: jobject,
 ) -> jobjectRefType {
-    if object.is_null() || HEAP.get_instance_name(object as i32).is_err() {
-        jobjectRefType::JNIInvalidRefType
-    } else {
-        jobjectRefType::JNILocalRefType
-    }
+    handles::reference_type(object)
 }
 
 pub(super) extern "system" fn is_instance_of(
@@ -52,7 +53,10 @@ pub(super) extern "system" fn is_instance_of(
         return true as jboolean;
     }
 
-    match class_is_instance(clazz as i32, obj as i32) {
+    match class_is_instance(
+        handles::resolve_or_return!(clazz),
+        handles::resolve_or_return!(obj),
+    ) {
         Ok(matches) => matches as jboolean,
         Err(error) => {
             set_pending_internal_error(&format!("Failed to check object instance: {error}"));
@@ -67,7 +71,7 @@ pub(super) extern "system" fn is_virtual_thread(_env: *mut JNIEnv, thread: jobje
     }
 
     match HEAP
-        .get_instance_name(thread as i32)
+        .get_instance_name(handles::resolve_or_return!(thread))
         .and_then(|class_name| {
             InstanceChecker::checkcast(&class_name, "java/lang/BaseVirtualThread")
         }) {
@@ -85,8 +89,8 @@ pub(super) extern "system" fn alloc_object(_env: *mut JNIEnv, clazz: jclass) -> 
         return null_mut();
     }
 
-    match alloc_object_impl(clazz as i32) {
-        Ok(obj_ref) => obj_ref as jobject,
+    match alloc_object_impl(handles::resolve_or_return!(clazz)) {
+        Ok(obj_ref) => handles::new_local(obj_ref),
         Err(error) => {
             set_pending_internal_error(&format!("Failed to allocate object: {error}"));
             null_mut()
@@ -130,7 +134,8 @@ pub(super) extern "system" fn new_object_a(
     if obj.is_null() {
         return null_mut();
     }
-    let destination = RootedSlots::from_slots(vec![Slot::Ref(obj as i32)]);
+    let obj_ref = handles::resolve_or_return!(obj);
+    let destination = RootedSlots::from_slots(vec![Slot::Ref(obj_ref)]);
 
     let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
     let constructor = match klass(declaring_class_ref)
@@ -142,7 +147,9 @@ pub(super) extern "system" fn new_object_a(
             return null_mut();
         }
     };
-    let arguments = transform_args_to_vec(&constructor, args);
+    let Some(arguments) = transform_args_to_vec(&constructor, args) else {
+        return null_mut();
+    };
     let context = format!(
         "{}.{}",
         constructor.class_name(),
@@ -151,7 +158,7 @@ pub(super) extern "system" fn new_object_a(
     let result = Executor::invoke_non_static_method(
         constructor.class_name(),
         constructor.name_signature(),
-        obj as i32,
+        obj_ref,
         &arguments,
     )
     .map(|_| destination);

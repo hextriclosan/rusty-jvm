@@ -2,6 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::vec_to_i64;
+use crate::vm::jni::handles;
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use jni_sys::{jlong, jobject, JNIEnv};
@@ -47,7 +48,7 @@ pub(super) extern "system" fn get_direct_buffer_capacity(
 }
 
 fn direct_buffer_field(buffer: jobject, field_name: &str) -> Option<Vec<i32>> {
-    let buffer_ref = buffer as i32;
+    let buffer_ref = handles::resolve(buffer)?;
     is_direct_buffer(buffer_ref)
         .ok()?
         .then(|| HEAP.get_object_field_value(buffer_ref, "java/nio/Buffer", field_name))?

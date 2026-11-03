@@ -1,19 +1,20 @@
 use crate::vm::helper::{i64_to_vec, vec_to_i64};
+use crate::vm::jni::handles;
 use crate::vm::stack::stack_value::StackValue;
 use jni_sys::{jboolean, jbyte, jchar, jdouble, jfloat, jint, jlong, jobject, jshort};
 
 pub trait JNIValue: Default {
     fn from_vec(v: &[i32]) -> Self;
-    fn to_vec(&self) -> Vec<i32>;
+    fn to_vec(&self) -> Option<Vec<i32>>;
 }
 
 impl JNIValue for jobject {
     fn from_vec(v: &[i32]) -> Self {
-        v[0] as jobject
+        handles::new_local(v[0])
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        handles::resolve(*self).map(|target| vec![target])
     }
 }
 
@@ -22,8 +23,8 @@ impl JNIValue for jboolean {
         v[0] != 0
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![if *self { 1 } else { 0 }]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![if *self { 1 } else { 0 }])
     }
 }
 
@@ -32,8 +33,8 @@ impl JNIValue for jbyte {
         v[0] as jbyte
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![*self as i32])
     }
 }
 
@@ -42,8 +43,8 @@ impl JNIValue for jchar {
         v[0] as jchar
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![*self as i32])
     }
 }
 
@@ -52,8 +53,8 @@ impl JNIValue for jshort {
         v[0] as jshort
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![*self as i32]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![*self as i32])
     }
 }
 
@@ -62,8 +63,8 @@ impl JNIValue for jint {
         v[0] as jint
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![(*self)]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![(*self)])
     }
 }
 
@@ -72,8 +73,8 @@ impl JNIValue for jlong {
         vec_to_i64(v)
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        i64_to_vec(*self)
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(i64_to_vec(*self))
     }
 }
 
@@ -83,8 +84,8 @@ impl JNIValue for jfloat {
         f32::from_bits(value as u32)
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![self.to_bits() as i32]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![self.to_bits() as i32])
     }
 }
 
@@ -94,15 +95,15 @@ impl JNIValue for jdouble {
         f64::from_bits(value as u64)
     }
 
-    fn to_vec(&self) -> Vec<i32> {
-        StackValue::to_vec(&(self.to_bits() as i64))
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(StackValue::to_vec(&(self.to_bits() as i64)))
     }
 }
 
 impl JNIValue for () {
     fn from_vec(_v: &[i32]) -> Self {}
 
-    fn to_vec(&self) -> Vec<i32> {
-        vec![]
+    fn to_vec(&self) -> Option<Vec<i32>> {
+        Some(vec![])
     }
 }

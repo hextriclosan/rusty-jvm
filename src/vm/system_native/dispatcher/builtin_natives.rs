@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::jni::handles;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
@@ -44,8 +45,7 @@ fn set_pending_native_error(error: &Error) {
 // drifting apart.
 // ---------------------------------------------------------------------------
 
-/// Per-kind argument cast: reference types are carried as the VM's `i32`
-/// object ref; scalars are cast to their VM-side value type.
+/// Resolve opaque references to VM heap IDs; retain scalar widths.
 macro_rules! jni_arg_cast_impl {
     (bool, $rust:ty, $e:expr) => {
         $e as i32 != 0
@@ -57,15 +57,14 @@ macro_rules! jni_arg_cast_impl {
         $e as $rust
     };
     (ref, $rust:ty, $e:expr) => {
-        $e as i32
+        handles::resolve_or_return!($e)
     };
     (void, $rust:ty, $e:expr) => {
         compile_error!("`void` cannot be used as an argument")
     };
 }
 
-/// Per-kind return conversion: reference types are the VM's `i32` object ref
-/// and must be widened back into the JNI pointer handle; scalars map directly.
+/// Publish a new local record for object results; scalars map directly.
 macro_rules! jni_ret_conv_impl {
     (void, $ffi:ty, $e:expr) => {
         $e
@@ -80,7 +79,7 @@ macro_rules! jni_ret_conv_impl {
         $e as $ffi
     };
     (ref, $ffi:ty, $e:expr) => {
-        $e as usize as $ffi
+        handles::new_local($e)
     };
 }
 
@@ -223,7 +222,7 @@ macro_rules! builtin_wrapper {
             this: jobject,
             $($pname: jni_ffi_ty!($pty),)*
         ) -> jni_ffi_ty!($ret) {
-            match $inner(this as i32 $(, jni_arg_cast!($pty, $pname))*) {
+            match $inner(handles::resolve_or_return!(this) $(, jni_arg_cast!($pty, $pname))*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {
                     set_pending_native_error(&__error);
@@ -250,24 +249,28 @@ mod ref_transfer_tests {
     #[test]
     fn ref_transfer_static_native_wrapper_preserves_callback_exception() {
         let throwable = HEAP.create_array("[I", 0);
-        let argument = std::ptr::with_exposed_provenance_mut(throwable as usize);
+        let frame = crate::vm::jni::local_frames::NativeFrame::enter().unwrap();
+        let argument = handles::new_local(throwable);
 
         let result = callback_static(std::ptr::null_mut(), std::ptr::null_mut(), argument);
 
         assert!(result.is_null());
         assert_eq!(JavaThread::take_pending_exception(), Some(throwable));
+        drop(frame);
         assert!(JavaThread::temp_root_refs().is_empty());
     }
 
     #[test]
     fn ref_transfer_instance_native_wrapper_preserves_callback_exception() {
         let throwable = HEAP.create_array("[I", 0);
-        let argument = std::ptr::with_exposed_provenance_mut(throwable as usize);
+        let frame = crate::vm::jni::local_frames::NativeFrame::enter().unwrap();
+        let argument = handles::new_local(throwable);
 
         let result = callback_instance(std::ptr::null_mut(), argument);
 
         assert!(result.is_null());
         assert_eq!(JavaThread::take_pending_exception(), Some(throwable));
+        drop(frame);
         assert!(JavaThread::temp_root_refs().is_empty());
     }
 }

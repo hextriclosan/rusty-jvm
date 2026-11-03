@@ -5,6 +5,7 @@ mod class_operations_demo;
 mod define_class_demo;
 mod direct_buffer_demo;
 mod exception_demo;
+mod gc_identity_demo;
 mod get_module_demo;
 mod inherited_fields_demo;
 mod instance_methods_demo;

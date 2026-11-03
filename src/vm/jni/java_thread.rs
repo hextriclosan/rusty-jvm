@@ -1,6 +1,8 @@
 use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
 use crate::vm::error::{Error, Result};
+use crate::vm::jni::buffer_leases::BufferLease;
 use crate::vm::jni::jni_env::jni_native_interface;
+use crate::vm::jni::local_frames::LocalFrames;
 use crate::vm::safepoint::{self, Safepoint};
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
@@ -59,6 +61,8 @@ pub(crate) struct JavaThread {
     ///
     /// Scopes nest and unwind in LIFO order via [`TempRootsGuard`], so this is a stack, not a set.
     temp_roots: RefCell<Vec<Slot>>,
+    jni_frames: RefCell<LocalFrames>,
+    jni_leases: RefCell<Vec<BufferLease>>,
 }
 
 thread_local! {
@@ -70,6 +74,8 @@ thread_local! {
         stack_frames: RefCell::new(Vec::new()),
         safepoint: Safepoint::new(),
         temp_roots: RefCell::new(Vec::new()),
+        jni_frames: RefCell::new(LocalFrames::default()),
+        jni_leases: RefCell::new(Vec::new()),
     };
 }
 
@@ -142,6 +148,22 @@ impl Drop for StackFramesGuard {
 }
 
 impl JavaThread {
+    pub(super) fn with_jni_frames<T>(f: impl FnOnce(&mut LocalFrames) -> T) -> T {
+        JAVA_THREAD.with(|thread| f(&mut thread.jni_frames.borrow_mut()))
+    }
+
+    pub(super) fn with_jni_leases<T>(f: impl FnOnce(&mut Vec<BufferLease>) -> T) -> T {
+        JAVA_THREAD.with(|thread| f(&mut thread.jni_leases.borrow_mut()))
+    }
+
+    /// Allocation-free first-wins exception installation for exhausted JNI resources.
+    pub(super) fn set_pending_if_empty(throwable: i32) {
+        JAVA_THREAD.with(|thread| {
+            if thread.exception_pending.get().is_none() {
+                thread.exception_pending.set(Some(Slot::Ref(throwable)));
+            }
+        });
+    }
     /// Returns a `*mut JNIEnv` pointing at the `env` field of the current thread's
     /// [`JavaThread`].  This is what every JNI call receives as its first argument.
     pub(super) fn get_env_ptr() -> *mut JNIEnv {
@@ -257,6 +279,8 @@ impl JavaThread {
                 .collect()
         });
         refs.extend(RootedSlots::root_refs());
+        refs.extend(crate::vm::jni::handles::local_roots());
+        Self::with_jni_leases(|leases| refs.extend(leases.iter().map(|lease| lease.target)));
         refs
     }
 

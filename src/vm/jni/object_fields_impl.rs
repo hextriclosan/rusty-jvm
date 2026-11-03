@@ -2,6 +2,7 @@ use crate::from_mutf8_ptr;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
+use crate::vm::jni::handles;
 use crate::vm::jni::jni_value::JNIValue;
 use crate::vm::jni::utils::set_pending_no_such_field_error;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -24,7 +25,8 @@ pub(super) extern "system" fn get_field_id(
         from_mutf8_ptr!(name_mutf8).expect("Failed to convert field name from CESU-8");
     let field_signature =
         from_mutf8_ptr!(sig_mutf8).expect("Failed to convert field signature from CESU-8");
-    let klass = klass(clazz as i32).expect("Failed to get class from reference");
+    let klass =
+        klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     StaticInit::initialize_java_class(&klass)
         .expect("Failed to initialize class before getting field ID");
 
@@ -79,8 +81,9 @@ pub(super) extern "system" fn get_field<T: JNIValue>(
     obj: jobject,
     field_id: jfieldID,
 ) -> T {
+    let obj = handles::resolve_or_return!(obj);
     let instance_name = HEAP
-        .get_instance_name(obj as i32)
+        .get_instance_name(obj)
         .expect("Failed to get instance name from reference");
     let klass = CLASSES
         .get(&instance_name)
@@ -89,7 +92,7 @@ pub(super) extern "system" fn get_field<T: JNIValue>(
         .get_field_name_by_offset(decode_field_id(field_id))
         .expect("Failed to get field name by offset");
     let raw = HEAP
-        .get_object_field_value(obj as i32, &class_name, &field_name)
+        .get_object_field_value(obj, &class_name, &field_name)
         .expect("Failed to get object field value");
 
     JNIValue::from_vec(&raw)
@@ -122,8 +125,9 @@ pub(super) extern "system" fn set_field<T: JNIValue>(
     field_id: jfieldID,
     value: T,
 ) {
+    let obj = handles::resolve_or_return!(obj);
     let instance_name = HEAP
-        .get_instance_name(obj as i32)
+        .get_instance_name(obj)
         .expect("Failed to get instance name from reference");
     let klass = CLASSES
         .get(&instance_name)
@@ -132,9 +136,11 @@ pub(super) extern "system" fn set_field<T: JNIValue>(
         .get_field_name_by_offset(decode_field_id(field_id))
         .expect("Failed to get field name by offset");
 
-    let raw_value = value.to_vec();
+    let Some(raw_value) = value.to_vec() else {
+        return;
+    };
 
-    HEAP.set_object_field_value(obj as i32, &class_name, &field_name, raw_value)
+    HEAP.set_object_field_value(obj, &class_name, &field_name, raw_value)
         .expect("Failed to set object field value");
 }
 

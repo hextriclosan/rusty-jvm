@@ -34,6 +34,9 @@ fn handle_error<T: JNIValue>(e: Error, context: &str) -> T {
 
             T::default()
         }
-        None => panic!("Non-exception VM error escaped JNI boundary in {context}: {e}"),
+        None => {
+            crate::vm::jni::set_pending_internal_error(&format!("{context}: {e}"));
+            T::default()
+        }
     }
 }

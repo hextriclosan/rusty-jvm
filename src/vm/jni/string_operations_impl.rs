@@ -5,6 +5,10 @@ use crate::vm::jni::array_operations_impl::{
 };
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
+use crate::vm::jni::utils::{
+    set_pending_negative_array_size_exception, set_pending_null_pointer_exception,
+};
+use crate::vm::jni::{buffer_leases, handles};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -92,10 +96,11 @@ fn encode_codepoint_to_mutf8(codepoint: u32, buf: &mut Vec<u8>) {
 }
 
 pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstring) -> jint {
-    let string_ref = input as i32;
+    let string_ref = handles::resolve_or_return!(input);
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("String is null");
+        return 0;
     }
 
     Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
@@ -109,18 +114,24 @@ pub(super) extern "system" fn new_string(
     len: jsize,
 ) -> jstring {
     if len < 0 {
-        panic!("negative array size"); // todo throw NegativeArraySizeException here
+        set_pending_negative_array_size_exception(len);
+        return ptr::null_mut();
     }
     if unicode.is_null() && len > 0 {
-        panic!("unicode array is null but length is {len}");
+        set_pending_null_pointer_exception("String characters are null");
+        return ptr::null_mut();
     }
     let arr_ref = new_char_array(env, len);
-    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(arr_ref as i32)]);
+    if arr_ref.is_null() {
+        return ptr::null_mut();
+    }
+    let array_target = handles::resolve_or_return!(arr_ref);
+    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(array_target)]);
     set_char_array_region(env, arr_ref, 0, len, unicode);
     let result = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([C)V",
-        &[StackValueKind::Ref(arr_ref as i32)],
+        &[StackValueKind::Ref(array_target)],
         Some(""),
     );
     jni_invoke_scalar(result, "NewString")
@@ -131,14 +142,21 @@ pub(super) extern "system" fn get_string_chars(
     from: jstring,
     is_copy: *mut jboolean,
 ) -> *const jchar {
-    let string_ref = from as i32;
+    let string_ref = handles::resolve_or_return!(from);
     if string_ref == 0 {
-        panic!("Invalid string reference: null");
+        set_pending_null_pointer_exception("String is null");
+        return ptr::null();
     }
 
     let raw_data = get_string_raw_data(string_ref);
-    let boxed_slice = raw_data.into_boxed_slice();
-    let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const jchar;
+    // SAFETY: jchar is u16, whose complete initialized representation is native-endian bytes.
+    let bytes = unsafe {
+        std::slice::from_raw_parts(
+            raw_data.as_ptr().cast(),
+            raw_data.len() * size_of::<jchar>(),
+        )
+    };
+    let raw_ptr = buffer_leases::copy(string_ref, bytes, align_of::<jchar>()).cast();
 
     if !is_copy.is_null() {
         unsafe {
@@ -181,26 +199,8 @@ pub(super) extern "system" fn release_string_chars(
     str: jstring,
     chars: *const jchar,
 ) {
-    let string_ref = str as i32;
-    if string_ref == 0 {
-        panic!("Invalid string reference: null");
-    }
-
-    if chars.is_null() {
-        return;
-    }
-
-    let (is_latin, array_ref) = get_raw_string_info(string_ref)
-        .unwrap_or_else(|_| panic!("Failed to get raw string info for string_ref={string_ref}"));
-    let byte_len = HEAP
-        .get_entire_raw_data(array_ref)
-        .unwrap_or_else(|_| panic!("Failed to get string data for array_ref={array_ref}"))
-        .len();
-    let len = if is_latin { byte_len } else { byte_len / 2 };
-    unsafe {
-        let _boxed: Box<_> =
-            Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut jchar, len));
-    }
+    let string_ref = handles::resolve_or_return!(str);
+    buffer_leases::release(chars.cast(), string_ref, None);
 }
 
 pub(super) extern "system" fn new_string_utf8(
@@ -208,7 +208,8 @@ pub(super) extern "system" fn new_string_utf8(
     mutf8_bytes: *const c_char,
 ) -> jstring {
     if mutf8_bytes.is_null() {
-        panic!("modified utf-8 array is null");
+        set_pending_null_pointer_exception("String characters are null");
+        return ptr::null_mut();
     }
 
     let decoded = match from_mutf8_ptr!(mutf8_bytes) {
@@ -219,7 +220,11 @@ pub(super) extern "system" fn new_string_utf8(
 
     let len = decoded_bytes.len() as jsize;
     let byte_array = new_byte_array(env, len);
-    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(byte_array as i32)]);
+    if byte_array.is_null() {
+        return ptr::null_mut();
+    }
+    let array_target = handles::resolve_or_return!(byte_array);
+    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(array_target)]);
     set_byte_array_region(
         env,
         byte_array,
@@ -247,7 +252,7 @@ pub(super) extern "system" fn new_string_utf8(
         "java/lang/String",
         "<init>:([BLjava/nio/charset/Charset;)V",
         &[
-            StackValueKind::Ref(byte_array as i32),
+            StackValueKind::Ref(array_target),
             StackValueKind::Ref(utf8_charset_ref),
         ],
         Some(""),
@@ -259,10 +264,11 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
     _env: *mut JNIEnv,
     input: jstring,
 ) -> jlong {
-    let string_ref = input as i32;
+    let string_ref = handles::resolve_or_return!(input);
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("String is null");
+        return 0;
     }
 
     let raw_data = get_string_raw_data(string_ref);
@@ -282,14 +288,14 @@ pub(super) extern "system" fn get_string_utf_chars(
     from: jstring,
     is_copy: *mut jboolean,
 ) -> *const c_char {
-    let string_ref = from as i32;
+    let string_ref = handles::resolve_or_return!(from);
     if string_ref == 0 {
-        panic!("Invalid string reference: null");
+        set_pending_null_pointer_exception("String is null");
+        return ptr::null();
     }
 
     let mutf8_data = to_mutf8_data!(string_ref);
-    let boxed_slice = mutf8_data.into_boxed_slice();
-    let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const c_char;
+    let raw_ptr = buffer_leases::copy(string_ref, &mutf8_data, align_of::<u8>()).cast();
 
     if !is_copy.is_null() {
         unsafe {
@@ -301,23 +307,12 @@ pub(super) extern "system" fn get_string_utf_chars(
 }
 
 pub(super) extern "system" fn release_string_utf_chars(
-    env: *mut JNIEnv,
+    _env: *mut JNIEnv,
     str: jstring,
     chars: *const c_char,
 ) {
-    let string_ref = str as i32;
-    if string_ref == 0 {
-        panic!("Invalid string reference: null");
-    }
-
-    if chars.is_null() {
-        return;
-    }
-
-    let len = get_string_utf_length_as_long(env, str) as usize + 1/*null terminator*/;
-    unsafe {
-        let _boxed: Box<_> = Box::from_raw(ptr::slice_from_raw_parts_mut(chars as *mut u8, len));
-    }
+    let string_ref = handles::resolve_or_return!(str);
+    buffer_leases::release(chars.cast(), string_ref, None);
 }
 
 /// GetStringRegion: Copies a region of the string into the provided buffer.
@@ -342,7 +337,7 @@ pub(super) extern "system" fn get_string_region(
     }
 
     // Get the raw UTF-16 data
-    let string_ref = str as i32;
+    let string_ref = handles::resolve_or_return!(str);
     let raw_data = get_string_raw_data(string_ref);
 
     // Copy the region to the buffer
@@ -375,7 +370,7 @@ pub(super) extern "system" fn get_string_utf_region(
     }
 
     // Get the raw UTF-16 data and extract the region
-    let string_ref = str as i32;
+    let string_ref = handles::resolve_or_return!(str);
     let raw_data = get_string_raw_data(string_ref);
     let region = &raw_data[start as usize..start as usize + len as usize];
 
@@ -394,35 +389,21 @@ pub(super) extern "system" fn get_string_utf_region(
 }
 
 /// GetStringCritical: Returns a pointer to the string's characters.
-/// This is similar to GetStringChars but signals that a GC-critical section has started.
-/// Since there's no GC yet in rusty-jvm, this is just a wrapper around GetStringChars.
-/// TODO(GC): When GC is implemented, this must:
-///   1. Pin the string object to prevent it from being moved during collection
-///   2. Disable GC for the duration of the critical section
-///   3. Return a direct pointer to the string's internal char array (no copy) when possible
+/// Critical access remains copy-based and holds a root-bearing lease, not a GC lock.
 pub(super) extern "system" fn get_string_critical(
     env: *mut JNIEnv,
     str: jstring,
     is_copy: *mut jboolean,
 ) -> *const jchar {
-    // No GC yet, so this is equivalent to GetStringChars
-    // TODO(GC): Pin object and disable GC here
     get_string_chars(env, str, is_copy)
 }
 
 /// ReleaseStringCritical: Releases the pointer obtained from GetStringCritical.
-/// Since there's no GC yet in rusty-jvm, this is just a wrapper around ReleaseStringChars.
-/// TODO(GC): When GC is implemented, this must:
-///   1. Unpin the string object
-///   2. Re-enable GC
-///   3. Must NOT be called between GetStringCritical and ReleaseStringCritical:
-///      - NewString, NewCharArray, SetCharArrayRegion (any allocating JNI function)
+/// Releasing the lease never changes global collection eligibility.
 pub(super) extern "system" fn release_string_critical(
     env: *mut JNIEnv,
     str: jstring,
     carray: *const jchar,
 ) {
-    // No GC yet, so this is equivalent to ReleaseStringChars
-    // TODO(GC): Unpin object and re-enable GC here
     release_string_chars(env, str, carray);
 }

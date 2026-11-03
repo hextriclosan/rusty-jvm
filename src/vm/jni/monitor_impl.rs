@@ -1,4 +1,5 @@
 use crate::vm::exception::pending_helpers::set_pending_null_pointer_exception_with_message;
+use crate::vm::jni::handles;
 use crate::vm::monitor;
 use jni_sys::{jint, jobject, JNIEnv, JNI_ERR, JNI_OK};
 
@@ -8,7 +9,7 @@ pub(super) extern "system" fn monitor_enter(_env: *mut JNIEnv, object: jobject) 
             .expect("Failed to create NullPointerException");
         return JNI_ERR;
     }
-    monitor::enter(object as i32);
+    monitor::enter(handles::resolve_or_return!(object, JNI_ERR));
     JNI_OK
 }
 
@@ -18,8 +19,9 @@ pub(super) extern "system" fn monitor_exit(_env: *mut JNIEnv, object: jobject) -
             .expect("Failed to create NullPointerException");
         return JNI_ERR;
     }
-    let owned = monitor::holds_lock(object as i32);
-    monitor::exit(object as i32).expect("Failed to exit monitor");
+    let object = handles::resolve_or_return!(object, JNI_ERR);
+    let owned = monitor::holds_lock(object);
+    monitor::exit(object).expect("Failed to exit monitor");
     if owned {
         JNI_OK
     } else {

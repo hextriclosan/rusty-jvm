@@ -53,7 +53,9 @@ fn call_static_method_a<T: JNIValue>(
         .get_method_by_index(method_index)
         .expect("Failed to get method by ID for static method call");
 
-    let args_values = transform_args_to_vec(&method, args);
+    let Some(args_values) = transform_args_to_vec(&method, args) else {
+        return T::default();
+    };
     let context = format!("{}.{}", klass.this_class_name(), method.name_signature());
     let result = Executor::invoke_static_method_jc(&klass, method.name_signature(), &args_values);
     jni_invoke(result, &context)
