@@ -1,5 +1,7 @@
 pub(crate) mod common;
 mod engine;
+#[cfg(test)]
+pub(crate) use engine::Engine;
 pub(crate) mod executor;
 pub(crate) mod invoke_dynamic_runner;
 pub(crate) mod invoker;

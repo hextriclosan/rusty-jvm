@@ -85,11 +85,22 @@ pub(crate) fn process(
             trace!("PUTSTATIC -> {class_name}.{field_name} = {value:?}");
         }
         GETFIELD => {
-            let (class_name, field_name, objectref) = {
+            let (class_name, field_name, type_descriptor, objectref) = {
                 let stack_frame = last_frame_mut(stack_frames)?;
                 let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
+                // Metadata lookup can wait for class publication and cross a GC stop.
+                // Keep the receiver on the frame until it completes, and do not
+                // leave the raw field result unrooted across another lookup.
+                let type_descriptor =
+                    lookup::lookup_for_field_descriptor(&class_name, &field_name).ok_or_else(
+                        || {
+                            Error::new_constant_pool(&format!(
+                                "Error getting type descriptor for {class_name}.{field_name}"
+                            ))
+                        },
+                    )?;
                 let objectref = stack_frame.pop();
-                (class_name, field_name, objectref)
+                (class_name, field_name, type_descriptor, objectref)
             };
 
             let value = HEAP.get_object_field_value_throwing(
@@ -100,13 +111,6 @@ pub(crate) fn process(
             )?;
 
             let Some(value) = value else { return Ok(()) };
-
-            let type_descriptor = lookup::lookup_for_field_descriptor(&class_name, &field_name)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting type descriptor for {class_name}.{field_name}"
-                    ))
-                })?;
 
             let stack_frame = last_frame_mut(stack_frames)?;
             push_typed(stack_frame, &type_descriptor, &value)?;
@@ -421,7 +425,9 @@ pub(crate) fn process(
             let stack_frame = last_frame_mut(stack_frames)?;
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
-            let objectref = stack_frame.pop();
+            let mut operand = RootedSlots::new();
+            operand.replace(vec![stack_frame.pop_slot()]);
+            let objectref = operand[0].value();
 
             if objectref != 0 {
                 let klass = CLASSES.get(current_class_name)?;
@@ -453,7 +459,9 @@ pub(crate) fn process(
             // todo: merge me with CHECKCAST
             let class_constpool_index = stack_frame.extract_two_bytes() as u16;
             stack_frame.incr_pc();
-            let objectref: i32 = stack_frame.pop();
+            let mut operand = RootedSlots::new();
+            operand.replace(vec![stack_frame.pop_slot()]);
+            let objectref = operand[0].value();
 
             // Unlike CHECKCAST, this consumes the reference and yields a boolean, so the result is
             // pushed untagged however the operand was tagged.
