@@ -1,9 +1,23 @@
 use crate::vm::error::Result;
+use crate::vm::heap::heap::HEAP;
+use crate::vm::helper::undecorate;
 use crate::vm::method_area::loaded_classes::CLASSES;
 
 pub(crate) struct InstanceChecker {}
 
 impl InstanceChecker {
+    /// Whether the object `value_ref` can be stored in an array whose element type is
+    /// `element_type` (e.g. `Ljava/lang/String;`, `java/lang/String` or `[I`). Null always can.
+    pub fn can_store_in_array(value_ref: i32, element_type: &str) -> Result<bool> {
+        // Anything fits in an Object[], so skip looking up the value's class
+        if value_ref == 0 || undecorate(element_type) == "java/lang/Object" {
+            return Ok(true);
+        }
+
+        let value_class = HEAP.get_instance_name(value_ref)?;
+        Self::checkcast(&value_class, element_type)
+    }
+
     pub fn checkcast(class_cast_from: &str, class_cast_to: &str) -> Result<bool> {
         let (class_cast_from, class_cast_to) =
             Self::try_unwrap_arrays(class_cast_from, class_cast_to);

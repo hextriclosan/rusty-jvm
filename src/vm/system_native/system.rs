@@ -181,17 +181,13 @@ pub(crate) fn arraycopy(
         let value_to_set = HEAP.get_array_value(src_ref, src_pos + i)?;
 
         if let Some(ref dest_element_type) = dest_element_type_name {
-            let element_ref = value_to_set[0];
-            if element_ref != 0 {
-                let element_type_name = HEAP.get_instance_name(element_ref)?;
-                if !InstanceChecker::checkcast(&element_type_name, dest_element_type)? {
-                    set_pending_array_store_exception(&format!(
-                        "arraycopy: element type mismatch: can not cast one of the elements of {}[] to the type of the destination array, {}",
-                        to_external(undecorate(&src_name[1..])),
-                        to_external(dest_element_type),
-                    ))?;
-                    return Ok(());
-                }
+            if !InstanceChecker::can_store_in_array(value_to_set[0], dest_element_type)? {
+                set_pending_array_store_exception(&format!(
+                    "arraycopy: element type mismatch: can not cast one of the elements of {}[] to the type of the destination array, {}",
+                    to_external(undecorate(&src_name[1..])),
+                    to_external(dest_element_type),
+                ))?;
+                return Ok(());
             }
         }
 

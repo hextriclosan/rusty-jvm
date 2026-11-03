@@ -249,6 +249,32 @@ null store: java.lang.NullPointerException
 }
 
 #[test]
+fn should_throw_for_incompatible_array_store() {
+    assert_success(
+        "samples.arrays.store.ArrayStoreCheck",
+        r#"same class ok [value, null]
+subclass ok [null, 42]
+null ok [null, old]
+interface ok [task, null]
+primitive array as Object ok [[1], null]
+array as Cloneable ok [[1], null]
+array as Serializable ok [[a], null]
+nested array ok [[a], null]
+covariant nested array ok [[7], null]
+unrelated class -> java.lang.ArrayStoreException: java.lang.Integer [old, old]
+not an interface implementor -> java.lang.ArrayStoreException: java.lang.String [null, null]
+superclass into subclass array -> java.lang.ArrayStoreException: java.lang.Object [null, null]
+primitive array as Object[] -> java.lang.ArrayStoreException: [I [null, null]
+object into primitive arrays -> java.lang.ArrayStoreException: java.lang.String [null, null]
+object into nested arrays -> java.lang.ArrayStoreException: java.lang.String [null, null]
+array of wrong type -> java.lang.ArrayStoreException: [Ljava.lang.Number; [null, null]
+out of bounds before type check -> java.lang.ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2 [null, null]
+null array before type check -> java.lang.NullPointerException: Cannot store to object array because "<parameter1>" is null null
+"#,
+    );
+}
+
+#[test]
 fn should_support_arrays_with_longs() {
     assert_success("samples.arrays.array.longs.ArrayLong", "233646220932000\n");
 }

@@ -15,7 +15,8 @@ impl StringPoolHelper {
         Ok(string_ref)
     }
 
-    fn create_string(string: &str) -> Result<i32> {
+    /// Creates a new `String` that is not interned, e.g. for exception messages.
+    pub(crate) fn create_string(string: &str) -> Result<i32> {
         if string.is_empty() {
             return Self::create_empty_string();
         }

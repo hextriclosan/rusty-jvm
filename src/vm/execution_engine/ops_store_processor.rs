@@ -1,5 +1,5 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::exception::helpers::check_array_access;
+use crate::vm::exception::helpers::{check_array_access, check_array_store};
 use crate::vm::execution_engine::common::last_frame_mut;
 use crate::vm::execution_engine::opcode::*;
 use crate::vm::heap::heap::HEAP;
@@ -35,7 +35,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<()> {
         LASTORE => handle_array_store::<i64>(stack_frames, "LASTORE")?,
         FASTORE => handle_array_store::<f32>(stack_frames, "FASTORE")?,
         DASTORE => handle_array_store::<f64>(stack_frames, "DASTORE")?,
-        AASTORE => handle_array_store::<Slot>(stack_frames, "AASTORE")?,
+        AASTORE => handle_object_array_store(stack_frames)?,
         BASTORE => handle_array_store::<i32>(stack_frames, "BASTORE")?,
         CASTORE => handle_array_store::<i32>(stack_frames, "CASTORE")?,
         SASTORE => handle_array_store::<i32>(stack_frames, "SASTORE")?,
@@ -92,6 +92,30 @@ fn handle_array_store<T: StackValue + Display + Copy>(
     let stack_frame = last_frame_mut(stack_frames)?;
     stack_frame.incr_pc();
     trace!("{name_starts} -> arrayref={arrayref}, index={index}, value={value}");
+
+    Ok(())
+}
+
+/// Like the other array stores, but also checks that the value fits the array's element type.
+fn handle_object_array_store(stack_frames: &mut StackFrames) -> Result<()> {
+    let (arrayref, index, value) = {
+        let stack_frame = last_frame_mut(stack_frames)?;
+        let value: Slot = stack_frame.pop();
+        let index: i32 = stack_frame.pop();
+        let arrayref: i32 = stack_frame.pop();
+        (arrayref, index, value)
+    };
+    if !check_array_access(arrayref, index, stack_frames)? {
+        return Ok(());
+    }
+    if !check_array_store(arrayref, value.value(), stack_frames)? {
+        return Ok(());
+    }
+    HEAP.set_array_value(arrayref, index, value.to_vec())?;
+
+    let stack_frame = last_frame_mut(stack_frames)?;
+    stack_frame.incr_pc();
+    trace!("AASTORE -> arrayref={arrayref}, index={index}, value={value}");
 
     Ok(())
 }
