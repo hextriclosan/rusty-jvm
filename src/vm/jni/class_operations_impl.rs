@@ -1,4 +1,5 @@
 use crate::from_mutf8_ptr;
+use crate::vm::error::Error;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::jni::handles;
@@ -44,14 +45,38 @@ pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c
     match clazz_ref(&name) {
         Ok(clazz) => handles::new_local(clazz),
         Err(error) => {
-            if error.throwable_ref().is_some() {
-                set_pending_vm_error(&error);
-            } else {
-                set_pending_no_class_def_found_error(&name);
-            }
+            set_find_class_error(&name, &error);
             null_mut()
         }
     }
+}
+
+fn set_find_class_error(name: &str, error: &Error) {
+    let Some(throwable) = error.throwable_ref() else {
+        set_pending_no_class_def_found_error(name);
+        return;
+    };
+    // Emergency delivery must not allocate even a class-name String.
+    if handles::emergency_oom_ref() != Some(throwable) {
+        let mut class = HEAP
+            .get_instance_name(throwable)
+            .ok()
+            .and_then(|name| CLASSES.get_loaded(&name));
+        // Throwable construction already materialized its superclass hierarchy.
+        // Inspect only published metadata, without loading classes on an error path.
+        while let Some(current) = class {
+            if current.this_class_name() == "java/lang/ClassNotFoundException" {
+                // FindClass uses the caller's internal name, not the loader's dotted message.
+                set_pending_no_class_def_found_error(name);
+                return;
+            }
+            class = current
+                .parent()
+                .as_deref()
+                .and_then(|parent| CLASSES.get_loaded(parent));
+        }
+    }
+    set_pending_vm_error(error);
 }
 
 /// Defines a class from raw classfile bytes, like HotSpot's `jni_DefineClass`: the class name is
@@ -213,4 +238,46 @@ pub(super) extern "system" fn get_module(_env: *mut JNIEnv, clazz: jclass) -> jo
         .copied()
         .expect("Class module field has no value"),
     )
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+    use crate::vm::gc::budget::AllocError;
+    use crate::vm::gc::test_allocations::{bootstrap_oom, measure};
+    use crate::vm::stack::rooted_slots::RootedSlots;
+    use crate::vm::stack::slot::Slot;
+
+    #[test]
+    fn gc_budget_find_class_preserves_non_lookup_throwables() {
+        bootstrap_oom();
+        for name in [
+            "java/lang/ExceptionInInitializerError",
+            "java/lang/ClassFormatError",
+            "java/lang/LinkageError",
+        ] {
+            let plan =
+                with_method_area(|area| area.create_instance_with_default_fields(name)).unwrap();
+            let mut root = RootedSlots::new();
+            let reference = HEAP.create_instance(plan, &mut root).unwrap();
+            let error = Error::uncaught_exception(Slot::Ref(reference));
+
+            set_find_class_error("requested/Name", &error);
+
+            assert_eq!(JavaThread::take_pending_exception(), Some(reference));
+        }
+    }
+
+    #[test]
+    fn gc_budget_find_class_preserves_emergency_without_allocation() {
+        let emergency = bootstrap_oom();
+        assert_eq!(JavaThread::get_pending_exception(), None);
+
+        let (_, allocations) = measure(usize::MAX, || {
+            set_find_class_error("requested/Name", &AllocError::Capacity.into());
+        });
+
+        assert_eq!(allocations, 0);
+        assert_eq!(JavaThread::take_pending_exception(), Some(emergency));
+    }
 }
