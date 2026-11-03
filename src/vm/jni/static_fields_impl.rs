@@ -17,6 +17,7 @@ pub(super) extern "system" fn get_static_field_id(
     name_mutf8: *const c_char,
     _sig_mutf8: *const c_char,
 ) -> jfieldID {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let name_str = from_mutf8_ptr!(name_mutf8).expect("Failed to convert field name from CESU-8");
     let klass =
         klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
@@ -38,6 +39,7 @@ macro_rules! get_static_field_impl {
             clazz: jclass,
             field_id: jfieldID,
         ) -> $jni_ty {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             get_static_field::<$jni_ty>(env, clazz, field_id)
         }
     };
@@ -56,6 +58,7 @@ pub(super) extern "system" fn get_static_field<T: JNIValue>(
     clazz: jclass,
     field_id: jfieldID,
 ) -> T {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let klass =
         klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     let raw = klass
@@ -75,6 +78,7 @@ macro_rules! set_static_field_impl {
             field_id: jfieldID,
             value: $jni_ty,
         ) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             set_static_field::<$jni_ty>(env, clazz, field_id, value)
         }
     };
@@ -94,6 +98,7 @@ pub(super) extern "system" fn set_static_field<T: JNIValue>(
     field_id: jfieldID,
     value: T,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let klass =
         klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
     let field = klass

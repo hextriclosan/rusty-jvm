@@ -37,6 +37,7 @@ pub(crate) fn refers_to0(this: i32, o: i32) -> Result<bool> {
 /// no GC the list is never populated, so the daemon simply parks here forever — matching the
 /// "block until a reference is pending" contract. It is a daemon, so this never delays VM shutdown.
 pub(crate) fn wait_for_reference_pending_list() -> Result<()> {
+    let _blocked = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     loop {
         std::thread::park();
     }

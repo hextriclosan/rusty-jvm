@@ -605,8 +605,7 @@ pub(crate) fn ensure_class_initialized0(_this: i32, class_ref: i32) -> Result<()
 /// `jdk.internal.misc.Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z`
 pub(crate) fn should_be_initialized0(_this: i32, class_ref: i32) -> Result<bool> {
     let klass = klass(class_ref)?;
-    let guard = klass.static_fields_init_state().lock();
-    Ok(guard.get_inner_state() != Initialized)
+    Ok(klass.static_fields_init_state().get_inner_state() != Initialized)
 }
 
 /// `jdk.internal.misc.Unsafe.allocateMemory0(J)J`
@@ -671,12 +670,12 @@ pub(crate) fn copy_memory0(
 
         if dest_base_ref == 0 {
             // dest_offset is absolute address
-            unsafe {
+            crate::vm::safepoint::blocking(|| unsafe {
                 let src = to_copy.as_ptr();
                 let dst = dest_offset as usize as *mut u8;
                 let len = to_copy.len();
                 ptr::copy(src, dst, len);
-            }
+            });
         } else {
             let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
             let input = &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
@@ -687,13 +686,15 @@ pub(crate) fn copy_memory0(
             unimplemented!("dest_base_ref == null not supported yet");
         } else {
             let ptr_copy_from = src_offset as usize as *const u8;
-            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
-            unsafe {
-                let output =
-                    &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
-
-                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
-            }
+            let mut copied = vec![0; bytes as usize];
+            crate::vm::safepoint::blocking(|| {
+                // SAFETY: Unsafe's caller supplies a readable native range of `bytes`.
+                // The destination is exclusively owned host storage, not a heap shard.
+                unsafe { ptr::copy(ptr_copy_from, copied.as_mut_ptr(), copied.len()) };
+            });
+            HEAP.get_entire_raw_data_mut(dest_base_ref)?
+                [dest_offset as usize..(dest_offset + bytes) as usize]
+                .copy_from_slice(&copied);
         }
     }
 
@@ -726,7 +727,7 @@ pub(crate) fn copy_swap_memory0(
 
     // Collect source bytes into a local Vec before acquiring the dest guard to avoid
     // deadlock when src and dest are in the same DashMap shard.
-    let src_data: Vec<u8> = {
+    let mut src_data: Vec<u8> = {
         let src_raw = HEAP.get_entire_raw_data(src_base_ref)?;
         let src_start = src_offset as usize;
         src_raw[src_start..src_start + total_bytes].to_vec()
@@ -739,29 +740,18 @@ pub(crate) fn copy_swap_memory0(
         unimplemented!("dest_base_ref == 0 not supported yet");
     }
 
-    let mut dest_raw = HEAP.get_entire_raw_data_mut(dest_base_ref)?;
     let dest_start = dest_offset as usize;
 
     // ---------------------------
     // Copy + swap
     // ---------------------------
-    let mut byte_index = 0;
-
-    while byte_index < total_bytes {
-        let src_chunk_start = byte_index;
-        let src_chunk_end = src_chunk_start + elem_size;
-
-        let src_chunk = &src_data[src_chunk_start..src_chunk_end];
-
-        for j in 0..elem_size {
-            let value = src_chunk[elem_size - 1 - j]; // swap
-            let dst_index = dest_start + byte_index + j;
-
-            dest_raw[dst_index] = value;
+    crate::vm::safepoint::blocking(|| {
+        for element in src_data.chunks_exact_mut(elem_size) {
+            element.reverse();
         }
-
-        byte_index += elem_size;
-    }
+    });
+    HEAP.get_entire_raw_data_mut(dest_base_ref)?[dest_start..dest_start + total_bytes]
+        .copy_from_slice(&src_data);
 
     Ok(())
 }
@@ -774,6 +764,7 @@ pub(crate) fn copy_swap_memory0(
 /// epoch. Backed by `std::thread` park, whose permit semantics match `LockSupport` (a prior
 /// `unpark` makes the next park return immediately). Spurious wakeups are allowed by the contract.
 pub(crate) fn park(_this: i32, is_absolute: bool, time: i64) -> Result<()> {
+    let _blocked = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     if !is_absolute {
         if time == 0 {
             std::thread::park();

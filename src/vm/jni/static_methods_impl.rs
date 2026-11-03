@@ -15,6 +15,7 @@ pub(super) extern "system" fn get_static_method_id(
     name: *const c_char,
     sig: *const c_char,
 ) -> jmethodID {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     get_static_method_id_impl(clazz, name, sig)
 }
 
@@ -26,6 +27,7 @@ macro_rules! get_static_method_a_impl {
             method_id: jmethodID,
             args: *const jvalue,
         ) -> $jni_ty {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             call_static_method_a::<$jni_ty>(env, clazz, method_id, args)
         }
     };

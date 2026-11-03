@@ -3,7 +3,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::jni::buffer_leases::BufferLease;
 use crate::vm::jni::jni_env::jni_native_interface;
 use crate::vm::jni::local_frames::LocalFrames;
-use crate::vm::safepoint::{self, Safepoint};
+use crate::vm::safepoint::{self, Snapshot};
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
@@ -11,7 +11,6 @@ use jni_sys::{JNIEnv, JNINativeInterface_};
 use std::cell::{Cell, RefCell};
 use std::marker::PhantomData;
 use std::rc::Rc;
-use std::sync::Arc;
 
 /// Represents a JVM thread for JNI purposes.
 ///
@@ -46,10 +45,8 @@ pub(crate) struct JavaThread {
     /// Only the newest (top) segment is being mutated by the running interpreter; every older
     /// segment is suspended in a native call and therefore safe to read.
     stack_frames: RefCell<Vec<*mut StackFrames>>,
-    /// This thread's cooperative safepoint, polled by the interpreter loop. Shared (by `Arc`) with
-    /// the global registry once the thread is attached, so another thread can drive it to a
-    /// safepoint to snapshot its stack. See [`crate::vm::safepoint`].
-    safepoint: Arc<Safepoint>,
+    /// One entry per logical monitor acquisition, retained across wait/reacquisition.
+    monitor_roots: RefCell<Vec<i32>>,
     /// References held alive across a VM operation that has no frame to put them in.
     ///
     /// Almost every reference the VM touches lives in some frame's locals or operand stack, which
@@ -72,7 +69,7 @@ thread_local! {
         current_thread: Cell::new(None),
         scoped_value_cache: Cell::new(0),
         stack_frames: RefCell::new(Vec::new()),
-        safepoint: Safepoint::new(),
+        monitor_roots: RefCell::new(Vec::new()),
         temp_roots: RefCell::new(Vec::new()),
         jni_frames: RefCell::new(LocalFrames::default()),
         jni_leases: RefCell::new(Vec::new()),
@@ -230,8 +227,7 @@ impl JavaThread {
     pub(crate) fn set_current_thread(thread_ref: i32) {
         JAVA_THREAD.with(|t| {
             t.current_thread.set(Some(thread_ref));
-            // Publish this thread's safepoint under its identity so it can be targeted for a stack dump.
-            safepoint::register(thread_ref, Arc::clone(&t.safepoint));
+            safepoint::bind(thread_ref);
         });
     }
 
@@ -268,7 +264,6 @@ impl JavaThread {
     ///
     /// Read by the calling thread about itself, the same way a thread collects its own stack at a
     /// safepoint rather than having another thread reach into it.
-    #[allow(dead_code)] // consumed by the root scan added in a later step
     pub(crate) fn temp_root_refs() -> Vec<i32> {
         let mut refs: Vec<i32> = JAVA_THREAD.with(|t| {
             t.temp_roots
@@ -284,10 +279,39 @@ impl JavaThread {
         refs
     }
 
-    /// Returns a clone of the calling thread's safepoint. `Engine::execute` grabs it once and polls
-    /// it every iteration (a cheap flag check).
-    pub(crate) fn safepoint() -> Arc<Safepoint> {
-        JAVA_THREAD.with(|t| Arc::clone(&t.safepoint))
+    /// Owner-produced and uncapped. Snapshotting never loads a class or runs Java.
+    pub(crate) fn snapshot_roots() -> Snapshot {
+        let mut roots = Self::temp_root_refs();
+        JAVA_THREAD.with(|thread| {
+            roots.extend(thread.current_thread.get());
+            roots.push(thread.scoped_value_cache.get());
+            roots.extend(thread.exception_pending.get().map(|slot| slot.value()));
+            roots.extend(thread.monitor_roots.borrow().iter().copied());
+            for &segment in thread.stack_frames.borrow().iter() {
+                // SAFETY: only the owning OS thread reads its registered, live segments,
+                // between bytecodes or during a suspended native call. No Java is invoked.
+                for frame in unsafe { &*segment }.iter() {
+                    roots.extend(frame.ref_slots());
+                }
+            }
+        });
+        roots.retain(|&reference| reference != 0);
+        Snapshot { roots }
+    }
+
+    pub(crate) fn root_monitor(reference: i32) {
+        JAVA_THREAD.with(|thread| thread.monitor_roots.borrow_mut().push(reference));
+    }
+
+    pub(crate) fn unroot_monitor(reference: i32) {
+        JAVA_THREAD.with(|thread| {
+            let mut roots = thread.monitor_roots.borrow_mut();
+            let index = roots
+                .iter()
+                .rposition(|&root| root == reference)
+                .expect("successful monitor exit has an owned root");
+            roots.remove(index);
+        });
     }
 
     /// Registers `stack_frames` as the newest segment of the calling thread's stack chain for

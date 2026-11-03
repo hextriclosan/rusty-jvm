@@ -9,6 +9,7 @@ pub(super) extern "system" fn from_reflected_method(
     _env: *mut JNIEnv,
     reflected: jobject,
 ) -> jmethodID {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let reflected = handles::resolve_or_return!(reflected);
     let result = HEAP.get_instance_name(reflected).and_then(|class_name| {
         let declaring_class = HEAP.get_object_field_value(reflected, &class_name, "clazz")?;
@@ -30,6 +31,7 @@ pub(super) extern "system" fn to_reflected_method(
     method_id: jmethodID,
     _is_static: jboolean,
 ) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let (class_ref, method_index) = decode_method_id(method_id as usize);
     let result = klass(class_ref)
         .and_then(|class| class.get_method_by_index(method_index))

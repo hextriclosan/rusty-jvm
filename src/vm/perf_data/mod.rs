@@ -27,6 +27,7 @@ impl Display for PerfDataError {
 }
 
 pub(crate) fn init_perf_file(arguments: &Arguments) -> Result<()> {
+    let _safe = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     let mut guard = PERF_FILE
         .get_or_try_init(|| Ok::<Mutex<PerfFile>, Error>(Mutex::new(PerfFile::default()?)))?
         .lock()?;
@@ -57,6 +58,7 @@ pub(crate) fn create_long_in_perf_file(
     units: u8,
     value: i64,
 ) -> std::result::Result<(*const u8, usize), PerfDataError> {
+    let _safe = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     let Some(mutex) = PERF_FILE.get() else {
         return Err(PerfDataError::NonRecoverable(
             "Perf file not initialized".to_string(),
@@ -91,6 +93,7 @@ pub(crate) fn create_byte_array_in_perf_file(
     value: &[u8],
     max_len: usize,
 ) -> std::result::Result<(*const u8, usize), PerfDataError> {
+    let _safe = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     let Some(mutex) = PERF_FILE.get() else {
         return Err(PerfDataError::NonRecoverable(
             "Perf file not initialized".to_string(),

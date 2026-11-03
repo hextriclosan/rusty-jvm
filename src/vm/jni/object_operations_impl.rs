@@ -19,6 +19,7 @@ use jni_sys::{jboolean, jclass, jmethodID, jobject, jobjectRefType, jvalue, JNIE
 use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let instance_name = HEAP
         .get_instance_name(handles::resolve_or_return!(obj))
         .expect("Failed to get instance name from reference");
@@ -32,6 +33,7 @@ pub(super) extern "system" fn is_same_object(
     first: jobject,
     second: jobject,
 ) -> jboolean {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let first = handles::resolve_or_return!(first);
     let second = handles::resolve_or_return!(second);
     first == second
@@ -41,6 +43,7 @@ pub(super) extern "system" fn get_object_ref_type(
     _env: *mut JNIEnv,
     object: jobject,
 ) -> jobjectRefType {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::reference_type(object)
 }
 
@@ -49,6 +52,7 @@ pub(super) extern "system" fn is_instance_of(
     obj: jobject,
     clazz: jclass,
 ) -> jboolean {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if obj.is_null() {
         return true as jboolean;
     }
@@ -66,6 +70,7 @@ pub(super) extern "system" fn is_instance_of(
 }
 
 pub(super) extern "system" fn is_virtual_thread(_env: *mut JNIEnv, thread: jobject) -> jboolean {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if thread.is_null() {
         return false as jboolean;
     }
@@ -84,6 +89,7 @@ pub(super) extern "system" fn is_virtual_thread(_env: *mut JNIEnv, thread: jobje
 }
 
 pub(super) extern "system" fn alloc_object(_env: *mut JNIEnv, clazz: jclass) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if clazz.is_null() {
         set_pending_null_pointer_exception("Class is null");
         return null_mut();
@@ -130,6 +136,7 @@ pub(super) extern "system" fn new_object_a(
     method_id: jmethodID,
     args: *const jvalue,
 ) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let obj = alloc_object(env, clazz);
     if obj.is_null() {
         return null_mut();

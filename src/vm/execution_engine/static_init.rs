@@ -1,68 +1,82 @@
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::engine::Engine;
-use crate::vm::method_area::java_class::{InnerState, JavaClass};
+use crate::vm::execution_engine::executor::Executor;
+use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::heap::heap::HEAP;
+use crate::vm::method_area::instance_checker::InstanceChecker;
+use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
-use std::sync::atomic::AtomicU32;
-use tracing::trace;
+use crate::vm::stack::stack_value::StackValueKind;
 
 pub struct StaticInit {}
 
-static COUNTER: AtomicU32 = AtomicU32::new(0);
-
 impl StaticInit {
-    const STATIC_INIT_METHOD: &'static str = "<clinit>:()V";
     pub fn initialize(java_class_name: &str) -> Result<()> {
         let java_class = CLASSES.get(java_class_name)?;
         Self::initialize_java_class(&java_class)
     }
 
     pub fn initialize_java_class(java_class: &JavaClass) -> Result<()> {
-        Self::initialization_impl(java_class)
-    }
-
-    fn initialization_impl(java_class: &JavaClass) -> Result<()> {
-        let guard = java_class.static_fields_init_state().lock();
-
-        match guard.get_inner_state() {
-            InnerState::Initialized => {
-                // already initialized doing nothing
-            }
-            InnerState::Initializing => {
-                // initialization is in progress, doing nothing, just log
-                trace!("{}: recursively initializing", java_class.this_class_name());
-            }
-            InnerState::NotInitialized => {
-                guard.set_inner_state(InnerState::Initializing);
-
-                if let Some(parent_name) = java_class.parent() {
-                    let klass = CLASSES.get(parent_name)?;
-                    Self::initialization_impl(&klass)?;
+        let state = java_class.static_fields_init_state();
+        match state.begin() {
+            Ok(false) => return Ok(()),
+            Ok(true) => {}
+            Err(cause_root) => {
+                if cause_root == 0 {
+                    return Err(Error::new_execution(
+                        "class initialization previously failed",
+                    ));
                 }
-
-                let curr_counter = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                trace!(
-                    ">>> {curr_counter} initializing {}",
-                    java_class.this_class_name()
-                );
-
-                if let Some(static_init_method) =
-                    java_class.try_get_method(Self::STATIC_INIT_METHOD)
-                {
-                    Engine::execute(
-                        static_init_method.new_stack_frame()?,
-                        &format!("static initialization {}", java_class.this_class_name()),
-                    )?;
-                }
-
-                guard.set_inner_state(InnerState::Initialized);
-
-                trace!(
-                    "<<< {curr_counter} initialised {}",
-                    java_class.this_class_name()
-                );
+                let message = StringPoolHelper::get_string(java_class.this_class_name())?;
+                let failure = Executor::invoke_args_constructor(
+                    "java/lang/NoClassDefFoundError",
+                    "<init>:(Ljava/lang/String;)V",
+                    &[StackValueKind::Ref(message)],
+                    None,
+                )?;
+                Executor::invoke_non_static_method(
+                    "java/lang/Throwable",
+                    "initCause:(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
+                    failure[0].value(),
+                    &[StackValueKind::Ref(cause_root)],
+                )?;
+                return Err(Error::uncaught_exception(failure[0]));
             }
         }
 
-        Ok(())
+        // No initialization mutex is held here, including during parent initialization.
+        let result = (|| -> Result<()> {
+            if let Some(parent_name) = java_class.parent() {
+                Self::initialize(parent_name)?;
+            }
+            if let Some(method) = java_class.try_get_method("<clinit>:()V") {
+                Engine::execute(method.new_stack_frame()?, "class initialization")?;
+            }
+            Ok(())
+        })();
+        match result {
+            Ok(()) => {
+                state.finish(None);
+                Ok(())
+            }
+            Err(error) => {
+                // Publish the persistent cause before releasing the Error's transfer root.
+                state.finish(Some(error.throwable_ref().unwrap_or(0)));
+                let Some(cause) = error.throwable_ref() else {
+                    return Err(error);
+                };
+                let name = HEAP.get_instance_name(cause)?;
+                if InstanceChecker::checkcast(&name, "java/lang/Error")? {
+                    return Err(error);
+                }
+                let wrapped = Executor::invoke_args_constructor(
+                    "java/lang/ExceptionInInitializerError",
+                    "<init>:(Ljava/lang/Throwable;)V",
+                    &[StackValueKind::Ref(cause)],
+                    None,
+                )?;
+                Err(Error::uncaught_exception(wrapped[0]))
+            }
+        }
     }
 }

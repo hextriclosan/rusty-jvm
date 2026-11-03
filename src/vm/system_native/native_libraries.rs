@@ -14,10 +14,10 @@ use std::ffi::{c_void, CString};
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use tracing::{enabled, trace, warn};
 
-static REGISTRY: LazyLock<DashMap<usize, LibraryEntry>> = LazyLock::new(DashMap::default);
+static REGISTRY: LazyLock<DashMap<usize, Arc<LibraryEntry>>> = LazyLock::new(DashMap::default);
 
 #[derive(Debug, new)]
 struct LibraryEntry {
@@ -47,10 +47,14 @@ pub(crate) fn load(
     // skip loading of jdk system libraries (libzip, libnio, libjimage and so on) since we have this functionality built-in
     let path = Path::new(&name);
     if let Some(parent_dir) = path.parent() {
-        if let (Ok(canonic_parent_dir), Ok(canonic_boot_lib_path)) = (
-            fs::canonicalize(parent_dir),
-            fs::canonicalize(Path::new(sun_boot_library_path())),
-        ) {
+        if let (Ok(canonic_parent_dir), Ok(canonic_boot_lib_path)) =
+            crate::vm::safepoint::blocking(|| {
+                (
+                    fs::canonicalize(parent_dir),
+                    fs::canonicalize(Path::new(sun_boot_library_path())),
+                )
+            })
+        {
             if canonic_parent_dir == canonic_boot_lib_path {
                 if path
                     .file_name()
@@ -64,20 +68,20 @@ pub(crate) fn load(
         }
     }
 
-    match unsafe { Library::new(&name) } {
+    match crate::vm::safepoint::blocking(|| unsafe { Library::new(&name) }) {
         Ok(lib) => {
             let raw_ptr = lib.into_raw();
-            let entry = REGISTRY.entry(raw_ptr as usize).or_insert_with(|| {
+            REGISTRY.entry(raw_ptr as usize).or_insert_with(|| {
                 // Safety: raw_ptr was just obtained from lib.into_raw() and is not yet
                 // wrapped by another Library instance.
                 let lib = unsafe { Library::from_raw(raw_ptr) };
-                LibraryEntry::new(lib, DashMap::default())
+                Arc::new(LibraryEntry::new(lib, DashMap::default()))
             });
             HEAP.set_object_field_value(
                 native_lib_impl_ref,
                 "jdk/internal/loader/NativeLibraries$NativeLibraryImpl",
                 "handle",
-                i64_to_vec(*entry.key() as i64),
+                i64_to_vec(raw_ptr as i64),
             )?;
 
             Ok(true)
@@ -99,7 +103,7 @@ fn extract_lib_name(s: &str) -> Option<&str> {
 /// `jdk.internal.loader.NativeLibraries$NativeLibraryImpl.findEntry0(JLjava/lang/String;)J`
 pub(crate) fn find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
     let lib = match REGISTRY.get(&(handle as usize)) {
-        Some(lib) => lib,
+        Some(lib) => Arc::clone(lib.value()),
         None => {
             warn!("Library not found in registry for handle: {handle}");
             return Ok(0);
@@ -107,19 +111,19 @@ pub(crate) fn find_entry0(handle: i64, name_ref: i32) -> Result<i64> {
     };
 
     let name = get_utf8_string_by_ref(name_ref)?;
-    let entry = lib.value();
-
     let c_name = CString::from_str(&name)?;
-    let symbol = entry.symbols.entry(name.clone()).or_insert_with(|| {
-        let sym: core::result::Result<Symbol<*const c_void>, libloading::Error> =
-            unsafe { entry.library.get(c_name.as_bytes_with_nul()) };
-        match sym {
-            Ok(sym) => sym.as_raw_ptr() as usize,
-            Err(_) => 0,
-        }
-    });
+    let raw_ptr = crate::vm::safepoint::blocking(|| {
+        let symbol = lib.symbols.entry(name.clone()).or_insert_with(|| {
+            let sym: core::result::Result<Symbol<*const c_void>, libloading::Error> =
+                unsafe { lib.library.get(c_name.as_bytes_with_nul()) };
+            match sym {
+                Ok(sym) => sym.as_raw_ptr() as usize,
+                Err(_) => 0,
+            }
+        });
 
-    let raw_ptr = *symbol.value();
+        *symbol.value()
+    });
     if raw_ptr == 0 {
         return Ok(0);
     }

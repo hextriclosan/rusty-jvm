@@ -40,22 +40,29 @@ pub(crate) fn inflate_bytes_bytes(
     output_off: i32,
     output_len: i32,
 ) -> Result<i64> {
-    let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
-        Error::new_execution(&format!(
-            "Inflater not found in registry for address: {}",
-            addr
-        ))
-    })?;
-    let inflate_state = entry.value_mut();
-
     let input = {
         let input_array = HEAP.get_entire_raw_data(input_array_ref)?;
         input_array[input_off as usize..(input_off + input_len) as usize].to_vec()
     };
 
-    let mut output_array = HEAP.get_entire_raw_data_mut(output_array_ref)?;
-    let output = &mut output_array[output_off as usize..(output_off + output_len) as usize];
-    let stream_result = inflate(&mut inflate_state.0, &input, output, MZFlush::Sync);
+    let mut output = vec![0; output_len as usize];
+    let stream_result = crate::vm::safepoint::blocking(|| {
+        let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
+            Error::new_execution(&format!(
+                "Inflater not found in registry for address: {addr}"
+            ))
+        })?;
+        Ok::<_, Error>(inflate(
+            &mut entry.value_mut().0,
+            &input,
+            &mut output,
+            MZFlush::Sync,
+        ))
+    })?;
+    let written = stream_result.bytes_written;
+    HEAP.get_entire_raw_data_mut(output_array_ref)?
+        [output_off as usize..output_off as usize + written]
+        .copy_from_slice(&output[..written]);
 
     check_inflate_status(stream_result)
 }
@@ -121,6 +128,7 @@ fn check_inflate_status(stream_result: StreamResult) -> Result<i64> {
 
 /// `java.util.zip.Inflater.end(J)V`
 pub(crate) fn end(addr: i64) -> Result<()> {
+    let _safe = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     REGISTRY.remove(addr).ok_or_else(|| {
         Error::new_execution(&format!("Address {addr} does not exist in REGISTRY"))
     })?;
@@ -130,6 +138,7 @@ pub(crate) fn end(addr: i64) -> Result<()> {
 
 /// `java.util.zip.Inflater.reset(J)V`
 pub(crate) fn reset(addr: i64) -> Result<()> {
+    let _safe = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
         Error::new_execution(&format!(
             "Inflater not found in registry for address: {}",

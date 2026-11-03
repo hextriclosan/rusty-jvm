@@ -14,6 +14,7 @@ use jni_sys::{
 use std::ffi::c_void;
 
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let array_ref = handles::resolve_or_return!(input);
     if array_ref == 0 {
         set_pending_null_pointer_exception("Array is null");
@@ -29,6 +30,7 @@ pub(super) extern "system" fn new_object_array(
     clazz: jclass,
     init: jobject,
 ) -> jobjectArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let clazz_ref = handles::resolve_or_return!(clazz);
     let init_obj_ref = handles::resolve_or_return!(init);
 
@@ -72,6 +74,7 @@ pub(super) extern "system" fn get_object_array_element(
     array: jobjectArray,
     index: jsize,
 ) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let array_ref = handles::resolve_or_return!(array);
     if array_ref == 0 {
         set_pending_null_pointer_exception("Array is null");
@@ -96,6 +99,7 @@ pub(super) extern "system" fn set_object_array_element(
     index: jsize,
     value: jobject,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let array_ref = handles::resolve_or_return!(array);
     if array_ref == 0 {
         set_pending_null_pointer_exception("Array is null");
@@ -113,34 +117,42 @@ pub(super) extern "system" fn set_object_array_element(
 }
 
 pub(super) extern "system" fn new_boolean_array(_env: *mut JNIEnv, len: jsize) -> jbooleanArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[Z")
 }
 
 pub(super) extern "system" fn new_byte_array(_env: *mut JNIEnv, len: jsize) -> jbyteArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[B")
 }
 
 pub(super) extern "system" fn new_char_array(_env: *mut JNIEnv, len: jsize) -> jcharArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[C")
 }
 
 pub(super) extern "system" fn new_short_array(_env: *mut JNIEnv, len: jsize) -> jshortArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[S")
 }
 
 pub(super) extern "system" fn new_int_array(_env: *mut JNIEnv, len: jsize) -> jintArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[I")
 }
 
 pub(super) extern "system" fn new_long_array(_env: *mut JNIEnv, len: jsize) -> jlongArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[J")
 }
 
 pub(super) extern "system" fn new_float_array(_env: *mut JNIEnv, len: jsize) -> jfloatArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[F")
 }
 
 pub(super) extern "system" fn new_double_array(_env: *mut JNIEnv, len: jsize) -> jdoubleArray {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     new_primitive_type_array_impl(len, "[D")
 }
 
@@ -160,6 +172,7 @@ macro_rules! impl_get_array {
             array: $array_ty,
             is_copy: *mut jboolean,
         ) -> *mut $jni_ty {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             get_primitive_type_array_elements::<$jni_ty>(
                 handles::resolve_or_return!(array),
                 is_copy,
@@ -207,6 +220,7 @@ macro_rules! impl_release_array {
             elems: *mut $jni_ty,
             mode: jint,
         ) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             release_primitive_type_array_elements::<$jni_ty>(env, array, elems, mode)
         }
     };
@@ -234,6 +248,7 @@ pub(super) extern "system" fn get_primitive_array_critical(
     array: jarray,
     is_copy: *mut jboolean,
 ) -> *mut c_void {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     // Copy-based even for critical access: the lease roots the target, without disabling GC.
     get_primitive_type_array_elements::<u8>(handles::resolve_or_return!(array), is_copy).cast()
 }
@@ -244,6 +259,7 @@ pub(super) extern "system" fn release_primitive_array_critical(
     elements: *mut c_void,
     mode: jint,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let array_ref = handles::resolve_or_return!(array);
     buffer_leases::release(elements.cast(), array_ref, Some(mode));
 }
@@ -257,6 +273,7 @@ macro_rules! impl_set_array_region {
             len: jsize,
             buf: *const $jni_ty,
         ) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             set_primitive_type_array_region::<$jni_ty>(env, array, start, len, buf)
         }
     };
@@ -303,6 +320,7 @@ macro_rules! impl_get_array_region {
             len: jsize,
             buf: *mut $jni_ty,
         ) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             get_primitive_type_array_region::<$jni_ty>(env, array, start, len, buf)
         }
     };

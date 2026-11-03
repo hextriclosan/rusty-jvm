@@ -1,3 +1,4 @@
+mod class_loading;
 pub(crate) mod field;
 pub(crate) mod instance_checker;
 pub(crate) mod java_class;

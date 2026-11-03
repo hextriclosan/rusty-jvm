@@ -100,7 +100,10 @@ pub(crate) fn sleep_nanos0(nanos: i64) -> Result<()> {
         if remaining.is_zero() {
             break Ok(());
         }
-        std::thread::park_timeout(remaining);
+        {
+            let _blocked = safepoint::Blocking::enter(safepoint::Reason::Blocking);
+            std::thread::park_timeout(remaining);
+        }
     };
     threads::set_current_thread_status(threads::thread_status::RUNNABLE);
     result
@@ -131,10 +134,11 @@ pub(crate) fn interrupt0(this: i32) -> Result<()> {
 /// that never reaches one within the timeout (e.g. blocked in a native) yields null. The collected
 /// frames are turned into `StackTraceElement`s via the same backtrace path as `fillInStackTrace`.
 pub(crate) fn get_stack_trace0(this: i32) -> Result<i32> {
+    let mut dump_roots = RootedSlots::new();
     let frames = if JavaThread::current_thread() == Some(this) {
         StackFramesUtil::collect_current_stack(MAX_STACK_DEPTH)?
     } else {
-        match safepoint::dump_stack(this) {
+        match safepoint::dump_stack(this, &mut dump_roots) {
             Some(frames) => frames,
             None => return Ok(0), // null: the thread didn't reach a safepoint (or isn't registered)
         }
@@ -192,9 +196,18 @@ pub(crate) fn start0(this: i32) -> Result<()> {
     threads::set_thread_status(this, threads::thread_status::RUNNABLE);
 
     let thread_ref = this;
+    let startup = safepoint::COORDINATOR.startup(this);
+    // The child cannot claim managed access until the parent publishes its parker.
+    let (ready, claim) = std::sync::mpsc::sync_channel(1);
     let handle = std::thread::Builder::new()
-        .spawn(move || run_thread(thread_ref))
+        .spawn(move || {
+            if claim.recv().is_ok() {
+                safepoint::claim(startup);
+                run_thread(thread_ref);
+            }
+        })
         .map_err(|e| {
+            safepoint::COORDINATOR.cancel_startup(startup);
             // Roll back the "started" markers so a thread that never launched is left back in NEW:
             // eetop cleared so isAlive() is false, and threadStatus reset so getState() reads NEW and
             // Thread.start() can be retried (it rejects threadStatus != 0).
@@ -205,6 +218,9 @@ pub(crate) fn start0(this: i32) -> Result<()> {
 
     // Register the parker eagerly, from the parent, before the child can be unparked (race-free).
     threads::register_parker(this, handle.thread().clone());
+    if ready.send(()).is_err() {
+        error!("spawned thread vanished before claiming its startup record");
+    }
 
     if !is_daemon {
         threads::register_non_daemon(handle);
@@ -244,7 +260,7 @@ fn run_thread(this: i32) {
     // and isAlive() is now false (eetop cleared above), so a notify lets them observe termination.
     crate::vm::monitor::wake_all_on_exit(this);
     threads::unregister_parker(this);
-    safepoint::unregister(this);
+    safepoint::retire();
 }
 
 /// Resolves `run:()V` on the thread object's actual class (virtual dispatch, honoring subclass

@@ -14,6 +14,7 @@ use crate::vm::exception::pending_helpers::{
     set_pending_illegal_argument_exception, set_pending_io_exception,
 };
 use crate::vm::heap::heap::HEAP;
+use crate::vm::safepoint;
 use crate::vm::system_native::platform_file::Mode::RandomAccessFile;
 use crate::vm::system_native::platform_file::{get_by_raw_id, length};
 #[cfg(unix)]
@@ -56,7 +57,7 @@ pub(crate) fn seek0(obj_ref: i32, offset: i64) -> Result<()> {
         return Ok(());
     }
 
-    file.seek(std::io::SeekFrom::Start(offset as u64))?;
+    safepoint::blocking(|| file.seek(std::io::SeekFrom::Start(offset as u64)))?;
     Ok(())
 }
 
@@ -64,7 +65,7 @@ pub(crate) fn write0(obj_ref: i32, byte: i32) -> Result<()> {
     let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
         return Ok(());
     };
-    if let Err(error) = file.write_all(&[byte as u8]) {
+    if let Err(error) = safepoint::blocking(|| file.write_all(&[byte as u8])) {
         set_pending_io_exception(&error.to_string())?;
     }
     Ok(())
@@ -75,7 +76,7 @@ pub(crate) fn read0(obj_ref: i32) -> Result<i32> {
         return Ok(-1);
     };
     let mut byte = [0u8; 1];
-    match file.read(&mut byte) {
+    match safepoint::blocking(|| file.read(&mut byte)) {
         Ok(0) => Ok(-1),
         Ok(_) => Ok(byte[0] as i32),
         Err(error) => {
@@ -89,7 +90,7 @@ pub(crate) fn get_file_pointer(obj_ref: i32) -> Result<i64> {
     let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
         return Ok(-1);
     };
-    match file.stream_position() {
+    match safepoint::blocking(|| file.stream_position()) {
         Ok(position) => Ok(position.min(i64::MAX as u64) as i64),
         Err(error) => {
             set_pending_io_exception(&error.to_string())?;
@@ -108,9 +109,9 @@ pub(crate) fn write_bytes0(obj_ref: i32, bytes_ref: i32, offset: i32, len: i32) 
         return Ok(());
     };
 
-    let input_array = HEAP.get_entire_raw_data(bytes_ref)?;
-    let input = &input_array[offset as usize..(offset + len) as usize];
-    file.write_all(input)?;
+    let input =
+        HEAP.get_entire_raw_data(bytes_ref)?[offset as usize..(offset + len) as usize].to_vec();
+    safepoint::blocking(|| file.write_all(&input))?;
 
     Ok(())
 }
@@ -129,13 +130,16 @@ pub(crate) fn read_bytes0(obj_ref: i32, bytes_ref: i32, offset: i32, len: i32) -
         return Ok(-1);
     };
 
-    let mut input_array = HEAP.get_entire_raw_data_mut(bytes_ref)?;
-    let input = &mut input_array[offset as usize..(offset + len) as usize];
-    let read = file.read(input);
+    let mut input = vec![0; len as usize];
+    let read = safepoint::blocking(|| file.read(&mut input));
 
     match read {
         Ok(n) if n == 0 => Ok(-1),
-        Ok(n) => Ok(n as i32),
+        Ok(n) => {
+            HEAP.get_entire_raw_data_mut(bytes_ref)?[offset as usize..offset as usize + n]
+                .copy_from_slice(&input[..n]);
+            Ok(n as i32)
+        }
         Err(e) => {
             set_pending_io_exception(&e.to_string())?;
             Ok(-1)
@@ -157,13 +161,15 @@ pub(crate) fn set_length0(obj_ref: i32, new_length: i64) -> Result<()> {
     let Some(mut file) = get_by_raw_id(obj_ref, RandomAccessFile)? else {
         return Ok(());
     };
-    if let Err(error) = file.set_len(new_length as u64) {
+    if let Err(error) = safepoint::blocking(|| file.set_len(new_length as u64)) {
         set_pending_io_exception(&error.to_string())?;
         return Ok(());
     }
-    match file.stream_position() {
+    match safepoint::blocking(|| file.stream_position()) {
         Ok(position) if position > new_length as u64 => {
-            if let Err(error) = file.seek(std::io::SeekFrom::Start(new_length as u64)) {
+            if let Err(error) =
+                safepoint::blocking(|| file.seek(std::io::SeekFrom::Start(new_length as u64)))
+            {
                 set_pending_io_exception(&error.to_string())?;
             }
         }

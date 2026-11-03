@@ -205,6 +205,7 @@ macro_rules! builtin_wrapper {
             _class: jclass,
             $($pname: jni_ffi_ty!($pty),)*
         ) -> jni_ffi_ty!($ret) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             match $inner($(jni_arg_cast!($pty, $pname)),*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {
@@ -222,6 +223,7 @@ macro_rules! builtin_wrapper {
             this: jobject,
             $($pname: jni_ffi_ty!($pty),)*
         ) -> jni_ffi_ty!($ret) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             match $inner(handles::resolve_or_return!(this) $(, jni_arg_cast!($pty, $pname))*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {

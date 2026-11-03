@@ -12,6 +12,7 @@ use std::ptr::null_mut;
 use tracing::warn;
 
 pub(super) extern "system" fn throw(_env: *mut JNIEnv, throwable: jthrowable) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if throwable.is_null() {
         return JNI_ERR;
     }
@@ -25,6 +26,7 @@ pub(super) extern "system" fn throw_new(
     clazz: jclass,
     msg_mutf8: *const c_char,
 ) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if clazz.is_null() {
         return JNI_ERR;
     }
@@ -67,6 +69,7 @@ pub(super) extern "system" fn throw_new(
 }
 
 pub(super) extern "system" fn exception_occurred(_env: *mut JNIEnv) -> jthrowable {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     match JavaThread::get_pending_exception() {
         Some(r) => handles::new_local(r),
         None => null_mut(),
@@ -74,6 +77,7 @@ pub(super) extern "system" fn exception_occurred(_env: *mut JNIEnv) -> jthrowabl
 }
 
 pub(super) extern "system" fn exception_describe(_env: *mut JNIEnv) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if let Some(exception) = JavaThread::take_pending_exception_rooted() {
         invoke_uncaught_exception_handler(exception[0].value())
             .expect("Failed to invoke uncaught exception handler");
@@ -81,10 +85,12 @@ pub(super) extern "system" fn exception_describe(_env: *mut JNIEnv) {
 }
 
 pub(super) extern "system" fn exception_clear(_env: *mut JNIEnv) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     JavaThread::take_pending_exception();
 }
 
 pub(super) extern "system" fn fatal_error(_env: *mut JNIEnv, msg: *const c_char) -> ! {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if !msg.is_null() {
         let msg_str = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
         eprintln!("FATAL ERROR in native method: {msg_str}");
@@ -95,6 +101,7 @@ pub(super) extern "system" fn fatal_error(_env: *mut JNIEnv, msg: *const c_char)
 }
 
 pub(super) extern "system" fn exception_check(_env: *mut JNIEnv) -> jboolean {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let pending = JavaThread::get_pending_exception();
     if pending.is_some() {
         JNI_TRUE

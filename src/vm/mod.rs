@@ -55,6 +55,7 @@ pub(crate) static SYSTEM_CLASSLOADER_REF: OnceLock<i32> = OnceLock::new();
 /// * `arguments` - The arguments for the Java program.
 /// * `java_home` - The path to the Java home directory.
 pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
+    safepoint::attach();
     gc::install(arguments)?;
     JAVA_HOME
         .set(java_home.to_path_buf())
@@ -92,7 +93,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
         Ok(())
     })();
 
-    match result {
+    let result = match result {
         Ok(()) => Ok(()),
         Err(e) if e.is_uncaught_exception() => {
             if let Some(throwable_ref) = e.throwable_ref() {
@@ -106,7 +107,9 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
             Err(e)
         }
         Err(e) => Err(e),
-    }
+    };
+    safepoint::retire();
+    result
 }
 
 pub(crate) fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()> {

@@ -14,6 +14,7 @@ pub(super) extern "system" fn new_direct_byte_buffer(
     address: *mut c_void,
     capacity: jlong,
 ) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     // The constructor rejects a negative or oversized capacity with an IllegalArgumentException,
     // which is left pending for the caller.
     let result = Executor::invoke_args_constructor(
@@ -31,6 +32,7 @@ pub(super) extern "system" fn get_direct_buffer_address(
     _env: *mut JNIEnv,
     buffer: jobject,
 ) -> *mut c_void {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     direct_buffer_field(buffer, "address")
         .map(|value| vec_to_i64(&value) as usize as *mut c_void)
         .unwrap_or(null_mut())
@@ -41,6 +43,7 @@ pub(super) extern "system" fn get_direct_buffer_capacity(
     _env: *mut JNIEnv,
     buffer: jobject,
 ) -> jlong {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     direct_buffer_field(buffer, "capacity")
         .and_then(|value| value.first().copied())
         .map(jlong::from)

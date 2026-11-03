@@ -2,6 +2,7 @@ use crate::vm::jni::jni_env::get_jni_vm;
 use jni_sys::{jint, JNIEnv, JavaVM, JNI_ERR, JNI_OK};
 
 pub(super) extern "system" fn get_java_vm(_env: *mut JNIEnv, vm: *mut *mut JavaVM) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if vm.is_null() {
         return JNI_ERR;
     }

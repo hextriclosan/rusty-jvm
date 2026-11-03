@@ -19,6 +19,7 @@ pub(crate) static CLASSES: LazyLock<LoadedClasses> = LazyLock::new(LoadedClasses
 
 #[derive(Debug, Default)]
 pub(crate) struct LoadedClasses {
+    loading: super::class_loading::Loading,
     loaded_classes: DashMap<String, Arc<ClassEntry>>,
     id_index: DashMap<usize, Arc<ClassEntry>>,
     next_id: AtomicUsize,
@@ -37,6 +38,10 @@ const CLASS: &str = "java/lang/Class";
 const CLASS_FILE_ACCESS_FLAGS: &str = "classFileAccessFlags";
 
 impl LoadedClasses {
+    /// Inspection only: never class-loads or re-enters Java while collecting a trace.
+    pub(crate) fn get_loaded(&self, name: &str) -> Option<Arc<JavaClass>> {
+        self.get_full_impl(name).map(|(_, _, klass)| klass)
+    }
     /// Checks if class is already loaded
     pub fn is_loaded(&self, fully_qualified_class_name: &str) -> bool {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
@@ -65,11 +70,11 @@ impl LoadedClasses {
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
 
+        let _claim = self.loading.claim(fully_qualified_class_name);
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
             return Ok((id, key, klass));
         }
 
-        // todo loading class can be called concurrently from multiple threads - not critical but it's better to handle that
         let klass = if fully_qualified_class_name.starts_with('[') {
             Self::generate_synthetic_array_class(fully_qualified_class_name)
         } else {
@@ -102,6 +107,7 @@ impl LoadedClasses {
         class_loader_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
+        let _claim = self.loading.claim(fully_qualified_class_name);
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
             return Ok((id, key.to_string(), Arc::clone(&klass)));
         }
@@ -136,6 +142,7 @@ impl LoadedClasses {
         class_loader_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
+        let _claim = self.loading.claim(fully_qualified_class_name);
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
             return Ok((id, key.to_string(), Arc::clone(&klass)));
         }

@@ -29,7 +29,7 @@ pub(crate) struct InvokeDynamicRunner {
     resolved_methods: DashMap<u16, ResolvedMethod>,
 }
 
-#[derive(Debug, new, CopyGetters, Getters)]
+#[derive(Debug, Clone, new, CopyGetters, Getters)]
 struct ResolvedMethod {
     #[get_copy = "pub"]
     method_handle_dynamic_invoked_ref: i32,
@@ -121,11 +121,20 @@ impl InvokeDynamicRunner {
         current_class_name: &str,
         invokedynamic_index: u16,
     ) -> Result<()> {
-        let entry = &self
+        let cached = self
             .resolved_methods
-            .entry(invokedynamic_index)
-            .or_try_insert_with(|| Self::resolve(current_class_name, invokedynamic_index))?;
-        let resolved_method = entry.value();
+            .get(&invokedynamic_index)
+            .map(|entry| entry.clone());
+        let resolved_method = match cached {
+            Some(resolved) => resolved,
+            None => {
+                let resolved = Self::resolve(current_class_name, invokedynamic_index)?;
+                self.resolved_methods
+                    .entry(invokedynamic_index)
+                    .or_insert(resolved)
+                    .clone()
+            }
+        };
 
         let method_handle_dynamic_invoked_ref =
             resolved_method.method_handle_dynamic_invoked_ref();

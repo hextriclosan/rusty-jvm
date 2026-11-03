@@ -21,6 +21,7 @@ pub(super) extern "system" fn get_field_id(
     name_mutf8: *const c_char,
     sig_mutf8: *const c_char,
 ) -> jfieldID {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let field_name =
         from_mutf8_ptr!(name_mutf8).expect("Failed to convert field name from CESU-8");
     let field_signature =
@@ -63,6 +64,7 @@ macro_rules! get_field_impl {
             obj: jobject,
             field_id: jfieldID,
         ) -> $jni_ty {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             get_field::<$jni_ty>(env, obj, field_id)
         }
     };
@@ -81,6 +83,7 @@ pub(super) extern "system" fn get_field<T: JNIValue>(
     obj: jobject,
     field_id: jfieldID,
 ) -> T {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let obj = handles::resolve_or_return!(obj);
     let instance_name = HEAP
         .get_instance_name(obj)
@@ -106,6 +109,7 @@ macro_rules! set_field_impl {
             field_id: jfieldID,
             value: $jni_ty,
         ) {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             set_field::<$jni_ty>(env, obj, field_id, value)
         }
     };
@@ -125,6 +129,7 @@ pub(super) extern "system" fn set_field<T: JNIValue>(
     field_id: jfieldID,
     value: T,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let obj = handles::resolve_or_return!(obj);
     let instance_name = HEAP
         .get_instance_name(obj)

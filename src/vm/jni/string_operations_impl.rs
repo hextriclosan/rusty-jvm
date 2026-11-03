@@ -96,6 +96,7 @@ fn encode_codepoint_to_mutf8(codepoint: u32, buf: &mut Vec<u8>) {
 }
 
 pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstring) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let string_ref = handles::resolve_or_return!(input);
 
     if string_ref == 0 {
@@ -113,6 +114,7 @@ pub(super) extern "system" fn new_string(
     unicode: *const jchar,
     len: jsize,
 ) -> jstring {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if len < 0 {
         set_pending_negative_array_size_exception(len);
         return ptr::null_mut();
@@ -142,6 +144,7 @@ pub(super) extern "system" fn get_string_chars(
     from: jstring,
     is_copy: *mut jboolean,
 ) -> *const jchar {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let string_ref = handles::resolve_or_return!(from);
     if string_ref == 0 {
         set_pending_null_pointer_exception("String is null");
@@ -199,6 +202,7 @@ pub(super) extern "system" fn release_string_chars(
     str: jstring,
     chars: *const jchar,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let string_ref = handles::resolve_or_return!(str);
     buffer_leases::release(chars.cast(), string_ref, None);
 }
@@ -207,6 +211,7 @@ pub(super) extern "system" fn new_string_utf8(
     env: *mut JNIEnv,
     mutf8_bytes: *const c_char,
 ) -> jstring {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if mutf8_bytes.is_null() {
         set_pending_null_pointer_exception("String characters are null");
         return ptr::null_mut();
@@ -264,6 +269,7 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
     _env: *mut JNIEnv,
     input: jstring,
 ) -> jlong {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let string_ref = handles::resolve_or_return!(input);
 
     if string_ref == 0 {
@@ -280,6 +286,7 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
 }
 
 pub(super) extern "system" fn get_string_utf_length(_env: *mut JNIEnv, input: jstring) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     get_string_utf_length_as_long(_env, input) as jint
 }
 
@@ -288,6 +295,7 @@ pub(super) extern "system" fn get_string_utf_chars(
     from: jstring,
     is_copy: *mut jboolean,
 ) -> *const c_char {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let string_ref = handles::resolve_or_return!(from);
     if string_ref == 0 {
         set_pending_null_pointer_exception("String is null");
@@ -311,6 +319,7 @@ pub(super) extern "system" fn release_string_utf_chars(
     str: jstring,
     chars: *const c_char,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let string_ref = handles::resolve_or_return!(str);
     buffer_leases::release(chars.cast(), string_ref, None);
 }
@@ -324,6 +333,7 @@ pub(super) extern "system" fn get_string_region(
     len: jsize,
     buf: *mut jchar,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if str.is_null() || buf.is_null() {
         panic!("Null pointer in GetStringRegion"); // todo throw NullPointerException
     }
@@ -357,6 +367,7 @@ pub(super) extern "system" fn get_string_utf_region(
     len: jsize,
     buf: *mut c_char,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if str.is_null() || buf.is_null() {
         panic!("Null pointer in GetStringUTFRegion"); // todo throw NullPointerException
     }
@@ -395,6 +406,7 @@ pub(super) extern "system" fn get_string_critical(
     str: jstring,
     is_copy: *mut jboolean,
 ) -> *const jchar {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     get_string_chars(env, str, is_copy)
 }
 
@@ -405,5 +417,6 @@ pub(super) extern "system" fn release_string_critical(
     str: jstring,
     carray: *const jchar,
 ) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     release_string_chars(env, str, carray);
 }

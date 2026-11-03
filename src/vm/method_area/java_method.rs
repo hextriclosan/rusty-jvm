@@ -134,9 +134,14 @@ impl JavaMethod {
     }
 
     pub fn reflection_ref(&self) -> Result<i32> {
-        self.reflection_ref
-            .get_or_try_init(|| self.init_reflection_ref())
-            .copied()
+        if self.reflection_ref.get().is_none() {
+            let reference = self.init_reflection_ref()?;
+            let _ = self.reflection_ref.set(reference);
+        }
+        Ok(*self
+            .reflection_ref
+            .get()
+            .expect("published reflection method"))
     }
 
     fn init_reflection_ref(&self) -> Result<i32> {

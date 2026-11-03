@@ -18,6 +18,7 @@ use crate::vm::exception::pending_helpers::{
 };
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::safepoint;
 use crate::vm::threads::{self, thread_status};
 use dashmap::DashMap;
 use parking_lot::{Condvar, Mutex};
@@ -25,11 +26,17 @@ use std::sync::{Arc, LazyLock};
 use std::thread::ThreadId;
 use std::time::{Duration, Instant};
 
+#[cfg(test)]
+#[path = "monitor_coordinator_tests.rs"]
+mod coordinator_tests;
+
 struct MonitorState {
     /// Owning OS thread, or `None` when the monitor is free.
     owner: Option<ThreadId>,
     /// Reentrant acquisition count for `owner`.
     count: u32,
+    /// Threads acquiring logical ownership (including wait-set reacquisition).
+    entrants: u32,
     /// Number of threads currently in `Object.wait` on this monitor.
     waiters: u32,
     /// Outstanding wake tokens produced by `notify`/`notifyAll` and consumed by waiters.
@@ -78,6 +85,7 @@ fn monitor_for(obj_ref: i32) -> Arc<ObjectMonitor> {
                 state: Mutex::new(MonitorState {
                     owner: None,
                     count: 0,
+                    entrants: 0,
                     waiters: 0,
                     to_wake: 0,
                 }),
@@ -90,16 +98,19 @@ fn monitor_for(obj_ref: i32) -> Arc<ObjectMonitor> {
 /// `monitorenter`: acquire the object's monitor, blocking until it is free; reentrant for the
 /// current owner.
 pub(crate) fn enter(obj_ref: i32) {
+    JavaThread::root_monitor(obj_ref);
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let mut s = m.state.lock();
+    let mut s = safepoint::lock(&m.state);
+    s.entrants += 1;
     let contended = s.owner.is_some() && s.owner != Some(tid);
     if contended {
         threads::set_current_thread_status(thread_status::BLOCKED);
     }
     while s.owner.is_some() && s.owner != Some(tid) {
-        m.cv.wait(&mut s);
+        s = safepoint::wait(&m.cv, &m.state, s);
     }
+    s.entrants -= 1;
     if s.owner == Some(tid) {
         s.count += 1;
     } else {
@@ -116,7 +127,7 @@ pub(crate) fn enter(obj_ref: i32) {
 pub(crate) fn exit(obj_ref: i32) -> Result<()> {
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let mut s = m.state.lock();
+    let mut s = safepoint::lock(&m.state);
     if s.owner != Some(tid) {
         drop(s);
         return set_pending_illegal_monitor_state_exception(
@@ -128,6 +139,8 @@ pub(crate) fn exit(obj_ref: i32) -> Result<()> {
         s.owner = None;
         m.cv.notify_all();
     }
+    drop(s);
+    JavaThread::unroot_monitor(obj_ref);
     Ok(())
 }
 
@@ -137,7 +150,7 @@ pub(crate) fn exit(obj_ref: i32) -> Result<()> {
 pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let mut s = m.state.lock();
+    let mut s = safepoint::lock(&m.state);
     if s.owner != Some(tid) {
         drop(s);
         return set_pending_illegal_monitor_state_exception(
@@ -183,14 +196,16 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
         }
         match deadline {
             None => {
-                m.cv.wait(&mut s);
+                s = safepoint::wait(&m.cv, &m.state, s);
             }
             Some(dl) => {
                 let now = Instant::now();
                 if now >= dl {
                     break;
                 }
-                if m.cv.wait_for(&mut s, dl - now).timed_out() && s.to_wake == 0 {
+                let (guard, timeout) = safepoint::wait_for(&m.cv, &m.state, s, dl - now);
+                s = guard;
+                if timeout.timed_out() && s.to_wake == 0 {
                     break;
                 }
             }
@@ -207,9 +222,11 @@ pub(crate) fn wait(obj_ref: i32, timeout_millis: i64) -> Result<()> {
     if s.owner.is_some() && s.owner != Some(tid) {
         threads::set_current_thread_status(thread_status::BLOCKED);
     }
+    s.entrants += 1;
     while s.owner.is_some() && s.owner != Some(tid) {
-        m.cv.wait(&mut s);
+        s = safepoint::wait(&m.cv, &m.state, s);
     }
+    s.entrants -= 1;
     s.owner = Some(tid);
     s.count = saved_count;
     threads::set_current_thread_status(thread_status::RUNNABLE);
@@ -232,7 +249,7 @@ pub(crate) fn interrupt_waiter(thread_ref: i32) {
         .get(&thread_ref)
         .map(|entry| entry.value().clone());
     if let Some(m) = monitor {
-        let _guard = m.state.lock();
+        let _guard = safepoint::lock(&m.state);
         m.cv.notify_all();
     }
 }
@@ -241,7 +258,7 @@ pub(crate) fn interrupt_waiter(thread_ref: i32) {
 pub(crate) fn notify(obj_ref: i32) -> Result<()> {
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let mut s = m.state.lock();
+    let mut s = safepoint::lock(&m.state);
     if s.owner != Some(tid) {
         drop(s);
         return set_pending_illegal_monitor_state_exception(
@@ -259,7 +276,7 @@ pub(crate) fn notify(obj_ref: i32) -> Result<()> {
 pub(crate) fn notify_all(obj_ref: i32) -> Result<()> {
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let mut s = m.state.lock();
+    let mut s = safepoint::lock(&m.state);
     if s.owner != Some(tid) {
         drop(s);
         return set_pending_illegal_monitor_state_exception(
@@ -275,7 +292,7 @@ pub(crate) fn notify_all(obj_ref: i32) -> Result<()> {
 pub(crate) fn holds_lock(obj_ref: i32) -> bool {
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let s = m.state.lock();
+    let s = safepoint::lock(&m.state);
     s.owner == Some(tid)
 }
 
@@ -284,12 +301,18 @@ pub(crate) fn holds_lock(obj_ref: i32) -> bool {
 /// `synchronized(thread) { while (isAlive()) wait(); }` — mirroring HotSpot's `lock.notify_all` in
 /// `JavaThread::exit`. Call *after* the liveness flag (`eetop`) has been cleared.
 pub(crate) fn wake_all_on_exit(obj_ref: i32) {
+    // Deliberately not `enter`/`exit`: the dying thread's status is already TERMINATED, and
+    // `enter` would rewrite it to BLOCKED/RUNNABLE on contention. The target is rooted for the
+    // whole acquisition because a contended wait here can cross a safepoint.
+    JavaThread::root_monitor(obj_ref);
     let m = monitor_for(obj_ref);
     let tid = std::thread::current().id();
-    let mut s = m.state.lock();
+    let mut s = safepoint::lock(&m.state);
+    s.entrants += 1;
     while s.owner.is_some() && s.owner != Some(tid) {
-        m.cv.wait(&mut s);
+        s = safepoint::wait(&m.cv, &m.state, s);
     }
+    s.entrants -= 1;
     s.owner = Some(tid);
     s.count = 1;
     s.to_wake = s.waiters;
@@ -298,4 +321,6 @@ pub(crate) fn wake_all_on_exit(obj_ref: i32) {
     s.count = 0;
     s.owner = None;
     m.cv.notify_all();
+    drop(s);
+    JavaThread::unroot_monitor(obj_ref);
 }

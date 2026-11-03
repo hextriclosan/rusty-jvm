@@ -13,9 +13,9 @@ use jclassmodel::modifiers::{ClassModifier, NestedClassModifier};
 use jclassmodel::{ClassModel, EnclosingMethodInfo, FieldModel, MethodModel};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
-use parking_lot::ReentrantMutex;
-use std::cell::RefCell;
+use parking_lot::{Condvar, Mutex};
 use std::sync::{Arc, OnceLock};
+use std::thread::ThreadId;
 
 pub const STATIC_FIELDS_START: i64 = i32::MAX as i64;
 
@@ -63,7 +63,7 @@ pub(crate) struct JavaClass {
     nested_class_modifiers: Option<NestedClassModifier>,
 
     #[get = "pub"]
-    static_fields_init_state: Arc<ReentrantMutex<InitState>>,
+    static_fields_init_state: InitState,
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
@@ -83,25 +83,67 @@ pub(crate) struct JavaClass {
 
 #[derive(Debug, Default)]
 pub struct InitState {
-    inner_state: RefCell<InnerState>,
+    state: Mutex<InnerState>,
+    cv: Condvar,
 }
 
 impl InitState {
-    pub fn set_inner_state(&self, new_state: InnerState) {
-        *self.inner_state.borrow_mut() = new_state;
+    /// Returns true only to the elected initializer. Ownership is logical; no
+    /// mutex guard survives this call or spans the initializer's Java execution.
+    pub(crate) fn begin(&self) -> std::result::Result<bool, i32> {
+        let owner = std::thread::current().id();
+        let mut state = crate::vm::safepoint::lock(&self.state);
+        loop {
+            match *state {
+                InnerState::Uninitialized => {
+                    *state = InnerState::Initializing { owner };
+                    return Ok(true);
+                }
+                InnerState::Initializing { owner: current } if owner == current => {
+                    return Ok(false)
+                }
+                InnerState::Initializing { .. } => {
+                    state = crate::vm::safepoint::wait(&self.cv, &self.state, state);
+                }
+                InnerState::Initialized => return Ok(false),
+                InnerState::Failed { cause_root } => return Err(cause_root),
+            }
+        }
     }
 
-    pub fn get_inner_state(&self) -> InnerState {
-        *self.inner_state.borrow()
+    pub(crate) fn finish(&self, cause: Option<i32>) {
+        let mut state = crate::vm::safepoint::lock(&self.state);
+        assert_eq!(
+            *state,
+            InnerState::Initializing {
+                owner: std::thread::current().id()
+            }
+        );
+        *state = match cause {
+            Some(cause_root) => InnerState::Failed { cause_root },
+            None => InnerState::Initialized,
+        };
+        self.cv.notify_all();
+    }
+
+    /// The failed cause is owned by permanent class metadata and is a global GC
+    /// root. Enumeration uses this value without class loading or Java execution.
+    pub(crate) fn get_inner_state(&self) -> InnerState {
+        *crate::vm::safepoint::lock(&self.state)
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum InnerState {
     #[default]
-    NotInitialized,
-    Initializing,
+    Uninitialized,
+    Initializing {
+        owner: ThreadId,
+    },
     Initialized,
+    Failed {
+        cause_root: i32,
+    },
 }
 
 impl JavaClass {
@@ -290,7 +332,7 @@ impl JavaClass {
             interfaces,
             class_modifiers,
             nested_class_modifiers,
-            static_fields_init_state: Arc::default(),
+            static_fields_init_state: InitState::default(),
             instance_fields_hierarchy: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
             vtable: OnceCell::new(),
@@ -515,18 +557,25 @@ impl JavaClass {
     pub fn instance_fields_hierarchy(
         &self,
     ) -> Result<&IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>> {
-        self.instance_fields_hierarchy.get_or_try_init(|| {
+        if self.instance_fields_hierarchy.get().is_none() {
             let mut instance_fields_hierarchy = IndexMap::new();
             lookup::lookup_and_fill_instance_fields_hierarchy(
                 &self.this_class_name,
                 &mut instance_fields_hierarchy,
             )?;
-            Ok(instance_fields_hierarchy)
-        })
+            // Construction may load classes. Only publication occurs under the cell lock.
+            let _ = self
+                .instance_fields_hierarchy
+                .set(instance_fields_hierarchy);
+        }
+        Ok(self
+            .instance_fields_hierarchy
+            .get()
+            .expect("published field hierarchy"))
     }
 
     fn fields_offset_mapping(&self) -> Result<&IndexSet<FullyQualifiedFieldName>> {
-        self.fields_offset_mapping.get_or_try_init(|| {
+        if self.fields_offset_mapping.get().is_none() {
             let mut fields_offset_mapping = IndexSet::new();
             let hierarchy = self.instance_fields_hierarchy()?;
 
@@ -536,13 +585,20 @@ impl JavaClass {
                 });
             });
 
-            Ok(fields_offset_mapping)
-        })
+            let _ = self.fields_offset_mapping.set(fields_offset_mapping);
+        }
+        Ok(self
+            .fields_offset_mapping
+            .get()
+            .expect("published field offsets"))
     }
 
     pub fn vtable(&self) -> Result<&IndexMap<String, Arc<JavaMethod>>> {
-        self.vtable
-            .get_or_try_init(|| lookup::build_vtable(self.this_class_name()))
+        if self.vtable.get().is_none() {
+            let vtable = lookup::build_vtable(self.this_class_name())?;
+            let _ = self.vtable.set(vtable);
+        }
+        Ok(self.vtable.get().expect("published vtable"))
     }
 
     pub fn inject_mirror_clazz_ref(&self, mirror_class_ref: i32) -> Result<()> {

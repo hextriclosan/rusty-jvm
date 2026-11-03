@@ -1,5 +1,6 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::safepoint::{Blocking, Reason};
 use dashmap::DashMap;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -116,6 +117,7 @@ pub(crate) fn join_all_non_daemon() {
             break;
         }
         for handle in handles {
+            let _blocked = Blocking::enter(Reason::Blocking);
             if let Err(panic) = handle.join() {
                 error!("a non-daemon thread terminated by panicking: {panic:?}");
             }

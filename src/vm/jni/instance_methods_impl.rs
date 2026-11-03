@@ -20,6 +20,7 @@ pub(super) extern "system" fn get_method_id(
     name: *const c_char,
     sig: *const c_char,
 ) -> jmethodID {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     get_instance_method_id_impl(clazz, name, sig)
 }
 
@@ -31,6 +32,7 @@ macro_rules! call_method_a_impl {
             method_id: jmethodID,
             args: *const jvalue,
         ) -> $jni_ty {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             call_method_a::<$jni_ty>(env, this, method_id, args)
         }
     };
@@ -99,6 +101,7 @@ macro_rules! call_non_virtual_method_a_impl {
             method_id: jmethodID,
             args: *const jvalue,
         ) -> $jni_ty {
+            let _managed = crate::vm::safepoint::ManagedAccess::enter();
             call_non_virtual_method_a::<$jni_ty>(env, this, target, method_id, args)
         }
     };

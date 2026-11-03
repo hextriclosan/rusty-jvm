@@ -19,6 +19,7 @@ use std::ptr::null_mut;
 use tracing::warn;
 
 pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c_char) -> jclass {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if name_mutf8.is_null() {
         set_pending_no_class_def_found_error("Failed to find class: null pointer for class name");
         return null_mut();
@@ -58,6 +59,7 @@ pub(super) extern "system" fn define_class(
     buffer: *const jbyte,
     length: jsize,
 ) -> jclass {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if buffer.is_null() || length < 0 {
         set_pending_class_format_error("Invalid class definition input");
         return null_mut();
@@ -148,6 +150,7 @@ fn is_valid_internal_class_name(name: &str) -> bool {
 }
 
 pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> jclass {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let klass =
         klass(handles::resolve_or_return!(sub)).expect("Failed to get class from reference");
     let parent = if !klass.is_interface() {
@@ -170,6 +173,7 @@ pub(super) extern "system" fn is_assignable_from(
     sub: jclass,
     sup: jclass,
 ) -> jboolean {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     let sub_klass =
         klass(handles::resolve_or_return!(sub)).expect("Failed to get class from reference");
     let sup_klass =
@@ -189,6 +193,7 @@ pub(super) extern "system" fn is_assignable_from(
 }
 
 pub(super) extern "system" fn get_module(_env: *mut JNIEnv, clazz: jclass) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::new_local(
         HEAP.get_object_field_value(
             handles::resolve_or_return!(clazz),

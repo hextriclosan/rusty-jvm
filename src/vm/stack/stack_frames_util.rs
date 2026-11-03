@@ -32,7 +32,7 @@ pub enum CallerClass {
     Misuse(String),
 }
 
-#[derive(Debug, new, CopyGetters)]
+#[derive(Debug, Clone, new, CopyGetters)]
 #[getset(get_copy = "pub")]
 pub struct StackElement {
     class_ref: i32,
@@ -121,9 +121,18 @@ impl StackFramesUtil {
         throwable_name: &str,
         max_stack_size: usize,
     ) -> Result<Vec<StackElement>> {
-        let mut stack_trace = JavaThread::with_frames(|frames| {
+        let frames = JavaThread::with_frames(|frames| {
             // `with_frames` yields frames newest → oldest.
-            let newest_to_oldest: Vec<_> = frames.collect();
+            let newest_to_oldest: Vec<_> = frames
+                .map(|frame| {
+                    (
+                        frame.current_class_name().to_string(),
+                        frame.method_name().to_string(),
+                        Self::extract_line_number(frame.line_numbers(), frame.ex_pc()),
+                        frame.bci() as u16,
+                    )
+                })
+                .collect();
 
             // Drop the `fillInStackTrace` machinery sitting at the top of the stack: the synthetic
             // native `fillInStackTrace(int)` frame plus the `Throwable.fillInStackTrace()` wrapper
@@ -138,9 +147,8 @@ impl StackFramesUtil {
             let after_fill = newest_to_oldest
                 .iter()
                 .position(|frame| {
-                    let name = frame.method_name().split(':').next();
-                    !(frame.current_class_name() == "java/lang/Throwable"
-                        && name == Some("fillInStackTrace"))
+                    let name = frame.1.split(':').next();
+                    !(frame.0 == "java/lang/Throwable" && name == Some("fillInStackTrace"))
                 })
                 .unwrap_or(newest_to_oldest.len());
 
@@ -149,7 +157,7 @@ impl StackFramesUtil {
             let eligible: Vec<_> = newest_to_oldest[after_fill..]
                 .iter()
                 .rev()
-                .take_while(|frame| frame.current_class_name() != throwable_name)
+                .take_while(|frame| frame.0 != throwable_name)
                 .collect();
 
             // When the stack is deeper than `max_stack_size`, the JVM keeps the *newest* frames
@@ -157,32 +165,12 @@ impl StackFramesUtil {
             // of this oldest → newest slice. Resolving elements only for the retained frames avoids
             // wasted lookups — and error propagation — for frames that would be dropped.
             let start = eligible.len().saturating_sub(max_stack_size);
-            let mut stack_trace = Vec::with_capacity(eligible.len() - start);
-            for frame in &eligible[start..] {
-                let klass = CLASSES.get(frame.current_class_name())?;
-                let method_name = frame.method_name();
-                let method = klass.get_method(method_name)?;
-                let method_raw = Arc::as_ptr(&method) as i64;
-
-                let pc = frame.ex_pc();
-                let line_numbers = frame.line_numbers();
-                let instruction_line_num = Self::extract_line_number(line_numbers, pc);
-
-                let class_ref = klass.mirror_clazz_ref()?;
-                let native = method.is_native();
-
-                stack_trace.push(StackElement::new(
-                    class_ref,
-                    method_raw,
-                    instruction_line_num,
-                    frame.bci() as u16,
-                    native,
-                ));
-            }
-
-            Ok::<_, Error>(stack_trace)
-        })??;
-
+            eligible[start..]
+                .iter()
+                .map(|frame| (*frame).clone())
+                .collect::<Vec<_>>()
+        })?;
+        let mut stack_trace = Self::resolve_trace(frames)?;
         stack_trace.reverse();
         Ok(stack_trace)
     }
@@ -193,30 +181,40 @@ impl StackFramesUtil {
     /// stack (e.g. `Thread.getStackTrace`) at a safepoint, where the newest frame is wherever the
     /// thread was paused.
     pub fn collect_current_stack(max_stack_size: usize) -> Result<Vec<StackElement>> {
-        JavaThread::with_frames(|frames| {
-            let mut elements = Vec::new();
-            for frame in frames {
-                if elements.len() >= max_stack_size {
-                    break;
-                }
-                let klass = CLASSES.get(frame.current_class_name())?;
-                let method = klass.get_method(frame.method_name())?;
-                let method_raw = Arc::as_ptr(&method) as i64;
-                // Use the call-site PC (`ex_pc`), like `collect_stack_trace`: for a caller frame the
-                // live `pc` has already advanced past the invoke, so it would report the line after
-                // the call rather than the call site.
-                let line = Self::extract_line_number(frame.line_numbers(), frame.ex_pc());
-                let class_ref = klass.mirror_clazz_ref()?;
-                elements.push(StackElement::new(
-                    class_ref,
-                    method_raw,
+        let frames = JavaThread::with_frames(|frames| {
+            frames
+                .take(max_stack_size)
+                .map(|frame| {
+                    (
+                        frame.current_class_name().to_string(),
+                        frame.method_name().to_string(),
+                        Self::extract_line_number(frame.line_numbers(), frame.ex_pc()),
+                        frame.bci() as u16,
+                    )
+                })
+                .collect()
+        })?;
+        Self::resolve_trace(frames)
+    }
+
+    fn resolve_trace(frames: Vec<(String, String, u16, u16)>) -> Result<Vec<StackElement>> {
+        frames
+            .into_iter()
+            .map(|(class, method, line, bci)| {
+                let klass = CLASSES.get_loaded(&class).ok_or_else(|| {
+                    Error::new_execution("executing frame's class is not loaded")
+                })?;
+                let method = klass.get_method(&method)?;
+                // Class unloading is disabled: the permanent registry pins this method.
+                Ok(StackElement::new(
+                    klass.mirror_clazz_ref()?,
+                    Arc::as_ptr(&method) as i64,
                     line,
-                    frame.bci() as u16,
+                    bci,
                     method.is_native(),
-                ));
-            }
-            Ok::<_, Error>(elements)
-        })?
+                ))
+            })
+            .collect()
     }
 
     pub fn extract_line_number(line_numbers: &BTreeMap<u16, u16>, pc: usize) -> u16 {

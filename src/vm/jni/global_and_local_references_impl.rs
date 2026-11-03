@@ -17,16 +17,19 @@ fn status(result: HandleResult<()>) -> jint {
 }
 
 pub(super) extern "system" fn push_local_frame(_env: *mut JNIEnv, count: jint) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     status(capacity(count).and_then(|count| {
         JavaThread::with_jni_frames(|frames| frames.push(count, false).map(|_| ()))
     }))
 }
 
 pub(super) extern "system" fn pop_local_frame(_env: *mut JNIEnv, result: jobject) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::finish(JavaThread::with_jni_frames(|frames| frames.pop(result)))
 }
 
 pub(super) extern "system" fn ensure_local_capacity(_env: *mut JNIEnv, count: jint) -> jint {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     status(
         capacity(count)
             .and_then(|count| JavaThread::with_jni_frames(|frames| frames.ensure_capacity(count))),
@@ -34,25 +37,31 @@ pub(super) extern "system" fn ensure_local_capacity(_env: *mut JNIEnv, count: ji
 }
 
 pub(super) extern "system" fn new_local_ref(_env: *mut JNIEnv, object: jobject) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::new_reference(object, ReferenceKind::Local)
 }
 
 pub(super) extern "system" fn new_global_ref(_env: *mut JNIEnv, object: jobject) -> jobject {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::new_reference(object, ReferenceKind::Global)
 }
 
 pub(super) extern "system" fn new_weak_global_ref(_env: *mut JNIEnv, object: jobject) -> jweak {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::new_reference(object, ReferenceKind::WeakGlobal)
 }
 
 pub(super) extern "system" fn delete_local_ref(_env: *mut JNIEnv, object: jobject) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::delete_reference(object, ReferenceKind::Local);
 }
 
 pub(super) extern "system" fn delete_global_ref(_env: *mut JNIEnv, object: jobject) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::delete_reference(object, ReferenceKind::Global);
 }
 
 pub(super) extern "system" fn delete_weak_global_ref(_env: *mut JNIEnv, object: jweak) {
+    let _managed = crate::vm::safepoint::ManagedAccess::enter();
     handles::delete_reference(object, ReferenceKind::WeakGlobal);
 }

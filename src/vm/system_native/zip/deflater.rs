@@ -41,22 +41,25 @@ pub(crate) fn deflate_bytes_bytes(
     flush: i32,
     _params: i32, // carries the compression level and strategy, not used here
 ) -> Result<i64> {
-    let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
-        Error::new_execution(&format!(
-            "Deflater not found in registry for address: {}",
-            addr
-        ))
-    })?;
-    let comp = entry.value_mut();
-
     let input = {
         let input_array = HEAP.get_entire_raw_data(input_array_ref)?;
         input_array[input_off as usize..(input_off + input_len) as usize].to_vec()
     };
 
-    let mut output_array = HEAP.get_entire_raw_data_mut(output_array_ref)?;
-    let output = &mut output_array[output_off as usize..(output_off + output_len) as usize];
-    let stream_result = deflate(comp, &input, output, MZFlush::new(flush)?);
+    let mut output = vec![0; output_len as usize];
+    let flush = MZFlush::new(flush)?;
+    let stream_result = crate::vm::safepoint::blocking(|| {
+        let mut entry = REGISTRY.get_mut(addr).ok_or_else(|| {
+            Error::new_execution(&format!(
+                "Deflater not found in registry for address: {addr}"
+            ))
+        })?;
+        Ok::<_, Error>(deflate(entry.value_mut(), &input, &mut output, flush))
+    })?;
+    let written = stream_result.bytes_written;
+    HEAP.get_entire_raw_data_mut(output_array_ref)?
+        [output_off as usize..output_off as usize + written]
+        .copy_from_slice(&output[..written]);
 
     check_deflate_status(stream_result)
 }
@@ -102,6 +105,7 @@ fn check_deflate_status(stream_result: StreamResult) -> Result<i64> {
 
 /// `java.util.zip.Deflater.end(J)V`
 pub(crate) fn end(addr: i64) -> Result<()> {
+    let _safe = crate::vm::safepoint::Blocking::enter(crate::vm::safepoint::Reason::Blocking);
     REGISTRY.remove(addr).ok_or_else(|| {
         Error::new_execution(&format!("Address {addr} does not exist in REGISTRY"))
     })?;

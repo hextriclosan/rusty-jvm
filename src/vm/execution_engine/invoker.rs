@@ -98,6 +98,7 @@ pub(crate) fn invoke(
 /// This ordering is shared by every ordinary native call, on success and failure.
 fn pop_native_frame(stack_frames: &mut StackFrames) -> Option<RootedSlots> {
     let pending = JavaThread::take_pending_exception_rooted();
+    crate::vm::safepoint::event(crate::vm::safepoint::Event::NativeFramePop);
     stack_frames.propagate_exception();
     pending
 }

@@ -5,14 +5,15 @@ use crate::vm::execution_engine::{
     ops_reference_processor, ops_stack_processor, ops_store_processor,
 };
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::safepoint;
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use tracing::{span, trace, Level};
 
-/// How often (in bytecodes) the interpreter polls its safepoint. A power of two so the modulo is a
-/// cheap mask; small enough that a dump request is serviced within microseconds.
-const SAFEPOINT_POLL_INTERVAL: u32 = 4096;
+#[cfg(test)]
+#[path = "engine_coordinator_tests.rs"]
+mod coordinator_tests;
 
 pub(crate) struct Engine {}
 
@@ -26,17 +27,8 @@ impl Engine {
         // stack-walking natives can traverse it (and older segments) without a parameter. The
         // guard pops it on return/unwind, keeping the chain correct across native re-entries.
         let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
-        // Grabbed once per invocation, not per instruction. The safepoint is polled only every
-        // `SAFEPOINT_POLL_INTERVAL` bytecodes (a cheap local-counter test each iteration); that
-        // bounds time-to-safepoint to a few microseconds while keeping the hot loop's overhead to a
-        // register increment, not an atomic load, on every instruction.
-        let safepoint = JavaThread::safepoint();
-        let mut poll_counter: u32 = 0;
         while !stack_frames.is_empty() {
-            poll_counter = poll_counter.wrapping_add(1);
-            if poll_counter % SAFEPOINT_POLL_INTERVAL == 0 {
-                safepoint.poll();
-            }
+            safepoint::dispatch_bytecode();
             // Stamp the instruction's start pc so that, if this opcode raises an implicit
             // NullPointerException, the throwable's backtrace records the faulting bytecode index
             // (JEP 358) even though the handler advances `pc` while reading operands.
@@ -62,38 +54,51 @@ impl Engine {
             let span = span!(Level::TRACE, "", "{class}:{instruction_line_num}");
             let _entered = span.enter();
 
-            match code {
-                0u8..=20u8 => {
-                    ops_constant_processor::process(code, &class, &mut stack_frames)?;
+            let result = (|| -> Result<()> {
+                match code {
+                    0u8..=20u8 => {
+                        ops_constant_processor::process(code, &class, &mut stack_frames)?;
+                    }
+                    21u8..=53u8 => {
+                        ops_load_processor::process(code, &mut stack_frames)?;
+                    }
+                    54u8..=86u8 => {
+                        ops_store_processor::process(code, &mut stack_frames)?;
+                    }
+                    87u8..=95u8 => {
+                        ops_stack_processor::process(code, &mut stack_frames)?;
+                    }
+                    96u8..=132u8 => {
+                        ops_math_processor::process(code, &mut stack_frames)?;
+                    }
+                    133u8..=147u8 => {
+                        ops_conversion_processor::process(code, &mut stack_frames)?;
+                    }
+                    148u8..=166u8 => {
+                        ops_comparison_processor::process(code, &mut stack_frames)?;
+                    }
+                    167u8..=177u8 => {
+                        ops_control_processor::process(code, &mut stack_frames, &mut destination)?;
+                    }
+                    178u8..=195u8 => {
+                        ops_reference_processor::process(code, &class, &mut stack_frames)?;
+                    }
+                    196u8..=201u8 => {
+                        ops_extended_processor::process(code, &class, &mut stack_frames)?;
+                    }
+                    _ => unreachable!("{}", format! {"xxx = {}", code}),
                 }
-                21u8..=53u8 => {
-                    ops_load_processor::process(code, &mut stack_frames)?;
+                Ok(())
+            })();
+            if let Err(error) = result {
+                if let Some(throwable) = error.throwable_ref() {
+                    crate::vm::exception::common::throw_exception_with_ref(
+                        crate::vm::stack::slot::Slot::Ref(throwable),
+                        &mut stack_frames,
+                    )?;
+                } else {
+                    return Err(error);
                 }
-                54u8..=86u8 => {
-                    ops_store_processor::process(code, &mut stack_frames)?;
-                }
-                87u8..=95u8 => {
-                    ops_stack_processor::process(code, &mut stack_frames)?;
-                }
-                96u8..=132u8 => {
-                    ops_math_processor::process(code, &mut stack_frames)?;
-                }
-                133u8..=147u8 => {
-                    ops_conversion_processor::process(code, &mut stack_frames)?;
-                }
-                148u8..=166u8 => {
-                    ops_comparison_processor::process(code, &mut stack_frames)?;
-                }
-                167u8..=177u8 => {
-                    ops_control_processor::process(code, &mut stack_frames, &mut destination)?;
-                }
-                178u8..=195u8 => {
-                    ops_reference_processor::process(code, &class, &mut stack_frames)?;
-                }
-                196u8..=201u8 => {
-                    ops_extended_processor::process(code, &class, &mut stack_frames)?;
-                }
-                _ => unreachable!("{}", format! {"xxx = {}", code}),
             }
         }
 
