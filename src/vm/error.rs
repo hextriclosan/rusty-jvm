@@ -1,6 +1,8 @@
 use crate::vm::error::ErrorKind::{
     ClassFile, ConstantPool, Execution, Io, JniExceptionAlreadyPending, Native, UncaughtException,
 };
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use iana_time_zone::GetTimezoneError;
 use jdescriptor::DescriptorError;
 use jimage_rs::error::JImageError;
@@ -23,6 +25,12 @@ pub type Result<T> = result::Result<T, Error>;
 #[derive(Debug)]
 pub struct Error(Box<ErrorKind>);
 
+/// Owns the published root while an uncaught Java exception crosses Rust calls.
+#[derive(Debug)]
+pub struct RootedThrowable {
+    root: RootedSlots,
+}
+
 impl Error {
     pub(crate) fn new(error_kind: ErrorKind) -> Self {
         Self(Box::new(error_kind))
@@ -40,8 +48,10 @@ impl Error {
         Self::new(Native(String::from(descr)))
     }
 
-    pub(crate) fn uncaught_exception(throwable_ref: i32) -> Error {
-        Self::new(UncaughtException(throwable_ref))
+    pub(crate) fn uncaught_exception(throwable: Slot) -> Error {
+        Self::new(UncaughtException(RootedThrowable {
+            root: RootedSlots::from_slots(vec![throwable]),
+        }))
     }
 
     pub fn kind(&self) -> &ErrorKind {
@@ -59,8 +69,8 @@ impl Error {
 
     /// If this error represents an uncaught Java exception, return the throwable heap reference.
     pub fn throwable_ref(&self) -> Option<i32> {
-        match *self.0 {
-            UncaughtException(r) => Some(r),
+        match &*self.0 {
+            UncaughtException(throwable) => Some(throwable.root[0].value()),
             _ => None,
         }
     }
@@ -74,8 +84,12 @@ impl Display for Error {
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
             Execution(descr) => write!(f, "Execution Error: {descr}"),
             Native(descr) => write!(f, "Native Call Error: {descr}"),
-            UncaughtException(throwable_ref) => {
-                write!(f, "Uncaught Exception (throwable_ref={throwable_ref})")
+            UncaughtException(throwable) => {
+                write!(
+                    f,
+                    "Uncaught Exception (throwable_ref={})",
+                    throwable.root[0].value()
+                )
             }
             JniExceptionAlreadyPending(throwable_ref) => write!(
                 f,
@@ -221,7 +235,7 @@ pub enum ErrorKind {
     ConstantPool(String),
     Execution(String),
     Native(String),
-    UncaughtException(i32),
+    UncaughtException(RootedThrowable),
     JniExceptionAlreadyPending(i32),
 
     #[doc(hidden)]

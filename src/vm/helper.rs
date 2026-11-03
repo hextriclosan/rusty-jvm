@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
@@ -71,8 +72,8 @@ pub fn is_reference(type_descriptor: &TypeDescriptor) -> bool {
 /// off the operand stack (receiver first when `has_this`, then each parameter, `long` and `double`
 /// contributing two chunks each).
 ///
-/// Lets a caller that has only raw `i32` chunks and a descriptor rebuild the tags the operand stack
-/// was carrying before the arguments were popped.
+/// Supplies the expected reference categories for validating producer tags and chunk widths
+/// against an exact descriptor, without reconstructing tags at a transfer boundary.
 pub fn ref_arg_chunks(method_descriptor: &MethodDescriptor, has_this: bool) -> Result<Vec<bool>> {
     let mut chunks = Vec::new();
     if has_this {
@@ -88,14 +89,15 @@ pub fn ref_arg_chunks(method_descriptor: &MethodDescriptor, has_this: bool) -> R
     Ok(chunks)
 }
 
-/// The reference mask for a call whose parameter types cannot be read off a descriptor — a
+/// The former mask for a call whose parameter types could not be read off a descriptor: a
 /// `@PolymorphicSignature` intrinsic, whose declared descriptor is the placeholder
-/// `(Object[])Object`.
+/// `(Object[])Object`. Test-only; this is not a valid complete root classification.
 ///
 /// The parameters are genuinely unknown and stay untagged, but the receiver is not in doubt: an
 /// instance method's local 0 is the object the call was made on — the `MethodHandle` or `VarHandle`
 /// itself — and that is a reference whatever the signature claims. Tagging it costs nothing and
 /// keeps it a root for the call, so only what is actually unknown is given up.
+#[cfg(test)]
 pub fn receiver_only_chunks(has_this: bool) -> Vec<bool> {
     if has_this {
         vec![true]
@@ -104,8 +106,8 @@ pub fn receiver_only_chunks(has_this: bool) -> Vec<bool> {
     }
 }
 
-/// Best-effort classification of a polymorphic call's arguments, from the descriptor written at the
-/// call site.
+/// Retired classification helper, compiled only for the historical demonstrations below.
+/// Production invocation carries original Slots and validates an effective MethodType instead.
 ///
 /// A `@PolymorphicSignature` method's own descriptor is a placeholder, but the constant pool entry
 /// that invoked it carries the real types (JVMS §5.4.3.3), so `call_site_descriptor` classifies the
@@ -119,9 +121,10 @@ pub fn receiver_only_chunks(has_this: bool) -> Vec<bool> {
 /// That case falls back to [`receiver_only_chunks`]: the receiver is known either way, and tagging
 /// from a descriptor that describes a different call would put `Slot::Ref` on the wrong values.
 ///
-/// The fallback also catches a descriptor that parses but does not fit the arguments, though the
-/// provenance check is what makes this sound — a placeholder whose chunk count happens to match
-/// would otherwise be accepted, and its `Object` parameters would tag primitives as references.
+/// The fallback also catches a descriptor that parses but does not fit the arguments. Even with
+/// provenance, it loses unknown reference tags; that is why this helper is test-only. A fitting
+/// placeholder would also tag primitives as references.
+#[cfg(test)]
 pub fn polymorphic_arg_slots(
     call_site_descriptor: Option<&str>,
     has_this: bool,
@@ -151,11 +154,12 @@ pub fn polymorphic_arg_slots(
 /// Rebuilds the slots for a call's raw argument chunks, tagging the receiver and every reference
 /// parameter.
 ///
-/// Arguments reach a callee as bare `i32`s — popped off the caller's operand stack, or handed in by
-/// VM-side code — with nothing left to say which of them are references. `ref_chunks` restores
-/// that, and the resulting slots are what make those objects roots for the duration of the call.
-/// Callers get the mask from [`JavaMethod::arg_ref_chunks`](crate::vm::method_area::java_method::JavaMethod::arg_ref_chunks),
-/// which caches it per method.
+/// This retired helper accepts bare `i32`s and a mask, with no producer tags available.
+/// It is kept for low-level demonstration tests. Production arguments reach a callee as Slots,
+/// and [`validate_arg_slots`] checks them without reconstructing any tags. No production caller
+/// uses this helper or its polymorphic fallback.
+/// Reconstructed tags do not prove that the original producer supplied the correct type.
+#[cfg(test)]
 pub fn arg_slots(ref_chunks: &[bool], method_args: &[i32]) -> Result<Vec<Slot>> {
     if ref_chunks.len() != method_args.len() {
         return Err(Error::new_execution(&format!(
@@ -176,6 +180,22 @@ pub fn arg_slots(ref_chunks: &[bool], method_args: &[i32]) -> Result<Vec<Slot>> 
             }
         })
         .collect())
+}
+
+/// Check a producer's tags and widths against the effective invocation type.
+/// This never repairs a missing tag or consults heap membership.
+pub(crate) fn validate_arg_slots(ref_chunks: &[bool], args: &[Slot]) -> Result<()> {
+    if ref_chunks.len() != args.len()
+        || ref_chunks
+            .iter()
+            .zip(args)
+            .any(|(&is_ref, slot)| is_ref != slot.is_ref())
+    {
+        return Err(Error::new_execution(&format!(
+            "argument tags/widths disagree with effective MethodType: {ref_chunks:?}, {args:?}"
+        )));
+    }
+    Ok(())
 }
 
 pub fn default_value(type_descriptor: &TypeDescriptor) -> Result<Vec<i32>> {
@@ -207,6 +227,7 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
     let class_of_array = format!("[L{class_of_array};");
     let length = props.len() as i32;
     let array_ref = HEAP.create_array(&class_of_array, length);
+    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(array_ref)]);
 
     for (index, prop) in props.iter().enumerate() {
         let string_ref = StringPoolHelper::get_string(prop)?;
@@ -251,7 +272,7 @@ pub fn undecorate(type_name: &str) -> &str {
 mod tests {
     use super::*;
 
-    /// What `JavaMethod::arg_ref_chunks` reports for an instance polymorphic method.
+    /// What the retired receiver-only helper reported for an instance polymorphic method.
     const RECEIVER_ONLY: &[bool] = &[true];
 
     fn descriptor(text: &str) -> MethodDescriptor {
@@ -354,8 +375,9 @@ mod tests {
         );
     }
 
-    /// VM-side MethodHandle dispatch has no call-site descriptor to offer, so only the receiver is
-    /// certain.
+    /// Retired low-level helper behavior, not a production requirement. No production interface
+    /// reaches this fallback: invoker::invoke now carries producer Slots and validates an effective
+    /// MethodType with validate_arg_slots. This documents the information the old helper lost.
     #[test]
     fn should_fall_back_to_the_receiver_without_a_call_site_descriptor() {
         assert_eq!(
@@ -386,8 +408,9 @@ mod tests {
         );
     }
 
-    /// A call-site descriptor that does not fit the arguments still falls back rather than tagging
-    /// the wrong values.
+    /// Retired low-level helper behavior only. No production interface reaches this fallback:
+    /// invoker::invoke now rejects mismatched tags/widths using validate_arg_slots and an effective
+    /// MethodType. Keep this assertion to document why the old helper cannot implement C2.
     #[test]
     fn should_fall_back_when_the_descriptor_does_not_fit() {
         assert_eq!(

@@ -4,7 +4,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::invoker::{invoke, SignatureOrigin};
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::helper::{klass, vec_to_i64};
+use crate::vm::helper::{klass, ref_arg_chunks, validate_arg_slots, vec_to_i64};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_method::JavaMethod;
@@ -33,8 +33,16 @@ const SIMPLE_METHOD_HANDLE: &str = "java/lang/invoke/SimpleMethodHandle";
 static DEBUG_SPECIES_PRINTING: Lazy<bool> =
     Lazy::new(|| env::var("DEBUG_SPECIES_PRINTING").is_ok());
 
-pub fn invoke_exact(handle_ref: i32, method_args: &[i32]) -> Result<()> {
+pub fn invoke_exact(handle_ref: i32, method_args: &[Slot]) -> Result<()> {
+    let mut roots = JavaThread::hold_temp_roots(method_args.to_vec());
+    roots.add_root(Slot::Ref(handle_ref));
     let handle_name = HEAP.get_instance_name(handle_ref)?;
+    if handle_name != MUTABLE_CALL_SITE {
+        let type_ref =
+            HEAP.get_object_field_value(handle_ref, "java/lang/invoke/MethodHandle", "type")?[0];
+        let effective_type = MethodType::new(type_ref)?.descriptor()?;
+        validate_arg_slots(&ref_arg_chunks(&effective_type, false)?, method_args)?;
+    }
     if handle_name.starts_with(DIRECT_METHOD_HANDLE) {
         return direct_method_handle_invocation(handle_ref, method_args, &handle_name);
     } else if handle_name.starts_with(BOUND_METHOD_HANDLE)
@@ -53,7 +61,7 @@ pub fn invoke_exact(handle_ref: i32, method_args: &[i32]) -> Result<()> {
 
 fn direct_method_handle_invocation(
     handle_ref: i32,
-    method_args: &[i32],
+    method_args: &[Slot],
     handle_name: &String,
 ) -> Result<()> {
     let member_name_ref = HEAP.get_object_field_value(handle_ref, handle_name, "member")?[0];
@@ -81,7 +89,7 @@ fn direct_method_handle_invocation(
 
 fn bound_method_handle_invocation(
     handle_ref: i32,
-    method_args: &[i32],
+    method_args: &[Slot],
     handle_name: &String,
 ) -> Result<()> {
     if *DEBUG_SPECIES_PRINTING {
@@ -99,6 +107,7 @@ fn bound_method_handle_invocation(
     // todo: hide this block into MemberName struct
     let type_obj_ref = member_name.type_obj_ref();
     let method_type = MethodType::new(type_obj_ref)?;
+    let effective_type = method_type.descriptor()?;
     let method_name = member_name.name();
     let ptype_names = method_type.ptype_names();
     let rtype_name = method_type.rtype_name();
@@ -113,7 +122,7 @@ fn bound_method_handle_invocation(
         )))?;
 
     let mut new_args = Vec::new();
-    new_args.push(handle_ref);
+    new_args.push(Slot::Ref(handle_ref));
     new_args.extend_from_slice(method_args);
 
     // Re-enter the interpreter on the current top segment. The borrow is released as soon as
@@ -123,7 +132,7 @@ fn bound_method_handle_invocation(
         invoke(
             stack_frames,
             method_to_invoke.name_signature(),
-            SignatureOrigin::ResolvedMethod,
+            SignatureOrigin::EffectiveMethodType(&effective_type),
             &new_args,
             Arc::clone(&method_to_invoke),
             class_name_to_load,
@@ -172,9 +181,9 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
             method_type.rtype_name()
         );
     } else if handle_name == MUTABLE_CALL_SITE {
-        let target_ref =
-            Executor::invoke_non_static_method(&handle_name, "getTarget", handle_ref, &[])?[0];
-        print_species(target_ref, indent + 1)?;
+        let target =
+            Executor::invoke_non_static_method(&handle_name, "getTarget", handle_ref, &[])?;
+        print_species(target[0].value(), indent + 1)?;
     } else {
         unimplemented!(
             "print_species: handle_name: {} is not supported",
@@ -187,16 +196,16 @@ fn print_species(handle_ref: i32, indent: usize) -> Result<()> {
 
 fn mutable_call_site_invocation(
     mutable_call_site_ref: i32,
-    method_args: &[i32],
+    method_args: &[Slot],
     handle_name: &str,
 ) -> Result<()> {
-    let target_ref =
-        Executor::invoke_non_static_method(handle_name, "getTarget", mutable_call_site_ref, &[])?
-            [0];
-    invoke_exact(target_ref, method_args)
+    let target =
+        Executor::invoke_non_static_method(handle_name, "getTarget", mutable_call_site_ref, &[])?;
+    invoke_exact(target[0].value(), method_args)
 }
 
-fn invoke_exact_method(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
+fn invoke_exact_method(member_name: &MemberName, method_args: &[Slot]) -> Result<()> {
+    let effective_type = MethodType::new(member_name.type_obj_ref())?.descriptor()?;
     let (resolved_class_name, resolved_method_to_invoke) = extract_resolved(member_name)?;
 
     let reference_kind = member_name.reference_kind();
@@ -207,7 +216,7 @@ fn invoke_exact_method(member_name: &MemberName, method_args: &[i32]) -> Result<
             let reference = method_args
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
-            let instance_type_class_name = HEAP.get_instance_name(*reference)?;
+            let instance_type_class_name = HEAP.get_instance_name(reference.value())?;
 
             let type_obj_ref = member_name.type_obj_ref();
             let method_type = MethodType::new(type_obj_ref)?;
@@ -255,7 +264,7 @@ fn invoke_exact_method(member_name: &MemberName, method_args: &[i32]) -> Result<
         invoke(
             stack_frames,
             method_to_invoke.name_signature(),
-            SignatureOrigin::ResolvedMethod,
+            SignatureOrigin::EffectiveMethodType(&effective_type),
             method_args.as_slice(),
             Arc::clone(&method_to_invoke),
             method_to_invoke.class_name(),
@@ -287,7 +296,7 @@ fn extract_resolved(member_name: &MemberName) -> Result<(String, Arc<JavaMethod>
     Ok((class_name, method_to_invoke))
 }
 
-fn mimic_new(class_name: &str, method_args: &[i32]) -> Result<Vec<i32>> {
+fn mimic_new(class_name: &str, method_args: &[Slot]) -> Result<Vec<Slot>> {
     // bellow we mimic the behavior of the NEW opcode
     let instance_with_default_fields = with_method_area(|method_area| {
         method_area.create_instance_with_default_fields(class_name)
@@ -299,14 +308,14 @@ fn mimic_new(class_name: &str, method_args: &[i32]) -> Result<Vec<i32>> {
         last_frame_mut(stack_frames)?.push(Slot::Ref(instanceref))
     })??; // NEW opcode, including the reference tag it pushes
 
-    let method_args = std::iter::once(instanceref)
+    let method_args = std::iter::once(Slot::Ref(instanceref))
         .chain(method_args.iter().cloned())
         .collect::<Vec<_>>();
 
     Ok(method_args)
 }
 
-fn invoke_exact_get_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
+fn invoke_exact_get_field(member_name: &MemberName, method_args: &[Slot]) -> Result<()> {
     let (instance_ref, class_name, field_name, _) = prepare_field(member_name, method_args)?;
 
     let value = HEAP.get_object_field_value(instance_ref, &class_name, &field_name)?;
@@ -340,12 +349,12 @@ fn push_field_value(type_descriptor: &TypeDescriptor, raw: &[i32]) -> Result<()>
 /// `putfield`/`putstatic` opcodes never need it: popping the operand stack top-down yields storage
 /// order directly, whereas these paths receive the chunks already collected into argument order.
 /// A category-2 value is therefore reversed; anything narrower is a single chunk and unaffected.
-fn stored_order(args: &[i32]) -> Vec<i32> {
-    args.iter().rev().copied().collect()
+fn stored_order(args: &[Slot]) -> Vec<i32> {
+    args.iter().rev().map(|slot| slot.value()).collect()
 }
 
 /// The MethodHandle spelling of `putfield`.
-fn invoke_exact_put_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
+fn invoke_exact_put_field(member_name: &MemberName, method_args: &[Slot]) -> Result<()> {
     let (instance_ref, class_name, field_name, args) = prepare_field(member_name, method_args)?;
 
     HEAP.set_object_field_value(instance_ref, &class_name, &field_name, stored_order(&args))
@@ -353,7 +362,7 @@ fn invoke_exact_put_field(member_name: &MemberName, method_args: &[i32]) -> Resu
 
 /// The MethodHandle spelling of `getstatic`; a `findStaticGetter` on an object-typed field returns
 /// a live reference, so it is tagged exactly as [`invoke_exact_get_field`] tags an instance field.
-fn invoke_exact_get_static_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
+fn invoke_exact_get_static_field(member_name: &MemberName, method_args: &[Slot]) -> Result<()> {
     let (field, type_descriptor, _args) = prepare_static_field(member_name, method_args)?;
     let value = field.raw_value()?;
 
@@ -361,16 +370,16 @@ fn invoke_exact_get_static_field(member_name: &MemberName, method_args: &[i32]) 
 }
 
 /// The MethodHandle spelling of `putstatic`.
-fn invoke_exact_put_static_field(member_name: &MemberName, method_args: &[i32]) -> Result<()> {
+fn invoke_exact_put_static_field(member_name: &MemberName, method_args: &[Slot]) -> Result<()> {
     let (field, _type_descriptor, args) = prepare_static_field(member_name, method_args)?;
     field.set_raw_value(stored_order(&args))
 }
 
 fn prepare_field(
     member_name: &MemberName,
-    method_args: &[i32],
-) -> Result<(i32, String, String, Vec<i32>)> {
-    let instance_ref = method_args[0];
+    method_args: &[Slot],
+) -> Result<(i32, String, String, Vec<Slot>)> {
+    let instance_ref = method_args[0].value();
     let args = method_args[1..].to_vec();
     let class_name = HEAP.get_instance_name(instance_ref)?;
 
@@ -385,8 +394,8 @@ fn prepare_field(
 /// thing that can say whether the raw chunks it holds are a reference.
 fn prepare_static_field(
     member_name: &MemberName,
-    method_args: &[i32],
-) -> Result<(Arc<FieldValue>, TypeDescriptor, Vec<i32>)> {
+    method_args: &[Slot],
+) -> Result<(Arc<FieldValue>, TypeDescriptor, Vec<Slot>)> {
     let args = method_args.to_vec();
     let class_name = member_name.class_name();
 

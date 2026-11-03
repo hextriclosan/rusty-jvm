@@ -1,4 +1,6 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::method_handle_natives::wrappers::{
     method_handle_invoke_basic_wrp, method_handle_invoke_exact_wrp, method_handle_invoke_wrp,
     var_handle_compare_and_exchange_wrp, var_handle_compare_and_set_wrp,
@@ -8,9 +10,10 @@ use crate::vm::system_native::method_handle_natives::wrappers::{
 pub(crate) fn invoke_polymorphic(
     class_name: &str,
     method_name: &str,
-    args: &[i32],
-) -> Result<Vec<i32>> {
-    match (class_name, method_name) {
+    args: &[Slot],
+    destination: &mut RootedSlots,
+) -> Result<()> {
+    let result = match (class_name, method_name) {
         ("java/lang/invoke/MethodHandle", "invokeExact") => method_handle_invoke_exact_wrp(args),
         ("java/lang/invoke/MethodHandle", "invokeBasic") => method_handle_invoke_basic_wrp(args),
         ("java/lang/invoke/MethodHandle", "invoke") => method_handle_invoke_wrp(args),
@@ -37,5 +40,7 @@ pub(crate) fn invoke_polymorphic(
         _ => Err(Error::new_native(&format!(
             "Unknown polymorphic-signature native method: {class_name}:{method_name}"
         ))),
-    }
+    }?;
+    destination.replace(result.to_vec());
+    Ok(())
 }

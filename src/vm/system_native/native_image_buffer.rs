@@ -17,5 +17,5 @@ pub(crate) fn get_native_map(_this: i32, _image_path_ref: i32) -> Result<i32> {
         Some("native image buffer creation"),
     )?;
 
-    Ok(byte_buffer_ref)
+    Ok(byte_buffer_ref[0].value())
 }

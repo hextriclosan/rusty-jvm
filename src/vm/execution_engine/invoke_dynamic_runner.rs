@@ -138,8 +138,9 @@ impl InvokeDynamicRunner {
     fn resolve(current_class_name: &str, invokedynamic_index: u16) -> Result<ResolvedMethod> {
         let bootstrap_info =
             Self::extract_bootstrap_info(current_class_name, invokedynamic_index)?;
-        // `_roots` keeps the assembled arguments reachable until the bootstrap call has taken them.
-        let (args, _roots) = Self::prepare_args(current_class_name, &bootstrap_info)?;
+        // The caller owns the scope; prepare_args never returns an inner LIFO guard.
+        let mut roots = JavaThread::hold_temp_roots(vec![]);
+        let args = Self::prepare_args(current_class_name, &bootstrap_info, &mut roots)?;
         let method_handle_dynamic_invoked_ref = Self::build_method_handle_dynamic_invoked(&args)?;
 
         Ok(ResolvedMethod::new(
@@ -149,11 +150,12 @@ impl InvokeDynamicRunner {
     }
 
     fn build_method_handle_dynamic_invoked(args: &[StackValueKind; 6]) -> Result<i32> {
-        let call_site_ref = Executor::invoke_static_method(
+        let call_site = Executor::invoke_static_method(
             "java/lang/invoke/BootstrapMethodInvoker",
             "invoke:(Ljava/lang/Class;Ljava/lang/invoke/MethodHandle;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Class;)Ljava/lang/Object;",
             args,
-        )?[0];
+        )?;
+        let call_site_ref = call_site[0].value();
 
         let call_site_name = HEAP.get_instance_name(call_site_ref)?;
 
@@ -162,8 +164,8 @@ impl InvokeDynamicRunner {
             "dynamicInvoker:()Ljava/lang/invoke/MethodHandle;",
             call_site_ref,
             &[],
-        )?[0];
-        Ok(method_handle_dynamic_invoked_ref)
+        )?;
+        Ok(method_handle_dynamic_invoked_ref[0].value())
     }
 
     /// Boxes a numeric bootstrap argument so it can be stored in the `Object[]` handed to the
@@ -178,12 +180,14 @@ impl InvokeDynamicRunner {
                 "java/lang/Integer",
                 "valueOf:(I)Ljava/lang/Integer;",
                 &[(*value).into()],
-            )?[0],
+            )?[0]
+                .value(),
             LdcConstant::Float(value) => Executor::invoke_static_method(
                 "java/lang/Float",
                 "valueOf:(F)Ljava/lang/Float;",
                 &[(*value).into()],
-            )?[0],
+            )?[0]
+                .value(),
             LdcConstant::Reference(reference) => *reference,
         })
     }
@@ -191,16 +195,16 @@ impl InvokeDynamicRunner {
     fn prepare_args(
         current_class_name: &str,
         bootstrap_info: &BootstrapInfo,
-    ) -> Result<([StackValueKind; 6], TempRootsGuard)> {
+        roots: &mut TempRootsGuard,
+    ) -> Result<[StackValueKind; 6]> {
         let bootstrap_args = bootstrap_info.bootstrap_args();
         let arguments_ref = HEAP.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32);
 
         // Each argument below lives only in a Rust local until the bootstrap call takes it, and
         // every step in between (boxing, handle resolution, interning, method type construction)
         // runs Java and so can collect — hence a root per argument, added as soon as it exists.
-        // Rooting the array first also covers the boxed constants stored into it, and the guard
-        // goes back to the caller to cover the bootstrap call itself.
-        let mut roots = JavaThread::hold_temp_roots(vec![Slot::Ref(arguments_ref)]);
+        // The caller's scope covers both preparation and the bootstrap call.
+        roots.add_root(Slot::Ref(arguments_ref));
 
         bootstrap_args
             .iter()
@@ -248,14 +252,14 @@ impl InvokeDynamicRunner {
         roots.add_root(Slot::Ref(current_clazz));
 
         let args = [
-            call_site_clazz.into(),
-            method_handle_ref.into(),
-            method_name_ref.into(),
-            invoke_dynamic_methodtype_or_type_ref.into(),
-            arguments_ref.into(),
-            current_clazz.into(),
+            StackValueKind::Ref(call_site_clazz),
+            StackValueKind::Ref(method_handle_ref),
+            StackValueKind::Ref(method_name_ref),
+            StackValueKind::Ref(invoke_dynamic_methodtype_or_type_ref),
+            StackValueKind::Ref(arguments_ref),
+            StackValueKind::Ref(current_clazz),
         ];
-        Ok((args, roots))
+        Ok(args)
     }
 
     fn extract_bootstrap_info(

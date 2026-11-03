@@ -2,6 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::vec_to_i64;
+use crate::vm::stack::stack_value::StackValueKind;
 use jdescriptor::TypeDescriptor;
 use libffi::middle::Type;
 
@@ -27,9 +28,9 @@ pub(super) fn get_symbol_address(name: &str, native_libraries_ref: i32) -> Resul
         "jdk/internal/loader/NativeLibraries",
         "find:(Ljava/lang/String;)J",
         native_libraries_ref,
-        &[short_name_ref.into()],
+        &[StackValueKind::Ref(short_name_ref)],
     )?;
-    let symbol_address = vec_to_i64(&symbol_address);
+    let symbol_address = vec_to_i64(&symbol_address.raw());
     Ok(if symbol_address != 0 {
         Some(symbol_address)
     } else {

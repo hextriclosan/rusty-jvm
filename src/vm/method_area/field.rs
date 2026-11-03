@@ -2,6 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, default_value};
+use crate::vm::stack::stack_value::StackValueKind;
 use getset::{CopyGetters, Getters};
 use jdescriptor::TypeDescriptor;
 use once_cell::sync::OnceCell;
@@ -119,14 +120,14 @@ impl FieldInfo {
         let annotations = 0; // todo https://github.com/hextriclosan/rusty-jvm/issues/386
 
         let args = &[
-            declaring_class_ref.into(),
-            name_ref.into(),
-            type_ref.into(),
+            StackValueKind::Ref(declaring_class_ref),
+            StackValueKind::Ref(name_ref),
+            StackValueKind::Ref(type_ref),
             modifiers.into(),
             trusted_final.into(),
             slot.into(),
-            signature_ref.into(),
-            annotations.into(),
+            StackValueKind::Ref(signature_ref),
+            StackValueKind::Ref(annotations),
         ];
 
         let method_ref = Executor::invoke_args_constructor(
@@ -136,6 +137,6 @@ impl FieldInfo {
             None
         )?;
 
-        Ok(method_ref)
+        Ok(method_ref[0].value())
     }
 }

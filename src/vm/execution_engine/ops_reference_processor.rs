@@ -12,6 +12,7 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::monitor;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jclassmodel::constant_pool::{ConstantPool, ConstantPoolLookup};
@@ -155,12 +156,12 @@ pub(crate) fn process(
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
 
-            if *reference == 0 {
+            if reference.value() == 0 {
                 throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
 
-            let class_name_by_instance = HEAP.get_instance_name(*reference)?;
+            let class_name_by_instance = HEAP.get_instance_name(reference.value())?;
 
             let exact_implementation =
                 lookup::lookup_instance_method(&class_name_by_instance, &full_signature)?.ok_or_else(
@@ -252,12 +253,12 @@ pub(crate) fn process(
                 .first()
                 .ok_or_else(|| Error::new_execution("Error getting reference from method_args"))?;
 
-            if *reference == 0 {
+            if reference.value() == 0 {
                 throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
 
-            let instance_name = HEAP.get_instance_name(*reference)?;
+            let instance_name = HEAP.get_instance_name(reference.value())?;
             let java_method =
                 lookup::lookup_instance_method(&instance_name, &full_signature)?.ok_or_else(|| {
                     Error::new_constant_pool(&format!(
@@ -287,6 +288,9 @@ pub(crate) fn process(
             invoke_dynamic_runner
                 .run(stack_frames, current_class_name, invokedynamic_index)
                 .map_err(|e| {
+                    if e.is_uncaught_exception() {
+                        return e;
+                    }
                     Error::new_execution(&format!(
                         "Error running invokedynamic for class {current_class_name} on index {invokedynamic_index}: {e}"
                     ))
@@ -392,13 +396,15 @@ pub(crate) fn process(
         }
         ATHROW => {
             store_ex_pc(stack_frames)?;
+            let mut destination = RootedSlots::new();
             let throwable_ref = {
                 let stack_frame = last_frame_mut(stack_frames)?;
-                let throwable_ref: i32 = stack_frame.pop();
+                let throwable_ref: Slot = stack_frame.pop();
                 throwable_ref
             };
+            destination.replace(vec![throwable_ref]);
 
-            if throwable_ref == 0 {
+            if throwable_ref.value() == 0 {
                 throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
@@ -511,22 +517,24 @@ pub fn prepare_invoke_context(
     stack_frames: &mut StackFrames,
     method_descriptor: &MethodDescriptor,
     use_self_ref: bool,
-) -> Result<Vec<i32>> {
+) -> Result<RootedSlots> {
     let arg_num = argument_length(method_descriptor.parameter_types())?;
     let arg_num = arg_num + if use_self_ref { 1 } else { 0 };
 
     get_args(stack_frames, arg_num as usize)
 }
 
-fn get_args(stack_frames: &mut StackFrames, arg_num: usize) -> Result<Vec<i32>> {
+fn get_args(stack_frames: &mut StackFrames, arg_num: usize) -> Result<RootedSlots> {
+    let mut destination = RootedSlots::new();
     let mut method_args = Vec::with_capacity(arg_num);
     for _ in 0..arg_num {
-        let val = last_frame_mut(stack_frames)?.pop();
+        let val = last_frame_mut(stack_frames)?.pop_slot();
         method_args.push(val);
     }
     method_args.reverse();
 
-    Ok(method_args)
+    destination.replace(method_args);
+    Ok(destination)
 }
 
 fn get_class_name_and_signature<F>(
@@ -581,4 +589,67 @@ fn get_field_info(
             ))
         })?;
     Ok((class_name, field_name))
+}
+
+#[cfg(test)]
+mod ref_transfer_tests {
+    use super::*;
+    use crate::vm::jni::java_thread::JavaThread;
+
+    #[test]
+    fn ref_transfer_mixed_arguments_keep_published_tags() {
+        let object = HEAP.create_array("[I", 1);
+        let expected = [
+            Slot::Ref(object),
+            Slot::Value(17),
+            Slot::Value(0x1234),
+            Slot::Value(0x5678),
+            Slot::Ref(0),
+        ];
+        let mut caller = StackFrame::for_test(0, expected.len());
+        for slot in expected {
+            caller.push(slot).unwrap();
+        }
+        let mut frames = StackFrames::new(vec![caller]);
+
+        let arguments = get_args(&mut frames, expected.len()).unwrap();
+        let callee = StackFrame::new_native(
+            Arc::new("mixed:(Ljava/lang/Object;IJ[Ljava/lang/Object;)V".into()),
+            Arc::new("Test".into()),
+            arguments.to_vec(),
+        );
+
+        assert_eq!(&*arguments, &expected);
+        assert_eq!(JavaThread::temp_root_refs(), vec![object, 0]);
+        assert_eq!(callee.ref_slots().collect::<Vec<_>>(), vec![object, 0]);
+        assert_eq!(frames.last().unwrap().ref_slots().count(), 0);
+    }
+
+    #[test]
+    fn ref_transfer_live_heap_key_remains_a_primitive_nonroot() {
+        let live_key = HEAP.create_array("[I", 1);
+        assert_eq!(HEAP.get_array_len(live_key).unwrap(), 1);
+        let mut caller = StackFrame::for_test(0, 1);
+        caller.push(live_key).unwrap();
+        let mut frames = StackFrames::new(vec![caller]);
+
+        let arguments = get_args(&mut frames, 1).unwrap();
+
+        assert_eq!(arguments[0], Slot::Value(live_key));
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
+
+    #[test]
+    fn ref_transfer_athrow_keeps_the_original_throwable_tag() {
+        let throwable = HEAP.create_array("[Ljava/lang/Object;", 0);
+        let mut source = StackFrame::for_test(0, 1);
+        source.push(Slot::Ref(throwable)).unwrap();
+        let mut frames = StackFrames::new(vec![source]);
+
+        let error = process(ATHROW, "Test", &mut frames).unwrap_err();
+
+        assert_eq!(error.throwable_ref(), Some(throwable));
+        assert!(frames.is_empty());
+        assert_eq!(JavaThread::temp_root_refs(), vec![throwable]);
+    }
 }

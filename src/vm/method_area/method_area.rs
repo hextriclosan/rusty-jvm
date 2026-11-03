@@ -10,6 +10,7 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::module_helper::Modules;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
 use crate::vm::stack::slot::Slot;
+use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::system_native::class_loader::SYNTH_CLASS_DELIM;
 use crate::vm::{JAVA_HOME, SYSTEM_CLASSLOADER_REF};
 use indexmap::IndexSet;
@@ -129,12 +130,12 @@ impl MethodArea {
                 "java/lang/Class",
                 "forName:(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;",
                 &[
-                    name_ref.into(),
+                    StackValueKind::Ref(name_ref),
                     0.into(),
-                    SYSTEM_CLASSLOADER_REF.get().copied().unwrap_or(0).into(),
+                    StackValueKind::Ref(SYSTEM_CLASSLOADER_REF.get().copied().unwrap_or(0)),
                 ],
-            )?[0];
-            klass(clazz_ref)
+            )?;
+            klass(clazz_ref[0].value())
         }
     }
 

@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::set_pending_internal_error;
 use crate::vm::method_area::lookup::lookup_method;
 use crate::vm::system_native as sn;
@@ -10,6 +11,18 @@ use jni_sys::{
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::LazyLock;
+
+/// Preserve a callback's Java exception while the owning Error is still rooted.
+fn set_pending_native_error(error: &Error) {
+    match error.throwable_ref() {
+        Some(throwable) => {
+            if let Err(pending) = JavaThread::try_set_pending_exception(throwable) {
+                tracing::warn!("Dropping native exception: {pending}");
+            }
+        }
+        None => set_pending_internal_error(&error.to_string()),
+    }
+}
 // ---------------------------------------------------------------------------
 // JNI type-token mapping
 //
@@ -196,7 +209,7 @@ macro_rules! builtin_wrapper {
             match $inner($(jni_arg_cast!($pty, $pname)),*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {
-                    set_pending_internal_error(&__error.to_string());
+                    set_pending_native_error(&__error);
                     jni_ret_default!($ret)
                 }
             }
@@ -213,12 +226,50 @@ macro_rules! builtin_wrapper {
             match $inner(this as i32 $(, jni_arg_cast!($pty, $pname))*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {
-                    set_pending_internal_error(&__error.to_string());
+                    set_pending_native_error(&__error);
                     jni_ret_default!($ret)
                 }
             }
         }
     };
+}
+
+#[cfg(test)]
+mod ref_transfer_tests {
+    use super::*;
+    use crate::vm::heap::heap::HEAP;
+    use crate::vm::stack::slot::Slot;
+
+    fn fail(throwable: i32) -> Result<i32> {
+        Err(Error::uncaught_exception(Slot::Ref(throwable)))
+    }
+
+    builtin_wrapper!(static callback_static(throwable: object) -> object => fail);
+    builtin_wrapper!(instance callback_instance() -> object => fail);
+
+    #[test]
+    fn ref_transfer_static_native_wrapper_preserves_callback_exception() {
+        let throwable = HEAP.create_array("[I", 0);
+        let argument = std::ptr::with_exposed_provenance_mut(throwable as usize);
+
+        let result = callback_static(std::ptr::null_mut(), std::ptr::null_mut(), argument);
+
+        assert!(result.is_null());
+        assert_eq!(JavaThread::take_pending_exception(), Some(throwable));
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
+
+    #[test]
+    fn ref_transfer_instance_native_wrapper_preserves_callback_exception() {
+        let throwable = HEAP.create_array("[I", 0);
+        let argument = std::ptr::with_exposed_provenance_mut(throwable as usize);
+
+        let result = callback_instance(std::ptr::null_mut(), argument);
+
+        assert!(result.is_null());
+        assert_eq!(JavaThread::take_pending_exception(), Some(throwable));
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
 }
 
 /// Declaratively defines the built-in native registry from a single source of

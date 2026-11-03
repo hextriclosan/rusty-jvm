@@ -1,5 +1,5 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::helper::is_reference;
+use crate::vm::helper::{get_length, is_reference};
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jdescriptor::TypeDescriptor;
@@ -50,18 +50,40 @@ pub(crate) fn push_typed(
     type_descriptor: &TypeDescriptor,
     raw: &[i32],
 ) -> Result<()> {
-    if is_reference(type_descriptor) {
-        let reference = *raw.first().ok_or_else(|| {
-            Error::new_execution(&format!(
-                "missing value for reference of type {type_descriptor}"
-            ))
-        })?;
-        return stack_frame.push(Slot::Ref(reference));
-    }
+    push_slots(stack_frame, &typed_slots(type_descriptor, raw)?)
+}
 
-    raw.iter()
+/// Tags raw storage at a producer whose declared type is exact, never at a transfer.
+pub(crate) fn typed_slots(type_descriptor: &TypeDescriptor, raw: &[i32]) -> Result<Vec<Slot>> {
+    let width = if matches!(type_descriptor, TypeDescriptor::Void) {
+        0
+    } else {
+        get_length(type_descriptor)? as usize
+    };
+    if raw.len() != width {
+        return Err(Error::new_execution(&format!(
+            "result width {} disagrees with {type_descriptor}",
+            raw.len()
+        )));
+    }
+    Ok(raw
+        .iter()
+        .map(|&value| {
+            if is_reference(type_descriptor) {
+                Slot::Ref(value)
+            } else {
+                Slot::Value(value)
+            }
+        })
+        .collect())
+}
+
+/// Result chunks are in pop order (high, low for category 2).
+pub(crate) fn push_slots(stack_frame: &mut StackFrame, slots: &[Slot]) -> Result<()> {
+    slots
+        .iter()
         .rev()
-        .try_for_each(|chunk| stack_frame.push(*chunk))
+        .try_for_each(|slot| stack_frame.push(*slot))
 }
 
 #[cfg(test)]

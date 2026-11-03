@@ -5,6 +5,7 @@ use crate::vm::execution_engine::{
     ops_reference_processor, ops_stack_processor, ops_store_processor,
 };
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use tracing::{span, trace, Level};
@@ -16,7 +17,8 @@ const SAFEPOINT_POLL_INTERVAL: u32 = 4096;
 pub(crate) struct Engine {}
 
 impl Engine {
-    pub(crate) fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<Vec<i32>> {
+    pub(crate) fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<RootedSlots> {
+        let mut destination = RootedSlots::new();
         trace!("@@@ Entering execute: {reason}");
 
         let mut stack_frames = StackFrames::new(vec![initial_stack_frame]);
@@ -30,7 +32,6 @@ impl Engine {
         // register increment, not an atomic load, on every instruction.
         let safepoint = JavaThread::safepoint();
         let mut poll_counter: u32 = 0;
-        let mut last_value = vec![];
         while !stack_frames.is_empty() {
             poll_counter = poll_counter.wrapping_add(1);
             if poll_counter % SAFEPOINT_POLL_INTERVAL == 0 {
@@ -84,7 +85,7 @@ impl Engine {
                     ops_comparison_processor::process(code, &mut stack_frames)?;
                 }
                 167u8..=177u8 => {
-                    last_value = ops_control_processor::process(code, &mut stack_frames)?;
+                    ops_control_processor::process(code, &mut stack_frames, &mut destination)?;
                 }
                 178u8..=195u8 => {
                     ops_reference_processor::process(code, &class, &mut stack_frames)?;
@@ -96,6 +97,6 @@ impl Engine {
             }
         }
 
-        Ok(last_value)
+        Ok(destination)
     }
 }

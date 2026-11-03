@@ -169,12 +169,13 @@ fn set_pending_error(exception_class: &str, message: &str) {
         Executor::invoke_args_constructor(
             exception_class,
             "<init>:(Ljava/lang/String;)V",
-            &[StackValueKind::from(msg_ref)],
+            &[StackValueKind::Ref(msg_ref)],
             None,
         )
     });
     match result {
-        Ok(throwable_ref) => match JavaThread::try_set_pending_exception(throwable_ref) {
+        Ok(throwable_ref) => match JavaThread::try_set_pending_exception(throwable_ref[0].value())
+        {
             Ok(()) => (),
             // Constructing the throwable ran Java code, which may itself have
             // raised (and left pending) an exception in the meantime. Honor
@@ -245,7 +246,7 @@ fn resolve_stack_kind_value(value: jvalue, type_descriptor: &TypeDescriptor) -> 
         TypeDescriptor::Float => unsafe { value.f }.into(),
         TypeDescriptor::Double => unsafe { value.d }.into(),
         TypeDescriptor::Object(_) | TypeDescriptor::Array(_, _) => {
-            (unsafe { value.l } as i32).into()
+            StackValueKind::Ref(unsafe { value.l } as i32)
         }
         TypeDescriptor::Void => panic!("Void type cannot be used as argument"),
     }

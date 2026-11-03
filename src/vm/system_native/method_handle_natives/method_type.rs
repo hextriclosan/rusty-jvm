@@ -2,6 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{decorate, klass};
 use getset::Getters;
+use jdescriptor::MethodDescriptor;
 
 const METHOD_TYPE: &str = "java/lang/invoke/MethodType";
 
@@ -13,6 +14,10 @@ pub struct MethodType {
 }
 
 impl MethodType {
+    pub(crate) fn descriptor(&self) -> Result<MethodDescriptor> {
+        Ok(format!("{}{}", self.ptype_names, self.rtype_name).parse()?)
+    }
+
     pub fn new(type_obj_ref: i32) -> Result<Self> {
         let ptype_class_refs =
             HEAP.get_object_field_value(type_obj_ref, METHOD_TYPE, "ptypes")?[0];

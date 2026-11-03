@@ -5,6 +5,8 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{create_array_of_strings, klass};
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::system_native::dispatcher::validate_builtin_natives;
 use std::sync::Arc;
 
@@ -33,11 +35,11 @@ pub fn resolve_and_execute_main_method(
         &[
             (PRINT_TO_STDERR as i32).into(),
             (launch_mode as i32).into(),
-            class_name_ref.into(),
+            StackValueKind::Ref(class_name_ref),
         ],
-    )?[0];
+    )?;
 
-    let jc = klass(app_clazz_ref)?;
+    let jc = klass(app_clazz_ref[0].value())?;
     StaticInit::initialize_java_class(&jc)?;
     let launcher_helper = CLASSES.get("sun/launcher/LauncherHelper")?;
     let static_main = launcher_helper
@@ -61,20 +63,25 @@ pub fn resolve_and_execute_main_method(
             Executor::invoke_static_method_jc(
                 &jc,
                 "main:([Ljava/lang/String;)V",
-                &[args_array_ref.into()],
+                &[StackValueKind::Ref(args_array_ref)],
             )?;
         }
     } else {
         let main_instance_ref = construct_main_class(&jc)?;
         if no_arg_main {
-            Executor::invoke_non_static_method_jc(&jc, "main:()V", main_instance_ref, &[])?;
+            Executor::invoke_non_static_method_jc(
+                &jc,
+                "main:()V",
+                main_instance_ref[0].value(),
+                &[],
+            )?;
         } else {
             let args_array_ref = create_array_of_strings(args)?;
             Executor::invoke_non_static_method_jc(
                 &jc,
                 "main:([Ljava/lang/String;)V",
-                main_instance_ref,
-                &[args_array_ref.into()],
+                main_instance_ref[0].value(),
+                &[StackValueKind::Ref(args_array_ref)],
             )?;
         }
     }
@@ -82,6 +89,6 @@ pub fn resolve_and_execute_main_method(
     Ok(())
 }
 
-fn construct_main_class(java_class: &Arc<JavaClass>) -> Result<i32> {
+fn construct_main_class(java_class: &Arc<JavaClass>) -> Result<RootedSlots> {
     Executor::invoke_default_constructor_jc(java_class)
 }

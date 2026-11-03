@@ -31,7 +31,7 @@ pub(super) extern "system" fn throw_new(
     }
 
     // clear and save any pending exception, otherwise we'll get an UncaughtException when we invoke the constructor
-    let saved = JavaThread::take_pending_exception();
+    let saved = JavaThread::take_pending_exception_rooted();
 
     let klass = klass(clazz as i32).expect("Failed to get class from reference for exception");
 
@@ -44,7 +44,7 @@ pub(super) extern "system" fn throw_new(
         Executor::invoke_args_constructor(
             klass.this_class_name(),
             "<init>:(Ljava/lang/String;)V",
-            &[StackValueKind::from(msg_ref)],
+            &[StackValueKind::Ref(msg_ref)],
             None,
         )
     };
@@ -57,12 +57,12 @@ pub(super) extern "system" fn throw_new(
                 klass.this_class_name()
             );
             if let Some(saved_ref) = saved {
-                JavaThread::force_set_pending_exception(saved_ref);
+                JavaThread::force_set_pending_exception(saved_ref[0].value());
             }
             return JNI_ERR;
         }
     };
-    JavaThread::force_set_pending_exception(throwable_ref);
+    JavaThread::force_set_pending_exception(throwable_ref[0].value());
     JNI_OK
 }
 
@@ -76,8 +76,8 @@ pub(super) extern "system" fn exception_occurred(_env: *mut JNIEnv) -> jthrowabl
 }
 
 pub(super) extern "system" fn exception_describe(_env: *mut JNIEnv) {
-    if let Some(exception_ref) = JavaThread::take_pending_exception() {
-        invoke_uncaught_exception_handler(exception_ref)
+    if let Some(exception) = JavaThread::take_pending_exception_rooted() {
+        invoke_uncaught_exception_handler(exception[0].value())
             .expect("Failed to invoke uncaught exception handler");
     }
 }

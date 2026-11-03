@@ -5,6 +5,7 @@ use crate::vm::stack::stack_frame::StackFrame;
 
 #[derive(Clone, Debug)]
 pub enum StackValueKind {
+    Ref(i32),
     I32(i32),
     I64(i64),
     F32(f32),
@@ -12,10 +13,23 @@ pub enum StackValueKind {
 }
 
 impl StackValueKind {
-    pub fn chunks(&self) -> usize {
+    /// Argument order matches locals: low half first for a wide primitive.
+    pub(crate) fn slots(&self) -> Vec<Slot> {
         match self {
-            StackValueKind::I32(_) | StackValueKind::F32(_) => 1,
-            StackValueKind::I64(_) | StackValueKind::F64(_) => 2,
+            Self::Ref(value) => vec![Slot::Ref(*value)],
+            Self::I32(value) => vec![Slot::Value(*value)],
+            Self::F32(value) => value.to_vec().into_iter().map(Slot::Value).collect(),
+            Self::I64(value) => value.to_vec().into_iter().rev().map(Slot::Value).collect(),
+            Self::F64(value) => value.to_vec().into_iter().rev().map(Slot::Value).collect(),
+        }
+    }
+}
+
+impl From<Slot> for StackValueKind {
+    fn from(slot: Slot) -> Self {
+        match slot {
+            Slot::Ref(value) => Self::Ref(value),
+            Slot::Value(value) => Self::I32(value),
         }
     }
 }

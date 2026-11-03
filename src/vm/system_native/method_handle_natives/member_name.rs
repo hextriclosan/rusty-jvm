@@ -2,6 +2,8 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
+use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::method_handle_natives::resolved_method_name::ResolvedMethodName;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind;
 use crate::vm::system_native::method_handle_natives::types::ReferenceKind::{
@@ -90,6 +92,7 @@ impl MemberName {
     pub fn get_member_vm_info(&self) -> Result<i32> {
         let reference_kind = self.reference_kind();
         let array_ref = HEAP.create_array("[Ljava/lang/Object;", 2);
+        let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(array_ref)]);
         // vmindex it is an index of the method in the vtable, HotSpot uses negative value for methods that don't need dynamic dispatch
         // We don't have vtable (yet), thus we use -2 for all methods that are not either of virtual or interface
         let vmindex = match reference_kind {
@@ -109,7 +112,7 @@ impl MemberName {
             _ => self.member_name_ref,
         };
 
-        HEAP.set_array_value(array_ref, 0, vec![long_instance_ref])?;
+        HEAP.set_array_value(array_ref, 0, vec![long_instance_ref[0].value()])?;
         HEAP.set_array_value(array_ref, 1, vec![vmtarget])?;
 
         Ok(array_ref)

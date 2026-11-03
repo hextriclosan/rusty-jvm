@@ -2,6 +2,7 @@ use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::clazz_ref;
 use crate::vm::monitor;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use murmur3::murmur3_32;
 use std::io::Cursor;
 
@@ -16,9 +17,10 @@ pub(crate) fn get_class(obj_ref: i32) -> Result<i32> {
 
 /// `java.lang.Object.clone()Ljava/lang/Object;`
 pub(crate) fn clone(obj_ref: i32) -> Result<i32> {
-    let cloned_obj_ref = HEAP.clone_instance(obj_ref)?;
+    let mut destination = RootedSlots::new();
+    HEAP.clone_instance(obj_ref, &mut destination)?;
 
-    Ok(cloned_obj_ref)
+    Ok(destination[0].value())
 }
 
 /// `java.lang.Object.hashCode()I`

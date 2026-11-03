@@ -1,14 +1,15 @@
 use crate::vm::error::{Error, Result};
-use crate::vm::execution_engine::common::last_frame_mut;
+use crate::vm::execution_engine::common::{last_frame_mut, push_slots};
 use crate::vm::execution_engine::opcode::*;
-use crate::vm::stack::slot::Slot;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::stack_frame::StackFrames;
-use crate::vm::stack::stack_value::StackValue;
-use std::fmt::Display;
 use tracing::trace;
 
-pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
-    let mut last_value = vec![];
+pub(crate) fn process(
+    code: u8,
+    stack_frames: &mut StackFrames,
+    destination: &mut RootedSlots,
+) -> Result<()> {
     match code {
         GOTO => {
             let stack_frame = last_frame_mut(stack_frames)?;
@@ -66,13 +67,10 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<Vec<i3
 
             trace!("TABLESWITCH -> offset={offset}, from={from}, to={to}");
         }
-        IRETURN => last_value = perform_return::<i32>(stack_frames, "IRETURN")?,
-        LRETURN => last_value = perform_return::<i64>(stack_frames, "LRETURN")?,
-        FRETURN => last_value = perform_return::<f32>(stack_frames, "FRETURN")?,
-        DRETURN => last_value = perform_return::<f64>(stack_frames, "DRETURN")?,
-        ARETURN => last_value = perform_return::<Slot>(stack_frames, "ARETURN")?,
+        IRETURN | FRETURN | ARETURN => perform_return(stack_frames, destination, 1)?,
+        LRETURN | DRETURN => perform_return(stack_frames, destination, 2)?,
         RETURN => {
-            last_value = vec![];
+            destination.replace(vec![]);
             stack_frames.exit_frame();
             trace!("RETURN");
         }
@@ -84,22 +82,24 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<Vec<i3
         }
     }
 
-    Ok(last_value)
+    Ok(())
 }
 
-fn perform_return<T: StackValue + Copy + Display>(
+fn perform_return(
     stack_frames: &mut StackFrames,
-    name: &str,
-) -> Result<Vec<i32>> {
+    destination: &mut RootedSlots,
+    width: usize,
+) -> Result<()> {
     let stack_frame = last_frame_mut(stack_frames)?;
-    let result: T = stack_frame.pop();
+    let slots = (0..width).map(|_| stack_frame.pop_slot()).collect();
+    destination.replace(slots);
 
     stack_frames.exit_frame();
-    // if we have next frame - populate return value to it
+    // Publish into the caller before releasing the transfer destination.
     if let Some(next_frame) = stack_frames.last_mut() {
-        next_frame.push(result)?;
+        push_slots(next_frame, destination)?;
+        destination.replace(vec![]);
     }
 
-    trace!("{name} -> {result}");
-    Ok(result.to_vec())
+    Ok(())
 }

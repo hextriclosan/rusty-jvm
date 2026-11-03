@@ -1,7 +1,10 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::execution_engine::common::typed_slots;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::clazz_ref;
 use crate::vm::jni::jni_env::get_jni_env;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_value::StackValue;
 use crate::vm::system_native::dispatcher::args::build_args;
 use crate::vm::system_native::dispatcher::builtin_natives::find_builtin_native;
@@ -12,7 +15,12 @@ use libffi::high::CodePtr;
 use libffi::middle::{Arg, Cif};
 use std::ffi::c_void;
 
-pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> Result<Vec<i32>> {
+pub(crate) fn invoke(
+    method_signature: &str,
+    args: &[Slot],
+    is_static: bool,
+    destination: &mut RootedSlots,
+) -> Result<()> {
     let split: Vec<_> = method_signature.split(":").collect();
     if split.len() != 3 {
         return Err(Error::new_native(&format!(
@@ -44,35 +52,39 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
     }
 
     let method_descriptor: MethodDescriptor = descriptor.parse()?;
-    let storage = build_args(args, method_descriptor.parameter_types(), is_static);
+    let raw_args: Vec<_> = args.iter().map(|slot| slot.value()).collect();
+    let storage = build_args(&raw_args, method_descriptor.parameter_types(), is_static);
     let ffi_args_from_descriptor = storage.iter().map(|s| s.as_arg()).collect::<Vec<_>>();
     ffi_args.extend(ffi_args_from_descriptor);
 
     let code_ptr = CodePtr(fun_ptr);
 
     let safe_cif = get_cif(&method_descriptor)?;
-    call_native(
+    let raw = call_native(
         &safe_cif.0,
         code_ptr,
         &ffi_args,
         method_descriptor.return_type(),
-    )
+    )?;
+    destination.replace(typed_slots(method_descriptor.return_type(), &raw)?);
+    Ok(())
 }
 
 /// Resolves the address of a native symbol exported by a loaded native library,
 /// trying the overloaded (long) name first and then the simple (short) name.
 fn resolve_library_symbol(clazz_ref: i32, short_name: &str, long_name: &str) -> Result<i64> {
-    let class_loader_ref = Executor::invoke_non_static_method(
+    let class_loader = Executor::invoke_non_static_method(
         "java/lang/Class",
         "getClassLoader:()Ljava/lang/ClassLoader;",
         clazz_ref,
         &[],
-    )?[0];
-    let native_libraries_ref = Executor::invoke_static_method(
+    )?;
+    let native_libraries = Executor::invoke_static_method(
         "java/lang/ClassLoader",
         "nativeLibrariesFor:(Ljava/lang/ClassLoader;)Ljdk/internal/loader/NativeLibraries;",
-        &[class_loader_ref.into()],
-    )?[0];
+        &[class_loader[0].into()],
+    )?;
+    let native_libraries_ref = native_libraries[0].value();
 
     match get_symbol_address(long_name, native_libraries_ref)? {
         Some(v) => Ok(v),

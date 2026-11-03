@@ -7,6 +7,7 @@ use crate::vm::execution_engine::ops_math_processor::increment;
 use crate::vm::execution_engine::ops_store_processor::handle_store;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValue;
@@ -68,8 +69,9 @@ pub(crate) fn process(
                 .rev()
                 .collect::<Vec<_>>();
 
-            let root_array_ref = create_n_array(&dimentions, &class_name, 0)?;
-            stack_frame.push(Slot::Ref(root_array_ref))?;
+            let root_array = create_n_array(&dimentions, &class_name, 0)?;
+            let root_array_ref = root_array[0].value();
+            stack_frame.push(root_array[0])?;
 
             stack_frame.incr_pc();
             trace!("MULTIANEWARRAY -> type={class_name}, dimension_number={dimension_number}, root_array_ref={root_array_ref}");
@@ -109,17 +111,56 @@ fn handle_pos_and_store<T: StackValue + Display + Copy>(
     handle_store::<T, _>(stack_frame, pos as usize, name_starts);
 }
 
-fn create_n_array(dimensions: &[i32], signature: &str, current_level: usize) -> Result<i32> {
+fn create_n_array(
+    dimensions: &[i32],
+    signature: &str,
+    current_level: usize,
+) -> Result<RootedSlots> {
+    let mut destination = RootedSlots::new();
     let current_length = dimensions[current_level];
     let current_signature = &signature[current_level..];
     let arrayref = HEAP.create_array(current_signature, current_length);
+    destination.replace(vec![Slot::Ref(arrayref)]);
 
     if current_level < dimensions.len() - 1 {
         for i in 0..current_length {
-            let next_ref = create_n_array(dimensions, signature, current_level + 1)?;
-            HEAP.set_array_value(arrayref, i, vec![next_ref])?;
+            let child = create_n_array(dimensions, signature, current_level + 1)?;
+            HEAP.set_array_value(arrayref, i, vec![child[0].value()])?;
         }
     }
 
-    Ok(arrayref)
+    Ok(destination)
+}
+
+#[cfg(test)]
+mod ref_transfer_tests {
+    use super::*;
+    use crate::vm::heap::heap::observe_array_allocations;
+    use crate::vm::jni::java_thread::JavaThread;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[test]
+    fn ref_transfer_multiarray_parents_are_roots_before_child_allocation() {
+        let observations = Rc::new(RefCell::new(Vec::new()));
+        let recorded = Rc::clone(&observations);
+
+        let result = observe_array_allocations(
+            move |reference| {
+                recorded
+                    .borrow_mut()
+                    .push((reference, JavaThread::temp_root_refs()))
+            },
+            || create_n_array(&[1, 1, 1], "[[[I", 0).unwrap(),
+        );
+
+        let observations = observations.borrow();
+        assert_eq!(observations.len(), 3);
+        let parent = observations[0].0;
+        let child = observations[1].0;
+        assert_eq!(observations[1].1, vec![parent]);
+        assert_eq!(observations[2].1, vec![parent, child]);
+        assert_eq!(result[0], Slot::Ref(parent));
+        assert_eq!(JavaThread::temp_root_refs(), vec![parent]);
+    }
 }

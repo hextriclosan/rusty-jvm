@@ -15,6 +15,7 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_value::StackValueKind;
 use tracing::warn;
 
@@ -55,8 +56,12 @@ pub(crate) fn set_pending_class_not_found_exception(message: &str) -> Result<()>
 
 /// Sets a pending `FileNotFoundException` with the given file path and message.
 pub(crate) fn set_pending_file_not_found_exception(path_ref: i32, message: &str) -> Result<()> {
+    let _path = JavaThread::hold_temp_roots(vec![Slot::Ref(path_ref)]);
     let reason_ref = StringPoolHelper::get_string(message)?;
-    let args = vec![path_ref.into(), StackValueKind::from(reason_ref)];
+    let args = vec![
+        StackValueKind::Ref(path_ref),
+        StackValueKind::Ref(reason_ref),
+    ];
     set_pending_exception(
         "java/io/FileNotFoundException",
         "<init>:(Ljava/lang/String;Ljava/lang/String;)V",
@@ -96,7 +101,7 @@ fn set_pending_exception_with_message(class_name: &str, message: &str) -> Result
     set_pending_exception(
         class_name,
         "<init>:(Ljava/lang/String;)V",
-        &[StackValueKind::from(message_ref)],
+        &[StackValueKind::Ref(message_ref)],
     )
 }
 
@@ -119,7 +124,7 @@ pub(super) fn set_pending_exception(
     let throwable_ref =
         Executor::invoke_args_constructor(class_name, constructor_signature, args, None)?;
 
-    if let Err(e) = JavaThread::try_set_pending_exception(throwable_ref) {
+    if let Err(e) = JavaThread::try_set_pending_exception(throwable_ref[0].value()) {
         // Constructing the throwable ran Java code, which may itself have raised a
         // pending exception in the meantime. Honor first-wins and drop this one.
         warn!("Dropping {class_name}: {e}");

@@ -8,6 +8,9 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, klass, strip_nest_host};
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::primitives_helper::{PRIMITIVE_CODE_BY_TYPE, PRIMITIVE_TYPE_BY_CODE};
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
+use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use jclassmodel::modifiers::ClassModifier;
@@ -90,7 +93,7 @@ pub(crate) fn for_name0(name_ref: i32, initialize: bool, loader_ref: i32) -> Res
     let reflection_ref = if loader_ref == 0 {
         // it's a bootstrap class loader, so we load class directly with native code
         match clazz_ref(&internal_name) {
-            Ok(r) => r,
+            Ok(r) => RootedSlots::from_slots(vec![Slot::Ref(r)]),
             Err(_) => {
                 set_pending_class_not_found_exception(&name)?;
                 return Ok(0);
@@ -102,11 +105,11 @@ pub(crate) fn for_name0(name_ref: i32, initialize: bool, loader_ref: i32) -> Res
             "java/lang/ClassLoader",
             "loadClass:(Ljava/lang/String;)Ljava/lang/Class;",
             loader_ref,
-            &[name_ref.into()],
+            &[StackValueKind::Ref(name_ref)],
         );
 
         match res {
-            Ok(vals) => vals[0],
+            Ok(vals) => vals,
             Err(_) => {
                 // fixme: samples.reflection.trivial.forname.NonExisting prints stacktrace here
                 // https://github.com/hextriclosan/rusty-jvm/issues/676
@@ -124,7 +127,7 @@ pub(crate) fn for_name0(name_ref: i32, initialize: bool, loader_ref: i32) -> Res
         StaticInit::initialize(&internal_name)?;
     }
 
-    Ok(reflection_ref)
+    Ok(reflection_ref[0].value())
 }
 
 /// `java.lang.Class.registerNatives()V`
@@ -334,9 +337,14 @@ pub(crate) fn class_is_instance(this_class_ref: i32, obj_ref_to_check: i32) -> R
 pub(crate) fn get_constant_pool(clazz_ref: i32) -> Result<i32> {
     const NAME: &str = "jdk/internal/reflect/ConstantPool";
     let constant_pool_ref = Executor::invoke_default_constructor(NAME)?;
-    HEAP.set_object_field_value(constant_pool_ref, NAME, CONSTANT_POOL_OOP, vec![clazz_ref])?;
+    HEAP.set_object_field_value(
+        constant_pool_ref[0].value(),
+        NAME,
+        CONSTANT_POOL_OOP,
+        vec![clazz_ref],
+    )?;
 
-    Ok(constant_pool_ref)
+    Ok(constant_pool_ref[0].value())
 }
 
 /// `java.lang.Class.getNestHost0()Ljava/lang/Class;`

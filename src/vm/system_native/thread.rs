@@ -8,6 +8,8 @@ use crate::vm::helper::i64_to_vec;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::lookup;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use crate::vm::system_native::{stack_trace_element, throwable};
 use crate::vm::{monitor, safepoint, threads};
@@ -140,8 +142,10 @@ pub(crate) fn get_stack_trace0(this: i32) -> Result<i32> {
 
     let depth = frames.len() as i32;
     let backtrace_ref = throwable::build_backtrace(&frames)?;
+    let mut roots = JavaThread::hold_temp_roots(vec![Slot::Ref(backtrace_ref)]);
 
     let elements_ref = HEAP.create_array("[Ljava/lang/StackTraceElement;", depth);
+    roots.add_root(Slot::Ref(elements_ref));
     for index in 0..depth {
         let element = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields("java/lang/StackTraceElement")
@@ -180,7 +184,7 @@ pub(crate) fn start0(this: i32) -> Result<()> {
     let is_daemon =
         Executor::invoke_non_static_method("java/lang/Thread", "isDaemon:()Z", this, &[])?
             .first()
-            .is_some_and(|&v| v != 0);
+            .is_some_and(|v| v.value() != 0);
 
     set_eetop(this, threads::next_eetop())?;
     // Mark RUNNABLE synchronously, before spawning, so getState() is correct the moment start()
@@ -245,7 +249,7 @@ fn run_thread(this: i32) {
 
 /// Resolves `run:()V` on the thread object's actual class (virtual dispatch, honoring subclass
 /// overrides) and invokes it.
-fn invoke_run(this: i32) -> Result<Vec<i32>> {
+fn invoke_run(this: i32) -> Result<RootedSlots> {
     let actual_class = HEAP.get_instance_name(this)?;
     let run_method =
         lookup::lookup_instance_method(&actual_class, "run:()V")?.ok_or_else(|| {

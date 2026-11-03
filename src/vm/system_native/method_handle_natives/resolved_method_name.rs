@@ -18,7 +18,7 @@ impl ResolvedMethodName {
     pub fn new_create_instance(vmholder: i32, vmtarget: i64) -> Result<Self> {
         let resolved_method_name_ref = Executor::invoke_default_constructor(RESOLVED_METHOD_NAME)?;
         Ok(Self {
-            resolved_method_name_ref,
+            resolved_method_name_ref: resolved_method_name_ref[0].value(),
             vmholder,
             vmtarget,
         })

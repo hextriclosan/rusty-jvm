@@ -4,6 +4,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::heap::java_instance::Array;
 use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::stack_value::{StackValue, StackValueKind};
 use jdescriptor::TypeDescriptor;
 use std::sync::Arc;
@@ -28,65 +29,66 @@ pub(crate) fn invoke0(method_ref: i32, obj_ref: i32, args_ref: i32) -> Result<i3
 
 /// Turns the raw result slots of a reflective call into the `Object` that `Method.invoke` returns:
 /// the wrapper of a primitive, `null` for `void`, or the reference itself.
-fn box_return_value(method: &JavaMethod, ret: &[i32]) -> Result<i32> {
+fn box_return_value(method: &JavaMethod, ret: &RootedSlots) -> Result<i32> {
     let (wrapper, value_of, value) = match method.get_method_descriptor().return_type() {
         TypeDescriptor::Void => return Ok(0),
-        TypeDescriptor::Object(_) | TypeDescriptor::Array(..) => return Ok(ret[0]),
+        TypeDescriptor::Object(_) | TypeDescriptor::Array(..) => return Ok(ret[0].value()),
         TypeDescriptor::Boolean => (
             "java/lang/Boolean",
             "valueOf:(Z)Ljava/lang/Boolean;",
-            StackValueKind::I32(ret[0]),
+            StackValueKind::I32(ret[0].value()),
         ),
         TypeDescriptor::Byte => (
             "java/lang/Byte",
             "valueOf:(B)Ljava/lang/Byte;",
-            StackValueKind::I32(ret[0]),
+            StackValueKind::I32(ret[0].value()),
         ),
         TypeDescriptor::Char => (
             "java/lang/Character",
             "valueOf:(C)Ljava/lang/Character;",
-            StackValueKind::I32(ret[0]),
+            StackValueKind::I32(ret[0].value()),
         ),
         TypeDescriptor::Short => (
             "java/lang/Short",
             "valueOf:(S)Ljava/lang/Short;",
-            StackValueKind::I32(ret[0]),
+            StackValueKind::I32(ret[0].value()),
         ),
         TypeDescriptor::Integer => (
             "java/lang/Integer",
             "valueOf:(I)Ljava/lang/Integer;",
-            StackValueKind::I32(ret[0]),
+            StackValueKind::I32(ret[0].value()),
         ),
         TypeDescriptor::Float => (
             "java/lang/Float",
             "valueOf:(F)Ljava/lang/Float;",
-            StackValueKind::F32(f32::from_vec(ret)),
+            StackValueKind::F32(f32::from_vec(&ret.raw())),
         ),
         TypeDescriptor::Long => (
             "java/lang/Long",
             "valueOf:(J)Ljava/lang/Long;",
-            StackValueKind::I64(i64::from_vec(ret)),
+            StackValueKind::I64(i64::from_vec(&ret.raw())),
         ),
         TypeDescriptor::Double => (
             "java/lang/Double",
             "valueOf:(D)Ljava/lang/Double;",
-            StackValueKind::F64(f64::from_vec(ret)),
+            StackValueKind::F64(f64::from_vec(&ret.raw())),
         ),
     };
 
-    Ok(Executor::invoke_static_method(wrapper, value_of, &[value])?[0])
+    Ok(Executor::invoke_static_method(wrapper, value_of, &[value])?[0].value())
 }
 
 /// `jdk.internal.reflect.DirectConstructorHandleAccessor$NativeAccessor.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;`
 pub(crate) fn new_instance0(constructor_ref: i32, args_ref: i32) -> Result<i32> {
     let (method, args) = resolve_method_and_args(constructor_ref, args_ref)?;
 
-    Executor::invoke_args_constructor(
+    let result = Executor::invoke_args_constructor(
         method.class_name(),
         method.name_signature(),
         &args,
         Some("Native Accessor newInstance0"),
-    )
+    )?;
+    Ok(result[0].value())
 }
 
 fn resolve_method_and_args(
@@ -129,16 +131,17 @@ fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
     let primitive =
         Executor::invoke_non_static_method("java/lang/Class", "isPrimitive:()Z", clazz_ref_, &[])?
             [0]
+        .value()
             != 0;
 
     if !primitive {
-        return Ok(StackValueKind::I32(obj_ref)); // Return as object if not primitive
+        return Ok(StackValueKind::Ref(obj_ref)); // Return as object if not primitive
     }
 
     let res = if clazz_ref_ == clazz_ref("B")? {
         let raw =
             Executor::invoke_non_static_method("java/lang/Byte", "byteValue:()B", obj_ref, &[])?;
-        StackValueKind::I32(i32::from_vec(&raw))
+        StackValueKind::I32(i32::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("Z")? {
         let raw = Executor::invoke_non_static_method(
             "java/lang/Boolean",
@@ -146,11 +149,11 @@ fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
             obj_ref,
             &[],
         )?;
-        StackValueKind::I32(i32::from_vec(&raw))
+        StackValueKind::I32(i32::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("S")? {
         let raw =
             Executor::invoke_non_static_method("java/lang/Short", "shortValue:()S", obj_ref, &[])?;
-        StackValueKind::I32(i32::from_vec(&raw))
+        StackValueKind::I32(i32::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("C")? {
         let raw = Executor::invoke_non_static_method(
             "java/lang/Character",
@@ -158,19 +161,19 @@ fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
             obj_ref,
             &[],
         )?;
-        StackValueKind::I32(i32::from_vec(&raw))
+        StackValueKind::I32(i32::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("I")? {
         let raw =
             Executor::invoke_non_static_method("java/lang/Integer", "intValue:()I", obj_ref, &[])?;
-        StackValueKind::I32(i32::from_vec(&raw))
+        StackValueKind::I32(i32::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("F")? {
         let raw =
             Executor::invoke_non_static_method("java/lang/Float", "floatValue:()F", obj_ref, &[])?;
-        StackValueKind::F32(f32::from_vec(&raw))
+        StackValueKind::F32(f32::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("J")? {
         let raw =
             Executor::invoke_non_static_method("java/lang/Long", "longValue:()J", obj_ref, &[])?;
-        StackValueKind::I64(i64::from_vec(&raw))
+        StackValueKind::I64(i64::from_vec(&raw.raw()))
     } else if clazz_ref_ == clazz_ref("D")? {
         let raw = Executor::invoke_non_static_method(
             "java/lang/Double",
@@ -178,7 +181,7 @@ fn unbox_if_needed(obj_ref: i32, clazz_ref_: i32) -> Result<StackValueKind> {
             obj_ref,
             &[],
         )?;
-        StackValueKind::F64(f64::from_vec(&raw))
+        StackValueKind::F64(f64::from_vec(&raw.raw()))
     } else {
         return Err(Error::new_execution(&format!(
             "Unrecognized primitive type with clazz_ref {clazz_ref_}"

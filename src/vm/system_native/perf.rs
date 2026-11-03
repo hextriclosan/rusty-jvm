@@ -61,7 +61,7 @@ pub(crate) fn create_long(
         Some("native image buffer creation"),
     )?;
 
-    Ok(byte_buffer_ref)
+    Ok(byte_buffer_ref[0].value())
 }
 
 /// `jdk.internal.perf.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;`
@@ -119,5 +119,5 @@ pub(crate) fn create_byte_array(
         Some("native image buffer creation"),
     )?;
 
-    Ok(byte_buffer_ref)
+    Ok(byte_buffer_ref[0].value())
 }

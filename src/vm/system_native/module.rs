@@ -13,12 +13,13 @@ pub(crate) fn define_module0(
     _location_str_ref: i32,
     _packages_arr_ref: i32,
 ) -> Result<()> {
-    let module_str_ref = Executor::invoke_non_static_method(
+    let module_name = Executor::invoke_non_static_method(
         "java/lang/Module",
         "getName:()Ljava/lang/String;",
         this_module_ref,
         &[],
-    )?[0];
+    )?;
+    let module_str_ref = module_name[0].value();
 
     if module_str_ref != 0 {
         let module_str = get_utf8_string_by_ref(module_str_ref)?;

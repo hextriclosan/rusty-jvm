@@ -1,6 +1,8 @@
 use crate::vm::error::Result;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
+use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frames_util::{StackElement, StackFramesUtil};
 
 const MAX_DEPTH: usize = 32;
@@ -40,15 +42,27 @@ pub(crate) fn fill_in_stack_trace(throwable_ref: i32, _dummy: i32) -> Result<i32
 /// frames. Shared by `fillInStackTrace` and `Thread.getStackTrace0` (which snapshots another thread
 /// at a safepoint), so both feed the same `StackTraceElement` construction path.
 pub(crate) fn build_backtrace(stack_elements: &[StackElement]) -> Result<i32> {
+    let mut roots = JavaThread::hold_temp_roots(
+        stack_elements
+            .iter()
+            .map(|element| Slot::Ref(element.class_ref()))
+            .collect(),
+    );
     let depth = stack_elements.len() as i32;
 
     let backtrace_ref = HEAP.create_array("[Ljava/lang/Object;", 5);
+    roots.add_root(Slot::Ref(backtrace_ref));
 
     let class_array_ref = HEAP.create_array("[Ljava/lang/Class;", depth);
+    roots.add_root(Slot::Ref(class_array_ref));
     let method_array_ref = HEAP.create_array("[J", depth);
+    roots.add_root(Slot::Ref(method_array_ref));
     let line_array_ref = HEAP.create_array("[I", depth);
+    roots.add_root(Slot::Ref(line_array_ref));
     let tag_array_ref = HEAP.create_array("[I", depth);
+    roots.add_root(Slot::Ref(tag_array_ref));
     let bci_array_ref = HEAP.create_array("[I", depth);
+    roots.add_root(Slot::Ref(bci_array_ref));
 
     HEAP.set_array_value(backtrace_ref, 0, vec![class_array_ref])?;
     HEAP.set_array_value(backtrace_ref, 1, vec![method_array_ref])?;

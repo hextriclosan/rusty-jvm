@@ -23,25 +23,27 @@ pub fn construct_exception_and_throw(
     )?;
 
     let (exception_name, found_exception_handler) =
-        throw_exception_with_ref(exception_instance_ref, stack_frames)?;
+        throw_exception_with_ref(exception_instance_ref[0], stack_frames)?;
 
     trace!("<THROWING> -> exception_name={exception_name}, found_exception_handler={found_exception_handler}");
     Ok(())
 }
 
 pub fn throw_exception_with_ref(
-    throwable_ref: i32,
+    throwable: Slot,
     stack_frames: &mut StackFrames,
 ) -> Result<(String, i16)> {
+    if !throwable.is_ref() {
+        return Err(Error::new_execution(
+            "throwable must retain its producer reference tag",
+        ));
+    }
+    // This owner exists before handler lookup can re-enter Java or any frame is popped.
+    let ownership = Error::uncaught_exception(throwable);
+    let throwable_ref = throwable.value();
     let exception_name = HEAP.get_instance_name(throwable_ref)?;
     trace!("<THROWING> -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
-    let found_exception_handler = unwind_stack(throwable_ref, stack_frames)?;
-
-    enter_handler(
-        last_frame_mut(stack_frames)?,
-        found_exception_handler,
-        throwable_ref,
-    )?;
+    let found_exception_handler = unwind_stack(throwable_ref, stack_frames, ownership)?;
 
     Ok((exception_name, found_exception_handler))
 }
@@ -59,7 +61,11 @@ fn enter_handler(stack_frame: &mut StackFrame, handler_pc: i16, throwable_ref: i
     stack_frame.push(Slot::Ref(throwable_ref))
 }
 
-fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i16> {
+fn unwind_stack(
+    throwable_ref: i32,
+    stack_frames: &mut StackFrames,
+    ownership: Error,
+) -> Result<i16> {
     let exception_name = HEAP.get_instance_name(throwable_ref)?;
     while !stack_frames.is_empty() {
         let stack_frame = last_frame_mut(stack_frames)?;
@@ -72,6 +78,7 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i1
             stack_frame.current_class_name(),
         )? {
             Some(exception_handler) => {
+                enter_handler(stack_frame, exception_handler as i16, throwable_ref)?;
                 return Ok(exception_handler as i16);
             }
             None => {
@@ -80,7 +87,7 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i1
         }
     }
 
-    Err(Error::uncaught_exception(throwable_ref))
+    Err(ownership)
 }
 
 #[cfg(test)]
@@ -117,5 +124,39 @@ mod tests {
     #[test]
     fn should_position_the_frame_at_the_handler() {
         assert_eq!(frame_at_handler().pc(), HANDLER_PC as usize);
+    }
+
+    #[test]
+    fn ref_transfer_uncaught_exception_owns_root_after_all_frames_pop() {
+        use crate::vm::jni::java_thread::JavaThread;
+        use crate::vm::stack::stack_frame::observe_frame_pops;
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        // Empty handler tables only need a heap identity; no class lookup or type matching.
+        // The Java integration fixture covers real Throwable construction and handlers.
+        let throwable = HEAP.create_array("[Ljava/lang/Object;", 0);
+        let mut source = StackFrame::for_test(0, 1);
+        source.push(Slot::Ref(throwable)).unwrap();
+        let mut frames = StackFrames::new(vec![source]);
+        let observed = Rc::new(Cell::new(false));
+        let seen = Rc::clone(&observed);
+
+        let error = observe_frame_pops(
+            move |remaining| {
+                assert!(remaining.is_empty());
+                assert!(JavaThread::temp_root_refs().contains(&throwable));
+                seen.set(true);
+            },
+            || throw_exception_with_ref(Slot::Ref(throwable), &mut frames).unwrap_err(),
+        );
+
+        assert!(observed.get());
+        assert_eq!(error.throwable_ref(), Some(throwable));
+        assert!(JavaThread::temp_root_refs().contains(&throwable));
+        JavaThread::try_set_pending_exception(error.throwable_ref().unwrap()).unwrap();
+        drop(error);
+        assert_eq!(JavaThread::take_pending_exception(), Some(throwable));
+        assert!(JavaThread::temp_root_refs().is_empty());
     }
 }

@@ -2,9 +2,11 @@ use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i32toi64;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_value::StackValueKind;
 
-pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()> {
+pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[Slot]) -> Result<()> {
     let name = HEAP.get_instance_name(handle_ref)?;
 
     if name == "java/lang/invoke/VarHandleInts$Array" {
@@ -34,7 +36,7 @@ pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()>
     } else if name == "java/lang/invoke/VarHandleByteArrayAsLongs$ArrayHandle" {
         let array_ref = args_to_set[0];
         let index = args_to_set[1];
-        let value = i32toi64(args_to_set[3], args_to_set[2]);
+        let value = i32toi64(args_to_set[3].value(), args_to_set[2].value());
 
         Executor::invoke_non_static_method(
             &name,
@@ -50,7 +52,7 @@ pub(crate) fn var_handle_set(handle_ref: i32, args_to_set: &[i32]) -> Result<()>
     }
 }
 
-pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[Slot]) -> Result<RootedSlots> {
     let name = HEAP.get_instance_name(handle_ref)?;
 
     if name == "java/lang/invoke/VarHandleInts$Array" {
@@ -102,10 +104,10 @@ pub(crate) fn var_handle_get(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec
 
 /// Backs the signature-polymorphic `VarHandle.getOpaque`, e.g. `AtomicReferenceArray.getOpaque`,
 /// which `ZoneOffset.ofTotalSeconds` reads its cache with.
-pub(crate) fn var_handle_get_opaque(handle_ref: i32, args_to_get: &[i32]) -> Result<Vec<i32>> {
+pub(crate) fn var_handle_get_opaque(handle_ref: i32, args_to_get: &[Slot]) -> Result<RootedSlots> {
     let name = HEAP.get_instance_name(handle_ref)?;
 
-    let mut all_args = vec![handle_ref];
+    let mut all_args = vec![Slot::Ref(handle_ref)];
     all_args.extend_from_slice(args_to_get);
     let all_args = all_args
         .into_iter()
@@ -126,11 +128,11 @@ pub(crate) fn var_handle_get_opaque(handle_ref: i32, args_to_get: &[i32]) -> Res
 
 pub(crate) fn var_handle_compare_and_set(
     handle_ref: i32,
-    args_to_process: &[i32],
-) -> Result<Vec<i32>> {
+    args_to_process: &[Slot],
+) -> Result<RootedSlots> {
     let name = HEAP.get_instance_name(handle_ref)?;
 
-    let mut all_args = vec![handle_ref];
+    let mut all_args = vec![Slot::Ref(handle_ref)];
     all_args.extend_from_slice(args_to_process);
     let all_args = all_args
         .into_iter()
@@ -175,11 +177,11 @@ pub(crate) fn var_handle_compare_and_set(
 /// `AtomicReference.compareAndExchange` / `updateAndGet`.
 pub(crate) fn var_handle_compare_and_exchange(
     handle_ref: i32,
-    args_to_process: &[i32],
-) -> Result<Vec<i32>> {
+    args_to_process: &[Slot],
+) -> Result<RootedSlots> {
     let name = HEAP.get_instance_name(handle_ref)?;
 
-    let mut all_args = vec![handle_ref];
+    let mut all_args = vec![Slot::Ref(handle_ref)];
     all_args.extend_from_slice(args_to_process);
     let all_args = all_args
         .into_iter()

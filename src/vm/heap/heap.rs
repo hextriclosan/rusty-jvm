@@ -7,6 +7,9 @@ use crate::vm::exception::pending::Throws;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::JavaInstance::Class;
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
+use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrames;
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
 use dashmap::DashMap;
@@ -202,7 +205,14 @@ impl Heap {
     }
 
     pub(crate) fn create_array(&self, type_name: &str, len: i32) -> i32 {
-        self.data.insert_auto(Arr(Array::new(type_name, len)))
+        let reference = self.data.insert_auto(Arr(Array::new(type_name, len)));
+        #[cfg(test)]
+        ARRAY_ALLOCATION_OBSERVER.with(|observer| {
+            if let Some(observer) = observer.borrow().as_ref() {
+                observer(reference);
+            }
+        });
+        reference
     }
 
     pub(crate) fn create_array_with_values(&self, type_name: &str, array: &[i32]) -> i32 {
@@ -405,7 +415,12 @@ impl Heap {
         Ok(())
     }
 
-    pub(crate) fn clone_instance(&self, objectref: i32) -> Result<i32> {
+    pub(crate) fn clone_instance(
+        &self,
+        objectref: i32,
+        destination: &mut RootedSlots,
+    ) -> Result<()> {
+        let _input = JavaThread::hold_temp_roots(vec![Slot::Ref(objectref)]);
         let cloned_heap_value = {
             self.data
                 .get(objectref)
@@ -417,16 +432,64 @@ impl Heap {
                 })
         }?;
 
-        let cloned_ref = match cloned_heap_value {
-            Object(new_instance) => self.create_instance(new_instance),
+        match cloned_heap_value {
+            Object(new_instance) => {
+                destination.replace(vec![Slot::Ref(self.create_instance(new_instance))]);
+            }
             Arr(new_array) => {
                 let new_array_ref =
                     self.create_array(new_array.type_name(), new_array.get_length());
+                destination.replace(vec![Slot::Ref(new_array_ref)]);
                 self.set_entire_array(new_array_ref, new_array)?;
-                new_array_ref
             }
         };
 
-        Ok(cloned_ref)
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    static ARRAY_ALLOCATION_OBSERVER: std::cell::RefCell<Option<Box<dyn Fn(i32)>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+pub(crate) fn observe_array_allocations<R>(
+    observer: impl Fn(i32) + 'static,
+    operation: impl FnOnce() -> R,
+) -> R {
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            ARRAY_ALLOCATION_OBSERVER.with(|observer| observer.borrow_mut().take());
+        }
+    }
+    ARRAY_ALLOCATION_OBSERVER.with(|slot| {
+        assert!(slot.borrow().is_none());
+        *slot.borrow_mut() = Some(Box::new(observer));
+    });
+    let _reset = Reset;
+    operation()
+}
+
+#[cfg(test)]
+mod ref_transfer_tests {
+    use super::*;
+
+    #[test]
+    fn ref_transfer_clone_roots_input_during_allocation_and_publishes_output() {
+        let source = HEAP.create_array_with_values("[I", &[17, 23]);
+        let mut destination = RootedSlots::new();
+
+        observe_array_allocations(
+            move |_| assert!(JavaThread::temp_root_refs().contains(&source)),
+            || HEAP.clone_instance(source, &mut destination).unwrap(),
+        );
+
+        let clone = destination[0].value();
+        assert_ne!(clone, source);
+        assert_eq!(HEAP.get_array_value(clone, 1).unwrap(), vec![23]);
+        assert_eq!(JavaThread::temp_root_refs(), vec![clone]);
     }
 }

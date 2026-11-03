@@ -10,6 +10,8 @@ use crate::vm::jni::utils::{
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::class::class_is_instance;
 use jclassmodel::modifiers::ClassModifier;
 use jni_sys::{jboolean, jclass, jmethodID, jobject, jobjectRefType, jvalue, JNIEnv};
@@ -128,6 +130,7 @@ pub(super) extern "system" fn new_object_a(
     if obj.is_null() {
         return null_mut();
     }
+    let destination = RootedSlots::from_slots(vec![Slot::Ref(obj as i32)]);
 
     let (declaring_class_ref, method_index) = decode_method_id(method_id as usize);
     let constructor = match klass(declaring_class_ref)
@@ -151,6 +154,6 @@ pub(super) extern "system" fn new_object_a(
         obj as i32,
         &arguments,
     )
-    .map(|_| obj as i32);
+    .map(|_| destination);
     jni_invoke_scalar(result, &context)
 }

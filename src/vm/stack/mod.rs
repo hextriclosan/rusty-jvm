@@ -1,3 +1,4 @@
+pub(crate) mod rooted_slots;
 pub(crate) mod slot;
 mod stack;
 pub(crate) mod stack_frame;

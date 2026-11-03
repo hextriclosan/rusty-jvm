@@ -4,8 +4,11 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, vec_to_i64};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::trace;
@@ -31,15 +34,16 @@ pub(crate) fn retrieve_directives() -> Result<i32> {
         method_area.create_instance_with_default_fields(ASSERTION_STATUS_DIRECTIVES)
     })?;
     let directives_ref = HEAP.create_instance(directives);
+    let _directives = JavaThread::hold_temp_roots(vec![Slot::Ref(directives_ref)]);
 
     let assertions = java_assertions();
-    let (packages, package_enabled) = to_java_arrays(assertions.packages())?;
-    let (classes, class_enabled) = to_java_arrays(assertions.classes())?;
+    let packages = to_java_arrays(assertions.packages())?;
+    let classes = to_java_arrays(assertions.classes())?;
     let fields = [
-        ("packages", packages),
-        ("packageEnabled", package_enabled),
-        ("classes", classes),
-        ("classEnabled", class_enabled),
+        ("packages", packages[0].value()),
+        ("packageEnabled", packages[1].value()),
+        ("classes", classes[0].value()),
+        ("classEnabled", classes[1].value()),
         ("deflt", assertions.user_default() as i32),
     ];
     for (name, value) in fields {
@@ -54,7 +58,8 @@ pub(crate) fn retrieve_directives() -> Result<i32> {
 }
 
 /// The parallel `String[]` names and `boolean[]` statuses of `options`.
-fn to_java_arrays(options: &[AssertionOption]) -> Result<(i32, i32)> {
+fn to_java_arrays(options: &[AssertionOption]) -> Result<RootedSlots> {
+    let mut destination = RootedSlots::new();
     let names = options
         .iter()
         .map(|option| StringPoolHelper::get_string(&option.name.replace('/', ".")))
@@ -63,10 +68,11 @@ fn to_java_arrays(options: &[AssertionOption]) -> Result<(i32, i32)> {
         .iter()
         .map(|option| option.enabled as i32)
         .collect::<Vec<_>>();
-    Ok((
-        HEAP.create_array_with_values("[Ljava/lang/String;", &names),
-        HEAP.create_array_with_values("[Z", &enabled),
-    ))
+    let names_ref = HEAP.create_array_with_values("[Ljava/lang/String;", &names);
+    destination.replace(vec![Slot::Ref(names_ref)]);
+    let enabled_ref = HEAP.create_array_with_values("[Z", &enabled);
+    destination.replace(vec![Slot::Ref(names_ref), Slot::Ref(enabled_ref)]);
+    Ok(destination)
 }
 
 /// `java/lang/ClassLoader:defineClass0:(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;`

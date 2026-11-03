@@ -2,6 +2,7 @@ use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
 use crate::vm::error::{Error, Result};
 use crate::vm::jni::jni_env::jni_native_interface;
 use crate::vm::safepoint::{self, Safepoint};
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use jni_sys::{JNIEnv, JNINativeInterface_};
@@ -22,7 +23,7 @@ pub(crate) struct JavaThread {
     /// ultimately points *at*; see [`crate::vm::jni::jni_env::get_jni_env`].
     env: *const JNINativeInterface_,
     /// Heap reference to the currently-pending exception, or `None` if no exception is pending.
-    exception_pending: Cell<Option<i32>>,
+    exception_pending: Cell<Option<Slot>>,
     /// Heap reference to this OS thread's `java.lang.Thread`, or `None` before it is attached.
     ///
     /// This is what `Thread.currentThread()` returns, making thread identity a per-OS-thread fact
@@ -97,7 +98,7 @@ impl TempRootsGuard {
     pub(crate) fn add_root(&mut self, slot: Slot) {
         JAVA_THREAD.with(|t| {
             let mut temp_roots = t.temp_roots.borrow_mut();
-            debug_assert_eq!(temp_roots.len(), self.scope_end, "not the innermost scope");
+            assert_eq!(temp_roots.len(), self.scope_end, "not the innermost scope");
             temp_roots.push(slot);
             self.scope_end = temp_roots.len();
         });
@@ -106,7 +107,15 @@ impl TempRootsGuard {
 
 impl Drop for TempRootsGuard {
     fn drop(&mut self) {
-        JAVA_THREAD.with(|t| t.temp_roots.borrow_mut().truncate(self.restore_to));
+        JAVA_THREAD.with(|t| {
+            let mut temp_roots = t.temp_roots.borrow_mut();
+            assert_eq!(
+                temp_roots.len(),
+                self.scope_end,
+                "TempRootsGuard dropped out of LIFO order"
+            );
+            temp_roots.truncate(self.restore_to);
+        });
     }
 }
 
@@ -143,11 +152,23 @@ impl JavaThread {
 
     /// Takes the currently-pending exception (if any) for the calling thread, leaving `None` in its place.
     pub(crate) fn take_pending_exception() -> Option<i32> {
-        JAVA_THREAD.with(|t| t.exception_pending.take())
+        JAVA_THREAD.with(|t| t.exception_pending.take().map(|slot| slot.value()))
     }
 
     pub(crate) fn get_pending_exception() -> Option<i32> {
-        JAVA_THREAD.with(|t| t.exception_pending.get())
+        JAVA_THREAD.with(|t| t.exception_pending.get().map(|slot| slot.value()))
+    }
+
+    /// Publish a caller-owned destination before removing the pending root.
+    pub(crate) fn take_pending_exception_rooted() -> Option<RootedSlots> {
+        let mut destination = RootedSlots::new();
+        JAVA_THREAD.with(|t| {
+            t.exception_pending.get().map(|throwable| {
+                destination.replace(vec![throwable]);
+                t.exception_pending.set(None);
+                destination
+            })
+        })
     }
 
     /// Stores `throwable_ref` as the pending exception for the calling thread.
@@ -161,9 +182,9 @@ impl JavaThread {
     pub(crate) fn try_set_pending_exception(throwable_ref: i32) -> Result<()> {
         JAVA_THREAD.with(|t| {
             if let Some(pending_ref) = t.exception_pending.get() {
-                Err(Error::new(JniExceptionAlreadyPending(pending_ref)))
+                Err(Error::new(JniExceptionAlreadyPending(pending_ref.value())))
             } else {
-                t.exception_pending.set(Some(throwable_ref));
+                t.exception_pending.set(Some(Slot::Ref(throwable_ref)));
                 Ok(())
             }
         })
@@ -172,7 +193,7 @@ impl JavaThread {
     /// Used by JNI `Throw`/`ThrowNew`: always installs `throwable_ref`,
     /// replacing any previously-pending exception. This is spec-compliant.
     pub(super) fn force_set_pending_exception(throwable_ref: i32) {
-        JAVA_THREAD.with(|t| t.exception_pending.set(Some(throwable_ref)));
+        JAVA_THREAD.with(|t| t.exception_pending.set(Some(Slot::Ref(throwable_ref))));
     }
 
     /// Returns the `java.lang.Thread` heap reference for the calling OS thread, or `None` if it has
@@ -210,6 +231,8 @@ impl JavaThread {
         JAVA_THREAD.with(|t| {
             let mut temp_roots = t.temp_roots.borrow_mut();
             let restore_to = temp_roots.len();
+            // A non-root boundary makes even empty nested scopes distinguishable.
+            temp_roots.push(Slot::Value(0));
             temp_roots.extend(slots);
             TempRootsGuard {
                 restore_to,
@@ -219,20 +242,22 @@ impl JavaThread {
         })
     }
 
-    /// Every reference currently held in this thread's temporary root scopes.
+    /// Every reference in this thread's temporary scopes and owned transfers.
     ///
     /// Read by the calling thread about itself, the same way a thread collects its own stack at a
     /// safepoint rather than having another thread reach into it.
     #[allow(dead_code)] // consumed by the root scan added in a later step
     pub(crate) fn temp_root_refs() -> Vec<i32> {
-        JAVA_THREAD.with(|t| {
+        let mut refs: Vec<i32> = JAVA_THREAD.with(|t| {
             t.temp_roots
                 .borrow()
                 .iter()
                 .filter(|slot| slot.is_ref())
                 .map(|slot| slot.value())
                 .collect()
-        })
+        });
+        refs.extend(RootedSlots::root_refs());
+        refs
     }
 
     /// Returns a clone of the calling thread's safepoint. `Engine::execute` grabs it once and polls
@@ -384,6 +409,60 @@ mod temp_roots_tests {
         assert_eq!(JavaThread::temp_root_refs(), vec![1]);
 
         drop(outer);
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
+
+    #[test]
+    fn ref_transfer_guard_rejects_out_of_order_drop_without_losing_inner_roots() {
+        let outer = JavaThread::hold_temp_roots(vec![Slot::Ref(11)]);
+        let inner = JavaThread::hold_temp_roots(vec![Slot::Ref(22)]);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(outer)));
+
+        assert!(result.is_err());
+        assert_eq!(JavaThread::temp_root_refs(), vec![11, 22]);
+        drop(inner);
+        // The deliberately rejected outer destructor left its own roots in place.
+        JAVA_THREAD.with(|thread| thread.temp_roots.borrow_mut().clear());
+    }
+
+    #[test]
+    fn ref_transfer_guard_rejects_empty_nested_scope_escape() {
+        let outer = JavaThread::hold_temp_roots(vec![]);
+        let inner = JavaThread::hold_temp_roots(vec![]);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(outer)));
+
+        assert!(result.is_err());
+        drop(inner);
+        JAVA_THREAD.with(|thread| thread.temp_roots.borrow_mut().clear());
+    }
+
+    #[test]
+    fn ref_transfer_guard_rejects_growing_an_enclosing_scope() {
+        let mut outer = JavaThread::hold_temp_roots(vec![Slot::Ref(11)]);
+        let inner = JavaThread::hold_temp_roots(vec![Slot::Ref(22)]);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            outer.add_root(Slot::Ref(33));
+        }));
+
+        assert!(result.is_err());
+        assert_eq!(JavaThread::temp_root_refs(), vec![11, 22]);
+        drop(inner);
+        drop(outer);
+        assert!(JavaThread::temp_root_refs().is_empty());
+    }
+
+    #[test]
+    fn ref_transfer_owned_result_can_outlive_a_temporary_scope() {
+        let scope = JavaThread::hold_temp_roots(vec![Slot::Ref(11)]);
+        let result = RootedSlots::from_slots(vec![Slot::Ref(22)]);
+
+        drop(scope);
+
+        assert_eq!(JavaThread::temp_root_refs(), vec![22]);
+        drop(result);
         assert!(JavaThread::temp_root_refs().is_empty());
     }
 }

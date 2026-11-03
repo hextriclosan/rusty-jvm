@@ -122,8 +122,41 @@ impl StackFrames {
 
     /// Pops the top stack frame from the stack frames and returns it.
     fn pop(&mut self) -> Option<StackFrame> {
-        self.frames.pop()
+        let frame = self.frames.pop();
+        #[cfg(test)]
+        FRAME_POP_OBSERVER.with(|observer| {
+            if let Some(observer) = observer.borrow().as_ref() {
+                observer(self);
+            }
+        });
+        frame
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    static FRAME_POP_OBSERVER: std::cell::RefCell<Option<Box<dyn Fn(&StackFrames)>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Observe the actual publication boundary, without replacing the frame-pop implementation.
+#[cfg(test)]
+pub(crate) fn observe_frame_pops<R>(
+    observer: impl Fn(&StackFrames) + 'static,
+    operation: impl FnOnce() -> R,
+) -> R {
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            FRAME_POP_OBSERVER.with(|observer| observer.borrow_mut().take());
+        }
+    }
+    FRAME_POP_OBSERVER.with(|slot| {
+        assert!(slot.borrow().is_none());
+        *slot.borrow_mut() = Some(Box::new(observer));
+    });
+    let _reset = Reset;
+    operation()
 }
 
 impl StackFrame {

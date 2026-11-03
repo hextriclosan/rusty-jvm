@@ -32,6 +32,7 @@ use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::perf_data::init_perf_file;
 use crate::vm::properties::resolve_classpath;
 use crate::vm::properties::system_properties::init_system_properties;
+use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
@@ -122,7 +123,7 @@ pub(crate) fn invoke_uncaught_exception_handler(throwable_ref: i32) -> Result<()
         "java/lang/Thread",
         "dispatchUncaughtException:(Ljava/lang/Throwable;)V",
         thread_ref,
-        &[throwable_ref.into()],
+        &[StackValueKind::Ref(throwable_ref)],
     )?;
     Ok(())
 }
@@ -217,17 +218,19 @@ fn init() -> Result<()> {
     // group, a "main" group as its child, and the primordial thread named "main" in that group.
     // The thread's name is what surfaces as `Exception in thread "main"` on an uncaught exception.
     let system_tg_ref = Executor::invoke_default_constructor("java/lang/ThreadGroup")?;
-    with_method_area(|area| area.set_system_thread_group_id(system_tg_ref))?;
+    with_method_area(|area| area.set_system_thread_group_id(system_tg_ref[0].value()))?;
     let main_name_ref = StringPoolHelper::get_string("main")?; // refactor candidate B: introduce and use here common string creator, not string pool one
     let main_tg_ref = Executor::invoke_args_constructor(
         "java/lang/ThreadGroup",
         "<init>:(Ljava/lang/ThreadGroup;Ljava/lang/String;)V",
-        &[system_tg_ref.into(), main_name_ref.into()],
+        &[system_tg_ref[0].into(), StackValueKind::Ref(main_name_ref)],
         Some("main thread group creation"),
     )?;
-    with_method_area(|area| area.set_main_thread_group_id(main_tg_ref))?;
-    let _thread_obj_ref =
-        Executor::create_primordial_thread(&[main_tg_ref.into(), main_name_ref.into()])?;
+    with_method_area(|area| area.set_main_thread_group_id(main_tg_ref[0].value()))?;
+    let _thread_obj_ref = Executor::create_primordial_thread(&[
+        main_tg_ref[0].into(),
+        StackValueKind::Ref(main_name_ref),
+    ])?;
 
     StaticInit::initialize("java/lang/reflect/Method")?;
     Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
@@ -235,7 +238,8 @@ fn init() -> Result<()> {
         "java/lang/System",
         "initPhase2:(ZZ)I",
         &[1.into(), 1.into()],
-    )?[0];
+    )?[0]
+        .value();
     if init_phase2_result != 0 {
         return Err(Error::new_execution(&format!(
             "System.initPhase2 returned error code {init_phase2_result}"
@@ -249,7 +253,8 @@ fn init() -> Result<()> {
                 "java/lang/ClassLoader",
                 "getPlatformClassLoader:()Ljava/lang/ClassLoader;",
                 &[],
-            )?[0],
+            )?[0]
+                .value(),
         )
         .map_err(|_e| Error::new_execution("value already set"))?;
     SYSTEM_CLASSLOADER_REF
@@ -258,7 +263,8 @@ fn init() -> Result<()> {
                 "java/lang/ClassLoader",
                 "getSystemClassLoader:()Ljava/lang/ClassLoader;",
                 &[],
-            )?[0],
+            )?[0]
+                .value(),
         )
         .map_err(|_e| Error::new_execution("value already set"))?;
 
@@ -269,11 +275,11 @@ fn init() -> Result<()> {
     let module_ref = Executor::invoke_args_constructor(
         "java/lang/Module",
         "<init>:(Ljava/lang/ClassLoader;)V",
-        &[system_classloader_ref.into()],
+        &[StackValueKind::Ref(system_classloader_ref)],
         Some("module for reflection class"),
     )?;
     UNNAMED_MODULE_REF
-        .set(module_ref)
+        .set(module_ref[0].value())
         .map_err(|e| Error::new_execution(&format!("MODULE_REF already set: {e:?}")))?;
 
     Ok(())

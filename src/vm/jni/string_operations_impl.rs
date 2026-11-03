@@ -3,8 +3,11 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::array_operations_impl::{
     new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
 };
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::stack::slot::Slot;
+use crate::vm::stack::stack_value::StackValueKind;
 use crate::vm::system_native::string::get_raw_string_info;
 use crate::{from_mutf8_ptr, to_mutf8_data};
 use cesu8::to_java_cesu8;
@@ -95,11 +98,9 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
         panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
     }
 
-    let raw =
-        Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
-            .unwrap_or(vec![0]); // OpenJDK returns 0 for non-strings
-
-    raw[0] as jint
+    Executor::invoke_non_static_method("java/lang/String", "length:()I", string_ref, &[])
+        .map(|result| result[0].value())
+        .unwrap_or(0) // OpenJDK returns 0 for non-strings
 }
 
 pub(super) extern "system" fn new_string(
@@ -114,11 +115,12 @@ pub(super) extern "system" fn new_string(
         panic!("unicode array is null but length is {len}");
     }
     let arr_ref = new_char_array(env, len);
+    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(arr_ref as i32)]);
     set_char_array_region(env, arr_ref, 0, len, unicode);
     let result = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([C)V",
-        &[(arr_ref as i32).into()],
+        &[StackValueKind::Ref(arr_ref as i32)],
         Some(""),
     );
     jni_invoke_scalar(result, "NewString")
@@ -217,6 +219,7 @@ pub(super) extern "system" fn new_string_utf8(
 
     let len = decoded_bytes.len() as jsize;
     let byte_array = new_byte_array(env, len);
+    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(byte_array as i32)]);
     set_byte_array_region(
         env,
         byte_array,
@@ -243,7 +246,10 @@ pub(super) extern "system" fn new_string_utf8(
     let result = Executor::invoke_args_constructor(
         "java/lang/String",
         "<init>:([BLjava/nio/charset/Charset;)V",
-        &[(byte_array as i32).into(), utf8_charset_ref.into()],
+        &[
+            StackValueKind::Ref(byte_array as i32),
+            StackValueKind::Ref(utf8_charset_ref),
+        ],
         Some(""),
     );
     jni_invoke_scalar(result, "NewStringUTF")
