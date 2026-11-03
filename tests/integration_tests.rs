@@ -275,6 +275,45 @@ null array before type check -> java.lang.NullPointerException: Cannot store to 
 }
 
 #[test]
+fn should_throw_class_cast_exception() {
+    assert_success(
+        "samples.casts.ClassCastCheck",
+        r#"same class ok value
+superclass ok 42
+interface ok dog
+null ok null
+covariant array ok [dog]
+array as Object[] ok [a]
+array as Cloneable ok int[]
+both in java.base -> class java.lang.Integer cannot be cast to class java.lang.String (java.lang.Integer and java.lang.String are in module java.base of loader 'bootstrap')
+both application classes -> class samples.casts.ClassCastCheck$Dog cannot be cast to class samples.casts.ClassCastCheck$Cat (samples.casts.ClassCastCheck$Dog and samples.casts.ClassCastCheck$Cat are in unnamed module of loader 'app')
+java.base to application -> class java.lang.String cannot be cast to class samples.casts.ClassCastCheck$Dog (java.lang.String is in module java.base of loader 'bootstrap'; samples.casts.ClassCastCheck$Dog is in unnamed module of loader 'app')
+application to java.base -> class samples.casts.ClassCastCheck$Dog cannot be cast to class java.lang.Runnable (samples.casts.ClassCastCheck$Dog is in unnamed module of loader 'app'; java.lang.Runnable is in module java.base of loader 'bootstrap')
+object arrays -> class [Ljava.lang.String; cannot be cast to class [Ljava.lang.Integer; ([Ljava.lang.String; and [Ljava.lang.Integer; are in module java.base of loader 'bootstrap')
+primitive arrays -> class [I cannot be cast to class [J ([I and [J are in module java.base of loader 'bootstrap')
+application array to java.base array -> class [Lsamples.casts.ClassCastCheck$Dog; cannot be cast to class [Ljava.lang.String; ([Lsamples.casts.ClassCastCheck$Dog; is in unnamed module of loader 'app'; [Ljava.lang.String; is in module java.base of loader 'bootstrap')
+object to array -> class java.lang.String cannot be cast to class [I (java.lang.String and [I are in module java.base of loader 'bootstrap')
+array to class -> class [I cannot be cast to class java.lang.String ([I and java.lang.String are in module java.base of loader 'bootstrap')
+primitive array to Object[] -> class [I cannot be cast to class [Ljava.lang.Object; ([I and [Ljava.lang.Object; are in module java.base of loader 'bootstrap')
+heap pollution -> class java.lang.Integer cannot be cast to class java.lang.String (java.lang.Integer and java.lang.String are in module java.base of loader 'bootstrap')
+caught in the same frame: caught
+"#,
+    );
+}
+
+#[test]
+fn should_check_types_of_unnamed_package_classes_starting_with_l() {
+    assert_success(
+        "LampCheck",
+        r#"cast to superclass: true
+instanceof: true
+caught: LampCheck$LightOutException
+class LampCheck$Light cannot be cast to class LampCheck$Lamp (LampCheck$Light and LampCheck$Lamp are in unnamed module of loader 'app')
+"#,
+    );
+}
+
+#[test]
 fn should_support_arrays_with_longs() {
     assert_success("samples.arrays.array.longs.ArrayLong", "233646220932000\n");
 }
