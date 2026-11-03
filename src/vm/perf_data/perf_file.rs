@@ -11,6 +11,7 @@ use std::fs::OpenOptions;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{env, fs};
+use tracing::debug;
 
 static PERFDATA_CAPACITY: Lazy<usize> = Lazy::new(|| {
     let base = 32 * 1024; // 32 KB
@@ -131,7 +132,8 @@ pub enum Variability {
 
 pub(super) struct PerfFile {
     mmap: Option<MmapMut>,
-    path: PathBuf,
+    /// The `hsperfdata` file other processes read, or `None` for memory of this process only
+    path: Option<PathBuf>,
     names: HashSet<String>,
 }
 
@@ -140,12 +142,37 @@ impl Drop for PerfFile {
         // Flush and unmap before removing the file (important on Windows,
         // where you cannot delete a file that has an open mapping).
         drop(self.mmap.take());
-        let _ = fs::remove_file(&self.path);
+        if let Some(path) = &self.path {
+            let _ = fs::remove_file(path);
+        }
     }
 }
 
 impl PerfFile {
+    /// Like HotSpot, falls back to memory of this process only when the shared file can't be
+    /// created, e.g. for a user without a name, so tools like jstat just don't see this VM.
     pub(crate) fn default() -> Result<Self> {
+        let (mut mmap, path) = match Self::create_shared() {
+            Ok((mmap, path)) => (mmap, Some(path)),
+            Err(e) => {
+                debug!("Reverting to non-shared perf data: {e}");
+                (MmapMut::map_anon(*PERFDATA_CAPACITY)?, None)
+            }
+        };
+
+        let prologue_bytes = make_prologue_bytes()?;
+        mmap[..prologue_bytes.len()].copy_from_slice(&prologue_bytes);
+        mmap.flush()?;
+
+        Ok(Self {
+            mmap: Some(mmap),
+            path,
+            names: HashSet::new(),
+        })
+    }
+
+    /// Maps the `hsperfdata_<user>/<pid>` file in the temporary directory.
+    fn create_shared() -> Result<(MmapMut, PathBuf)> {
         let pid = std::process::id();
         let perf_dir = get_hsperfdata_dir()?;
 
@@ -169,17 +196,8 @@ impl PerfFile {
 
         // SAFETY: We just created this file and hold the only file descriptor.
         // No other process should be mapping it yet.
-        let mut mmap = unsafe { MmapMut::map_mut(&file)? };
-
-        let prologue_bytes = make_prologue_bytes()?;
-        mmap[..prologue_bytes.len()].copy_from_slice(&prologue_bytes);
-        mmap.flush()?;
-
-        Ok(Self {
-            mmap: Some(mmap),
-            path: file_path,
-            names: HashSet::new(),
-        })
+        let mmap = unsafe { MmapMut::map_mut(&file)? };
+        Ok((mmap, file_path))
     }
 
     pub(super) fn create_string(&mut self, name: &str, value: &str) -> Result<(*const u8, usize)> {
@@ -255,7 +273,8 @@ impl PerfFile {
 
 fn get_hsperfdata_dir() -> Result<PathBuf> {
     let tmp_dir = env::temp_dir();
-    let username = resolve_username()?;
+    let username =
+        resolve_username().ok_or_else(|| Error::new_execution("Failed to get the user name"))?;
     let safe_username: String = username
         .chars()
         .map(|c| {
@@ -353,12 +372,23 @@ fn time_stamp_ns() -> Result<i64> {
         .as_nanos() as i64)
 }
 
-fn resolve_username() -> Result<String> {
-    if let Ok(username) = whoami::username() {
-        return Ok(username);
-    }
+/// The user HotSpot names the `hsperfdata` directory after: the password database name of the
+/// effective user, without falling back to $USER or $LOGNAME.
+#[cfg(unix)]
+fn resolve_username() -> Option<String> {
+    nix::unistd::User::from_uid(nix::unistd::geteuid())
+        .ok()
+        .flatten()
+        .map(|user| user.name)
+        .filter(|name| !name.is_empty())
+}
 
-    // Fallbacks
-    let username = env::var("USER").or_else(|_| env::var("LOGNAME"))?;
-    Ok(username)
+/// The user HotSpot names the `hsperfdata` directory after: %USERNAME%, or else the user of
+/// the process.
+#[cfg(windows)]
+fn resolve_username() -> Option<String> {
+    env::var_os("USERNAME")
+        .filter(|name| !name.is_empty())
+        .map(|name| name.to_string_lossy().into_owned())
+        .or_else(|| whoami::username().ok())
 }
