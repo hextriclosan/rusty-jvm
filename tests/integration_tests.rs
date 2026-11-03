@@ -3693,21 +3693,12 @@ fn should_support_locales() {
 
 #[test]
 fn should_enumerate_network_interfaces() {
-    let output = get_output("samples.net.networkinterfaces.NetworkInterfacesExample");
-    let mut lines = output.lines();
-    let count = lines
-        .next()
-        .and_then(|line| line.strip_prefix("count="))
-        .and_then(|value| value.parse::<usize>().ok())
-        .expect("Missing network interface count");
-    let addresses = lines
-        .next()
-        .and_then(|line| line.strip_prefix("addresses="))
-        .and_then(|value| value.parse::<usize>().ok())
-        .expect("Missing network address count");
-    assert!(count > 0);
-    assert!(addresses > 0);
-    assert_eq!(lines.next(), Some("valid names=true"));
+    // The interfaces are the host's, so the reference JVM gives the expected output
+    utils::assert_same_as_reference_jvm(
+        &[],
+        "samples.net.networkinterfaces.NetworkInterfacesExample",
+        Success,
+    );
 }
 
 #[test]

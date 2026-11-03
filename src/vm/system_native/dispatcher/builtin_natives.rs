@@ -158,6 +158,8 @@ jni_types! {
     input_stream              : ref   | i32  | jobject      | "Ljava/io/InputStream;";
     file                      : ref   | i32  | jobject      | "Ljava/io/File;";
     file_descriptor           : ref   | i32  | jobject      | "Ljava/io/FileDescriptor;";
+    inet_address              : ref   | i32  | jobject      | "Ljava/net/InetAddress;";
+    network_interface         : ref   | i32  | jobject      | "Ljava/net/NetworkInterface;";
     print_stream              : ref   | i32  | jobject      | "Ljava/io/PrintStream;";
     byte_buffer               : ref   | i32  | jobject      | "Ljava/nio/ByteBuffer;";
     protection_domain         : ref   | i32  | jobject      | "Ljava/security/ProtectionDomain;";
@@ -464,8 +466,24 @@ builtin_natives! {
     "java/io/RandomAccessFile": instance fn length0() -> long => sn::random_access_file::length0;
     "java/io/RandomAccessFile": instance fn setLength0(new_length: long) -> void => sn::random_access_file::set_length0;
 
-    "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init; // todo: implement me
-    "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all; // fixme: https://github.com/hextriclosan/rusty-jvm/issues/539
+    "java/net/InetAddress": static fn init() -> void => sn::inet_address::init;
+    "java/net/InetAddress": static fn isIPv4Available() -> boolean => sn::inet_address::is_ipv4_available;
+    "java/net/InetAddress": static fn isIPv6Supported() -> boolean => sn::inet_address::is_ipv6_supported;
+    "java/net/Inet4Address": static fn init() -> void => sn::inet_address::init;
+    "java/net/Inet6Address": static fn init() -> void => sn::inet_address::init;
+
+    "java/net/NetworkInterface": static fn init() -> void => sn::network_interface::init;
+    "java/net/NetworkInterface": static fn getAll() -> network_interface_array => sn::network_interface::get_all;
+    "java/net/NetworkInterface": static fn getByName0(name: string) -> network_interface => sn::network_interface::get_by_name0;
+    "java/net/NetworkInterface": static fn getByIndex0(index: int) -> network_interface => sn::network_interface::get_by_index0;
+    "java/net/NetworkInterface": static fn getByInetAddress0(address: inet_address) -> network_interface => sn::network_interface::get_by_inet_address0;
+    "java/net/NetworkInterface": static fn boundInetAddress0(address: inet_address) -> boolean => sn::network_interface::bound_inet_address0;
+    "java/net/NetworkInterface": static fn isUp0(name: string, index: int) -> boolean => sn::network_interface::is_up0;
+    "java/net/NetworkInterface": static fn isLoopback0(name: string, index: int) -> boolean => sn::network_interface::is_loopback0;
+    "java/net/NetworkInterface": static fn isP2P0(name: string, index: int) -> boolean => sn::network_interface::is_p2p0;
+    "java/net/NetworkInterface": static fn supportsMulticast0(name: string, index: int) -> boolean => sn::network_interface::supports_multicast0;
+    "java/net/NetworkInterface": static fn getMacAddr0(address: byte_array, name: string, index: int) -> byte_array => sn::network_interface::get_mac_addr0;
+    "java/net/NetworkInterface": static fn getMTU0(name: string, index: int) -> int => sn::network_interface::get_mtu0;
 
     "java/nio/MappedMemoryUtils": static fn registerNatives() -> void => sn::mapped_memory_utils::register_natives; // todo: implement me
     "java/nio/MappedMemoryUtils": static fn force0(fd: file_descriptor, addr: long, len: long) -> void => sn::mapped_memory_utils::force0;
