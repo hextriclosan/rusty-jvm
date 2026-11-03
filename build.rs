@@ -94,6 +94,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UserPerfCounterExample.java",
         "ClasspathDemo.java",
         "HelpfulNpeDebugInfo.java",
+        "GcReferencesDemo.java",
     ];
 
     let mut normal_files = Vec::new();
@@ -241,6 +242,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
             "UserPerfCounterExample.java",
         ),
         (&["-cp", jar_path.as_str(), "-d"], "ClasspathDemo.java"),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.ref=ALL-UNNAMED",
+                "-d",
+            ],
+            "GcReferencesDemo.java",
+        ),
     ];
 
     for (args_prefix, file) in special_cmds {
