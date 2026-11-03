@@ -5,6 +5,8 @@ use std::thread::ThreadId;
 
 /// Serializes publication per class name, not execution under a Rust lock. This
 /// keeps concurrent loaders from returning different initialization state holders.
+/// Claims may cover cache inspection and mirror publication only: class loading,
+/// array component loading and lazy layout resolution must happen outside them.
 #[derive(Debug, Default)]
 pub(super) struct Loading {
     owners: Mutex<HashMap<String, ThreadId>>,

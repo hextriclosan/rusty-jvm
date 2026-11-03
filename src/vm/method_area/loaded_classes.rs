@@ -70,18 +70,33 @@ impl LoadedClasses {
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);
 
-        let _claim = self.loading.claim(fully_qualified_class_name);
-        if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
-            return Ok((id, key, klass));
+        self.get_or_load(fully_qualified_class_name, || {
+            if fully_qualified_class_name.starts_with('[') {
+                Ok(Self::generate_synthetic_array_class(
+                    fully_qualified_class_name,
+                ))
+            } else {
+                with_method_area(|a| a.load_class_file(fully_qualified_class_name))
+            }
+        })
+    }
+
+    /// The loader may execute Java and publish this name itself.
+    fn get_or_load(
+        &self,
+        fully_qualified_class_name: &str,
+        load: impl FnOnce() -> Result<Arc<JavaClass>>,
+    ) -> Result<(usize, String, Arc<JavaClass>)> {
+        {
+            // Wait for an in-flight publication, but never own the name while loading:
+            // load_class_file can enter Java's per-name class-loading monitor.
+            let _claim = self.loading.claim(fully_qualified_class_name);
+            if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
+                return Ok((id, key, klass));
+            }
         }
 
-        let klass = if fully_qualified_class_name.starts_with('[') {
-            Self::generate_synthetic_array_class(fully_qualified_class_name)
-        } else {
-            with_method_area(|a| a.load_class_file(fully_qualified_class_name))?
-        };
-
-        self.insert_klass(klass, None)
+        self.insert_klass(load()?, None)
     }
 
     fn get_full_impl(
@@ -107,11 +122,15 @@ impl LoadedClasses {
         class_loader_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
-        let _claim = self.loading.claim(fully_qualified_class_name);
-        if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
-            return Ok((id, key.to_string(), Arc::clone(&klass)));
+        {
+            let _claim = self.loading.claim(fully_qualified_class_name);
+            if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
+                return Ok((id, key, klass));
+            }
         }
 
+        // Array component loading may re-enter Java too. Only perform_insertion
+        // claims a name, after preparing everything that can load another class.
         if !fully_qualified_class_name.starts_with('[') {
             // this is not an array class - insert directly
             self.perform_insertion(&klass, None, class_loader_ref)
@@ -142,23 +161,29 @@ impl LoadedClasses {
         class_loader_ref: Option<i32>,
     ) -> Result<(usize, String, Arc<JavaClass>)> {
         let fully_qualified_class_name = klass.this_class_name();
+        let (class_klass_id, _name, class_klass) = self.get_full_impl(CLASS).ok_or_else(|| {
+            Error::new_execution(&format!("{CLASS} class not found in loaded classes"))
+        })?;
+        // Lazy field layout resolution can load classes; prepare it before claiming.
+        let class_instance = JavaInstanceBase::new(
+            class_klass_id,
+            class_klass.instance_fields_hierarchy()?.clone(),
+        );
+
         let _claim = self.loading.claim(fully_qualified_class_name);
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
-            return Ok((id, key.to_string(), Arc::clone(&klass)));
+            // A loader that won during preparation owns the one initialization state.
+            return Ok((id, key, klass));
         }
 
         let klass_id = self.insert_full_impl(fully_qualified_class_name, Arc::clone(klass));
         trace!("<CLASS LOADED> -> {}", fully_qualified_class_name);
 
-        let (class_klass_id, _name, class_klass) = self.get_full_impl(CLASS).ok_or_else(|| {
-            Error::new_execution(&format!("{CLASS} class not found in loaded classes"))
-        })?;
-
         Self::create_clazz_instance(
             klass,
             klass_id,
             &class_klass,
-            class_klass_id,
+            class_instance,
             component_type_ref,
             class_loader_ref,
         )?;
@@ -228,17 +253,12 @@ impl LoadedClasses {
         klass: &Arc<JavaClass>,
         klass_id: usize,
         class_klass: &Arc<JavaClass>,
-        class_klass_id: usize,
+        class_instance: JavaInstanceBase,
         component_type_ref: Option<i32>,
         class_loader_ref: Option<i32>,
     ) -> Result<()> {
-        let mut class_instance = JavaInstance::Class(JavaInstanceClass::new(
-            JavaInstanceBase::new(
-                class_klass_id,
-                class_klass.instance_fields_hierarchy()?.clone(),
-            ),
-            klass_id,
-        ));
+        let mut class_instance =
+            JavaInstance::Class(JavaInstanceClass::new(class_instance, klass_id));
         class_instance.set_field_value(
             CLASS,
             "componentType",
@@ -363,7 +383,10 @@ impl LoadedClasses {
                 &class_klass,
                 class_klass_id,
                 &class_klass,
-                class_klass_id,
+                JavaInstanceBase::new(
+                    class_klass_id,
+                    class_klass.instance_fields_hierarchy()?.clone(),
+                ),
                 None,
                 None,
             )?;
@@ -377,7 +400,10 @@ impl LoadedClasses {
                 &object_klass,
                 object_klass_id,
                 &class_klass,
-                class_klass_id,
+                JavaInstanceBase::new(
+                    class_klass_id,
+                    class_klass.instance_fields_hierarchy()?.clone(),
+                ),
                 None,
                 None,
             )?;
@@ -403,3 +429,7 @@ impl LoadedClasses {
         ))
     }
 }
+
+#[cfg(test)]
+#[path = "loaded_classes_tests.rs"]
+mod tests;
