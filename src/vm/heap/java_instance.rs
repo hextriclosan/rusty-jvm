@@ -1,5 +1,8 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::gc::budget::{copy_slice, copy_string, AllocError, AllocResult};
 use crate::vm::gc::layout::{InstanceFields, InstanceLayout, References};
+use crate::vm::heap::charge;
+use crate::vm::heap::construction::{copy_fields, ArrayLayout};
 use crate::vm::heap::java_instance::JavaInstance::{Base, Class};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
@@ -89,49 +92,59 @@ impl Array {
         })
     }
 
-    pub fn new(type_name: &str, len: i32) -> Self {
-        Self {
-            type_name: type_name.to_string(),
-            data: Self::allocate_data(type_name, len as usize),
-        }
+    pub fn new(type_name: &str, len: i32) -> AllocResult<Self> {
+        Self::from_layout(type_name, ArrayLayout::new(type_name, len)?)
     }
 
-    fn allocate_data(type_name: &str, len: usize) -> Vec<u8> {
-        vec![0; len * Self::bytes_size(type_name)]
+    pub(super) fn from_layout(type_name: &str, layout: ArrayLayout) -> AllocResult<Self> {
+        let mut data = Vec::new();
+        data.try_reserve_exact(layout.bytes)
+            .map_err(|_| AllocError::HostAllocation)?;
+        data.resize(layout.bytes, 0);
+        Ok(Self {
+            type_name: copy_string(type_name)?,
+            data,
+        })
+    }
+
+    pub(crate) fn try_clone(&self) -> AllocResult<Self> {
+        Ok(Self {
+            type_name: copy_string(&self.type_name)?,
+            data: copy_slice(&self.data)?,
+        })
     }
 
     fn bytes_size(type_name: &str) -> usize {
-        match type_name {
-            "[B" => 1,
-            "[C" => 2,
-            "[D" => 8,
-            "[F" => 4,
-            "[I" => 4,
-            "[J" => 8,
-            "[S" => 2,
-            "[Z" => 1,
-            _ => 4,
-        }
+        ArrayLayout::width(type_name)
     }
 
-    pub fn new_with_values(type_name: &str, array: &[i32]) -> Self {
+    /// Wide values are pairs of JVM slots, high word then low word, just like set_value.
+    pub fn new_with_values(type_name: &str, array: &[i32]) -> AllocResult<Self> {
         let size = Self::bytes_size(type_name);
-        let converted_arr: Vec<u8> = array
-            .iter()
-            .flat_map(|&value| {
-                let bytes = value.to_ne_bytes();
-                if cfg!(target_endian = "big") {
-                    bytes[4 - size..4].to_vec()
+        let mut result =
+            Self::from_layout(type_name, ArrayLayout::with_values(type_name, array.len())?)?;
+        if size == 8 {
+            for (dst, words) in result.data.chunks_exact_mut(8).zip(array.chunks_exact(2)) {
+                let (first, second) = if cfg!(target_endian = "big") {
+                    (words[0], words[1])
                 } else {
-                    bytes[0..size].to_vec()
-                }
-            })
-            .collect();
-
-        Self {
-            type_name: type_name.to_string(),
-            data: converted_arr,
+                    (words[1], words[0])
+                };
+                dst[..4].copy_from_slice(&first.to_ne_bytes());
+                dst[4..].copy_from_slice(&second.to_ne_bytes());
+            }
+        } else {
+            for (dst, value) in result.data.chunks_exact_mut(size).zip(array) {
+                let bytes = value.to_ne_bytes();
+                let src = if cfg!(target_endian = "big") {
+                    &bytes[4 - size..]
+                } else {
+                    &bytes[..size]
+                };
+                dst.copy_from_slice(src);
+            }
         }
+        Ok(result)
     }
 
     pub fn get_value(&self, index: i32) -> Result<Vec<i32>> {
@@ -231,7 +244,10 @@ impl Array {
     }
 
     pub fn set_entire_value(&mut self, value: Array) -> Result<()> {
-        self.data = value.data;
+        if self.type_name != value.type_name || self.data.len() != value.data.len() {
+            return Err(AllocError::InvalidLayout.into());
+        }
+        self.data.copy_from_slice(&value.data);
         Ok(())
     }
 
@@ -270,7 +286,52 @@ pub(crate) enum HeapValue {
     Arr(Array),
 }
 
+impl HeapValue {
+    pub(super) fn planned_charge(&self) -> AllocResult<u64> {
+        match self {
+            Self::Object(instance) => charge::fields(&instance.get_instance().fields, true),
+            Self::Arr(array) => charge::array(array.type_name.len(), array.data.len()),
+        }
+    }
+
+    pub(super) fn charge(&self) -> AllocResult<u64> {
+        match self {
+            Self::Object(instance) => charge::fields(&instance.get_instance().fields, false),
+            Self::Arr(array) => charge::array(array.type_name.capacity(), array.data.capacity()),
+        }
+    }
+
+    pub(super) fn try_clone(&self) -> Result<Self> {
+        Ok(match self {
+            Self::Arr(array) => Self::Arr(array.try_clone()?),
+            Self::Object(instance) => {
+                let source = instance.get_instance();
+                let base = JavaInstanceBase::new(
+                    source.klass_id,
+                    copy_fields(&source.fields)?,
+                    Arc::clone(&source.layout),
+                )?;
+                Self::Object(match instance {
+                    Base(_) => Base(base),
+                    Class(mirror) => Class(JavaInstanceClass::new(base, mirror.mirror_klass_id)),
+                })
+            }
+        })
+    }
+}
+
 impl JavaInstance {
+    #[cfg(test)]
+    pub(crate) fn corrupt_field_width_for_test(
+        &mut self,
+        class: &str,
+        field: &str,
+        value: Vec<i32>,
+    ) {
+        self.lookup_for_field_mut(class, field)
+            .unwrap()
+            .corrupt_width_for_test(value);
+    }
     pub(crate) fn references(&self) -> Result<References> {
         let instance = self.get_instance();
         instance.layout.references(&instance.fields)

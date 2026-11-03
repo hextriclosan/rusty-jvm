@@ -5,6 +5,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::stack::stack_value::StackValueKind;
+use std::borrow::Cow;
 use tracing::trace;
 
 pub fn construct_exception_and_throw(
@@ -32,7 +33,7 @@ pub fn construct_exception_and_throw(
 pub fn throw_exception_with_ref(
     throwable: Slot,
     stack_frames: &mut StackFrames,
-) -> Result<(String, i16)> {
+) -> Result<(Cow<'static, str>, i16)> {
     if !throwable.is_ref() {
         return Err(Error::new_execution(
             "throwable must retain its producer reference tag",
@@ -41,11 +42,26 @@ pub fn throw_exception_with_ref(
     // This owner exists before handler lookup can re-enter Java or any frame is popped.
     let ownership = Error::uncaught_exception(throwable);
     let throwable_ref = throwable.value();
+    if crate::vm::jni::handles::emergency_oom_ref() == Some(throwable_ref) {
+        // Neither class-name lookup nor the ordinary assignability walker is
+        // allocation-free. Bootstrap cached the actual OOM class ancestry.
+        while let Some(frame) = stack_frames.last_mut() {
+            if let Some(handler) = frame
+                .exception_table()
+                .find_emergency_oom_handler(frame.ex_pc() as u16)
+            {
+                enter_handler(frame, handler as i16, throwable_ref)?;
+                return Ok((Cow::Borrowed("java/lang/OutOfMemoryError"), handler as i16));
+            }
+            stack_frames.propagate_exception();
+        }
+        return Err(ownership);
+    }
     let exception_name = HEAP.get_instance_name(throwable_ref)?;
     trace!("<THROWING> -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
     let found_exception_handler = unwind_stack(throwable_ref, stack_frames, ownership)?;
 
-    Ok((exception_name, found_exception_handler))
+    Ok((Cow::Owned(exception_name), found_exception_handler))
 }
 
 /// Positions a frame at its exception handler: pc at the handler, operand stack discarded and
@@ -89,6 +105,10 @@ fn unwind_stack(
 
     Err(ownership)
 }
+
+#[cfg(test)]
+#[path = "budget_tests.rs"]
+mod budget_tests;
 
 #[cfg(test)]
 mod tests {
@@ -135,7 +155,13 @@ mod tests {
 
         // Empty handler tables only need a heap identity; no class lookup or type matching.
         // The Java integration fixture covers real Throwable construction and handlers.
-        let throwable = HEAP.create_array("[Ljava/lang/Object;", 0);
+        let throwable = HEAP
+            .create_array(
+                "[Ljava/lang/Object;",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let mut source = StackFrame::for_test(0, 1);
         source.push(Slot::Ref(throwable)).unwrap();
         let mut frames = StackFrames::new(vec![source]);

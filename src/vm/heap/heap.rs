@@ -4,27 +4,52 @@ use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_null_pointer_exception;
 use crate::vm::exception::pending::Throws;
+use crate::vm::gc::budget::copy_string;
 use crate::vm::gc::layout::References;
+use crate::vm::heap::allocation::Admission;
+use crate::vm::heap::charge;
+use crate::vm::heap::construction::{ArrayLayout, InstancePlan};
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::JavaInstance::Class;
-use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
+use crate::vm::heap::java_instance::{Array, HeapValue};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrames;
 use dashmap::mapref::one::{MappedRef, MappedRefMut, Ref, RefMut};
 use dashmap::DashMap;
+use parking_lot::Mutex;
 use serde::Serialize;
 use std::fs::File;
+use std::ops::{Deref, DerefMut};
 use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) static HEAP: LazyLock<Heap> = LazyLock::new(Heap::default);
 
+/// DashMap's mapped target must be Sized. Keep the Vec guard private and expose
+/// only a slice, so a caller cannot resize charged storage.
+pub(crate) struct ArrayDataMut<'a>(MappedRefMut<'a, i32, HeapValue, Vec<u8>>);
+
+impl Deref for ArrayDataMut<'_> {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
+        self.0.as_slice()
+    }
+}
+
+impl DerefMut for ArrayDataMut<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.as_mut_slice()
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct Heap {
-    data: AutoDashMapI32<HeapValue>,
-    ref_by_stringvalue: DashMap<String, i32>,
+    pub(super) data: AutoDashMapI32<HeapValue>,
+    pub(super) ref_by_stringvalue: DashMap<String, i32>,
+    #[serde(skip)]
+    pub(super) admission: Mutex<Admission>,
 }
 
 impl Default for Heap {
@@ -32,6 +57,13 @@ impl Default for Heap {
         Self {
             data: AutoDashMapI32::new(1), // start from 1 to avoid 0 as a valid reference
             ref_by_stringvalue: DashMap::new(),
+            // Emergency bootstrap is bounded through this same admission path.
+            // Its completion switches all runtime paths to accounting-only until
+            // task 7 enables pressure collection and enforcement together.
+            admission: Mutex::new(Admission::new(
+                crate::vm::gc::get().map_or(u64::MAX, |config| config.max_heap_bytes),
+                true,
+            )),
         }
     }
 }
@@ -57,8 +89,15 @@ impl Heap {
             .collect()
     }
 
-    pub fn create_instance(&self, java_instance: JavaInstance) -> i32 {
-        self.data.insert_auto(Object(java_instance))
+    pub fn create_instance(
+        &self,
+        plan: InstancePlan,
+        destination: &mut RootedSlots,
+    ) -> Result<i32> {
+        destination.prepare_single_ref()?;
+        let reservation = self.reserve(plan.charge()?)?;
+        let instance = plan.build()?;
+        Ok(reservation.commit(Object(instance), destination)?)
     }
 
     pub fn set_object_field_value(
@@ -74,17 +113,16 @@ impl Heap {
             ))); // throw an appropriate exception here
         }
 
-        self.data.get_mut(objectref)
-            .and_then(|mut entry| {
-                match entry.value_mut() {
-                    Object(instance) => {
-                        instance.set_field_value(class_name, field_name_type, value.clone()).ok()?;
-                        Some(())
-                    },
-                    _ => None,
-                }
-            })
-            .ok_or_else(|| Error::new_execution(&format!("error setting field value: objectref={objectref} class_name={class_name}, field_name_type={field_name_type}, value={value:?}")))
+        let mut entry = self
+            .data
+            .get_mut(objectref)
+            .ok_or_else(|| Error::new_execution("Missing object for field write"))?;
+        match entry.value_mut() {
+            Object(instance) => instance.set_field_value(class_name, field_name_type, value),
+            Arr(_) => Err(Error::new_execution(
+                "Cannot write an instance field on an array",
+            )),
+        }
     }
 
     /// Atomically compares an object field's raw value against `expected` and, if they match, stores
@@ -225,20 +263,46 @@ impl Heap {
             })
     }
 
-    pub(crate) fn create_array(&self, type_name: &str, len: i32) -> i32 {
-        let reference = self.data.insert_auto(Arr(Array::new(type_name, len)));
-        #[cfg(test)]
-        ARRAY_ALLOCATION_OBSERVER.with(|observer| {
-            if let Some(observer) = observer.borrow().as_ref() {
-                observer(reference);
+    pub(crate) fn create_array(
+        &self,
+        type_name: &str,
+        len: i32,
+        destination: &mut RootedSlots,
+    ) -> Result<i32> {
+        let layout = ArrayLayout::new(type_name, len)?;
+        destination.prepare_single_ref()?;
+        let reservation = self.reserve(layout.charge(type_name)?)?;
+        let array = match Array::from_layout(type_name, layout) {
+            Ok(array) => array,
+            Err(error) => {
+                reservation.cancel()?;
+                return Err(error.into());
             }
-        });
-        reference
+        };
+        let reference = reservation.commit(Arr(array), destination)?;
+        #[cfg(test)]
+        observe_array_commit(reference);
+        Ok(reference)
     }
 
-    pub(crate) fn create_array_with_values(&self, type_name: &str, array: &[i32]) -> i32 {
-        self.data
-            .insert_auto(Arr(Array::new_with_values(type_name, array)))
+    pub(crate) fn create_array_with_values(
+        &self,
+        type_name: &str,
+        array: &[i32],
+        destination: &mut RootedSlots,
+    ) -> Result<i32> {
+        let layout = ArrayLayout::with_values(type_name, array.len())?;
+        // The descriptor, not numeric membership in HEAP, identifies input roots.
+        let _inputs = if type_name.starts_with("[L") || type_name.starts_with("[[") {
+            Some(RootedSlots::from_slots(
+                array.iter().copied().map(Slot::Ref).collect(),
+            ))
+        } else {
+            None
+        };
+        destination.prepare_single_ref()?;
+        let reservation = self.reserve(layout.charge(type_name)?)?;
+        Ok(reservation.commit(Arr(Array::new_with_values(type_name, array)?), destination)?)
     }
 
     pub(crate) fn get_entire_array(&self, array_ref: i32) -> Result<Array> {
@@ -247,16 +311,14 @@ impl Heap {
                 "NullPointerException: null array reference",
             )); //todo: throw an appropriate exception here
         }
-        self.data
+        let entry = self
+            .data
             .get(array_ref)
-            .and_then(|entry| match entry.value() {
-                Arr(array) => {
-                    let cloned = array.clone();
-                    Some(cloned)
-                }
-                _ => None,
-            })
-            .ok_or_else(|| Error::new_execution("error getting array"))
+            .ok_or_else(|| Error::new_execution("Missing array"))?;
+        match entry.value() {
+            Arr(array) => Ok(array.try_clone()?),
+            Object(_) => Err(Error::new_execution("error getting array")),
+        }
     }
 
     pub(crate) fn get_entire_raw_data(
@@ -281,10 +343,7 @@ impl Heap {
             .ok_or_else(|| Error::new_execution(&format!("instance is not an array: {array_ref}")))
     }
 
-    pub(crate) fn get_entire_raw_data_mut(
-        &self,
-        array_ref: i32,
-    ) -> Result<MappedRefMut<'_, i32, HeapValue, Vec<u8>>> {
+    pub(crate) fn get_entire_raw_data_mut(&self, array_ref: i32) -> Result<ArrayDataMut<'_>> {
         if array_ref == 0 {
             return Err(Error::new_execution(
                 "NullPointerException: null array reference",
@@ -294,26 +353,24 @@ impl Heap {
         self.data
             .get_mut(array_ref)
             .and_then(|entry| match entry.value() {
-                Arr(_) => Some(RefMut::map(entry, |value| match value {
+                Arr(_) => Some(ArrayDataMut(RefMut::map(entry, |value| match value {
                     Arr(arr) => arr.raw_data_mut(),
                     _ => unreachable!("already checked that this is an array"),
-                })),
+                }))),
                 Object(_) => None,
             })
             .ok_or_else(|| Error::new_execution(&format!("instance is not an array: {array_ref}")))
     }
 
     pub(crate) fn set_entire_array(&self, array_ref: i32, array_val: Array) -> Result<()> {
-        self.data
+        let mut entry = self
+            .data
             .get_mut(array_ref)
-            .and_then(|mut entry| match entry.value_mut() {
-                Arr(array) => {
-                    array.set_entire_value(array_val).ok()?;
-                    Some(())
-                }
-                _ => None,
-            })
-            .ok_or_else(|| Error::new_execution("error getting array"))
+            .ok_or_else(|| Error::new_execution("Missing array"))?;
+        match entry.value_mut() {
+            Arr(array) => array.set_entire_value(array_val),
+            Object(_) => Err(Error::new_execution("error getting array")),
+        }
     }
 
     pub(crate) fn get_array_value(&self, arrayref: i32, index: i32) -> Result<Vec<i32>> {
@@ -419,9 +476,17 @@ impl Heap {
         self.ref_by_stringvalue.get(string).map(|v| *v)
     }
 
-    pub(crate) fn put_const_string_ref(&self, string: &str, reference: i32) -> Option<i32> {
-        self.ref_by_stringvalue
-            .insert(string.to_string(), reference)
+    pub(crate) fn put_const_string_ref(
+        &self,
+        string: &str,
+        reference: i32,
+    ) -> Result<Option<i32>> {
+        if let Some(mut entry) = self.ref_by_stringvalue.get_mut(string) {
+            return Ok(Some(std::mem::replace(entry.value_mut(), reference)));
+        }
+        let _input = RootedSlots::from_slots(vec![Slot::Ref(reference)]);
+        let reservation = self.reserve(charge::intern(string.len())?)?;
+        Ok(reservation.commit_intern(copy_string(string)?, reference)?)
     }
 
     #[allow(dead_code)]
@@ -442,37 +507,50 @@ impl Heap {
         destination: &mut RootedSlots,
     ) -> Result<()> {
         let _input = JavaThread::hold_temp_roots(vec![Slot::Ref(objectref)]);
-        let cloned_heap_value = {
-            self.data
-                .get(objectref)
-                .map(|entry| entry.value().clone())
-                .ok_or_else(|| {
-                    Error::new_execution(&format!(
-                        "error getting object by ref {objectref} for cloning"
-                    ))
-                })
-        }?;
-
-        match cloned_heap_value {
-            Object(new_instance) => {
-                destination.replace(vec![Slot::Ref(self.create_instance(new_instance))]);
-            }
-            Arr(new_array) => {
-                let new_array_ref =
-                    self.create_array(new_array.type_name(), new_array.get_length());
-                destination.replace(vec![Slot::Ref(new_array_ref)]);
-                self.set_entire_array(new_array_ref, new_array)?;
-            }
-        };
+        destination.prepare_single_ref()?;
+        let charge = self
+            .data
+            .get(objectref)
+            .ok_or_else(|| Error::new_execution("Missing clone source"))?
+            .planned_charge()?;
+        // Release the source shard before admission (task 7 may collect on failure).
+        let reservation = self.reserve(charge)?;
+        let cloned = self
+            .data
+            .get(objectref)
+            .ok_or_else(|| Error::new_execution("Missing rooted clone source"))?
+            .try_clone()?;
+        let reference = reservation.commit(cloned, destination)?;
+        #[cfg(test)]
+        observe_array_commit(reference);
+        #[cfg(not(test))]
+        let _ = reference;
 
         Ok(())
     }
 }
 
 #[cfg(test)]
+#[path = "budget_tests.rs"]
+mod budget_tests;
+
+#[cfg(test)]
+#[path = "construction_tests.rs"]
+mod construction_tests;
+
+#[cfg(test)]
 thread_local! {
     static ARRAY_ALLOCATION_OBSERVER: std::cell::RefCell<Option<Box<dyn Fn(i32)>>> =
         const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn observe_array_commit(reference: i32) {
+    ARRAY_ALLOCATION_OBSERVER.with(|observer| {
+        if let Some(observer) = observer.borrow().as_ref() {
+            observer(reference);
+        }
+    });
 }
 
 #[cfg(test)]
@@ -497,18 +575,35 @@ pub(crate) fn observe_array_allocations<R>(
 #[cfg(test)]
 mod ref_transfer_tests {
     use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
 
     #[test]
     fn ref_transfer_clone_roots_input_during_allocation_and_publishes_output() {
-        let source = HEAP.create_array_with_values("[I", &[17, 23]);
+        let source = HEAP
+            .create_array_with_values(
+                "[I",
+                &[17, 23],
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let mut destination = RootedSlots::new();
+        let observed = Rc::new(Cell::new(false));
+        let seen = Rc::clone(&observed);
 
         observe_array_allocations(
-            move |_| assert!(JavaThread::temp_root_refs().contains(&source)),
+            move |_| {
+                assert!(JavaThread::temp_root_refs().contains(&source));
+                seen.set(true);
+            },
             || HEAP.clone_instance(source, &mut destination).unwrap(),
         );
 
         let clone = destination[0].value();
+        assert!(
+            observed.get(),
+            "clone must cross the observed allocation boundary"
+        );
         assert_ne!(clone, source);
         assert_eq!(HEAP.get_array_value(clone, 1).unwrap(), vec![23]);
         assert_eq!(JavaThread::temp_root_refs(), vec![clone]);

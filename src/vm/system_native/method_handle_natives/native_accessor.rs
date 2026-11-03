@@ -109,7 +109,7 @@ fn resolve_method_and_args(
     let entire_array_args = if args_ref != 0 {
         HEAP.get_entire_array(args_ref)?
     } else {
-        Array::new("[Ljava/lang/Object;", 0)
+        Array::new("[Ljava/lang/Object;", 0)?
     };
     let parameter_types = HEAP.get_entire_array(parameter_types_ref)?;
 

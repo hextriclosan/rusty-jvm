@@ -302,7 +302,8 @@ fn mimic_new(class_name: &str, method_args: &[Slot]) -> Result<Vec<Slot>> {
         method_area.create_instance_with_default_fields(class_name)
     })?;
 
-    let instanceref = HEAP.create_instance(instance_with_default_fields);
+    let mut destination = crate::vm::stack::rooted_slots::RootedSlots::new();
+    let instanceref = HEAP.create_instance(instance_with_default_fields, &mut destination)?;
 
     JavaThread::with_top_frames_mut(|stack_frames| {
         last_frame_mut(stack_frames)?.push(Slot::Ref(instanceref))

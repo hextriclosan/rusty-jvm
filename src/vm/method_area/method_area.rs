@@ -3,7 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcConstant;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::java_instance::JavaInstance;
+use crate::vm::heap::construction::InstancePlan;
 use crate::vm::helper::klass;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -185,9 +185,9 @@ impl MethodArea {
         Ok((name, Arc::new(JavaClass::from_model(model)?)))
     }
 
-    pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
+    pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<InstancePlan> {
         let (id, _key, klass) = CLASSES.get_full(class_name)?;
-        Ok(JavaInstance::Base(klass.new_instance(id)?))
+        klass.new_instance(id)
     }
 
     pub(crate) fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {

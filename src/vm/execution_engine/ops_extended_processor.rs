@@ -5,6 +5,7 @@ use crate::vm::execution_engine::ops_comparison_processor::branch1arg;
 use crate::vm::execution_engine::ops_load_processor::handle_load;
 use crate::vm::execution_engine::ops_math_processor::increment;
 use crate::vm::execution_engine::ops_store_processor::handle_store;
+use crate::vm::heap::construction::ArrayLayout;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::rooted_slots::RootedSlots;
@@ -116,11 +117,19 @@ fn create_n_array(
     signature: &str,
     current_level: usize,
 ) -> Result<RootedSlots> {
+    if current_level == 0 {
+        // Check every dimension even behind a zero outer dimension, before any parent exists.
+        if let Some(&negative) = dimensions.iter().find(|&&length| length < 0) {
+            return Err(crate::vm::gc::budget::AllocError::NegativeLength(negative).into());
+        }
+        for (level, &length) in dimensions.iter().enumerate() {
+            ArrayLayout::new(&signature[level..], length)?;
+        }
+    }
     let mut destination = RootedSlots::new();
     let current_length = dimensions[current_level];
     let current_signature = &signature[current_level..];
-    let arrayref = HEAP.create_array(current_signature, current_length);
-    destination.replace(vec![Slot::Ref(arrayref)]);
+    let arrayref = HEAP.create_array(current_signature, current_length, &mut destination)?;
 
     if current_level < dimensions.len() - 1 {
         for i in 0..current_length {
@@ -158,8 +167,10 @@ mod ref_transfer_tests {
         assert_eq!(observations.len(), 3);
         let parent = observations[0].0;
         let child = observations[1].0;
-        assert_eq!(observations[1].1, vec![parent]);
-        assert_eq!(observations[2].1, vec![parent, child]);
+        // Commit now publishes the newly allocated array too, before returning.
+        assert_eq!(observations[0].1, vec![parent]);
+        assert_eq!(observations[1].1, vec![parent, child]);
+        assert_eq!(observations[2].1, vec![parent, child, observations[2].0]);
         assert_eq!(result[0], Slot::Ref(parent));
         assert_eq!(JavaThread::temp_root_refs(), vec![parent]);
     }

@@ -10,6 +10,7 @@ use crate::vm::helper::clazz_ref;
 use crate::vm::jni::java_thread::{JavaThread, TempRootsGuard};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrames;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -215,7 +216,12 @@ impl InvokeDynamicRunner {
         roots: &mut TempRootsGuard,
     ) -> Result<[StackValueKind; 6]> {
         let bootstrap_args = bootstrap_info.bootstrap_args();
-        let arguments_ref = HEAP.create_array("[Ljava/lang/Object;", bootstrap_args.len() as i32);
+        let mut destination = RootedSlots::new();
+        let arguments_ref = HEAP.create_array(
+            "[Ljava/lang/Object;",
+            bootstrap_args.len() as i32,
+            &mut destination,
+        )?;
 
         // Each argument below lives only in a Rust local until the bootstrap call takes it, and
         // every step in between (boxing, handle resolution, interning, method type construction)

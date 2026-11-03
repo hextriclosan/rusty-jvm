@@ -1,4 +1,5 @@
 use super::*;
+use crate::vm::heap::construction::InstancePlan;
 use crate::vm::heap::heap::Heap;
 use crate::vm::heap::java_instance::{Array, JavaInstance, JavaInstanceBase};
 use crate::vm::stack::rooted_slots::RootedSlots;
@@ -50,24 +51,37 @@ fn gc_roots_injected_layout_distinguishes_inherited_bare_names_and_clone_edges()
     let fields = storage(&segments);
     let layout = Arc::new(InstanceLayout::new(segments).unwrap());
     let heap = Heap::default();
-    let parent_edge = heap.create_array("[I", 0);
-    let child_edge = heap.create_array("[I", 0);
-    let primitive_bits = heap.create_array("[I", 0);
-    let mut object =
-        JavaInstance::Base(JavaInstanceBase::new(usize::MAX, fields, layout).unwrap());
-    object
-        .set_field_value("Parent", "value", vec![parent_edge])
+    let parent_edge = heap
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
         .unwrap();
-    object
-        .set_field_value("Parent", "other", vec![primitive_bits])
+    let child_edge = heap
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
         .unwrap();
-    object
-        .set_field_value("Child", "value", vec![primitive_bits])
+    let primitive_bits = heap
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
         .unwrap();
-    object
-        .set_field_value("Child", "other", vec![child_edge])
+    let plan = InstancePlan::new(usize::MAX, Arc::new(fields), layout).unwrap();
+    let reference = heap.create_instance(plan, &mut RootedSlots::new()).unwrap();
+    heap.set_object_field_value(reference, "Parent", "value", vec![parent_edge])
         .unwrap();
-    let reference = heap.create_instance(object);
+    heap.set_object_field_value(reference, "Parent", "other", vec![primitive_bits])
+        .unwrap();
+    heap.set_object_field_value(reference, "Child", "value", vec![primitive_bits])
+        .unwrap();
+    heap.set_object_field_value(reference, "Child", "other", vec![child_edge])
+        .unwrap();
     // When scanning an object with no registered klass_id, no lazy class lookup is possible.
     let edges = heap.references(reference).unwrap();
     let mut cloned = RootedSlots::new();
@@ -136,9 +150,9 @@ fn gc_roots_malformed_reference_width_aborts_instead_of_tracing_a_prefix() {
     let fields = storage(&segments);
     let layout = Arc::new(InstanceLayout::new(segments).unwrap());
     let mut object = JavaInstance::Base(JavaInstanceBase::new(0, fields, layout).unwrap());
-    object
-        .set_field_value("Test", "reference", vec![11, 22])
-        .unwrap();
+    // Production writes now reject width changes. Inject corrupt storage directly
+    // so this still verifies the scanner's independent fail-closed check.
+    object.corrupt_field_width_for_test("Test", "reference", vec![11, 22]);
 
     assert!(object.references().is_err());
 }
@@ -148,15 +162,15 @@ fn gc_roots_array_descriptors_not_element_width_decide_edges() {
     // Equal four-byte payloads must be traced differently.
     let values = [0x0102_0304, 0, 73];
     for descriptor in ["[I", "[F"] {
-        let array = Array::new_with_values(descriptor, &values);
+        let array = Array::new_with_values(descriptor, &values).unwrap();
         assert!(array.references().unwrap().strong.is_empty());
     }
     for descriptor in ["[[I", "[[J", "[Ljava/lang/Object;", "[[Ljava/lang/String;"] {
-        let array = Array::new_with_values(descriptor, &values);
+        let array = Array::new_with_values(descriptor, &values).unwrap();
         assert_eq!(array.references().unwrap().strong, vec![0x0102_0304, 73]);
     }
     for descriptor in ["[B", "[C", "[S", "[Z", "[J", "[D"] {
-        let mut array = Array::new(descriptor, 1);
+        let mut array = Array::new(descriptor, 1).unwrap();
         let value = if matches!(descriptor, "[J" | "[D") {
             vec![11, 22]
         } else {
@@ -165,8 +179,8 @@ fn gc_roots_array_descriptors_not_element_width_decide_edges() {
         array.set_value(0, value).unwrap();
         assert!(array.references().unwrap().strong.is_empty());
     }
-    assert!(Array::new("not-an-array", 0).references().is_err());
-    let mut truncated = Array::new("[[I", 1);
+    assert!(Array::new("not-an-array", 0).unwrap().references().is_err());
+    let mut truncated = Array::new("[[I", 1).unwrap();
     truncated.raw_data_mut().pop();
     assert!(truncated.references().is_err());
 }

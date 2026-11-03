@@ -4,6 +4,7 @@ use crate::vm::exception::pending_helpers_unix::{
 };
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::i64_to_vec;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use nix::errno::Errno;
 use nix::fcntl::{open, OFlag};
 use nix::libc::{c_char, fstatat, mode_t, rmdir, strerror_r};
@@ -33,9 +34,7 @@ pub(crate) fn get_cwd() -> Result<i32> {
         .collect::<Vec<_>>();
 
     // Allocate the byte array in the heap and return its reference
-    let array_ref = HEAP.create_array_with_values("[B", &cwd);
-
-    Ok(array_ref)
+    HEAP.create_array_with_values("[B", &cwd, &mut RootedSlots::new())
 }
 
 /// `sun.nio.fs.UnixNativeDispatcher.init()I`
@@ -237,9 +236,7 @@ pub(crate) fn realpath0(path_ptr: i64) -> Result<i32> {
         .collect::<Vec<_>>();
 
     // Allocate the byte array in the heap and return its reference
-    let array_ref = HEAP.create_array_with_values("[B", &path_bytes);
-
-    Ok(array_ref)
+    HEAP.create_array_with_values("[B", &path_bytes, &mut RootedSlots::new())
 }
 
 /// `sun.nio.fs.UnixNativeDispatcher.strerror(I)[B`
@@ -261,5 +258,5 @@ pub(crate) fn strerror(errnum: i32) -> Result<i32> {
         .map(|&b| b as i8 as i32)
         .collect::<Vec<_>>();
 
-    Ok(HEAP.create_array_with_values("[B", &bytes))
+    HEAP.create_array_with_values("[B", &bytes, &mut RootedSlots::new())
 }

@@ -21,6 +21,12 @@ pub(super) fn jni_invoke_scalar<T: JNIValue>(result: Result<RootedSlots>, contex
 }
 
 fn handle_error<T: JNIValue>(e: Error, context: &str) -> T {
+    if e.throwable_ref().is_some()
+        && e.throwable_ref() == crate::vm::jni::handles::emergency_oom_ref()
+    {
+        crate::vm::jni::handles::install_emergency_oom();
+        return T::default();
+    }
     trace!("JNI call threw exception in {context} ({e})");
     match e.throwable_ref() {
         Some(throwable_ref) => {
@@ -38,5 +44,24 @@ fn handle_error<T: JNIValue>(e: Error, context: &str) -> T {
             crate::vm::jni::set_pending_internal_error(&format!("{context}: {e}"));
             T::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+    use crate::vm::gc::budget::AllocError;
+    use crate::vm::gc::test_allocations::{bootstrap_oom, measure};
+
+    #[test]
+    fn gc_budget_jni_result_translation_does_not_allocate_or_replace_oom() {
+        let emergency = bootstrap_oom();
+        assert_eq!(JavaThread::get_pending_exception(), None);
+        let (result, allocations) = measure(usize::MAX, || {
+            jni_invoke_scalar::<jni_sys::jobject>(Err(AllocError::Capacity.into()), "allocation")
+        });
+        assert!(result.is_null());
+        assert_eq!(allocations, 0);
+        assert_eq!(JavaThread::take_pending_exception(), Some(emergency));
     }
 }

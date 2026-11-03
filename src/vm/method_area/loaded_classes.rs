@@ -1,10 +1,11 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::heap::construction::InstancePlan;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::heap::java_instance::{JavaInstance, JavaInstanceBase, JavaInstanceClass};
 use crate::vm::helper::undecorate;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::UNNAMED_MODULE_REF;
 use dashmap::DashMap;
 use derive_new::new;
@@ -265,19 +266,22 @@ impl LoadedClasses {
         klass: &Arc<JavaClass>,
         klass_id: usize,
         class_klass: &Arc<JavaClass>,
-        class_instance: JavaInstanceBase,
+        class_instance: InstancePlan,
         component_type_ref: Option<i32>,
         class_loader_ref: Option<i32>,
     ) -> Result<()> {
-        let mut class_instance =
-            JavaInstance::Class(JavaInstanceClass::new(class_instance, klass_id));
-        class_instance.set_field_value(
+        let mut destination = RootedSlots::new();
+        let class_instance_id =
+            HEAP.create_instance(class_instance.mirror(klass_id), &mut destination)?;
+        HEAP.set_object_field_value(
+            class_instance_id,
             CLASS,
             "componentType",
             vec![component_type_ref.unwrap_or(0)],
         )?;
 
-        class_instance.set_field_value(
+        HEAP.set_object_field_value(
+            class_instance_id,
             CLASS,
             "primitive",
             vec![
@@ -289,21 +293,28 @@ impl LoadedClasses {
             ],
         )?;
         let class_modifiers = klass.reflection_modifiers();
-        class_instance.set_field_value(CLASS, "modifiers", vec![class_modifiers as i32])?;
+        HEAP.set_object_field_value(
+            class_instance_id,
+            CLASS,
+            "modifiers",
+            vec![class_modifiers as i32],
+        )?;
         // JDK 26+ keeps the raw class file access flags in the mirror instead of fetching them
         // through the `Reflection.getClassAccessFlags` native.
         if class_klass
             .instance_field_descriptor(CLASS_FILE_ACCESS_FLAGS)
             .is_some()
         {
-            class_instance.set_field_value(
+            HEAP.set_object_field_value(
+                class_instance_id,
                 CLASS,
                 CLASS_FILE_ACCESS_FLAGS,
                 vec![klass.class_modifiers().bits() as i32],
             )?;
         }
 
-        class_instance.set_field_value(
+        HEAP.set_object_field_value(
+            class_instance_id,
             CLASS,
             "classLoader",
             vec![class_loader_ref.unwrap_or(0)],
@@ -323,9 +334,7 @@ impl LoadedClasses {
                 Ok::<_, Error>((module_ref, false))
             }
         })?;
-        class_instance.set_field_value(CLASS, "module", vec![module_ref])?;
-
-        let class_instance_id = HEAP.create_instance(class_instance);
+        HEAP.set_object_field_value(class_instance_id, CLASS, "module", vec![module_ref])?;
 
         with_method_area(|method_area| {
             if patch {

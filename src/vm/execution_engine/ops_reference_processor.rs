@@ -319,7 +319,9 @@ pub(crate) fn process(
                 method_area.create_instance_with_default_fields(&class_to_invoke_new_for)
             })?;
 
-            let instanceref = HEAP.create_instance(instance_with_default_fields);
+            let mut destination = RootedSlots::new();
+            let instanceref =
+                HEAP.create_instance(instance_with_default_fields, &mut destination)?;
             stack_frame.push(Slot::Ref(instanceref))?;
 
             trace!("NEW -> class={class_to_invoke_new_for}, reference={instanceref}");
@@ -347,7 +349,8 @@ pub(crate) fn process(
 
             let length = stack_frame.pop();
 
-            let arrayref = HEAP.create_array(type_name, length);
+            let mut destination = RootedSlots::new();
+            let arrayref = HEAP.create_array(type_name, length, &mut destination)?;
             stack_frame.push(Slot::Ref(arrayref))?;
 
             stack_frame.incr_pc();
@@ -373,7 +376,8 @@ pub(crate) fn process(
             } else {
                 format!("[L{class_of_array};")
             };
-            let arrayref = HEAP.create_array(&class_of_array, length);
+            let mut destination = RootedSlots::new();
+            let arrayref = HEAP.create_array(&class_of_array, length, &mut destination)?;
             stack_frame.push(Slot::Ref(arrayref))?;
 
             stack_frame.incr_pc();
@@ -598,7 +602,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_mixed_arguments_keep_published_tags() {
-        let object = HEAP.create_array("[I", 1);
+        let object = HEAP
+            .create_array(
+                "[I",
+                1,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let expected = [
             Slot::Ref(object),
             Slot::Value(17),
@@ -627,7 +637,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_live_heap_key_remains_a_primitive_nonroot() {
-        let live_key = HEAP.create_array("[I", 1);
+        let live_key = HEAP
+            .create_array(
+                "[I",
+                1,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         assert_eq!(HEAP.get_array_len(live_key).unwrap(), 1);
         let mut caller = StackFrame::for_test(0, 1);
         caller.push(live_key).unwrap();
@@ -641,7 +657,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_athrow_keeps_the_original_throwable_tag() {
-        let throwable = HEAP.create_array("[Ljava/lang/Object;", 0);
+        let throwable = HEAP
+            .create_array(
+                "[Ljava/lang/Object;",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let mut source = StackFrame::for_test(0, 1);
         source.push(Slot::Ref(throwable)).unwrap();
         let mut frames = StackFrames::new(vec![source]);

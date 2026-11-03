@@ -42,6 +42,19 @@ pub struct ExceptionTable {
 }
 
 impl ExceptionTable {
+    pub(crate) fn find_emergency_oom_handler(&self, pc: u16) -> Option<u16> {
+        self.table.iter().find_map(|record| {
+            if pc < record.start_pc() || pc >= record.end_pc() {
+                return None;
+            }
+            let eligible = match record.catch_type() {
+                CatchType::Any => true,
+                CatchType::Class(name) => crate::vm::jni::handles::emergency_oom_is_instance(name),
+            };
+            eligible.then(|| record.handler_pc())
+        })
+    }
+
     pub fn find_exception_handler(
         &self,
         exception_name: &str,

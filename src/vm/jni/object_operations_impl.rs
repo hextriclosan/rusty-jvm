@@ -7,7 +7,8 @@ use crate::vm::jni::handles;
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::jni::utils::{
     decode_method_id, set_pending_illegal_access_exception, set_pending_instantiation_exception,
-    set_pending_internal_error, set_pending_null_pointer_exception, transform_args_to_vec,
+    set_pending_internal_error, set_pending_null_pointer_exception, set_pending_vm_error,
+    transform_args_to_vec,
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::method_area::with_method_area;
@@ -23,9 +24,13 @@ pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) 
     let instance_name = HEAP
         .get_instance_name(handles::resolve_or_return!(obj))
         .expect("Failed to get instance name from reference");
-    handles::new_local(
-        clazz_ref(&instance_name).expect("Failed to get class reference from instance name"),
-    )
+    match clazz_ref(&instance_name) {
+        Ok(reference) => handles::new_local(reference),
+        Err(error) => {
+            set_pending_vm_error(&error);
+            null_mut()
+        }
+    }
 }
 
 pub(super) extern "system" fn is_same_object(
@@ -63,6 +68,10 @@ pub(super) extern "system" fn is_instance_of(
     ) {
         Ok(matches) => matches as jboolean,
         Err(error) => {
+            if error.throwable_ref().is_some() {
+                set_pending_vm_error(&error);
+                return false as jboolean;
+            }
             set_pending_internal_error(&format!("Failed to check object instance: {error}"));
             false as jboolean
         }
@@ -82,6 +91,10 @@ pub(super) extern "system" fn is_virtual_thread(_env: *mut JNIEnv, thread: jobje
         }) {
         Ok(is_virtual) => is_virtual as jboolean,
         Err(error) => {
+            if error.throwable_ref().is_some() {
+                set_pending_vm_error(&error);
+                return false as jboolean;
+            }
             set_pending_internal_error(&format!("Failed to inspect thread type: {error}"));
             false as jboolean
         }
@@ -95,10 +108,15 @@ pub(super) extern "system" fn alloc_object(_env: *mut JNIEnv, clazz: jclass) -> 
         return null_mut();
     }
 
-    match alloc_object_impl(handles::resolve_or_return!(clazz)) {
+    let mut destination = RootedSlots::new();
+    match alloc_object_impl(handles::resolve_or_return!(clazz), &mut destination) {
         Ok(obj_ref) => handles::new_local(obj_ref),
         Err(error) => {
-            set_pending_internal_error(&format!("Failed to allocate object: {error}"));
+            if let Some(throwable) = error.throwable_ref() {
+                crate::vm::jni::java_thread::JavaThread::set_pending_if_empty(throwable);
+            } else {
+                set_pending_internal_error(&format!("Failed to allocate object: {error}"));
+            }
             null_mut()
         }
     }
@@ -106,7 +124,7 @@ pub(super) extern "system" fn alloc_object(_env: *mut JNIEnv, clazz: jclass) -> 
 
 /// Returns `0` with an exception pending when the class cannot be instantiated, like HotSpot's
 /// `check_valid_for_instantiation`.
-fn alloc_object_impl(clazz_ref: i32) -> Result<i32> {
+fn alloc_object_impl(clazz_ref: i32, destination: &mut RootedSlots) -> Result<i32> {
     let target = klass(clazz_ref)?;
     // Primitive and array classes are synthetic and carry the `Abstract` modifier too.
     if target
@@ -125,7 +143,7 @@ fn alloc_object_impl(clazz_ref: i32) -> Result<i32> {
     let instance = with_method_area(|method_area| {
         method_area.create_instance_with_default_fields(target.this_class_name())
     })?;
-    Ok(HEAP.create_instance(instance))
+    HEAP.create_instance(instance, destination)
 }
 
 /// Allocates like [`alloc_object`] and then runs the constructor `method_id` names on the new

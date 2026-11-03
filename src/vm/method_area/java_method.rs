@@ -172,6 +172,7 @@ impl JavaMethod {
     /// ```
     fn construct_method(&self) -> Result<i32> {
         let mut roots = JavaThread::hold_temp_roots(vec![]);
+        let mut destination = crate::vm::stack::rooted_slots::RootedSlots::new();
         let declaring_class_ref = clazz_ref(self.class_name())?;
         roots.add_root(Slot::Ref(declaring_class_ref));
 
@@ -191,8 +192,11 @@ impl JavaMethod {
                 Ok(reference)
             })
             .collect::<Result<Vec<_>>>()?;
-        let parameter_type_refs =
-            HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
+        let parameter_type_refs = HEAP.create_array_with_values(
+            "[Ljava/lang/Class;",
+            &parameter_type_clazz_refs,
+            &mut destination,
+        )?;
         roots.add_root(Slot::Ref(parameter_type_refs));
 
         let return_type = self.method_descriptor.return_type().to_string();
@@ -208,8 +212,11 @@ impl JavaMethod {
                 Ok(reference)
             })
             .collect::<Result<Vec<_>>>()?;
-        let exception_type_refs =
-            HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
+        let exception_type_refs = HEAP.create_array_with_values(
+            "[Ljava/lang/Class;",
+            &exception_type_clazz_refs,
+            &mut destination,
+        )?;
         roots.add_root(Slot::Ref(exception_type_refs));
 
         let modifiers = self.access_flags;
@@ -227,9 +234,9 @@ impl JavaMethod {
                     .iter()
                     .map(|x| *x as i32)
                     .collect::<Vec<_>>();
-                let annotations = HEAP.create_array_with_values("[B", &vec);
-                annotations
+                HEAP.create_array_with_values("[B", &vec, &mut destination)
             })
+            .transpose()?
             .unwrap_or(0);
         roots.add_root(Slot::Ref(annotations));
 
@@ -273,6 +280,7 @@ impl JavaMethod {
     /// ```
     fn construct_constructor(&self) -> Result<i32> {
         let mut roots = JavaThread::hold_temp_roots(vec![]);
+        let mut destination = crate::vm::stack::rooted_slots::RootedSlots::new();
         let declaring_class_ref = clazz_ref(self.class_name())?;
         roots.add_root(Slot::Ref(declaring_class_ref));
 
@@ -289,8 +297,11 @@ impl JavaMethod {
                 Ok(reference)
             })
             .collect::<Result<Vec<_>>>()?;
-        let parameter_type_refs =
-            HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
+        let parameter_type_refs = HEAP.create_array_with_values(
+            "[Ljava/lang/Class;",
+            &parameter_type_clazz_refs,
+            &mut destination,
+        )?;
         roots.add_root(Slot::Ref(parameter_type_refs));
 
         let exception_type_clazz_refs = self
@@ -302,8 +313,11 @@ impl JavaMethod {
                 Ok(reference)
             })
             .collect::<Result<Vec<_>>>()?;
-        let checked_exception_type_refs =
-            HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
+        let checked_exception_type_refs = HEAP.create_array_with_values(
+            "[Ljava/lang/Class;",
+            &exception_type_clazz_refs,
+            &mut destination,
+        )?;
         roots.add_root(Slot::Ref(checked_exception_type_refs));
 
         let modifiers = self.access_flags;
@@ -321,9 +335,9 @@ impl JavaMethod {
                     .iter()
                     .map(|x| *x as i32)
                     .collect::<Vec<_>>();
-                let annotations = HEAP.create_array_with_values("[B", &vec);
-                annotations
+                HEAP.create_array_with_values("[B", &vec, &mut destination)
             })
+            .transpose()?
             .unwrap_or(0);
         roots.add_root(Slot::Ref(annotations));
 

@@ -4,7 +4,7 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::handles;
 use crate::vm::jni::jni_value::JNIValue;
-use crate::vm::jni::utils::set_pending_no_such_field_error;
+use crate::vm::jni::utils::{set_pending_no_such_field_error, set_pending_vm_error};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
 use jdescriptor::TypeDescriptor;
@@ -28,8 +28,10 @@ pub(super) extern "system" fn get_field_id(
         from_mutf8_ptr!(sig_mutf8).expect("Failed to convert field signature from CESU-8");
     let klass =
         klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
-    StaticInit::initialize_java_class(&klass)
-        .expect("Failed to initialize class before getting field ID");
+    if let Err(error) = StaticInit::initialize_java_class(&klass) {
+        set_pending_vm_error(&error);
+        return null_mut();
+    }
 
     let descriptor = match field_signature.parse::<TypeDescriptor>() {
         Ok(descriptor) => descriptor,
@@ -42,8 +44,16 @@ pub(super) extern "system" fn get_field_id(
         match lookup::lookup_for_instance_field(klass.this_class_name(), &field_name, &descriptor)
         {
             Ok(Some(class_name)) => class_name,
-            Ok(None) | Err(_) => {
+            Ok(None) => {
                 set_pending_no_such_field_error(&field_name);
+                return null_mut();
+            }
+            Err(error) => {
+                if error.throwable_ref().is_some() {
+                    set_pending_vm_error(&error);
+                } else {
+                    set_pending_no_such_field_error(&field_name);
+                }
                 return null_mut();
             }
         };

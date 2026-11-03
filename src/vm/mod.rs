@@ -140,9 +140,23 @@ fn prelude() -> Result<()> {
     MethodArea::init()?;
 
     // preload essential classes including breaking circular dependencies
-    CLASSES.pre_construct()?;
-    CLASSES.post_construct()?;
-    jni::handles::initialize()?;
+    let emergency_bootstrap = (|| -> Result<()> {
+        CLASSES.pre_construct()?;
+        CLASSES.post_construct()?;
+        jni::handles::initialize()
+    })();
+    emergency_bootstrap.map_err(|error| {
+        if matches!(
+            error.kind(),
+            crate::vm::error::ErrorKind::Allocation(crate::vm::gc::budget::AllocError::Capacity)
+        ) {
+            Error::new_execution(
+                "Configured managed heap is too small for emergency OutOfMemoryError bootstrap",
+            )
+        } else {
+            error
+        }
+    })?;
 
     for java_class in MethodArea::generate_synthetic_classes() {
         CLASSES.insert_klass(Arc::clone(&java_class), None)?;

@@ -1,6 +1,8 @@
 use crate::vm::error::ErrorKind::{
-    ClassFile, ConstantPool, Execution, Io, JniExceptionAlreadyPending, Native, UncaughtException,
+    Allocation, ClassFile, ConstantPool, Execution, Io, JniExceptionAlreadyPending, Native,
+    UncaughtException,
 };
+use crate::vm::gc::budget::AllocError;
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use iana_time_zone::GetTimezoneError;
@@ -23,17 +25,45 @@ use std::{io, result};
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
-pub struct Error(Box<ErrorKind>);
+pub struct Error(ErrorKind);
 
 /// Owns the published root while an uncaught Java exception crosses Rust calls.
 #[derive(Debug)]
 pub struct RootedThrowable {
-    root: RootedSlots,
+    root: ThrowableRoot,
+}
+
+#[derive(Debug)]
+enum ThrowableRoot {
+    Owned(RootedSlots),
+    Permanent([Slot; 1]),
+}
+
+impl RootedThrowable {
+    pub(crate) fn new(throwable: Slot) -> Self {
+        let root = if crate::vm::jni::handles::emergency_oom_ref() == Some(throwable.value()) {
+            ThrowableRoot::Permanent([throwable])
+        } else {
+            ThrowableRoot::Owned(RootedSlots::from_slots(vec![throwable]))
+        };
+        Self { root }
+    }
+
+    fn reference(&self) -> i32 {
+        self.slot().value()
+    }
+
+    pub(crate) fn slot(&self) -> Slot {
+        match &self.root {
+            ThrowableRoot::Owned(root) => root[0],
+            ThrowableRoot::Permanent(slot) => slot[0],
+        }
+    }
 }
 
 impl Error {
     pub(crate) fn new(error_kind: ErrorKind) -> Self {
-        Self(Box::new(error_kind))
+        Self(error_kind)
     }
 
     pub(crate) fn new_constant_pool(descr: &str) -> Self {
@@ -49,9 +79,7 @@ impl Error {
     }
 
     pub(crate) fn uncaught_exception(throwable: Slot) -> Error {
-        Self::new(UncaughtException(RootedThrowable {
-            root: RootedSlots::from_slots(vec![throwable]),
-        }))
+        Self::new(UncaughtException(RootedThrowable::new(throwable)))
     }
 
     pub fn kind(&self) -> &ErrorKind {
@@ -59,18 +87,19 @@ impl Error {
     }
 
     pub fn into_kind(self) -> ErrorKind {
-        *self.0
+        self.0
     }
 
     /// Returns `true` if the error represents an unhandled Java exception.
     pub fn is_uncaught_exception(&self) -> bool {
-        matches!(*self.0, UncaughtException(_))
+        self.throwable_ref().is_some()
     }
 
     /// If this error represents an uncaught Java exception, return the throwable heap reference.
     pub fn throwable_ref(&self) -> Option<i32> {
-        match &*self.0 {
-            UncaughtException(throwable) => Some(throwable.root[0].value()),
+        match &self.0 {
+            UncaughtException(throwable) => Some(throwable.reference()),
+            Allocation(_) => crate::vm::jni::handles::emergency_oom_ref(),
             _ => None,
         }
     }
@@ -78,7 +107,8 @@ impl Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &*self.0 {
+        match &self.0 {
+            Allocation(error) => write!(f, "Allocation Error: {error}"),
             Io(err) => write!(f, "I/O Error: {err}"),
             ClassFile(err) => write!(f, "ClassFile Error: {err}"),
             ConstantPool(descr) => write!(f, "ConstantPool Error: {descr}"),
@@ -88,7 +118,7 @@ impl Display for Error {
                 write!(
                     f,
                     "Uncaught Exception (throwable_ref={})",
-                    throwable.root[0].value()
+                    throwable.reference()
                 )
             }
             JniExceptionAlreadyPending(throwable_ref) => write!(
@@ -228,8 +258,35 @@ impl From<VarError> for Error {
 
 impl StdError for Error {}
 
+impl From<AllocError> for Error {
+    fn from(error: AllocError) -> Self {
+        if let AllocError::NegativeLength(length) = error {
+            // Validation occurs before any array reservation or payload construction.
+            // Negatives keep the existing JNI decimal message convention.
+            use crate::vm::execution_engine::executor::Executor;
+            use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+            use crate::vm::stack::stack_value::StackValueKind;
+            let exception =
+                StringPoolHelper::get_string(&length.to_string()).and_then(|message| {
+                    Executor::invoke_args_constructor(
+                        "java/lang/NegativeArraySizeException",
+                        "<init>:(Ljava/lang/String;)V",
+                        &[StackValueKind::Ref(message)],
+                        None,
+                    )
+                });
+            return match exception {
+                Ok(throwable) => Self::uncaught_exception(throwable[0]),
+                Err(error) => error,
+            };
+        }
+        Self::new(Allocation(error))
+    }
+}
+
 #[derive(Debug)]
 pub enum ErrorKind {
+    Allocation(AllocError),
     Io(io::Error),
     ClassFile(String),
     ConstantPool(String),

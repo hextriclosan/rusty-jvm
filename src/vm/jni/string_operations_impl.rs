@@ -241,7 +241,10 @@ pub(super) extern "system" fn new_string_utf8(
     let utf8_charset_ref = {
         let class = match CLASSES.get("java/nio/charset/StandardCharsets") {
             Ok(c) => c,
-            Err(e) => panic!("Failed to get StandardCharsets class: {e}"),
+            Err(error) => {
+                crate::vm::jni::utils::set_pending_vm_error(&error);
+                return ptr::null_mut();
+            }
         };
         let field = match class.static_field("UTF_8") {
             Some(f) => f,

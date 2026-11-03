@@ -11,15 +11,63 @@ use std::time::Duration;
 fn gc_roots_blocked_frames_all_segments_and_startup_escrow_are_complete() {
     let _serial = safepoint::tests::SERIAL.lock().unwrap();
     safepoint::attach();
-    let startup_root = HEAP.create_array("[I", 0);
+    let startup_root = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     let startup = COORDINATOR.startup(startup_root);
-    let thread_root = HEAP.create_array("[I", 0);
-    let deep_local = HEAP.create_array("[I", 0);
-    let operand = HEAP.create_array("[I", 0);
-    let nested_local = HEAP.create_array("[I", 0);
-    let primitive_bits = HEAP.create_array("[I", 0);
-    let temporary = HEAP.create_array("[I", 0);
-    let transfer = HEAP.create_array("[I", 0);
+    let thread_root = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let deep_local = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let operand = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let nested_local = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let primitive_bits = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let temporary = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let transfer = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     let (published, publication) = channel();
     let (release, released) = channel();
     let worker = std::thread::spawn(move || {
@@ -83,11 +131,21 @@ fn gc_roots_blocked_frames_all_segments_and_startup_escrow_are_complete() {
 fn gc_roots_global_loaders_interns_parkers_and_registry_identities_are_included() {
     let _serial = safepoint::tests::SERIAL.lock().unwrap();
     safepoint::attach();
-    let references: Vec<_> = (0..6).map(|_| HEAP.create_array("[I", 0)).collect();
+    let references: Vec<_> = (0..6)
+        .map(|_| {
+            HEAP.create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap()
+        })
+        .collect();
     PLATFORM_CLASSLOADER_REF.set(references[0]).unwrap();
     SYSTEM_CLASSLOADER_REF.set(references[1]).unwrap();
     UNNAMED_MODULE_REF.set(references[2]).unwrap();
-    HEAP.put_const_string_ref("gc_roots_global", references[3]);
+    HEAP.put_const_string_ref("gc_roots_global", references[3])
+        .unwrap();
     threads::register_parker(references[4], std::thread::current());
     // Deliberately bind only the registry record, not the thread-local current Thread.
     COORDINATOR.bind(safepoint::current().unwrap(), references[5]);
@@ -106,8 +164,20 @@ fn gc_roots_global_loaders_interns_parkers_and_registry_identities_are_included(
 #[test]
 fn gc_roots_waited_monitor_survives_but_idle_monitor_is_not_a_root() {
     let _serial = safepoint::tests::SERIAL.lock().unwrap();
-    let target = HEAP.create_array("[I", 0);
-    let idle = HEAP.create_array("[I", 0);
+    let target = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
+    let idle = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     assert!(!crate::vm::monitor::holds_lock(idle));
     let (published, publication) = channel();
     let worker = std::thread::spawn(move || {

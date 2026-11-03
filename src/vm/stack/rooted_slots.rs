@@ -1,3 +1,4 @@
+use crate::vm::gc::budget::{AllocError, AllocResult};
 use crate::vm::stack::slot::Slot;
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -38,6 +39,31 @@ impl RootedSlots {
     pub(crate) fn replace(&mut self, slots: Vec<Slot>) {
         self.published.borrow_mut().clone_from(&slots);
         self.slots = slots;
+    }
+
+    /// Prepare before admission so commit only writes already-owned storage.
+    pub(crate) fn prepare_single_ref(&mut self) -> AllocResult<()> {
+        if self.slots.is_empty() {
+            self.slots
+                .try_reserve_exact(1)
+                .map_err(|_| AllocError::HostAllocation)?;
+        }
+        let mut published = self.published.borrow_mut();
+        if published.is_empty() {
+            published
+                .try_reserve_exact(1)
+                .map_err(|_| AllocError::HostAllocation)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn publish_single_ref(&mut self, reference: i32) {
+        let mut published = self.published.borrow_mut();
+        assert!(self.slots.capacity() >= 1 && published.capacity() >= 1);
+        self.slots.clear();
+        published.clear();
+        self.slots.push(Slot::Ref(reference));
+        published.push(Slot::Ref(reference));
     }
 
     /// Raw bits are only for a consumer that already knows the type (heap or JNI).

@@ -148,13 +148,15 @@ pub(crate) fn get_stack_trace0(this: i32) -> Result<i32> {
     let backtrace_ref = throwable::build_backtrace(&frames)?;
     let mut roots = JavaThread::hold_temp_roots(vec![Slot::Ref(backtrace_ref)]);
 
-    let elements_ref = HEAP.create_array("[Ljava/lang/StackTraceElement;", depth);
+    let mut destination = RootedSlots::new();
+    let elements_ref =
+        HEAP.create_array("[Ljava/lang/StackTraceElement;", depth, &mut destination)?;
     roots.add_root(Slot::Ref(elements_ref));
     for index in 0..depth {
         let element = with_method_area(|method_area| {
             method_area.create_instance_with_default_fields("java/lang/StackTraceElement")
         })?;
-        let element_ref = HEAP.create_instance(element);
+        let element_ref = HEAP.create_instance(element, &mut destination)?;
         HEAP.set_array_value(elements_ref, index, vec![element_ref])?;
     }
     stack_trace_element::init_stack_trace_elements(elements_ref, backtrace_ref, depth)?;

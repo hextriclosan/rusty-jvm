@@ -1,4 +1,6 @@
 use crate::vm::commons::auto_dash_map::auto_dash_map::AutoDashMap;
+use crate::vm::gc::budget::{AllocError, AllocResult};
+use dashmap::mapref::entry::Entry;
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use serde::ser::SerializeMap;
@@ -10,6 +12,26 @@ use std::sync::Arc;
 pub struct AutoDashMapI32<V> {
     map: DashMap<i32, V>,
     counter: Arc<AtomicI32>,
+}
+
+impl<V> AutoDashMapI32<V> {
+    pub(crate) fn contains_key(&self, key: i32) -> bool {
+        self.map.contains_key(&key)
+    }
+
+    /// Heap IDs are issued by its admission mutex, never by the generic counter.
+    pub(crate) fn insert_checked(&self, key: i32, value: V) -> AllocResult<()> {
+        if key <= 0 {
+            return Err(AllocError::IdentityExhausted);
+        }
+        match self.map.entry(key) {
+            Entry::Vacant(entry) => {
+                entry.insert(value);
+                Ok(())
+            }
+            Entry::Occupied(_) => Err(AllocError::IdentityExhausted),
+        }
+    }
 }
 
 impl<V> Default for AutoDashMapI32<V> {

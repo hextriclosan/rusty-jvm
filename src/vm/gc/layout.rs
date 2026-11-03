@@ -97,7 +97,7 @@ impl InstanceLayout {
                 ));
             }
             for (slot, (name, value)) in segment.fields.iter().zip(values) {
-                if slot.name != *name || value.raw_value()?.len() != slot.width {
+                if slot.name != *name || value.storage_capacity(true)? != slot.width {
                     return Err(Error::new_execution(
                         "Instance layout has a mismatched field slot",
                     ));

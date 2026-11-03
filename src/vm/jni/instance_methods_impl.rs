@@ -72,13 +72,16 @@ fn call_method_a<T: JNIValue>(
     let instance_name = HEAP
         .get_instance_name(this_ref)
         .expect("Failed to get instance name from reference");
-    let implementation = lookup::lookup_instance_method(&instance_name, &name_signature)
-        .unwrap_or_else(|e| {
-            panic!("Failed to find implementation of {name_signature} for {instance_name}: {e}")
-        })
-        .unwrap_or_else(|| {
-            panic!("Failed to find implementation of {name_signature} for {instance_name}")
-        });
+    let implementation = match lookup::lookup_instance_method(&instance_name, &name_signature) {
+        Ok(method) => method,
+        Err(error) => {
+            crate::vm::jni::utils::set_pending_vm_error(&error);
+            return T::default();
+        }
+    }
+    .unwrap_or_else(|| {
+        panic!("Failed to find implementation of {name_signature} for {instance_name}")
+    });
 
     let implementation_klass_name = implementation.class_name().to_owned();
 

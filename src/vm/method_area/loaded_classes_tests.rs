@@ -60,7 +60,13 @@ fn class_loading_releases_claim_before_java_and_adopts_publication_winner() {
     assert_eq!(winner.static_fields_init_state().begin(), Ok(true));
     winner.static_fields_init_state().finish(Some(73));
 
-    let java_monitor = HEAP.create_array("[I", 0);
+    let java_monitor = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     monitor::enter(java_monitor);
     let (blocked, loading) = channel();
     let contender_classes = Arc::clone(&classes);

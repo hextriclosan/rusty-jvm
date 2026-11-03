@@ -146,8 +146,11 @@ pub(crate) fn get_interfaces0(class_ref: i32) -> Result<i32> {
         .map(|interface| clazz_ref(interface))
         .collect::<Result<Vec<i32>>>()?;
 
-    let result_ref = HEAP.create_array_with_values("[Ljava/lang/Class;", &interface_refs);
-    Ok(result_ref)
+    HEAP.create_array_with_values(
+        "[Ljava/lang/Class;",
+        &interface_refs,
+        &mut RootedSlots::new(),
+    )
 }
 
 /// `java.lang.Class.getPermittedSubclasses0()[Ljava/lang/Class;`
@@ -169,7 +172,11 @@ pub(crate) fn get_permitted_subclasses0(class_ref: i32) -> Result<i32> {
         .filter_map(|subclass| clazz_ref(subclass).ok())
         .collect::<Vec<_>>();
 
-    Ok(HEAP.create_array_with_values("[Ljava/lang/Class;", &subclass_refs))
+    HEAP.create_array_with_values(
+        "[Ljava/lang/Class;",
+        &subclass_refs,
+        &mut RootedSlots::new(),
+    )
 }
 
 /// `java.lang.Class.getDeclaringClass0()Ljava/lang/Class;`
@@ -200,9 +207,11 @@ pub(crate) fn get_declared_fields0(class_ref: i32, public_only: bool) -> Result<
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let result_ref = HEAP.create_array_with_values("[Ljava/lang/reflect/Field;", &fields_info_ref);
-
-    Ok(result_ref)
+    HEAP.create_array_with_values(
+        "[Ljava/lang/reflect/Field;",
+        &fields_info_ref,
+        &mut RootedSlots::new(),
+    )
 }
 
 /// `java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;`
@@ -224,8 +233,11 @@ pub(crate) fn get_declared_methods0(class_ref: i32, public_only: bool) -> Result
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let result_ref = HEAP.create_array_with_values("[Ljava/lang/reflect/Method;", &method_refs);
-    Ok(result_ref)
+    HEAP.create_array_with_values(
+        "[Ljava/lang/reflect/Method;",
+        &method_refs,
+        &mut RootedSlots::new(),
+    )
 }
 
 /// `java.lang.Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;`
@@ -240,9 +252,11 @@ pub(crate) fn get_declared_constructors0(class_ref: i32, public_only: bool) -> R
         .map(|(_, java_method)| java_method.reflection_ref())
         .collect::<Result<Vec<_>>>()?;
 
-    let result_ref =
-        HEAP.create_array_with_values("[Ljava/lang/reflect/Constructor;", &method_refs);
-    Ok(result_ref)
+    HEAP.create_array_with_values(
+        "[Ljava/lang/reflect/Constructor;",
+        &method_refs,
+        &mut RootedSlots::new(),
+    )
 }
 
 /// `java.lang.Class.getEnclosingMethod0()[Ljava/lang/Object;`
@@ -269,7 +283,8 @@ pub(crate) fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     let array_ref = HEAP.create_array_with_values(
         "[Ljava/lang/reflect/Method;",
         &[class_name_ref, name_ref, descriptor_ref],
-    );
+        &mut RootedSlots::new(),
+    )?;
     Ok(array_ref) // new Object[] {class_name, name, descriptor}
 }
 
@@ -284,8 +299,9 @@ pub(crate) fn get_raw_annotations(class_ref: i32) -> Result<i32> {
                 .map(|x| *x as i32)
                 .collect::<Vec<_>>();
 
-            HEAP.create_array_with_values("[B", &vec)
+            HEAP.create_array_with_values("[B", &vec, &mut RootedSlots::new())
         })
+        .transpose()?
         .unwrap_or(0);
 
     Ok(annotations_ref)

@@ -1,4 +1,4 @@
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
@@ -63,26 +63,36 @@ fn get_method_id_impl(
     let sig_str = from_mutf8_ptr!(sig).expect("Failed to convert method signature from CESU-8");
     let declaring_klass =
         klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
-    StaticInit::initialize_java_class(&declaring_klass)
-        .expect("Failed to initialize class before getting method ID"); // todo: throw ExceptionInInitializerError here
+    if let Err(error) = StaticInit::initialize_java_class(&declaring_klass) {
+        set_pending_vm_error(&error);
+        return null_mut();
+    }
     let full_signature = format!("{}:{}", name_str, sig_str);
 
     // Look up the method implementation in the class/interface hierarchy.
     let klass_name = declaring_klass.this_class_name().clone();
-    let method_id = lookup_method(&klass_name, &full_signature)
-        .unwrap_or_else(|e| panic!("Failed to find implementation of {full_signature}: {e}"))
-        .and_then(|method| {
-            let found_class_name = method.class_name();
-            let found_clazz_ref = clazz_ref(found_class_name).ok()?;
-            let found_klass = klass(found_clazz_ref).ok()?;
-            let (idx, _) = found_klass.get_method_full(&full_signature)?;
-            Some(encode_method_id(found_clazz_ref, idx) as jmethodID)
-        });
+    let method_id = lookup_method(&klass_name, &full_signature).and_then(|method| {
+        method
+            .map(|method| -> Result<_> {
+                let found_class_name = method.class_name();
+                let found_clazz_ref = clazz_ref(found_class_name)?;
+                let found_klass = klass(found_clazz_ref)?;
+                Ok(found_klass
+                    .get_method_full(&full_signature)
+                    .map(|(idx, _)| encode_method_id(found_clazz_ref, idx) as jmethodID))
+            })
+            .transpose()
+            .map(Option::flatten)
+    });
 
     match method_id {
-        Some(id) => id,
-        None => {
+        Ok(Some(id)) => id,
+        Ok(None) => {
             set_pending_no_such_method_error(&full_signature);
+            null_mut()
+        }
+        Err(error) => {
+            set_pending_vm_error(&error);
             null_mut()
         }
     }
@@ -148,6 +158,16 @@ pub(super) fn set_pending_array_region_out_of_bounds_exception(
 
 pub(crate) fn set_pending_internal_error(message: &str) {
     set_pending_error("java/lang/InternalError", message);
+}
+
+/// Allocation errors already carry the permanent emergency throwable. Inspect it
+/// before formatting a diagnostic or trying to construct another Java exception.
+pub(super) fn set_pending_vm_error(error: &Error) {
+    if let Some(reference) = error.throwable_ref() {
+        JavaThread::set_pending_if_empty(reference);
+    } else if JavaThread::get_pending_exception().is_none() {
+        set_pending_internal_error(&error.to_string());
+    }
 }
 
 fn set_pending_error(exception_class: &str, message: &str) {

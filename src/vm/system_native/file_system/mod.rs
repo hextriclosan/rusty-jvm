@@ -174,7 +174,11 @@ pub(crate) fn list0(_this: i32, file_ref: i32) -> Result<i32> {
         names.push(StringPoolHelper::get_string(&file_name.to_string_lossy())?);
     }
 
-    Ok(HEAP.create_array_with_values("[Ljava/lang/String;", &names))
+    HEAP.create_array_with_values(
+        "[Ljava/lang/String;",
+        &names,
+        &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+    )
 }
 
 /// Get the length of the file in bytes.

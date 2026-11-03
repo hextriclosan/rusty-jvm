@@ -3,10 +3,13 @@ use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::utils::set_pending_internal_error;
+use crate::vm::method_area::java_class::JavaClass;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
+use crate::vm::stack::rooted_slots::RootedSlots;
 use jni_sys::{jobject, jobjectRefType};
 use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::thread::{self, ThreadId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,8 +65,10 @@ impl HandleTable {
     }
 
     pub(super) fn reserve(&mut self, count: usize) -> HandleResult<()> {
-        if count != 0 && self.next.map_or(true, |next| count - 1 > usize::MAX - next) {
-            return Err(HandleError::OutOfMemory);
+        if let Some(additional) = count.checked_sub(1) {
+            self.next
+                .and_then(|next| next.checked_add(additional))
+                .ok_or(HandleError::OutOfMemory)?;
         }
         self.records
             .try_reserve(count)
@@ -76,6 +81,9 @@ impl HandleTable {
         }
         self.reserve(1)?;
         let token = self.next.ok_or(HandleError::OutOfMemory)?;
+        if token == 0 || self.records.contains_key(&token) {
+            return Err(HandleError::OutOfMemory);
+        }
         self.next = token.checked_add(1);
         self.records.insert(token, record);
         Ok(token)
@@ -99,6 +107,26 @@ impl HandleTable {
 
 static TABLE: LazyLock<Mutex<HandleTable>> = LazyLock::new(|| Mutex::new(HandleTable::new()));
 static EMERGENCY_OOM: OnceLock<i32> = OnceLock::new();
+static EMERGENCY_OOM_CLASSES: OnceLock<Vec<Arc<JavaClass>>> = OnceLock::new();
+
+pub(crate) fn emergency_oom_ref() -> Option<i32> {
+    EMERGENCY_OOM.get().copied()
+}
+
+pub(crate) fn install_emergency_oom() {
+    if let Some(reference) = emergency_oom_ref() {
+        JavaThread::set_pending_if_empty(reference);
+    }
+}
+
+/// Prepared at bootstrap: catch matching must not load classes or allocate on OOM.
+pub(crate) fn emergency_oom_is_instance(class_name: &str) -> bool {
+    EMERGENCY_OOM_CLASSES.get().is_some_and(|classes| {
+        classes
+            .iter()
+            .any(|class| class.this_class_name() == class_name)
+    })
+}
 
 pub(super) fn table() -> MutexGuard<'static, HandleTable> {
     TABLE
@@ -108,10 +136,28 @@ pub(super) fn table() -> MutexGuard<'static, HandleTable> {
 
 /// Bootstrap without Java constructors, native calls, or token allocation.
 pub(crate) fn initialize() -> Result<()> {
+    let mut classes = Vec::new();
+    let mut class = CLASSES.get("java/lang/OutOfMemoryError")?;
+    loop {
+        classes.push(Arc::clone(&class));
+        match class.parent().as_deref() {
+            Some(parent) => class = CLASSES.get(parent)?,
+            None => break,
+        }
+    }
+    EMERGENCY_OOM_CLASSES
+        .set(classes)
+        .map_err(|_| Error::new_execution("Emergency OOM metadata already initialized"))?;
     let instance = with_method_area(|area| {
         area.create_instance_with_default_fields("java/lang/OutOfMemoryError")
     })?;
-    let target = HEAP.create_instance(instance);
+    let mut destination = RootedSlots::new();
+    let target = HEAP.create_instance(instance, &mut destination)?;
+    HEAP.finish_emergency_bootstrap().map_err(|_| {
+        Error::new_execution(
+            "Configured managed heap is too small for emergency OutOfMemoryError bootstrap",
+        )
+    })?;
     EMERGENCY_OOM.set(target).map_err(|_| {
         crate::vm::error::Error::new_execution("JNI emergency exception already initialized")
     })

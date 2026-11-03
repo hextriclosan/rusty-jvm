@@ -1,7 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::primitives_helper::PRIMITIVE_TYPE_BY_CODE;
@@ -226,8 +225,8 @@ pub fn create_array_of_strings(props: &[String]) -> Result<i32> {
     let class_of_array = "java/lang/String";
     let class_of_array = format!("[L{class_of_array};");
     let length = props.len() as i32;
-    let array_ref = HEAP.create_array(&class_of_array, length);
-    let _array = JavaThread::hold_temp_roots(vec![Slot::Ref(array_ref)]);
+    let mut destination = crate::vm::stack::rooted_slots::RootedSlots::new();
+    let array_ref = HEAP.create_array(&class_of_array, length, &mut destination)?;
 
     for (index, prop) in props.iter().enumerate() {
         let string_ref = StringPoolHelper::get_string(prop)?;

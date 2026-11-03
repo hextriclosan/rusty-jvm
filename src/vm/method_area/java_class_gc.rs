@@ -1,5 +1,5 @@
 use super::*;
-use crate::vm::heap::java_instance::JavaInstanceBase;
+use crate::vm::heap::construction::InstancePlan;
 use crate::vm::method_area::loaded_classes::CLASSES;
 
 impl JavaClass {
@@ -39,7 +39,7 @@ impl JavaClass {
 
     /// All fallible hierarchy/schema work precedes instance publication. Build outside
     /// the OnceCell initializer lock, since hierarchy resolution can execute Java.
-    pub(crate) fn new_instance(&self, klass_id: usize) -> Result<JavaInstanceBase> {
+    pub(crate) fn new_instance(&self, klass_id: usize) -> Result<InstancePlan> {
         let fields = self.instance_fields_hierarchy()?;
         if self.instance_layout.get().is_none() {
             let mut segments = Vec::new();
@@ -67,7 +67,7 @@ impl JavaClass {
             .instance_layout
             .get()
             .ok_or_else(|| Error::new_execution("Instance layout was not published"))?;
-        JavaInstanceBase::new(klass_id, fields.clone(), Arc::clone(layout))
+        InstancePlan::new(klass_id, Arc::clone(fields), Arc::clone(layout))
     }
 
     /// A published class may not have a mirror yet. Never claim publication, wait,

@@ -8,6 +8,7 @@ use crate::vm::method_area::java_method::JavaMethod;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::rooted_slots::RootedSlots;
+#[cfg(test)]
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrame;
 use crate::vm::stack::stack_value::StackValueKind;
@@ -72,8 +73,8 @@ impl Executor {
             method_area.create_instance_with_default_fields(class_name)
         })?;
 
-        let instance_ref = HEAP.create_instance(instance_with_default_fields);
-        let destination = RootedSlots::from_slots(vec![Slot::Ref(instance_ref)]);
+        let mut destination = RootedSlots::new();
+        let instance_ref = HEAP.create_instance(instance_with_default_fields, &mut destination)?;
         Self::exec(
             class_name,
             Self::INIT_METHOD,
@@ -89,8 +90,8 @@ impl Executor {
             method_area.create_instance_with_default_fields(java_class.this_class_name())
         })?;
 
-        let instance_ref = HEAP.create_instance(instance_with_default_fields);
-        let destination = RootedSlots::from_slots(vec![Slot::Ref(instance_ref)]);
+        let mut destination = RootedSlots::new();
+        let instance_ref = HEAP.create_instance(instance_with_default_fields, &mut destination)?;
         Self::exec_jc(
             java_class,
             Self::INIT_METHOD,
@@ -113,8 +114,8 @@ impl Executor {
             method_area.create_instance_with_default_fields(class_name)
         })?;
 
-        let instance_ref = HEAP.create_instance(instance_with_default_fields);
-        let destination = RootedSlots::from_slots(vec![Slot::Ref(instance_ref)]);
+        let mut destination = RootedSlots::new();
+        let instance_ref = HEAP.create_instance(instance_with_default_fields, &mut destination)?;
 
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(StackValueKind::Ref(instance_ref));
@@ -131,8 +132,9 @@ impl Executor {
             method_area.create_instance_with_default_fields("java/lang/Thread")
         })?;
 
-        let thread_obj_ref = HEAP.create_instance(instance_with_default_fields);
-        let destination = RootedSlots::from_slots(vec![Slot::Ref(thread_obj_ref)]);
+        let mut destination = RootedSlots::new();
+        let thread_obj_ref =
+            HEAP.create_instance(instance_with_default_fields, &mut destination)?;
         with_method_area(|area| area.set_system_thread_id(thread_obj_ref))?; //save primordial thread id
                                                                              // Bind this OS thread's identity before `<init>` runs, since `Thread.<init>` calls
                                                                              // `currentThread()` (and relies on `parent == this` to recognize the primordial thread).
@@ -228,7 +230,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_vm_arguments_keep_explicit_tags_and_wide_order() {
-        let reference = HEAP.create_array("[I", 0);
+        let reference = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let wide = 0x1234_5678_9abc_def0i64;
         let args = [
             StackValueKind::Ref(reference),
@@ -246,7 +254,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_vm_argument_without_producer_tag_is_rejected() {
-        let reference = HEAP.create_array("[I", 0);
+        let reference = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let args = [reference.into(), 7.into(), 0i64.into()];
         let mut frame = StackFrame::for_test(4, 0);
 

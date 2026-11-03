@@ -233,7 +233,13 @@ fn gc_coordinator_class_initialization_is_recursive_and_contended() {
 #[test]
 fn gc_coordinator_failed_class_keeps_its_cause_root() {
     let state = InitState::default();
-    let cause = HEAP.create_array("[I", 0);
+    let cause = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     assert_eq!(state.begin(), Ok(true));
     state.finish(Some(cause));
     assert_eq!(state.begin(), Err(cause));
@@ -248,7 +254,13 @@ fn gc_coordinator_failed_class_keeps_its_cause_root() {
 fn gc_coordinator_startup_claim_and_retirement_obey_active_epoch() {
     let _serial = SERIAL.lock().unwrap();
     attach();
-    let object = HEAP.create_array("[I", 0);
+    let object = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     let child = COORDINATOR.startup(object);
     let cancelled = COORDINATOR.startup(object);
     COORDINATOR.cancel_startup(cancelled);

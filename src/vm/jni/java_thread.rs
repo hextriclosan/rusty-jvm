@@ -1,5 +1,5 @@
 use crate::vm::error::ErrorKind::JniExceptionAlreadyPending;
-use crate::vm::error::{Error, Result};
+use crate::vm::error::{Error, Result, RootedThrowable};
 use crate::vm::jni::buffer_leases::BufferLease;
 use crate::vm::jni::jni_env::jni_native_interface;
 use crate::vm::jni::local_frames::LocalFrames;
@@ -179,11 +179,10 @@ impl JavaThread {
     }
 
     /// Publish a caller-owned destination before removing the pending root.
-    pub(crate) fn take_pending_exception_rooted() -> Option<RootedSlots> {
-        let mut destination = RootedSlots::new();
+    pub(crate) fn take_pending_exception_rooted() -> Option<RootedThrowable> {
         JAVA_THREAD.with(|t| {
             t.exception_pending.get().map(|throwable| {
-                destination.replace(vec![throwable]);
+                let destination = RootedThrowable::new(throwable);
                 t.exception_pending.set(None);
                 destination
             })

@@ -6,12 +6,48 @@ use crate::vm::jni::utils::{
     set_pending_null_pointer_exception,
 };
 use crate::vm::jni::{buffer_leases, handles};
+use crate::vm::stack::rooted_slots::RootedSlots;
 use jni_sys::{
     jarray, jboolean, jbooleanArray, jbyte, jbyteArray, jchar, jcharArray, jclass, jdouble,
     jdoubleArray, jfloat, jfloatArray, jint, jintArray, jlong, jlongArray, jobject, jobjectArray,
     jshort, jshortArray, jsize, JNIEnv, JNI_TRUE,
 };
 use std::ffi::c_void;
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+    use crate::vm::gc::test_allocations::bootstrap_oom;
+    use crate::vm::jni::{java_thread::JavaThread, local_frames::NativeFrame};
+    use crate::vm::method_area::loaded_classes::CLASSES;
+
+    #[test]
+    fn gc_budget_jni_arrays_preserve_oom_and_filled_array_contents() {
+        let emergency = bootstrap_oom();
+        let _native = NativeFrame::enter().unwrap();
+        let component = CLASSES
+            .get("java/lang/Object")
+            .unwrap()
+            .mirror_clazz_ref()
+            .unwrap();
+        let class = handles::new_local(component);
+        let failed = new_object_array(std::ptr::null_mut(), i32::MAX, class, class);
+        assert!(failed.is_null());
+        assert_eq!(JavaThread::take_pending_exception(), Some(emergency));
+        assert!(new_primitive_type_array_impl(i32::MAX, "[J").is_null());
+        assert_eq!(JavaThread::take_pending_exception(), Some(emergency));
+        let filled = new_object_array(std::ptr::null_mut(), 3, class, class);
+        let reference = handles::resolve(filled).unwrap();
+        assert_ne!(reference, 0);
+        for index in 0..3 {
+            assert_eq!(
+                HEAP.get_array_value(reference, index).unwrap(),
+                vec![component]
+            );
+        }
+        assert_eq!(JavaThread::get_pending_exception(), None);
+    }
+}
 
 pub(super) extern "system" fn get_array_length(_env: *mut JNIEnv, input: jarray) -> jint {
     let _managed = crate::vm::safepoint::ManagedAccess::enter();
@@ -60,13 +96,30 @@ pub(super) extern "system" fn new_object_array(
         format!("[L{};", class_name)
     };
 
-    let arr_ref = if init_obj_ref == 0 {
-        HEAP.create_array(&type_name, len)
-    } else {
-        HEAP.create_array_with_values(&type_name, vec![init_obj_ref; len as usize].as_ref())
-    };
-
-    handles::new_local(arr_ref)
+    let mut destination = RootedSlots::new();
+    let result = HEAP
+        .create_array(&type_name, len, &mut destination)
+        .and_then(|reference| {
+            if init_obj_ref != 0 {
+                // Fill admitted storage, rather than building an unadmitted len-sized Vec.
+                let mut bytes = HEAP.get_entire_raw_data_mut(reference)?;
+                for slot in bytes.chunks_exact_mut(4) {
+                    slot.copy_from_slice(&init_obj_ref.to_ne_bytes());
+                }
+            }
+            Ok(reference)
+        });
+    match result {
+        Ok(reference) => handles::new_local(reference),
+        Err(error) => {
+            if let Some(throwable) = error.throwable_ref() {
+                crate::vm::jni::java_thread::JavaThread::set_pending_if_empty(throwable);
+            } else {
+                handles::install_emergency_oom();
+            }
+            std::ptr::null_mut()
+        }
+    }
 }
 
 pub(super) extern "system" fn get_object_array_element(
@@ -162,7 +215,14 @@ fn new_primitive_type_array_impl(len: jsize, type_name: &str) -> jarray {
         return std::ptr::null_mut();
     }
 
-    handles::new_local(HEAP.create_array(type_name, len))
+    let mut destination = RootedSlots::new();
+    match HEAP.create_array(type_name, len, &mut destination) {
+        Ok(reference) => handles::new_local(reference),
+        Err(_) => {
+            handles::install_emergency_oom();
+            std::ptr::null_mut()
+        }
+    }
 }
 
 macro_rules! impl_get_array {

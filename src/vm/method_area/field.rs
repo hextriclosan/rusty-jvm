@@ -1,6 +1,7 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::gc::budget::{copy_slice, AllocError, AllocResult};
 use crate::vm::helper::{clazz_ref, default_value};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::stack::slot::Slot;
@@ -29,6 +30,22 @@ pub(crate) struct FieldValue {
 }
 
 impl FieldValue {
+    pub(crate) fn storage_capacity(&self, planned: bool) -> AllocResult<usize> {
+        let value = self.value.read().map_err(|_| AllocError::InvalidLayout)?;
+        Ok(if planned {
+            value.len()
+        } else {
+            value.capacity()
+        })
+    }
+
+    pub(crate) fn try_clone(&self) -> AllocResult<Self> {
+        let value = self.value.read().map_err(|_| AllocError::InvalidLayout)?;
+        Ok(Self {
+            value: RwLock::new(copy_slice(&value)?),
+        })
+    }
+
     /// Read one typed reference during a quiescent scan. Contention or malformed
     /// storage aborts the scan; it must never wait for a stopped mutator.
     pub(crate) fn reference_snapshot(&self) -> Result<i32> {
@@ -52,7 +69,10 @@ impl FieldValue {
 
     pub fn set_raw_value(&self, value: Vec<i32>) -> Result<()> {
         let mut guard = self.value.write()?;
-        *guard = value;
+        if guard.len() != value.len() {
+            return Err(AllocError::InvalidLayout.into());
+        }
+        guard.copy_from_slice(&value);
         Ok(())
     }
 
@@ -71,9 +91,17 @@ impl FieldValue {
         let swapped = guard.as_slice() == expected;
         let old = guard.clone();
         if swapped {
-            *guard = new.to_vec();
+            if guard.len() != new.len() {
+                return Err(AllocError::InvalidLayout.into());
+            }
+            guard.copy_from_slice(new);
         }
         Ok((old, swapped))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn corrupt_width_for_test(&self, value: Vec<i32>) {
+        *self.value.write().unwrap() = value;
     }
 }
 

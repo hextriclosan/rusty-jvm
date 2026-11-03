@@ -4,7 +4,6 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, vec_to_i64};
-use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::with_method_area;
 use crate::vm::stack::rooted_slots::RootedSlots;
@@ -33,8 +32,8 @@ pub(crate) fn retrieve_directives() -> Result<i32> {
     let directives = with_method_area(|method_area| {
         method_area.create_instance_with_default_fields(ASSERTION_STATUS_DIRECTIVES)
     })?;
-    let directives_ref = HEAP.create_instance(directives);
-    let _directives = JavaThread::hold_temp_roots(vec![Slot::Ref(directives_ref)]);
+    let mut destination = RootedSlots::new();
+    let directives_ref = HEAP.create_instance(directives, &mut destination)?;
 
     let assertions = java_assertions();
     let packages = to_java_arrays(assertions.packages())?;
@@ -68,9 +67,10 @@ fn to_java_arrays(options: &[AssertionOption]) -> Result<RootedSlots> {
         .iter()
         .map(|option| option.enabled as i32)
         .collect::<Vec<_>>();
-    let names_ref = HEAP.create_array_with_values("[Ljava/lang/String;", &names);
-    destination.replace(vec![Slot::Ref(names_ref)]);
-    let enabled_ref = HEAP.create_array_with_values("[Z", &enabled);
+    let names_ref =
+        HEAP.create_array_with_values("[Ljava/lang/String;", &names, &mut destination)?;
+    let mut enabled_root = RootedSlots::new();
+    let enabled_ref = HEAP.create_array_with_values("[Z", &enabled, &mut enabled_root)?;
     destination.replace(vec![Slot::Ref(names_ref), Slot::Ref(enabled_ref)]);
     Ok(destination)
 }

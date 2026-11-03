@@ -41,25 +41,33 @@ pub(super) extern "system" fn throw_new(
         Executor::invoke_default_constructor_jc(&klass)
     } else {
         let msg = from_mutf8_ptr!(msg_mutf8).expect("Failed to convert message from CESU-8");
-        let msg_ref = StringPoolHelper::get_string(&msg)
-            .expect("Failed to get string reference from string pool");
-        Executor::invoke_args_constructor(
-            klass.this_class_name(),
-            "<init>:(Ljava/lang/String;)V",
-            &[StackValueKind::Ref(msg_ref)],
-            None,
-        )
+        StringPoolHelper::get_string(&msg).and_then(|msg_ref| {
+            Executor::invoke_args_constructor(
+                klass.this_class_name(),
+                "<init>:(Ljava/lang/String;)V",
+                &[StackValueKind::Ref(msg_ref)],
+                None,
+            )
+        })
     };
 
     let throwable_ref = match throwable_res {
         Ok(v) => v,
         Err(e) => {
+            if let Some(reference) = e.throwable_ref() {
+                JavaThread::force_set_pending_exception(
+                    saved
+                        .as_ref()
+                        .map_or(reference, |saved| saved.slot().value()),
+                );
+                return JNI_ERR;
+            }
             warn!(
                 "Failed to create instance of {}: {e}",
                 klass.this_class_name()
             );
             if let Some(saved_ref) = saved {
-                JavaThread::force_set_pending_exception(saved_ref[0].value());
+                JavaThread::force_set_pending_exception(saved_ref.slot().value());
             }
             return JNI_ERR;
         }
@@ -79,7 +87,7 @@ pub(super) extern "system" fn exception_occurred(_env: *mut JNIEnv) -> jthrowabl
 pub(super) extern "system" fn exception_describe(_env: *mut JNIEnv) {
     let _managed = crate::vm::safepoint::ManagedAccess::enter();
     if let Some(exception) = JavaThread::take_pending_exception_rooted() {
-        invoke_uncaught_exception_handler(exception[0].value())
+        invoke_uncaught_exception_handler(exception.slot().value())
             .expect("Failed to invoke uncaught exception handler");
     }
 }

@@ -3,7 +3,7 @@ use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::helper::klass;
 use crate::vm::jni::handles;
 use crate::vm::jni::jni_value::JNIValue;
-use crate::vm::jni::utils::set_pending_no_such_field_error;
+use crate::vm::jni::utils::{set_pending_no_such_field_error, set_pending_vm_error};
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jobject, jshort,
     JNIEnv,
@@ -21,8 +21,10 @@ pub(super) extern "system" fn get_static_field_id(
     let name_str = from_mutf8_ptr!(name_mutf8).expect("Failed to convert field name from CESU-8");
     let klass =
         klass(handles::resolve_or_return!(clazz)).expect("Failed to get class from reference");
-    StaticInit::initialize_java_class(&klass)
-        .expect("Failed to initialize class before getting static field ID");
+    if let Err(error) = StaticInit::initialize_java_class(&klass) {
+        set_pending_vm_error(&error);
+        return null_mut();
+    }
     match klass.get_static_field_offset(&name_str) {
         Ok(offset) => offset as jfieldID,
         Err(_) => {

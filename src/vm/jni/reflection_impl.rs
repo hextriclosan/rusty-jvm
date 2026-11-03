@@ -1,7 +1,9 @@
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::klass;
 use crate::vm::jni::handles;
-use crate::vm::jni::utils::{decode_method_id, encode_method_id, set_pending_internal_error};
+use crate::vm::jni::utils::{
+    decode_method_id, encode_method_id, set_pending_internal_error, set_pending_vm_error,
+};
 use jni_sys::{jboolean, jclass, jmethodID, jobject, JNIEnv};
 use std::ptr::null_mut;
 
@@ -39,6 +41,10 @@ pub(super) extern "system" fn to_reflected_method(
     match result {
         Ok(reference) => handles::new_local(reference),
         Err(error) => {
+            if error.throwable_ref().is_some() {
+                set_pending_vm_error(&error);
+                return null_mut();
+            }
             set_pending_internal_error(&format!("Failed to create reflected method: {error}"));
             null_mut()
         }

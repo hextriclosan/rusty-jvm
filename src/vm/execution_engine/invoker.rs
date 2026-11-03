@@ -69,7 +69,7 @@ pub(crate) fn invoke(
             // Extract into an owned slot while the native frame is still published.
             let pending = pop_native_frame(stack_frames);
             if let Some(throwable) = pending {
-                throw_exception_with_ref(throwable[0], stack_frames)?;
+                throw_exception_with_ref(throwable.slot(), stack_frames)?;
                 return Ok(());
             }
             result
@@ -77,7 +77,7 @@ pub(crate) fn invoke(
         result?;
 
         if let Some(throwable) = JavaThread::take_pending_exception_rooted() {
-            throw_exception_with_ref(throwable[0], stack_frames)?;
+            throw_exception_with_ref(throwable.slot(), stack_frames)?;
             return Ok(());
         }
         // MethodHandle wrappers install a Java frame and have no immediate result.
@@ -96,7 +96,7 @@ pub(crate) fn invoke(
 }
 
 /// This ordering is shared by every ordinary native call, on success and failure.
-fn pop_native_frame(stack_frames: &mut StackFrames) -> Option<RootedSlots> {
+fn pop_native_frame(stack_frames: &mut StackFrames) -> Option<crate::vm::error::RootedThrowable> {
     let pending = JavaThread::take_pending_exception_rooted();
     crate::vm::safepoint::event(crate::vm::safepoint::Event::NativeFramePop);
     stack_frames.propagate_exception();
@@ -130,7 +130,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_polymorphic_reference_survives_source_frame_pop() {
-        let reference = HEAP.create_array("[I", 0);
+        let reference = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let mut source = StackFrame::for_test(0, 1);
         source.push(Slot::Ref(reference)).unwrap();
         let mut sources = StackFrames::new(vec![source]);
@@ -165,7 +171,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_native_producer_tags_reference_before_publication() {
-        let reference = HEAP.create_array("[I", 0);
+        let reference = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let descriptor = TypeDescriptor::Array(Box::new(TypeDescriptor::Integer), 1);
         let mut destination = RootedSlots::new();
         let mut caller = StackFrames::new(vec![StackFrame::for_test(0, 1)]);
@@ -204,7 +216,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_pending_exception_is_rooted_before_native_frame_pop() {
-        let throwable = HEAP.create_array("[I", 0);
+        let throwable = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         JavaThread::try_set_pending_exception(throwable).unwrap();
         let mut frames = StackFrames::new(vec![StackFrame::new_native(
             Arc::new("native:()V".into()),
@@ -225,7 +243,7 @@ mod ref_transfer_tests {
         );
 
         assert!(observed.get());
-        assert_eq!(pending[0], Slot::Ref(throwable));
+        assert_eq!(pending.slot(), Slot::Ref(throwable));
         drop(pending);
         assert!(JavaThread::temp_root_refs().is_empty());
     }

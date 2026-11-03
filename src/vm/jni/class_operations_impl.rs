@@ -5,7 +5,7 @@ use crate::vm::jni::handles;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::utils::{
     set_pending_class_format_error, set_pending_internal_error, set_pending_linkage_error,
-    set_pending_no_class_def_found_error,
+    set_pending_no_class_def_found_error, set_pending_vm_error,
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -43,8 +43,12 @@ pub(super) extern "system" fn find_class(_env: *mut JNIEnv, name_mutf8: *const c
 
     match clazz_ref(&name) {
         Ok(clazz) => handles::new_local(clazz),
-        Err(_) => {
-            set_pending_no_class_def_found_error(&name);
+        Err(error) => {
+            if error.throwable_ref().is_some() {
+                set_pending_vm_error(&error);
+            } else {
+                set_pending_no_class_def_found_error(&name);
+            }
             null_mut()
         }
     }
@@ -159,13 +163,13 @@ pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> 
         None
     };
 
-    handles::new_local(
-        parent
-            .map(|parent_name| {
-                clazz_ref(&parent_name).expect("Failed to get class from reference")
-            })
-            .unwrap_or(0),
-    )
+    match parent.map(|name| clazz_ref(&name)).transpose() {
+        Ok(parent) => handles::new_local(parent.unwrap_or(0)),
+        Err(error) => {
+            set_pending_vm_error(&error);
+            null_mut()
+        }
+    }
 }
 
 pub(super) extern "system" fn is_assignable_from(
@@ -182,6 +186,10 @@ pub(super) extern "system" fn is_assignable_from(
     match InstanceChecker::checkcast(sub_klass.this_class_name(), sup_klass.this_class_name()) {
         Ok(result) => result as jboolean,
         Err(e) => {
+            if e.throwable_ref().is_some() {
+                set_pending_vm_error(&e);
+                return false;
+            }
             set_pending_internal_error(&format!(
                 "Failed to check assignability from {} to {}: {e}",
                 sub_klass.this_class_name(),

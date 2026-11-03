@@ -72,7 +72,8 @@ pub(crate) struct JavaClass {
     #[get = "pub"]
     static_fields_init_state: InitState,
 
-    instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>,
+    instance_fields_hierarchy:
+        OnceCell<Arc<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>>,
     instance_layout: OnceCell<Arc<InstanceLayout>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
     vtable: OnceCell<IndexMap<String, Arc<JavaMethod>>>,
@@ -563,7 +564,7 @@ impl JavaClass {
 
     pub fn instance_fields_hierarchy(
         &self,
-    ) -> Result<&IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>> {
+    ) -> Result<&Arc<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>> {
         if self.instance_fields_hierarchy.get().is_none() {
             let mut instance_fields_hierarchy = IndexMap::new();
             lookup::lookup_and_fill_instance_fields_hierarchy(
@@ -573,7 +574,7 @@ impl JavaClass {
             // Construction may load classes. Only publication occurs under the cell lock.
             let _ = self
                 .instance_fields_hierarchy
-                .set(instance_fields_hierarchy);
+                .set(Arc::new(instance_fields_hierarchy));
         }
         Ok(self
             .instance_fields_hierarchy

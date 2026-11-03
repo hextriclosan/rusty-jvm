@@ -15,6 +15,12 @@ use std::sync::LazyLock;
 
 /// Preserve a callback's Java exception while the owning Error is still rooted.
 fn set_pending_native_error(error: &Error) {
+    if let Some(reference) = error.throwable_ref() {
+        if handles::emergency_oom_ref() == Some(reference) {
+            handles::install_emergency_oom();
+            return;
+        }
+    }
     match error.throwable_ref() {
         Some(throwable) => {
             if let Err(pending) = JavaThread::try_set_pending_exception(throwable) {
@@ -248,9 +254,35 @@ mod ref_transfer_tests {
     builtin_wrapper!(static callback_static(throwable: object) -> object => fail);
     builtin_wrapper!(instance callback_instance() -> object => fail);
 
+    fn fail_budget() -> Result<i32> {
+        Err(crate::vm::gc::budget::AllocError::Capacity.into())
+    }
+    builtin_wrapper!(static budget_failure() -> object => fail_budget);
+
+    #[test]
+    fn gc_budget_builtin_wrapper_preserves_emergency_without_allocation() {
+        use crate::vm::gc::test_allocations::{bootstrap_oom, measure};
+        let emergency = bootstrap_oom();
+        crate::vm::safepoint::attach();
+        let (result, allocations) = measure(usize::MAX, || {
+            budget_failure(std::ptr::null_mut(), std::ptr::null_mut())
+        });
+        assert!(result.is_null());
+        assert_eq!(allocations, 0);
+        assert_eq!(JavaThread::take_pending_exception(), Some(emergency));
+        crate::vm::safepoint::retire();
+        println!("builtin OOM wrapper: allocations={allocations}, sentinel=null");
+    }
+
     #[test]
     fn ref_transfer_static_native_wrapper_preserves_callback_exception() {
-        let throwable = HEAP.create_array("[I", 0);
+        let throwable = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let frame = crate::vm::jni::local_frames::NativeFrame::enter().unwrap();
         let argument = handles::new_local(throwable);
 
@@ -264,7 +296,13 @@ mod ref_transfer_tests {
 
     #[test]
     fn ref_transfer_instance_native_wrapper_preserves_callback_exception() {
-        let throwable = HEAP.create_array("[I", 0);
+        let throwable = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let frame = crate::vm::jni::local_frames::NativeFrame::enter().unwrap();
         let argument = handles::new_local(throwable);
 

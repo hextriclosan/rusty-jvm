@@ -15,7 +15,13 @@ fn receive<T>(receiver: &Receiver<T>) -> T {
 #[test]
 fn gc_coordinator_waiter_drops_actual_guard_for_third_contender() {
     let _serial = safepoint::tests::SERIAL.lock().unwrap();
-    let object = HEAP.create_array("[I", 0);
+    let object = HEAP
+        .create_array(
+            "[I",
+            0,
+            &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+        )
+        .unwrap();
     let (wait_published, waiting) = channel();
     let (wake_guard, woke) = channel();
     let (continue_wake, wake_gate) = channel();

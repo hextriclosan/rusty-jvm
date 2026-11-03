@@ -85,6 +85,9 @@ pub(crate) fn invoke(
         method_descriptor.return_type(),
         external,
     );
+    if JavaThread::get_pending_exception().is_some() {
+        return Ok(());
+    }
     let raw = match result {
         NativeReturn::Object(handle) => vec![handles::resolve(handle).unwrap_or(0)],
         NativeReturn::Slots(raw) => raw,
@@ -195,7 +198,13 @@ mod jni_handles_tests {
     #[test]
     fn jni_handles_libffi_preserves_pointer_width_object_return() {
         let _frame = NativeFrame::enter().unwrap();
-        let target = HEAP.create_array("[I", 0);
+        let target = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
         let object = handles::new_wide_test_local(target);
         if usize::BITS > 32 {
             assert!(u64::try_from(object as usize).unwrap() > u64::from(u32::MAX));
