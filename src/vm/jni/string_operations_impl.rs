@@ -132,7 +132,8 @@ pub(super) extern "system" fn get_string_length(_env: *mut JNIEnv, input: jstrin
     let string_ref = input as i32;
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("String is null");
+        return 0;
     }
 
     let raw =
@@ -151,7 +152,8 @@ pub(super) extern "system" fn new_string(
         panic!("negative array size"); // todo throw NegativeArraySizeException here
     }
     if unicode.is_null() && len > 0 {
-        panic!("unicode array is null but length is {len}");
+        set_pending_null_pointer_exception("Buffer is null");
+        return ptr::null_mut();
     }
     let arr_ref = new_char_array(env, len);
     set_char_array_region(env, arr_ref, 0, len, unicode);
@@ -171,7 +173,8 @@ pub(super) extern "system" fn get_string_chars(
 ) -> *const jchar {
     let string_ref = from as i32;
     if string_ref == 0 {
-        panic!("Invalid string reference: null");
+        set_pending_null_pointer_exception("String is null");
+        return ptr::null();
     }
 
     let raw_data = get_string_raw_data(string_ref);
@@ -246,7 +249,8 @@ pub(super) extern "system" fn new_string_utf8(
     mutf8_bytes: *const c_char,
 ) -> jstring {
     if mutf8_bytes.is_null() {
-        panic!("modified utf-8 array is null");
+        // HotSpot returns null without an exception here
+        return ptr::null_mut();
     }
 
     // Decode straight to UTF-16: a Rust String can't hold the isolated surrogates allowed here
@@ -262,7 +266,8 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
     let string_ref = input as i32;
 
     if string_ref == 0 {
-        panic!("Invalid string reference"); // OpenJDK crashes here, why we shouldn't
+        set_pending_null_pointer_exception("String is null");
+        return 0;
     }
 
     let raw_data = get_string_raw_data(string_ref);
@@ -280,7 +285,8 @@ pub(super) extern "system" fn get_string_utf_chars(
 ) -> *const c_char {
     let string_ref = from as i32;
     if string_ref == 0 {
-        panic!("Invalid string reference: null");
+        set_pending_null_pointer_exception("String is null");
+        return ptr::null();
     }
 
     let mut mutf8_data = encode_utf16_to_modified_utf8(&get_string_raw_data(string_ref));

@@ -15,6 +15,7 @@ mod jni_no_such_id_demo;
 mod modified_utf8_demo;
 mod monitor_demo;
 mod new_object_a_demo;
+mod null_arguments_demo;
 mod object_array_bounds_demo;
 mod object_fields_demo;
 mod object_operations_demo;

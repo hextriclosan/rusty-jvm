@@ -16,6 +16,10 @@ use jni_sys::{jboolean, jclass, jmethodID, jobject, jobjectRefType, jvalue, JNIE
 use std::ptr::null_mut;
 
 pub(super) extern "system" fn get_object_class(_env: *mut JNIEnv, obj: jobject) -> jclass {
+    if obj.is_null() {
+        set_pending_null_pointer_exception("Object is null");
+        return null_mut();
+    }
     let instance_name = HEAP
         .get_instance_name(obj as i32)
         .expect("Failed to get instance name from reference");
