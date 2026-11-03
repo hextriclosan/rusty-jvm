@@ -4,7 +4,7 @@ use crate::vm::helper::{clazz_ref, klass};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::utils::{
     set_pending_class_format_error, set_pending_internal_error, set_pending_linkage_error,
-    set_pending_no_class_def_found_error,
+    set_pending_no_class_def_found_error, set_pending_null_pointer_exception,
 };
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -146,6 +146,10 @@ fn is_valid_internal_class_name(name: &str) -> bool {
 }
 
 pub(super) extern "system" fn get_superclass(_env: *mut JNIEnv, sub: jclass) -> jclass {
+    if sub.is_null() {
+        set_pending_null_pointer_exception("Class is null");
+        return null_mut();
+    }
     let klass = klass(sub as i32).expect("Failed to get class from reference");
     let parent = if !klass.is_interface() {
         klass.parent().clone()
@@ -163,6 +167,10 @@ pub(super) extern "system" fn is_assignable_from(
     sub: jclass,
     sup: jclass,
 ) -> jboolean {
+    if sub.is_null() || sup.is_null() {
+        set_pending_null_pointer_exception("Class is null");
+        return false;
+    }
     let sub_klass = klass(sub as i32).expect("Failed to get class from reference");
     let sup_klass = klass(sup as i32).expect("Failed to get class from reference");
 

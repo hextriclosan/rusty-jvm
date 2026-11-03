@@ -4856,6 +4856,51 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_throw_for_null_jni_arguments() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.nullargs.JniNullArgumentsDemo",
+        &[],
+        r#"GetArrayLength = 3
+GetStringLength = 5
+GetStringUTFLength = 5
+GetStringUTFLengthAsLong = 5
+GetStringChars = "value"
+GetStringUTFChars = "value"
+GetStringCritical = 118
+NewString empty = ""
+GetObjectClass = class java.lang.String
+GetSuperclass = class java.lang.Object
+GetSuperclass root = null
+IsAssignableFrom = true
+NewStringUTF null = null
+NewString null -> java.lang.NullPointerException: Buffer is null
+GetArrayLength null -> java.lang.NullPointerException: Array is null
+GetStringLength null -> java.lang.NullPointerException: String is null
+GetStringUTFLength null -> java.lang.NullPointerException: String is null
+GetStringUTFLengthAsLong null -> java.lang.NullPointerException: String is null
+GetStringChars null -> java.lang.NullPointerException: String is null
+GetStringUTFChars null -> java.lang.NullPointerException: String is null
+GetStringCritical null -> java.lang.NullPointerException: String is null
+GetObjectClass null -> java.lang.NullPointerException: Object is null
+GetSuperclass null -> java.lang.NullPointerException: Class is null
+IsAssignableFrom null sub -> java.lang.NullPointerException: Class is null
+IsAssignableFrom null sup -> java.lang.NullPointerException: Class is null
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.nullargs.JniNullArgumentsDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_throw_for_invalid_jni_string_regions() {
     let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
     utils::assert_with_all_args(
