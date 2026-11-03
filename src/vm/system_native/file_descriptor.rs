@@ -14,9 +14,10 @@ pub(crate) fn close0(fd_ref: i32) -> Result<()> {
     Ok(())
 }
 
+/// `java.io.FileDescriptor.sync0()V`
 pub(crate) fn sync0(fd_ref: i32) -> Result<()> {
-    if let Err(error) = PlatformFile::sync(fd_ref) {
-        set_pending_sync_failed_exception(&error.to_string())?;
+    if !PlatformFile::sync(fd_ref)? {
+        set_pending_sync_failed_exception("sync failed")?;
     }
     Ok(())
 }
