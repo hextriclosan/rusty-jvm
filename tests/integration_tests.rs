@@ -2674,7 +2674,10 @@ fn should_return_random_number() {
 fn should_report_finite_runtime_max_memory() {
     assert_success(
         "samples.runtime.maxmemory.RuntimeMaxMemory",
-        "positive=true\nfinite=true\n",
+        "positive=true\n\
+        finite=true\n\
+        total within max=true\n\
+        free within total=true\n",
     );
 }
 
