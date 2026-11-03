@@ -144,6 +144,10 @@ impl JavaMethod {
             .expect("published reflection method"))
     }
 
+    pub(crate) fn reflection_ref_if_present(&self) -> Option<i32> {
+        self.reflection_ref.get().copied()
+    }
+
     fn init_reflection_ref(&self) -> Result<i32> {
         if self.name == "<init>" {
             self.construct_constructor()
@@ -169,17 +173,23 @@ impl JavaMethod {
     fn construct_method(&self) -> Result<i32> {
         let mut roots = JavaThread::hold_temp_roots(vec![]);
         let declaring_class_ref = clazz_ref(self.class_name())?;
+        roots.add_root(Slot::Ref(declaring_class_ref));
 
         let mut name_signature_split = self.name_signature.split(':'); //fixme: crete separate field with name of get it from here
         let name = name_signature_split.next().unwrap();
         let name_ref = StringPoolHelper::get_string(name)?;
+        roots.add_root(Slot::Ref(name_ref));
 
         let parameter_type_clazz_refs = self
             .method_descriptor
             .parameter_types()
             .iter()
             .map(|t| t.to_string())
-            .map(|t| clazz_ref(undecorate(&t)))
+            .map(|t| {
+                let reference = clazz_ref(undecorate(&t))?;
+                roots.add_root(Slot::Ref(reference));
+                Ok(reference)
+            })
             .collect::<Result<Vec<_>>>()?;
         let parameter_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
@@ -187,11 +197,16 @@ impl JavaMethod {
 
         let return_type = self.method_descriptor.return_type().to_string();
         let return_type_ref = clazz_ref(&return_type)?;
+        roots.add_root(Slot::Ref(return_type_ref));
 
         let exception_type_clazz_refs = self
             .exceptions
             .iter()
-            .map(|exception_type| clazz_ref(exception_type))
+            .map(|exception_type| {
+                let reference = clazz_ref(exception_type)?;
+                roots.add_root(Slot::Ref(reference));
+                Ok(reference)
+            })
             .collect::<Result<Vec<_>>>()?;
         let exception_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
@@ -202,6 +217,7 @@ impl JavaMethod {
         let slot = self.slot;
 
         let signature_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
+        roots.add_root(Slot::Ref(signature_ref));
 
         let annotations = self
             .annotations_raw
@@ -215,6 +231,7 @@ impl JavaMethod {
                 annotations
             })
             .unwrap_or(0);
+        roots.add_root(Slot::Ref(annotations));
 
         let parameter_annotations = 0; // todo: implement me
         let annotation_default = 0; // todo: implement me
@@ -257,6 +274,7 @@ impl JavaMethod {
     fn construct_constructor(&self) -> Result<i32> {
         let mut roots = JavaThread::hold_temp_roots(vec![]);
         let declaring_class_ref = clazz_ref(self.class_name())?;
+        roots.add_root(Slot::Ref(declaring_class_ref));
 
         let mut name_signature_split = self.name_signature.split(':'); //fixme: crete separate field with name of get it from here
 
@@ -265,7 +283,11 @@ impl JavaMethod {
             .parameter_types()
             .iter()
             .map(|t| t.to_string())
-            .map(|t| clazz_ref(undecorate(&t)))
+            .map(|t| {
+                let reference = clazz_ref(undecorate(&t))?;
+                roots.add_root(Slot::Ref(reference));
+                Ok(reference)
+            })
             .collect::<Result<Vec<_>>>()?;
         let parameter_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &parameter_type_clazz_refs);
@@ -274,7 +296,11 @@ impl JavaMethod {
         let exception_type_clazz_refs = self
             .exceptions
             .iter()
-            .map(|exception_type| clazz_ref(exception_type))
+            .map(|exception_type| {
+                let reference = clazz_ref(exception_type)?;
+                roots.add_root(Slot::Ref(reference));
+                Ok(reference)
+            })
             .collect::<Result<Vec<_>>>()?;
         let checked_exception_type_refs =
             HEAP.create_array_with_values("[Ljava/lang/Class;", &exception_type_clazz_refs);
@@ -285,6 +311,7 @@ impl JavaMethod {
         let slot = self.slot;
 
         let signature_ref = StringPoolHelper::get_string(name_signature_split.next().unwrap())?;
+        roots.add_root(Slot::Ref(signature_ref));
 
         let annotations = self
             .annotations_raw
@@ -298,6 +325,7 @@ impl JavaMethod {
                 annotations
             })
             .unwrap_or(0);
+        roots.add_root(Slot::Ref(annotations));
 
         let parameter_annotations = 0; // todo: implement me
 
@@ -376,5 +404,33 @@ impl JavaMethod {
     /// (`Ljdk/internal/reflect/CallerSensitive;`).
     pub fn has_annotation(&self, descriptor: &str) -> bool {
         self.runtime_visible_annotations.contains(descriptor)
+    }
+}
+
+#[cfg(test)]
+mod gc_tests {
+    use super::*;
+
+    #[test]
+    fn gc_roots_method_and_constructor_reflection_caches_are_non_initializing() {
+        for name in ["method", "<init>"] {
+            let method = JavaMethod::new(
+                "()V".parse().unwrap(),
+                "Unloaded",
+                &format!("{name}:()V"),
+                None,
+                false,
+                vec![],
+                0,
+                name,
+                None,
+                None,
+                HashSet::new(),
+                0,
+            );
+            assert_eq!(method.reflection_ref_if_present(), None);
+            method.reflection_ref.set(83).unwrap();
+            assert_eq!(method.reflection_ref_if_present(), Some(83));
+        }
     }
 }

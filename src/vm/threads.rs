@@ -43,6 +43,11 @@ static NON_DAEMON_THREADS: LazyLock<Mutex<Vec<JoinHandle<()>>>> =
 /// termination.
 static PARKERS: LazyLock<DashMap<i32, std::thread::Thread>> = LazyLock::new(DashMap::new);
 
+/// Keys are retained until exit; no parker guard spans a Safe transition.
+pub(crate) fn parker_refs() -> Vec<i32> {
+    PARKERS.iter().map(|entry| *entry.key()).collect()
+}
+
 /// Returns the next non-zero `eetop` token for a starting thread.
 pub(crate) fn next_eetop() -> i64 {
     NEXT_EETOP.fetch_add(1, Ordering::Relaxed)

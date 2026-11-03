@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::gc::layout::{InstanceFields, InstanceLayout, References};
 use crate::vm::heap::java_instance::JavaInstance::{Base, Class};
 use crate::vm::method_area::field::FieldValue;
 use crate::vm::method_area::java_class::JavaClass;
@@ -6,16 +7,34 @@ use crate::vm::method_area::loaded_classes::CLASSES;
 use derive_new::new;
 use getset::CopyGetters;
 use indexmap::IndexMap;
+use jdescriptor::TypeDescriptor;
 use serde::Serialize;
 use std::sync::Arc;
 
 pub type ClassName = String;
 pub type FieldNameType = String;
 
-#[derive(Debug, Serialize, Clone, new)]
+#[derive(Debug, Serialize, Clone)]
 pub(crate) struct JavaInstanceBase {
     klass_id: usize,
     fields: IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>,
+    #[serde(skip)]
+    layout: Arc<InstanceLayout>,
+}
+
+impl JavaInstanceBase {
+    pub(crate) fn new(
+        klass_id: usize,
+        fields: InstanceFields,
+        layout: Arc<InstanceLayout>,
+    ) -> Result<Self> {
+        layout.validate(&fields)?;
+        Ok(Self {
+            klass_id,
+            fields,
+            layout,
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Clone, new, CopyGetters)]
@@ -38,6 +57,38 @@ pub(crate) struct Array {
 }
 
 impl Array {
+    pub(crate) fn references(&self) -> Result<References> {
+        let descriptor = self
+            .type_name
+            .parse::<TypeDescriptor>()
+            .map_err(|error| Error::new_execution(&format!("Invalid array layout: {error}")))?;
+        let TypeDescriptor::Array(base, dimensions) = descriptor else {
+            return Err(Error::new_execution(
+                "Array storage has a non-array descriptor",
+            ));
+        };
+        // [I and [[I have identical element widths, but only the latter holds refs.
+        let references = dimensions > 1 || matches!(*base, TypeDescriptor::Object(_));
+        if !references {
+            return Ok(References::default());
+        }
+        let chunks = self.data.chunks_exact(4);
+        if !chunks.remainder().is_empty() {
+            return Err(Error::new_execution("Truncated reference array slot"));
+        }
+        let mut strong = Vec::new();
+        for chunk in chunks {
+            let reference = i32::from_ne_bytes(chunk.try_into()?);
+            if reference != 0 {
+                strong.push(reference);
+            }
+        }
+        Ok(References {
+            strong,
+            referent: None,
+        })
+    }
+
     pub fn new(type_name: &str, len: i32) -> Self {
         Self {
             type_name: type_name.to_string(),
@@ -220,6 +271,11 @@ pub(crate) enum HeapValue {
 }
 
 impl JavaInstance {
+    pub(crate) fn references(&self) -> Result<References> {
+        let instance = self.get_instance();
+        instance.layout.references(&instance.fields)
+    }
+
     pub fn set_field_value(
         &mut self,
         class_name: &str,

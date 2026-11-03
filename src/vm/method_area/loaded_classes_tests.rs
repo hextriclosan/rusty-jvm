@@ -5,6 +5,42 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 #[test]
+fn gc_roots_published_class_without_mirror_never_takes_publication_claim() {
+    let classes = Arc::new(LoadedClasses::default());
+    let class = Arc::new(JavaClass::synthetic(
+        "I".to_string(),
+        "int".to_string(),
+        None,
+        IndexSet::new(),
+    ));
+    let claim = classes.loading.claim("I");
+    classes.insert_full_impl("I", Arc::clone(&class));
+    assert_eq!(class.static_fields_init_state().begin(), Ok(true));
+    class.static_fields_init_state().finish(Some(73));
+    let (scanned, scan) = channel();
+    let scanning_classes = Arc::clone(&classes);
+    let reader = std::thread::spawn(move || {
+        scanned
+            .send(
+                scanning_classes
+                    .root_refs()
+                    .map_err(|error| error.to_string()),
+            )
+            .unwrap();
+    });
+
+    // Publication is held until after the scan; a mirror cannot appear in this window.
+    let result = scan.recv_timeout(Duration::from_secs(2));
+    drop(claim);
+    reader.join().unwrap();
+    assert_eq!(result.unwrap().unwrap(), vec![73]);
+    assert_eq!(class.mirror_ref_if_present(), None);
+
+    class.inject_mirror_clazz_ref(91).unwrap();
+    assert_eq!(classes.root_refs().unwrap(), vec![91, 73]);
+}
+
+#[test]
 fn class_loading_releases_claim_before_java_and_adopts_publication_winner() {
     let _serial = safepoint::tests::SERIAL.lock().unwrap();
     // Given two prepared candidates and a Java monitor held by another thread.

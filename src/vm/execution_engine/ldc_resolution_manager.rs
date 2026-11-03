@@ -57,6 +57,21 @@ pub struct LdcResolutionManager {
 }
 
 impl LdcResolutionManager {
+    pub(crate) fn cached_refs(&self) -> Result<Vec<i32>> {
+        let cache = self.cache.try_read().map_err(|error| {
+            Error::new_execution(&format!("Cannot snapshot LDC cache: {error}"))
+        })?;
+        Ok(cache
+            .values()
+            .flat_map(|entries| entries.values())
+            .flatten()
+            .filter_map(|constant| match constant {
+                LdcConstant::Reference(reference) => Some(*reference),
+                LdcConstant::Int(_) | LdcConstant::Float(_) => None,
+            })
+            .collect())
+    }
+
     pub fn resolve_ldc(&self, current_class_name: &str, cpoolindex: u16) -> Result<LdcConstant> {
         if let Some(Some(value)) = self
             .cache
@@ -155,6 +170,29 @@ impl LdcResolutionManager {
 
     fn double_to_int(value: f64) -> i64 {
         value.to_bits() as i64
+    }
+}
+
+#[cfg(test)]
+mod gc_tests {
+    use super::*;
+
+    #[test]
+    fn gc_roots_ldc_cache_traces_only_tagged_references_without_resolution() {
+        let manager = LdcResolutionManager::default();
+        manager.cache.write().unwrap().insert(
+            "Unloaded".into(),
+            HashMap::from([
+                (1, vec![LdcConstant::Reference(41)]),
+                (2, vec![LdcConstant::Int(42), LdcConstant::Int(43)]),
+                (3, vec![LdcConstant::Float(f32::from_bits(44))]),
+            ]),
+        );
+
+        assert_eq!(manager.cached_refs().unwrap(), vec![41]);
+        let held = manager.cache.write().unwrap();
+        assert!(manager.cached_refs().is_err());
+        drop(held);
     }
 }
 

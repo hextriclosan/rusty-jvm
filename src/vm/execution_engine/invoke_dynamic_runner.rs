@@ -113,6 +113,14 @@ impl TryFrom<(BootstrapMethodInfo, &str)> for BootstrapInfo {
 }
 
 impl InvokeDynamicRunner {
+    /// Quiescent read only. Resolution runs outside the map's entry guard.
+    pub(crate) fn resolved_refs(&self) -> Vec<i32> {
+        self.resolved_methods
+            .iter()
+            .map(|entry| entry.method_handle_dynamic_invoked_ref())
+            .collect()
+    }
+
     /// Runs the invokedynamic call site logic, resolving it if not cached,
     /// and invoking the dynamic method with the correct arguments.
     pub fn run(
@@ -287,5 +295,21 @@ impl InvokeDynamicRunner {
         })?;
 
         BootstrapInfo::try_from((bootstrap_method_info, current_class_name))
+    }
+}
+
+#[cfg(test)]
+mod gc_tests {
+    use super::*;
+
+    #[test]
+    fn gc_roots_indy_cache_exposes_only_already_resolved_handles() {
+        let runner = InvokeDynamicRunner::default();
+        assert!(runner.resolved_refs().is_empty());
+        runner
+            .resolved_methods
+            .insert(7, ResolvedMethod::new(53, "()V".parse().unwrap()));
+
+        assert_eq!(runner.resolved_refs(), vec![53]);
     }
 }

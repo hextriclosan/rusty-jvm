@@ -20,9 +20,7 @@ pub(crate) enum Reason {
 
 #[derive(Debug, Default)]
 pub(crate) struct Snapshot {
-    /// Read by the tests here and by the root scan task 7 adds; nothing in the VM
-    /// consumes it yet, because no collection happens in this unit.
-    #[allow(dead_code)]
+    /// Owner-collected references, retained unchanged while the participant is Safe.
     pub(crate) roots: Vec<i32>,
 }
 
@@ -349,6 +347,11 @@ impl Coordinator {
                 ThreadState::Running => unreachable!("rendezvous is incomplete"),
             })
             .collect();
+        let thread_refs = state
+            .threads
+            .values()
+            .map(|record| record.thread_ref)
+            .collect();
         state.phase = Phase::Collecting { epoch, owner };
         drop(state);
         Some(Operation {
@@ -356,6 +359,7 @@ impl Coordinator {
             owner,
             epoch,
             snapshots,
+            thread_refs,
             completed: false,
         })
     }
@@ -367,14 +371,23 @@ pub(crate) struct Operation {
     coordinator: Arc<Coordinator>,
     owner: u64,
     epoch: u64,
-    /// The complete rendezvous: one immutable snapshot per live participant. Consumed by
-    /// task 7's scanner; until then only the tests here read it.
-    #[allow(dead_code)]
+    /// The complete rendezvous: one immutable snapshot per live participant.
     pub(crate) snapshots: Vec<Arc<Snapshot>>,
+    thread_refs: Vec<i32>,
     completed: bool,
 }
 
 impl Operation {
+    /// The registry owns Thread identities even if a producer has no Java frames.
+    /// Safe startup records and all blocked/native snapshots participate equally.
+    pub(crate) fn root_refs(&self) -> impl Iterator<Item = i32> + '_ {
+        self.thread_refs.iter().copied().chain(
+            self.snapshots
+                .iter()
+                .flat_map(|snapshot| snapshot.roots.iter().copied()),
+        )
+    }
+
     #[allow(dead_code)] // Activated by task 7 after a successful scan.
     pub(crate) fn complete(mut self) {
         self.completed = true;

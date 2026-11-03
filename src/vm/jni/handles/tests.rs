@@ -15,6 +15,82 @@ fn record() -> HandleRecord {
 }
 
 #[test]
+fn gc_roots_jni_locals_leases_exceptions_transfers_and_strong_globals_are_complete() {
+    let native = NativeFrame::enter().unwrap();
+    let references: Vec<_> = (0..10).map(|_| HEAP.create_array("[I", 0)).collect();
+    let local = new_local(references[0]);
+    let global_local = new_local(references[1]);
+    let global = new_reference(global_local, ReferenceKind::Global);
+    delete_reference(global_local, ReferenceKind::Local);
+    let weak_local = new_local(references[2]);
+    let weak = new_reference(weak_local, ReferenceKind::WeakGlobal);
+    delete_reference(weak_local, ReferenceKind::Local);
+    let lease = buffer_leases::copy(references[3], &[], align_of::<i32>());
+    assert!(!lease.is_null());
+    JavaThread::force_set_pending_exception(references[4]);
+    JavaThread::set_scoped_value_cache(references[5]);
+    let temporary =
+        JavaThread::hold_temp_roots(vec![Slot::Ref(references[6]), Slot::Value(references[9])]);
+    let transfer = RootedSlots::from_slots(vec![Slot::Ref(references[7])]);
+    let exception = crate::vm::error::Error::uncaught_exception(Slot::Ref(references[8]));
+    let emergency = HEAP.create_array("[I", 0);
+    EMERGENCY_OOM.set(emergency).unwrap();
+
+    let current = JavaThread::snapshot_roots().roots;
+    let globals = global_roots().unwrap();
+
+    for index in [0, 3, 4, 5, 6, 7, 8] {
+        assert!(
+            current.contains(&references[index]),
+            "missing category {index}"
+        );
+    }
+    assert!(!current.contains(&references[1]));
+    assert!(!current.contains(&references[2]));
+    assert!(!current.contains(&references[9]));
+    assert!(globals.contains(&references[1]));
+    assert!(globals.contains(&emergency));
+    assert!(!globals.contains(&references[2]));
+    delete_reference(local, ReferenceKind::Local);
+    delete_reference(global, ReferenceKind::Global);
+    delete_reference(weak, ReferenceKind::WeakGlobal);
+    buffer_leases::release(lease, references[3], None);
+    JavaThread::take_pending_exception();
+    JavaThread::set_scoped_value_cache(0);
+    drop(exception);
+    drop(transfer);
+    drop(temporary);
+    drop(native);
+    assert!(JavaThread::snapshot_roots().roots.is_empty());
+}
+
+#[test]
+fn gc_roots_snapshot_failure_aborts_operation_without_partial_roots_or_deadlock() {
+    use crate::vm::gc::roots;
+    use crate::vm::safepoint::{self, COORDINATOR};
+    let _serial = safepoint::tests::SERIAL.lock().unwrap();
+    safepoint::attach();
+    let owner = safepoint::current().unwrap();
+    let operation = COORDINATOR
+        .request_collection(owner, JavaThread::snapshot_roots())
+        .unwrap();
+    let guard = table();
+
+    let failed = roots::snapshot(&operation);
+
+    assert!(failed.is_err());
+    drop(guard);
+    drop(operation);
+    assert!(COORDINATOR.running(owner));
+    let next = COORDINATOR
+        .request_collection(owner, JavaThread::snapshot_roots())
+        .unwrap();
+    assert!(roots::snapshot(&next).is_ok());
+    next.complete();
+    safepoint::retire();
+}
+
+#[test]
 fn jni_handles_exhaustion_never_reuses_deleted_tokens() {
     let mut table = HandleTable::new();
     table.next = Some(usize::MAX - 1);
@@ -86,7 +162,7 @@ fn jni_handles_locals_are_thread_owned_but_globals_are_shared() {
     })
     .join()
     .unwrap();
-    assert!(global_roots().contains(&target));
+    assert!(global_roots().unwrap().contains(&target));
     delete_reference(global, ReferenceKind::Global);
 }
 

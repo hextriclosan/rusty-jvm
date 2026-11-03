@@ -1,6 +1,8 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::invoke_dynamic_runner::InvokeDynamicRunner;
+use crate::vm::gc::layout::InstanceLayout;
 use crate::vm::heap::java_instance::{ClassName, FieldNameType};
+use crate::vm::helper::is_reference;
 use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
 use crate::vm::method_area::lookup;
@@ -28,11 +30,15 @@ const FIELD_OFFSET_SCALE: i64 = 4;
 
 type FullyQualifiedFieldName = String; // format: com/example/models/Person.name
 
+#[path = "java_class_gc.rs"]
+mod gc;
+
 /// A class's fields, split the three ways [`JavaClass`] stores them: metadata for every field,
 /// values for the static ones, and the template instances are created from.
 struct BuiltFields {
     info: IndexMap<String, Arc<FieldInfo>>,
     static_values: IndexMap<String, Arc<FieldValue>>,
+    static_references: Box<[String]>,
     instance_template: IndexMap<String, FieldValue>,
 }
 
@@ -41,6 +47,7 @@ pub(crate) struct JavaClass {
     methods: IndexMap<String, Arc<JavaMethod>>,
     fields_info: IndexMap<String, Arc<FieldInfo>>,
     static_fields: IndexMap<String, Arc<FieldValue>>,
+    static_references: Box<[String]>,
     instance_fields_template: IndexMap<String, FieldValue>,
     #[get = "pub"]
     constant_pool: ConstantPool,
@@ -66,6 +73,7 @@ pub(crate) struct JavaClass {
     static_fields_init_state: InitState,
 
     instance_fields_hierarchy: OnceCell<IndexMap<ClassName, IndexMap<FieldNameType, FieldValue>>>,
+    instance_layout: OnceCell<Arc<InstanceLayout>>,
     fields_offset_mapping: OnceCell<IndexSet<FullyQualifiedFieldName>>,
     vtable: OnceCell<IndexMap<String, Arc<JavaMethod>>>,
     #[get = "pub"]
@@ -172,10 +180,11 @@ impl JavaClass {
 
         let built_fields = Self::build_fields(fields, &name)?;
 
-        Ok(Self::assemble(
+        let mut class = Self::assemble(
             Self::build_methods(methods, &name),
             built_fields.info,
             built_fields.static_values,
+            built_fields.static_references,
             built_fields.instance_template,
             constant_pool,
             attributes,
@@ -189,7 +198,9 @@ impl JavaClass {
             annotations_raw,
             enclosing_method,
             source_file,
-        ))
+        );
+        class.add_vm_fields()?;
+        Ok(class)
     }
 
     /// Builds a class the VM invents rather than loads: primitives (`int`, `void`, …) and array
@@ -205,6 +216,7 @@ impl JavaClass {
             IndexMap::new(),
             IndexMap::new(),
             IndexMap::new(),
+            Box::new([]),
             IndexMap::new(),
             ConstantPool::empty(),
             Attributes::empty(),
@@ -275,7 +287,16 @@ impl JavaClass {
         let mut info = IndexMap::new();
         let mut instance_template = IndexMap::new();
         let mut static_values = IndexMap::new();
+        let mut static_references = Vec::new();
         for field in fields {
+            // This storage is keyed by bare name. Do not publish an incomplete
+            // layout when a class file declares same-name/different-type fields.
+            if info.contains_key(&field.name) {
+                return Err(Error::new_execution(&format!(
+                    "Cannot represent duplicate field name {class_name}.{}",
+                    field.name
+                )));
+            }
             let is_static = field.is_static();
             info.insert(
                 field.name.clone(),
@@ -287,6 +308,9 @@ impl JavaClass {
                 )),
             );
             if is_static {
+                if is_reference(&field.descriptor) {
+                    static_references.push(field.name.clone());
+                }
                 static_values.insert(field.name, Arc::new(FieldValue::new(field.descriptor)?));
             } else {
                 instance_template.insert(field.name, FieldValue::new(field.descriptor)?);
@@ -296,6 +320,7 @@ impl JavaClass {
         Ok(BuiltFields {
             info,
             static_values,
+            static_references: static_references.into_boxed_slice(),
             instance_template,
         })
     }
@@ -305,6 +330,7 @@ impl JavaClass {
         methods: IndexMap<String, Arc<JavaMethod>>,
         fields_info: IndexMap<String, Arc<FieldInfo>>,
         static_fields: IndexMap<String, Arc<FieldValue>>,
+        static_references: Box<[String]>,
         instance_fields_template: IndexMap<String, FieldValue>,
         constant_pool: ConstantPool,
         attributes: Attributes,
@@ -323,6 +349,7 @@ impl JavaClass {
             methods,
             fields_info,
             static_fields,
+            static_references,
             instance_fields_template,
             constant_pool,
             attributes,
@@ -334,6 +361,7 @@ impl JavaClass {
             nested_class_modifiers,
             static_fields_init_state: InitState::default(),
             instance_fields_hierarchy: OnceCell::new(),
+            instance_layout: OnceCell::new(),
             fields_offset_mapping: OnceCell::new(),
             vtable: OnceCell::new(),
             declaring_class,
@@ -389,27 +417,6 @@ impl JavaClass {
         let field_info = self.fields_info.get(instance_field_name_type)?;
 
         Some(field_info.type_descriptor())
-    }
-
-    pub fn put_instance_field_descriptor(
-        &mut self,
-        name: String,
-        type_descriptor: TypeDescriptor,
-        flags: u16,
-        class_name: &str,
-    ) -> Result<Option<Arc<FieldInfo>>> {
-        self.instance_fields_template
-            .insert(name.clone(), FieldValue::new(type_descriptor.clone())?);
-
-        Ok(self.fields_info.insert(
-            name.clone(),
-            Arc::new(FieldInfo::new(
-                type_descriptor,
-                flags,
-                class_name.to_string(),
-                name,
-            )),
-        ))
     }
 
     pub fn default_value_instance_fields(&self) -> IndexMap<FieldNameType, FieldValue> {

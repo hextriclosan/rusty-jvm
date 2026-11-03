@@ -4,6 +4,7 @@ use crate::vm::commons::auto_dash_map::auto_dash_map_i32::AutoDashMapI32;
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::helpers::throw_null_pointer_exception;
 use crate::vm::exception::pending::Throws;
+use crate::vm::gc::layout::References;
 use crate::vm::heap::java_instance::HeapValue::{Arr, Object};
 use crate::vm::heap::java_instance::JavaInstance::Class;
 use crate::vm::heap::java_instance::{Array, HeapValue, JavaInstance};
@@ -36,6 +37,26 @@ impl Default for Heap {
 }
 
 impl Heap {
+    /// Read outgoing edges under one heap guard, then release it before the caller
+    /// follows any edge. Only call while mutators are quiescent.
+    #[allow(dead_code)] // Traversal is connected by the task-7 collector.
+    pub(crate) fn references(&self, objectref: i32) -> Result<References> {
+        let entry = self.data.get(objectref).ok_or_else(|| {
+            Error::new_execution(&format!("Missing strong heap reference {objectref}"))
+        })?;
+        match entry.value() {
+            Object(instance) => instance.references(),
+            Arr(array) => array.references(),
+        }
+    }
+
+    pub(crate) fn interned_refs(&self) -> Vec<i32> {
+        self.ref_by_stringvalue
+            .iter()
+            .map(|entry| *entry.value())
+            .collect()
+    }
+
     pub fn create_instance(&self, java_instance: JavaInstance) -> i32 {
         self.data.insert_auto(Object(java_instance))
     }

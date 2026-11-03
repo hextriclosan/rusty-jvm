@@ -1,7 +1,9 @@
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::helper::{clazz_ref, default_value};
+use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_value::StackValueKind;
 use getset::{CopyGetters, Getters};
 use jdescriptor::TypeDescriptor;
@@ -27,6 +29,20 @@ pub(crate) struct FieldValue {
 }
 
 impl FieldValue {
+    /// Read one typed reference during a quiescent scan. Contention or malformed
+    /// storage aborts the scan; it must never wait for a stopped mutator.
+    pub(crate) fn reference_snapshot(&self) -> Result<i32> {
+        let value = self.value.try_read().map_err(|error| {
+            Error::new_execution(&format!("Cannot snapshot reference field: {error}"))
+        })?;
+        match value.as_slice() {
+            [reference] => Ok(*reference),
+            _ => Err(Error::new_execution(
+                "Reference field must occupy exactly one slot",
+            )),
+        }
+    }
+
     pub fn new(type_descriptor: TypeDescriptor) -> Result<Self> {
         let value = default_value(&type_descriptor)?;
         Ok(Self {
@@ -70,6 +86,18 @@ impl Clone for FieldValue {
 }
 
 impl FieldInfo {
+    pub(crate) fn declaring_class(&self) -> &str {
+        &self.class_name
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub(crate) fn reflection_ref_if_present(&self) -> Option<i32> {
+        self.reflection_ref.get().copied()
+    }
+
     pub fn new(
         type_descriptor: TypeDescriptor,
         flags: u16,
@@ -112,11 +140,15 @@ impl FieldInfo {
     ///     byte[] annotations);
     /// ```
     fn construct_field(&self) -> Result<i32> {
+        let mut roots = JavaThread::hold_temp_roots(vec![]);
         let declaring_class_ref = clazz_ref(&self.class_name)?;
+        roots.add_root(Slot::Ref(declaring_class_ref));
 
         let name_ref = StringPoolHelper::get_string(&self.name)?;
+        roots.add_root(Slot::Ref(name_ref));
         let descr = self.type_descriptor.to_string();
         let type_ref = clazz_ref(&descr)?;
+        roots.add_root(Slot::Ref(type_ref));
 
         let modifiers = self.flags as i32;
         let trusted_final = 0; // we don't support this yet
@@ -143,5 +175,32 @@ impl FieldInfo {
         )?;
 
         Ok(method_ref[0].value())
+    }
+}
+
+#[cfg(test)]
+mod gc_tests {
+    use super::*;
+
+    #[test]
+    fn gc_roots_field_reflection_cache_is_non_initializing() {
+        let field = FieldInfo::new(
+            TypeDescriptor::Integer,
+            0,
+            "Unloaded".into(),
+            "field".into(),
+        );
+        assert_eq!(field.reflection_ref_if_present(), None);
+        field.reflection_ref.set(71).unwrap();
+        assert_eq!(field.reflection_ref_if_present(), Some(71));
+    }
+
+    #[test]
+    fn gc_roots_reference_field_snapshot_rejects_lock_contention() {
+        let value = FieldValue::new(TypeDescriptor::Object("Test".into())).unwrap();
+        let guard = value.value.write().unwrap();
+        assert!(value.reference_snapshot().is_err());
+        drop(guard);
+        assert_eq!(value.reference_snapshot().unwrap(), 0);
     }
 }

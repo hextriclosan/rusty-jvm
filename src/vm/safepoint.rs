@@ -11,7 +11,7 @@ use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frames_util::{StackElement, StackFramesUtil};
 pub(crate) use blocking::{lock, wait, wait_for, Blocking, ManagedAccess};
-pub(crate) use coordinator::{Coordinator, Reason, Snapshot};
+pub(crate) use coordinator::{Coordinator, Operation, Reason, Snapshot};
 use std::cell::Cell;
 #[cfg(test)]
 use std::cell::RefCell;

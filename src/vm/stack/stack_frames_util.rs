@@ -36,6 +36,9 @@ pub enum CallerClass {
 #[getset(get_copy = "pub")]
 pub struct StackElement {
     class_ref: i32,
+    /// Raw JavaMethod address, NOT a heap reference. It is valid only because
+    /// CLASSES permanently owns method metadata and class unloading is disabled.
+    /// TODO(GC): enabling unloading requires owned metadata here and in backtraces.
     method_ref: i64,
     line_number: u16,
     /// Start bytecode index of the instruction this frame was executing, used to build helpful

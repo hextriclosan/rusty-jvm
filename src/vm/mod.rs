@@ -26,14 +26,12 @@ use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::launcher::resolve_and_execute_main_method;
 use crate::vm::launcher::LaunchMode::{LmClass, LmJar};
-use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::method_area::{with_method_area, MethodArea};
 use crate::vm::perf_data::init_perf_file;
 use crate::vm::properties::resolve_classpath;
 use crate::vm::properties::system_properties::init_system_properties;
 use crate::vm::stack::stack_value::StackValueKind;
-use crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP;
 use crate::vm::system_native::properties_provider::properties::is_bigendian;
 use crate::vm::validation::validate_class_name;
 use crate::Arguments;
@@ -192,20 +190,9 @@ fn init_logger() -> Result<()> {
 }
 
 fn init() -> Result<()> {
-    put_synthetic_instance_field("java/lang/invoke/ResolvedMethodName", "vmtarget", "J", 0)?;
-    // JDK 26+ no longer declares the holder field of `ConstantPool`; like HotSpot, inject it.
-    if CLASSES
-        .get("jdk/internal/reflect/ConstantPool")?
-        .instance_field_descriptor(CONSTANT_POOL_OOP)
-        .is_none()
-    {
-        put_synthetic_instance_field(
-            "jdk/internal/reflect/ConstantPool",
-            CONSTANT_POOL_OOP,
-            "Ljava/lang/Object;",
-            0,
-        )?;
-    }
+    // Synthetic fields are installed during parsing, before immutable publication.
+    CLASSES.get("java/lang/invoke/ResolvedMethodName")?;
+    CLASSES.get("jdk/internal/reflect/ConstantPool")?;
     StaticInit::initialize("jdk/internal/misc/UnsafeConstants")?;
 
     let lc = CLASSES.get("jdk/internal/misc/UnsafeConstants")?;
@@ -290,30 +277,5 @@ fn init() -> Result<()> {
 }
 
 pub(crate) static UNNAMED_MODULE_REF: OnceLock<i32> = OnceLock::new();
-
-fn put_synthetic_instance_field(
-    class_name: &str,
-    field_name: &str,
-    type_descriptor: &str,
-    flags: u16,
-) -> Result<()> {
-    let lc = CLASSES.get(class_name)?;
-    let raw_java_class = Arc::into_raw(lc) as *mut JavaClass;
-    let result = unsafe {
-        (*raw_java_class).put_instance_field_descriptor(
-            field_name.to_string(),
-            str::parse(type_descriptor)?,
-            flags,
-            class_name,
-        )?
-    };
-    match result {
-        Some(field_property) => Err(Error::new_execution(&format!(
-            "field {field_name}:{} already exists in {class_name}",
-            field_property.type_descriptor()
-        ))),
-        None => Ok(()),
-    }
-}
 
 static JAVA_HOME: OnceLock<PathBuf> = OnceLock::new();

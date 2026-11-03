@@ -3,7 +3,7 @@ use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcConstant;
 use crate::vm::execution_engine::ldc_resolution_manager::LdcResolutionManager;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::heap::java_instance::{JavaInstance, JavaInstanceBase};
+use crate::vm::heap::java_instance::JavaInstance;
 use crate::vm::helper::klass;
 use crate::vm::method_area::java_class::JavaClass;
 use crate::vm::method_area::loaded_classes::CLASSES;
@@ -27,6 +27,14 @@ use tracing::trace;
 
 static METHOD_AREA: OnceCell<MethodArea> = OnceCell::new();
 
+/// Early bootstrap may not have installed the area. Reading roots must not initialize it.
+pub(crate) fn global_root_refs() -> Result<Vec<i32>> {
+    match METHOD_AREA.get() {
+        Some(area) => area.root_refs(),
+        None => Ok(Vec::new()),
+    }
+}
+
 pub(crate) fn with_method_area<F, R>(f: F) -> R
 where
     F: FnOnce(&MethodArea) -> R,
@@ -48,6 +56,15 @@ pub(crate) struct MethodArea {
 }
 
 impl MethodArea {
+    fn root_refs(&self) -> Result<Vec<i32>> {
+        let mut roots = self.modules.root_refs()?;
+        roots.extend(self.ldc_resolution_manager.cached_refs()?);
+        roots.extend(self.system_thread_id.get().copied());
+        roots.extend(self.system_thread_group_id.get().copied());
+        roots.extend(self.main_thread_group_id.get().copied());
+        Ok(roots)
+    }
+
     pub(crate) fn init() -> Result<()> {
         METHOD_AREA
             .set(MethodArea::new()?)
@@ -170,10 +187,7 @@ impl MethodArea {
 
     pub fn create_instance_with_default_fields(&self, class_name: &str) -> Result<JavaInstance> {
         let (id, _key, klass) = CLASSES.get_full(class_name)?;
-        Ok(JavaInstance::Base(JavaInstanceBase::new(
-            id,
-            klass.instance_fields_hierarchy()?.clone(),
-        )))
+        Ok(JavaInstance::Base(klass.new_instance(id)?))
     }
 
     pub(crate) fn generate_synthetic_classes() -> Vec<Arc<JavaClass>> {
@@ -289,6 +303,38 @@ fn derive_internal_and_external_names(raw: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gc_roots_method_area_keeps_primordial_groups_and_injects_before_publication() {
+        JAVA_HOME
+            .set(PathBuf::from(std::env::var("JAVA_HOME").unwrap()))
+            .unwrap();
+        let area = MethodArea::new().unwrap();
+        area.set_system_thread_id(61).unwrap();
+        area.set_system_thread_group_id(62).unwrap();
+        area.set_main_thread_group_id(63).unwrap();
+        area.modules.registry().insert("java.base".into(), 64);
+
+        let roots = area.root_refs().unwrap();
+
+        assert_eq!(roots, vec![64, 61, 62, 63]);
+        for (class, field, descriptor) in [
+            ("java/lang/invoke/ResolvedMethodName", "vmtarget", "J"),
+            (
+                "jdk/internal/reflect/ConstantPool",
+                crate::vm::system_native::constant_pool::CONSTANT_POOL_OOP,
+                "Ljava/lang/Object;",
+            ),
+        ] {
+            let parsed = area.load_class_file(class).unwrap();
+            assert_eq!(
+                parsed.instance_field_descriptor(field).unwrap().to_string(),
+                descriptor
+            );
+            assert!(parsed.default_value_instance_fields().contains_key(field));
+            assert_eq!(parsed.mirror_ref_if_present(), None);
+        }
+    }
 
     #[test]
     fn derive_internal_and_external_names_with_primitive_type() {

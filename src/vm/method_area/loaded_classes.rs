@@ -38,6 +38,21 @@ const CLASS: &str = "java/lang/Class";
 const CLASS_FILE_ACCESS_FLAGS: &str = "classFileAccessFlags";
 
 impl LoadedClasses {
+    /// Quiescent inspection only. Copy Arcs out of one index before reading any
+    /// class state; never acquire a publication claim or require a mirror.
+    pub(crate) fn root_refs(&self) -> Result<Vec<i32>> {
+        let classes: Vec<_> = self
+            .id_index
+            .iter()
+            .map(|entry| Arc::clone(&entry.klass))
+            .collect();
+        let mut roots = Vec::new();
+        for class in classes {
+            roots.extend(class.root_refs()?);
+        }
+        Ok(roots)
+    }
+
     /// Inspection only: never class-loads or re-enters Java while collecting a trace.
     pub(crate) fn get_loaded(&self, name: &str) -> Option<Arc<JavaClass>> {
         self.get_full_impl(name).map(|(_, _, klass)| klass)
@@ -165,10 +180,7 @@ impl LoadedClasses {
             Error::new_execution(&format!("{CLASS} class not found in loaded classes"))
         })?;
         // Lazy field layout resolution can load classes; prepare it before claiming.
-        let class_instance = JavaInstanceBase::new(
-            class_klass_id,
-            class_klass.instance_fields_hierarchy()?.clone(),
-        );
+        let class_instance = class_klass.new_instance(class_klass_id)?;
 
         let _claim = self.loading.claim(fully_qualified_class_name);
         if let Some((id, key, klass)) = self.get_full_impl(fully_qualified_class_name) {
@@ -383,10 +395,7 @@ impl LoadedClasses {
                 &class_klass,
                 class_klass_id,
                 &class_klass,
-                JavaInstanceBase::new(
-                    class_klass_id,
-                    class_klass.instance_fields_hierarchy()?.clone(),
-                ),
+                class_klass.new_instance(class_klass_id)?,
                 None,
                 None,
             )?;
@@ -400,10 +409,7 @@ impl LoadedClasses {
                 &object_klass,
                 object_klass_id,
                 &class_klass,
-                JavaInstanceBase::new(
-                    class_klass_id,
-                    class_klass.instance_fields_hierarchy()?.clone(),
-                ),
+                class_klass.new_instance(class_klass_id)?,
                 None,
                 None,
             )?;

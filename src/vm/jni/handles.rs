@@ -1,5 +1,5 @@
 //! JNI tokens are never dereferenced, tagged, recycled, or used as heap keys.
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::jni::utils::set_pending_internal_error;
@@ -213,16 +213,18 @@ pub(crate) fn clear_weak_references(mut is_live: impl FnMut(i32) -> bool) {
     }
 }
 
-#[allow(dead_code)] // Global root enumeration is task 5.
-pub(crate) fn global_roots() -> Vec<i32> {
-    let mut roots: Vec<_> = table()
+pub(crate) fn global_roots() -> Result<Vec<i32>> {
+    let table = TABLE.try_lock().map_err(|error| {
+        Error::new_execution(&format!("Cannot snapshot JNI global handles: {error}"))
+    })?;
+    let mut roots: Vec<_> = table
         .records
         .values()
         .filter(|record| record.kind == ReferenceKind::Global)
         .map(|record| record.target)
         .collect();
     roots.extend(EMERGENCY_OOM.get().copied());
-    roots
+    Ok(roots)
 }
 
 pub(crate) fn local_roots() -> Vec<i32> {
