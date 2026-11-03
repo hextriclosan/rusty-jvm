@@ -4814,6 +4814,46 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_throw_for_invalid_jni_string_regions() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.stringops.JniStringRegionBoundsDemo",
+        &[],
+        r#"get in bounds = "alu"
+get empty at length = ""
+get negative start -> java.lang.StringIndexOutOfBoundsException
+get negative length -> java.lang.StringIndexOutOfBoundsException
+get past end -> java.lang.StringIndexOutOfBoundsException
+get overflow -> java.lang.StringIndexOutOfBoundsException
+utf in bounds = "61 6c 75"
+utf non-ascii = "c3 a9 e2 82 ac ed a0 bd ed b8 80"
+utf split surrogate = "ed a0 bd"
+utf nul char = "61 c0 80 62"
+utf empty at length = ""
+utf negative start -> java.lang.StringIndexOutOfBoundsException
+utf past end -> java.lang.StringIndexOutOfBoundsException
+utf overflow -> java.lang.StringIndexOutOfBoundsException
+get null buffer empty = "done"
+utf null buffer empty = "done"
+get null string -> java.lang.NullPointerException: String is null
+utf null string -> java.lang.NullPointerException: String is null
+get null buffer -> java.lang.NullPointerException: Buffer is null
+utf null buffer -> java.lang.NullPointerException: Buffer is null
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.stringops.JniStringRegionBoundsDemo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_support_thread_pool_executor() {
     assert_success(
         "samples.concurrency.advancedpooldemo.AdvancedPoolDemo",

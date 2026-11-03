@@ -148,9 +148,19 @@ pub(crate) fn set_pending_internal_error(message: &str) {
     set_pending_error("java/lang/InternalError", message);
 }
 
+pub(super) fn set_pending_string_index_out_of_bounds_exception() {
+    // HotSpot throws it without a message from GetStringRegion and GetStringUTFRegion
+    set_pending_throwable("java/lang/StringIndexOutOfBoundsException", None);
+}
+
 fn set_pending_error(exception_class: &str, message: &str) {
+    set_pending_throwable(exception_class, Some(message));
+}
+
+fn set_pending_throwable(exception_class: &str, message: Option<&str>) {
+    let log_message = message.unwrap_or("<no message>");
     // First-wins semantics: if an exception is already pending, preserve it and
-    // do nothing, like OpenJDK does. This must never panic — `set_pending_error` is reachable from
+    // do nothing, like OpenJDK does. This must never panic — `set_pending_throwable` is reachable from
     // `extern "system"` natives, and unwinding across that FFI boundary would
     // abort the VM and violate JNI semantics (the original pending exception
     // must survive and propagate to Java).
@@ -160,28 +170,31 @@ fn set_pending_error(exception_class: &str, message: &str) {
     // is itself unsafe.
     if let Some(pending_ref) = JavaThread::get_pending_exception() {
         warn!(
-            "Dropping {exception_class} ('{message}'): an exception (ref={pending_ref}) is already pending"
+            "Dropping {exception_class} ('{log_message}'): an exception (ref={pending_ref}) is already pending"
         );
         return;
     }
 
-    let result = StringPoolHelper::get_string(message).and_then(|msg_ref| {
-        Executor::invoke_args_constructor(
-            exception_class,
-            "<init>:(Ljava/lang/String;)V",
-            &[StackValueKind::from(msg_ref)],
-            None,
-        )
-    });
+    let result = match message {
+        Some(message) => StringPoolHelper::get_string(message).and_then(|msg_ref| {
+            Executor::invoke_args_constructor(
+                exception_class,
+                "<init>:(Ljava/lang/String;)V",
+                &[StackValueKind::from(msg_ref)],
+                None,
+            )
+        }),
+        None => Executor::invoke_default_constructor(exception_class),
+    };
     match result {
         Ok(throwable_ref) => match JavaThread::try_set_pending_exception(throwable_ref) {
             Ok(()) => (),
             // Constructing the throwable ran Java code, which may itself have
             // raised (and left pending) an exception in the meantime. Honor
             // first-wins and drop this one rather than panicking across FFI.
-            Err(e) => warn!("Dropping {exception_class} ('{message}'): {e}"),
+            Err(e) => warn!("Dropping {exception_class} ('{log_message}'): {e}"),
         },
-        Err(e) => panic!("Failed to construct {exception_class} for '{message}': {e}"),
+        Err(e) => panic!("Failed to construct {exception_class} for '{log_message}': {e}"),
     }
 }
 

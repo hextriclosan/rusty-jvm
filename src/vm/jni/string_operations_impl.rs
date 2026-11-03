@@ -4,6 +4,9 @@ use crate::vm::jni::array_operations_impl::{
     new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
 };
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
+use crate::vm::jni::utils::{
+    set_pending_null_pointer_exception, set_pending_string_index_out_of_bounds_exception,
+};
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::string::get_raw_string_info;
 use crate::{from_mutf8_ptr, to_mutf8_data};
@@ -323,27 +326,22 @@ pub(super) extern "system" fn get_string_region(
     len: jsize,
     buf: *mut jchar,
 ) {
-    if str.is_null() || buf.is_null() {
-        panic!("Null pointer in GetStringRegion"); // todo throw NullPointerException
+    let Some(region) = get_string_region_data(str, start, len) else {
+        return;
+    };
+
+    if region.is_empty() {
+        return;
     }
-
-    let string_len = get_string_length(_env, str) as jsize;
-
-    // Check bounds (using overflow-safe comparison)
-    if start < 0 || len < 0 || start > string_len || len > string_len - start {
-        panic!("Invalid string region: start={start}, len={len}, string_len={string_len}");
-        // todo throw StringIndexOutOfBoundsException
+    if buf.is_null() {
+        set_pending_null_pointer_exception("Buffer is null");
+        return;
     }
-
-    // Get the raw UTF-16 data
-    let string_ref = str as i32;
-    let raw_data = get_string_raw_data(string_ref);
 
     // Copy the region to the buffer
     unsafe {
-        let src_slice = &raw_data[start as usize..start as usize + len as usize];
-        let dst_slice = std::slice::from_raw_parts_mut(buf, len as usize);
-        dst_slice.copy_from_slice(src_slice);
+        let dst_slice = std::slice::from_raw_parts_mut(buf, region.len());
+        dst_slice.copy_from_slice(&region);
     }
 }
 
@@ -356,26 +354,21 @@ pub(super) extern "system" fn get_string_utf_region(
     len: jsize,
     buf: *mut c_char,
 ) {
-    if str.is_null() || buf.is_null() {
-        panic!("Null pointer in GetStringUTFRegion"); // todo throw NullPointerException
+    let Some(region) = get_string_region_data(str, start, len) else {
+        return;
+    };
+
+    if buf.is_null() {
+        // HotSpot accepts a null buffer for an empty region
+        if !region.is_empty() {
+            set_pending_null_pointer_exception("Buffer is null");
+        }
+        return;
     }
-
-    let string_len = get_string_length(_env, str) as jsize;
-
-    // Check bounds (using overflow-safe comparison)
-    if start < 0 || len < 0 || start > string_len || len > string_len - start {
-        panic!("Invalid string region: start={start}, len={len}, string_len={string_len}");
-        // todo throw StringIndexOutOfBoundsException
-    }
-
-    // Get the raw UTF-16 data and extract the region
-    let string_ref = str as i32;
-    let raw_data = get_string_raw_data(string_ref);
-    let region = &raw_data[start as usize..start as usize + len as usize];
 
     // Encode directly to modified UTF-8 without round-tripping through Rust String.
     // This handles isolated surrogates and split surrogate pairs correctly per JNI spec.
-    let mutf8_data = encode_utf16_to_modified_utf8(region);
+    let mutf8_data = encode_utf16_to_modified_utf8(&region);
 
     // Copy to the caller's buffer: mutf8_data.len() bytes plus a null terminator.
     // The caller should size buf via GetStringUTFLength on the same region, since
@@ -385,6 +378,26 @@ pub(super) extern "system" fn get_string_utf_region(
         dst_slice[..mutf8_data.len()].copy_from_slice(&mutf8_data);
         dst_slice[mutf8_data.len()] = 0; // null terminator
     }
+}
+
+/// Returns the UTF-16 code units of the requested string region,
+/// or sets a pending exception and returns `None` if the string is null or the range is invalid.
+fn get_string_region_data(str: jstring, start: jsize, len: jsize) -> Option<Vec<jchar>> {
+    if str.is_null() {
+        set_pending_null_pointer_exception("String is null");
+        return None;
+    }
+
+    let raw_data = get_string_raw_data(str as i32);
+    let string_len = raw_data.len() as jsize;
+
+    // Check bounds (using overflow-safe comparison)
+    if start < 0 || len < 0 || start > string_len - len {
+        set_pending_string_index_out_of_bounds_exception();
+        return None;
+    }
+
+    Some(raw_data[start as usize..(start + len) as usize].to_vec())
 }
 
 /// GetStringCritical: Returns a pointer to the string's characters.
