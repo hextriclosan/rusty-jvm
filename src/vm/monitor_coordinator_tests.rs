@@ -23,6 +23,7 @@ fn gc_coordinator_waiter_drops_actual_guard_for_third_contender() {
         )
         .unwrap();
     let (wait_published, waiting) = channel();
+    let (reentry_published, reentering) = channel();
     let (wake_guard, woke) = channel();
     let (continue_wake, wake_gate) = channel();
     let (third_started, third_ready) = channel();
@@ -40,15 +41,27 @@ fn gc_coordinator_waiter_drops_actual_guard_for_third_contender() {
     let waiter = std::thread::spawn(move || {
         safepoint::attach();
         enter(object);
-        let published = Cell::new(false);
-        let reacquired = Cell::new(false);
+        let publications = Cell::new(0);
+        let reacquisitions = Cell::new(0);
         safepoint::observe(move |event| {
-            if event == Event::SnapshotPublished && !published.replace(true) {
-                wait_published.send(()).unwrap();
+            if event == Event::SnapshotPublished {
+                publications.set(publications.get() + 1);
+                match publications.get() {
+                    1 => wait_published.send(()).unwrap(),
+                    2 => reentry_published.send(()).unwrap(),
+                    _ => {}
+                }
             }
-            if event == Event::GuardReacquired && !reacquired.replace(true) {
-                wake_guard.send(()).unwrap();
-                receive(&wake_gate);
+            if event == Event::GuardReacquired {
+                reacquisitions.set(reacquisitions.get() + 1);
+                // The notify wake must proceed while main still owns the Java
+                // monitor. Pausing it here would prevent main's exit from taking
+                // the state mutex. Pause only the subsequent entry-set wake,
+                // after exit has released logical ownership.
+                if reacquisitions.get() == 2 {
+                    wake_guard.send(()).unwrap();
+                    receive(&wake_gate);
+                }
             }
         });
         wait(object, 0).unwrap();
@@ -102,6 +115,10 @@ fn gc_coordinator_waiter_drops_actual_guard_for_third_contender() {
     // When notify wakes the waiter, let a third contender arrive before rendezvous.
     enter(object);
     notify(object).unwrap();
+    // Let the notified waiter reach its entry-set wait before releasing the
+    // Java monitor. The next GuardReacquired is then caused by exit, not notify.
+    // This channel also avoids a flag-after-exit race that could miss the wake.
+    receive(&reentering);
     exit(object).unwrap();
     receive(&woke);
     start_third.send(()).unwrap();
