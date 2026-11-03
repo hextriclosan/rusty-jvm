@@ -209,20 +209,101 @@ pub(crate) fn user_dir() -> &'static str {
     &USER_DIR
 }
 
+/// The password database entry of the real user, which HotSpot reads the user properties from
+#[cfg(unix)]
+static PASSWD_ENTRY: LazyLock<Option<nix::unistd::User>> = LazyLock::new(|| {
+    nix::unistd::User::from_uid(nix::unistd::getuid())
+        .ok()
+        .flatten()
+});
+
+#[cfg(unix)]
+static USER_NAME: LazyLock<String> = LazyLock::new(|| match PASSWD_ENTRY.as_ref() {
+    Some(entry) => entry.name.clone(),
+    None => "?".to_string(),
+});
+
+#[cfg(windows)]
+static USER_NAME: LazyLock<String> = LazyLock::new(|| {
+    use winapi::shared::winerror::ERROR_INSUFFICIENT_BUFFER;
+    use winapi::um::errhandlingapi::GetLastError;
+    use winapi::um::winbase::GetUserNameW;
+
+    // like OpenJDK, %USERNAME% first, as GetUserNameW is expensive
+    if let Some(name) = env::var_os("USERNAME").filter(|name| !name.is_empty()) {
+        return name.to_string_lossy().into_owned();
+    }
+    let mut length = 0;
+    if unsafe { GetUserNameW(std::ptr::null_mut(), &mut length) } != 0
+        || unsafe { GetLastError() } != ERROR_INSUFFICIENT_BUFFER
+    {
+        return "unknown".to_string();
+    }
+    let mut name = vec![0u16; length as usize];
+    if unsafe { GetUserNameW(name.as_mut_ptr(), &mut length) } == 0 {
+        return "unknown".to_string();
+    }
+    // the length counts the terminating null
+    String::from_utf16_lossy(&name[..(length as usize).saturating_sub(1)])
+});
+
+pub(crate) fn user_name() -> &'static str {
+    &USER_NAME
+}
+
+/// The home directory the OS reports: macOS asks Foundation, which also honors `CFFIXED_USER_HOME`
+#[cfg(target_os = "macos")]
+fn os_user_home() -> Option<String> {
+    objc2::rc::autoreleasepool(|_| Some(objc2_foundation::NSHomeDirectory().to_string()))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn os_user_home() -> Option<String> {
+    PASSWD_ENTRY
+        .as_ref()
+        .map(|entry| entry.dir.to_string_lossy().into_owned())
+}
+
+#[cfg(unix)]
 static USER_HOME: LazyLock<String> = LazyLock::new(|| {
-    let variable = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-    env::var(variable).unwrap_or_else(|_| "?".to_string())
+    // like OpenJDK, $HOME only stands in for a missing home directory or one shorter than two
+    // characters, such as `/`
+    match os_user_home() {
+        Some(home) if home.len() >= 2 => home,
+        _ => env::var_os("HOME")
+            .filter(|home| !home.is_empty())
+            .map_or_else(
+                || "?".to_string(),
+                |home| home.to_string_lossy().into_owned(),
+            ),
+    }
+});
+
+#[cfg(windows)]
+static USER_HOME: LazyLock<String> = LazyLock::new(|| {
+    use winapi::um::combaseapi::CoTaskMemFree;
+    use winapi::um::knownfolders::FOLDERID_Profile;
+    use winapi::um::shlobj::{SHGetKnownFolderPath, KF_FLAG_DONT_VERIFY};
+
+    let mut path = std::ptr::null_mut();
+    let result = unsafe {
+        SHGetKnownFolderPath(
+            &FOLDERID_Profile,
+            KF_FLAG_DONT_VERIFY,
+            std::ptr::null_mut(),
+            &mut path,
+        )
+    };
+    let home = (result >= 0).then(|| {
+        let length = (0..).take_while(|&i| unsafe { *path.add(i) } != 0).count();
+        String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(path, length) })
+    });
+    unsafe { CoTaskMemFree(path.cast()) };
+    home.unwrap_or_else(|| "C:\\".to_string())
 });
 
 pub(crate) fn user_home() -> &'static str {
     &USER_HOME
-}
-
-static USER_NAME: LazyLock<String> =
-    LazyLock::new(|| whoami::username().unwrap_or_else(|_| "?".to_string()));
-
-pub(crate) fn user_name() -> &'static str {
-    &USER_NAME
 }
 
 static TMP_DIR: LazyLock<String> = LazyLock::new(|| env::temp_dir().display().to_string());

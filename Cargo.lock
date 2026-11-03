@@ -1459,6 +1459,8 @@ dependencies = [
  "nix",
  "num-traits",
  "num_enum",
+ "objc2",
+ "objc2-foundation",
  "once_cell",
  "os_info",
  "page_size",

@@ -2033,19 +2033,44 @@ fn should_return_system_properties() {
         tmp_dir,
         env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
     );
-
-    let home_variable = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-    assert_eq!(
-        json["user.home"],
-        env::var(home_variable).expect("User home is not set")
-    );
-    assert_eq!(json["user.name"], whoami::username().unwrap());
 }
 
 #[test]
 fn should_match_host_jnu_encoding() {
     // sun.jnu.encoding depends on the host's locale / code page
     utils::assert_same_as_reference_jvm(&[], "samples.system.encoding.SunJnuEncoding", Success);
+}
+
+#[test]
+fn should_match_host_user_properties() {
+    // user.name and user.home are the host's
+    utils::assert_same_as_reference_jvm(
+        &[],
+        "samples.system.userproperties.UserProperties",
+        Success,
+    );
+}
+
+#[test]
+fn should_take_user_properties_from_the_os() {
+    // HotSpot reads the user database and the profile folder, not $HOME, %USERPROFILE% or $USER,
+    // but Windows takes %USERNAME% and macOS takes CFFIXED_USER_HOME
+    let envs = [
+        ("HOME", "/elsewhere/home"),
+        ("USERPROFILE", "C:\\elsewhere\\home"),
+        ("USER", "someone"),
+        ("LOGNAME", "someone"),
+        ("USERNAME", "someone"),
+        ("CFFIXED_USER_HOME", "/fixed/home"),
+    ];
+    utils::assert_same_as_reference_jvm_with_envs(
+        &[],
+        "samples.system.userproperties.UserProperties",
+        Success,
+        envs.iter()
+            .map(|(name, value)| (name.to_string(), value.to_string()))
+            .collect(),
+    );
 }
 
 #[test]

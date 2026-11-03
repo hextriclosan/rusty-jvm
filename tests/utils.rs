@@ -178,6 +178,15 @@ pub struct ReferenceOutput {
 /// `jvm_args` go to the reference JVM only, e.g. `--add-exports`, whose module encapsulation the VM
 /// under test doesn't enforce.
 pub fn run_reference_jvm(jvm_args: &[&str], entry: &str) -> ReferenceOutput {
+    run_reference_jvm_with_envs(jvm_args, entry, &HashMap::default())
+}
+
+/// [`run_reference_jvm`] with extra environment variables.
+pub fn run_reference_jvm_with_envs(
+    jvm_args: &[&str],
+    entry: &str,
+    envs: &HashMap<String, String>,
+) -> ReferenceOutput {
     let java_home = env::var("JAVA_HOME").expect("JAVA_HOME is not set");
     let mut java = PathBuf::from(java_home).join("bin").join("java");
     if cfg!(windows) {
@@ -190,6 +199,7 @@ pub fn run_reference_jvm(jvm_args: &[&str], entry: &str) -> ReferenceOutput {
         .env_remove("JAVA_TOOL_OPTIONS")
         .env_remove("_JAVA_OPTIONS")
         .env_remove("JDK_JAVA_OPTIONS")
+        .envs(envs)
         .args(jvm_args)
         .arg(entry)
         .output()
@@ -218,7 +228,22 @@ pub fn assert_same_as_reference_jvm(
     entry: &str,
     expected_result: ExecutionResult,
 ) {
-    let reference = run_reference_jvm(reference_jvm_args, entry);
+    assert_same_as_reference_jvm_with_envs(
+        reference_jvm_args,
+        entry,
+        expected_result,
+        HashMap::default(),
+    );
+}
+
+/// [`assert_same_as_reference_jvm`] with extra environment variables for both JVMs.
+pub fn assert_same_as_reference_jvm_with_envs(
+    reference_jvm_args: &[&str],
+    entry: &str,
+    expected_result: ExecutionResult,
+    envs: HashMap<String, String>,
+) {
+    let reference = run_reference_jvm_with_envs(reference_jvm_args, entry, &envs);
     assert_with_all_args(
         &[],
         entry,
@@ -227,7 +252,7 @@ pub fn assert_same_as_reference_jvm(
         &reference.stderr,
         expected_result,
         reference.exit_code,
-        HashMap::default(),
+        envs,
     );
 }
 
