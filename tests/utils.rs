@@ -301,6 +301,20 @@ fn get_command(arguments: &[&str], envs: HashMap<String, String>) -> Command {
     cmd
 }
 
+pub fn get_command_with_vm_options(
+    vm_options: &[&str],
+    entry: &str,
+    application_args: &[&str],
+) -> Command {
+    let args = vm_options
+        .iter()
+        .copied()
+        .chain(iter::once(entry))
+        .chain(application_args.iter().copied())
+        .collect::<Vec<_>>();
+    get_command(&args, HashMap::default())
+}
+
 /// `com.example.Example$$Lambda/0x000001f9ca001850` -> `com.example.Example$$Lambda/0x0000`
 fn normalize_lambda(to_strip: &str) -> String {
     let re = regex::Regex::new(r"(\$\$Lambda/0x0000)[0-9a-fA-F]+").unwrap();

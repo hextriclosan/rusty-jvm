@@ -3,6 +3,7 @@ mod commons;
 mod error;
 mod exception;
 mod execution_engine;
+mod gc;
 mod heap;
 mod helper;
 mod jni;
@@ -53,6 +54,7 @@ pub(crate) static SYSTEM_CLASSLOADER_REF: OnceLock<i32> = OnceLock::new();
 /// * `arguments` - The arguments for the Java program.
 /// * `java_home` - The path to the Java home directory.
 pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
+    gc::install(arguments)?;
     JAVA_HOME
         .set(java_home.to_path_buf())
         .map_err(|e| Error::new_execution(&format!("JAVA_HOME already set: {e:?}")))?;
@@ -149,16 +151,36 @@ fn prelude() -> Result<()> {
 }
 
 fn init_logger() -> Result<()> {
+    use tracing_subscriber::filter::filter_fn;
+    use tracing_subscriber::layer::Layer;
+
     let fmt_layer = fmt::layer()
         .with_target(false)
         .without_time()
-        .with_ansi(false);
+        .with_ansi(false)
+        .with_filter(filter_fn(|metadata| metadata.target() != "gc"));
+    let gc_fmt_layer = fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_target(false)
+        .with_level(false)
+        .without_time()
+        .with_ansi(false)
+        .with_filter(filter_fn(|metadata| metadata.target() == "gc"));
     let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))
+        .or_else(|_| EnvFilter::try_new("info,gc=off"))
         .map_err(|e| Error::new_execution(&format!("Error creating EnvFilter: {e}")))?;
+    let filter_layer = if gc::logging_enabled() {
+        let directive = "gc=info"
+            .parse::<tracing_subscriber::filter::Directive>()
+            .map_err(|e| Error::new_execution(&format!("Error creating GC log directive: {e}")))?;
+        filter_layer.add_directive(directive)
+    } else {
+        filter_layer
+    };
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt_layer)
+        .with(gc_fmt_layer)
         .init();
 
     Ok(())
