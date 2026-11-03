@@ -370,7 +370,7 @@ builtin_natives! {
     "java/lang/Object": instance fn notifyAll() -> void => sn::object::notify_all;
     "java/lang/Object": instance fn wait0(timeout_millis: long) -> void => sn::object::wait0;
 
-    "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory; // todo: use meaningful value, maybe use `sysinfo` crate to get the actual memory size
+    "java/lang/Runtime": instance fn maxMemory() -> long => sn::runtime::max_memory;
     "java/lang/Runtime": instance fn availableProcessors() -> int => sn::runtime::available_processors;
     "java/lang/Runtime": instance fn totalMemory() -> long => sn::runtime::total_memory; // todo: implement me with GC
     "java/lang/Runtime": instance fn freeMemory() -> long => sn::runtime::free_memory; // todo: implement me with GC
