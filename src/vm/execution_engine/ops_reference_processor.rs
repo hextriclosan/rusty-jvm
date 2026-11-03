@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::exception::class_cast::throw_class_cast_exception;
 use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::exception::helpers::throw_null_pointer_exception;
 use crate::vm::execution_engine::common::{last_frame_mut, push_typed, store_ex_pc};
@@ -408,10 +409,12 @@ pub(crate) fn process(
             trace!("ATHROW -> throwable_ref={throwable_ref}, exception_name={exception_name}, found_exception_handler={found_exception_handler}");
         }
         CHECKCAST => {
-            let stack_frame = last_frame_mut(stack_frames)?;
-            let class_constpool_index = stack_frame.extract_two_bytes() as u16;
-            stack_frame.incr_pc();
-            let objectref = stack_frame.pop();
+            let (objectref, class_constpool_index) = {
+                let stack_frame = last_frame_mut(stack_frames)?;
+                let class_constpool_index = stack_frame.extract_two_bytes() as u16;
+                let objectref = stack_frame.pop();
+                (objectref, class_constpool_index)
+            };
 
             if objectref != 0 {
                 let klass = CLASSES.get(current_class_name)?;
@@ -428,13 +431,15 @@ pub(crate) fn process(
 
                 let possible_cast = InstanceChecker::checkcast(&instance_class_name, &class_name)?;
                 if !possible_cast {
-                    return Err(Error::new_execution(&format!(
-                        "Error casting {instance_class_name} to {class_name}"
-                    ))); //todo: throw ClassCastException here
+                    // Thrown before moving past the instruction, so its own handler range applies
+                    throw_class_cast_exception(&instance_class_name, &class_name, stack_frames)?;
+                    return Ok(());
                 }
             }
 
+            let stack_frame = last_frame_mut(stack_frames)?;
             stack_frame.push(Slot::Ref(objectref))?;
+            stack_frame.incr_pc();
 
             trace!("CHECKCAST -> class_constpool_index={class_constpool_index}, objectref={objectref}");
         }

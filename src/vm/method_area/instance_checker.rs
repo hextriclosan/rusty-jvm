@@ -37,20 +37,12 @@ impl InstanceChecker {
     }
 
     fn try_unwrap_arrays<'a>(first: &'a str, second: &'a str) -> (&'a str, &'a str) {
-        fn unwrap_descriptor(descr: &str) -> &str {
-            if descr.starts_with('L') {
-                &descr[1..descr.len() - 1]
-            } else {
-                descr
-            }
-        }
-
         if first.starts_with('[') && second.starts_with('[') {
             Self::try_unwrap_arrays(&first[1..], &second[1..])
         } else {
-            let first = unwrap_descriptor(first);
-            let second = unwrap_descriptor(second);
-            (first, second)
+            // `undecorate` also checks for the trailing ';', so a class that merely starts
+            // with 'L' (e.g. `Lamp` in the unnamed package) keeps its name
+            (undecorate(first), undecorate(second))
         }
     }
 
