@@ -1,18 +1,13 @@
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::heap::HEAP;
-use crate::vm::jni::array_operations_impl::{
-    new_byte_array, new_char_array, set_byte_array_region, set_char_array_region,
-};
+use crate::vm::jni::array_operations_impl::{new_char_array, set_char_array_region};
 use crate::vm::jni::jni_invoke::jni_invoke_scalar;
 use crate::vm::jni::utils::{
     set_pending_null_pointer_exception, set_pending_string_index_out_of_bounds_exception,
 };
-use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::system_native::string::get_raw_string_info;
-use crate::{from_mutf8_ptr, to_mutf8_data};
-use cesu8::to_java_cesu8;
-use jni_sys::{jboolean, jbyte, jchar, jint, jlong, jsize, jstring, JNIEnv, JNI_TRUE};
-use std::ffi::c_char;
+use jni_sys::{jboolean, jchar, jint, jlong, jsize, jstring, JNIEnv, JNI_TRUE};
+use std::ffi::{c_char, CStr};
 use std::ptr;
 
 /// Encode a slice of UTF-16 code units directly to Java's modified UTF-8 (CESU-8/MUTF-8).
@@ -52,6 +47,48 @@ fn encode_utf16_to_modified_utf8(utf16: &[u16]) -> Vec<u8> {
     }
 
     result
+}
+
+/// Decode modified UTF-8 into UTF-16 code units the same way HotSpot does
+/// (`UTF8::unicode_length` followed by `UTF8::convert_to_unicode`).
+/// Isolated surrogates are kept as they are, so this never fails. Malformed input is not
+/// rejected either: a byte that does not start a valid sequence becomes the char with the
+/// same value, and the result has as many chars as there are non-continuation bytes.
+fn decode_modified_utf8_to_utf16(bytes: &[u8]) -> Vec<u16> {
+    let len = bytes.iter().filter(|&&byte| byte & 0xC0 != 0x80).count();
+    let mut result = Vec::with_capacity(len);
+    let mut i = 0;
+    while result.len() < len && i < bytes.len() {
+        let (unit, size) = decode_modified_utf8_unit(&bytes[i..]);
+        result.push(unit);
+        i += size;
+    }
+
+    result
+}
+
+/// Decode one UTF-16 code unit from the start of `bytes`, returning it with the number of bytes used.
+fn decode_modified_utf8_unit(bytes: &[u8]) -> (u16, usize) {
+    let is_continuation = |i: usize| bytes.get(i).is_some_and(|byte| byte & 0xC0 == 0x80);
+    let first = bytes[0] as u16;
+    match first >> 4 {
+        // 0xxxxxxx
+        0x0..=0x7 => (first, 1),
+        // 110xxxxx 10xxxxxx
+        0xC | 0xD if is_continuation(1) => {
+            let unit = ((first & 0x1F) << 6) | (bytes[1] as u16 & 0x3F);
+            (unit, 2)
+        }
+        // 1110xxxx 10xxxxxx 10xxxxxx (also each half of a surrogate pair)
+        0xE if is_continuation(1) && is_continuation(2) => {
+            let unit = ((first & 0x0F) << 12)
+                | ((bytes[1] as u16 & 0x3F) << 6)
+                | (bytes[2] as u16 & 0x3F);
+            (unit, 3)
+        }
+        // Malformed byte: taken as a char of the same value, like HotSpot does
+        _ => (first, 1),
+    }
 }
 
 /// Encode a single Unicode code point to modified UTF-8 bytes.
@@ -212,44 +249,10 @@ pub(super) extern "system" fn new_string_utf8(
         panic!("modified utf-8 array is null");
     }
 
-    let decoded = match from_mutf8_ptr!(mutf8_bytes) {
-        Ok(d) => d,
-        Err(e) => panic!("Failed to decode modified UTF-8 bytes: {e}"),
-    };
-    let decoded_bytes = decoded.as_bytes();
-
-    let len = decoded_bytes.len() as jsize;
-    let byte_array = new_byte_array(env, len);
-    set_byte_array_region(
-        env,
-        byte_array,
-        0,
-        len,
-        decoded_bytes.as_ptr() as *const jbyte,
-    );
-
-    let utf8_charset_ref = {
-        let class = match CLASSES.get("java/nio/charset/StandardCharsets") {
-            Ok(c) => c,
-            Err(e) => panic!("Failed to get StandardCharsets class: {e}"),
-        };
-        let field = match class.static_field("UTF_8") {
-            Some(f) => f,
-            None => panic!("Failed to get UTF_8 field"),
-        };
-        match field.raw_value() {
-            Ok(v) => v[0],
-            Err(e) => panic!("Failed to get UTF_8 value: {e}"),
-        }
-    };
-
-    let result = Executor::invoke_args_constructor(
-        "java/lang/String",
-        "<init>:([BLjava/nio/charset/Charset;)V",
-        &[(byte_array as i32).into(), utf8_charset_ref.into()],
-        Some(""),
-    );
-    jni_invoke_scalar(result, "NewStringUTF")
+    // Decode straight to UTF-16: a Rust String can't hold the isolated surrogates allowed here
+    let bytes = unsafe { CStr::from_ptr(mutf8_bytes) }.to_bytes();
+    let utf16 = decode_modified_utf8_to_utf16(bytes);
+    new_string(env, utf16.as_ptr(), utf16.len() as jsize)
 }
 
 pub(super) extern "system" fn get_string_utf_length_as_long(
@@ -263,11 +266,7 @@ pub(super) extern "system" fn get_string_utf_length_as_long(
     }
 
     let raw_data = get_string_raw_data(string_ref);
-    let data = match String::from_utf16(&raw_data) {
-        Ok(s) => s,
-        Err(e) => panic!("Failed to build string from UTF-16 data: {e}"),
-    };
-    to_java_cesu8(&data).len() as jlong
+    encode_utf16_to_modified_utf8(&raw_data).len() as jlong
 }
 
 pub(super) extern "system" fn get_string_utf_length(_env: *mut JNIEnv, input: jstring) -> jint {
@@ -284,7 +283,8 @@ pub(super) extern "system" fn get_string_utf_chars(
         panic!("Invalid string reference: null");
     }
 
-    let mutf8_data = to_mutf8_data!(string_ref);
+    let mut mutf8_data = encode_utf16_to_modified_utf8(&get_string_raw_data(string_ref));
+    mutf8_data.push(0); // null terminator
     let boxed_slice = mutf8_data.into_boxed_slice();
     let raw_ptr = Box::into_raw(boxed_slice) as *const u8 as *const c_char;
 

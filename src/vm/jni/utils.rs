@@ -25,17 +25,6 @@ macro_rules! from_mutf8_ptr {
     }};
 }
 
-#[macro_export]
-macro_rules! to_mutf8_data {
-    ($string_ref:expr) => {{
-        let raw_data = get_string_raw_data($string_ref);
-        let data = String::from_utf16(&raw_data).expect("Failed to build string from UTF-16 data");
-        let mut mutf8_data = to_java_cesu8(&data).to_vec();
-        mutf8_data.push(0); // null terminator
-        mutf8_data
-    }};
-}
-
 pub(super) fn get_instance_method_id_impl(
     clazz: jclass,
     name: *const c_char,
