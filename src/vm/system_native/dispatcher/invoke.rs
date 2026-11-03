@@ -168,7 +168,7 @@ mod jni_handles_tests {
         let target = HEAP.create_array("[I", 0);
         let object = handles::new_wide_test_local(target);
         if usize::BITS > 32 {
-            assert!(u64::try_from(object.addr()).unwrap() > u64::from(u32::MAX));
+            assert!(u64::try_from(object as usize).unwrap() > u64::from(u32::MAX));
         }
         let cif = Cif::new([Type::pointer()], Type::pointer());
         let result = call_native(

@@ -119,11 +119,11 @@ pub(crate) fn initialize() -> Result<()> {
 
 pub(super) fn as_object(token: usize) -> jobject {
     // The address is only an opaque integer key; no allocation has this provenance.
-    std::ptr::without_provenance_mut(token)
+    token as jobject
 }
 
 pub(crate) fn resolve(object: jobject) -> Option<i32> {
-    let result = table().resolve(object.addr());
+    let result = table().resolve(object as usize);
     match result {
         Ok(target) => Some(target),
         Err(error) => {
@@ -157,7 +157,7 @@ pub(super) fn new_reference(object: jobject, kind: ReferenceKind) -> jobject {
     // TODO(GC): the coordinator's mutator permit will enclose this operation in task 4.
     let result = JavaThread::with_jni_frames(|frames| {
         let mut table = table();
-        let target = table.resolve(object.addr())?;
+        let target = table.resolve(object as usize)?;
         if target == 0 {
             return Ok(0);
         }
@@ -180,11 +180,11 @@ pub(super) fn delete_reference(object: jobject, kind: ReferenceKind) {
     }
     JavaThread::with_jni_frames(|frames| {
         let mut table = table();
-        if let Some(record) = table.record(object.addr()).copied() {
+        if let Some(record) = table.record(object as usize).copied() {
             if record.kind == kind {
-                table.records.remove(&object.addr());
+                table.records.remove(&(object as usize));
                 if let Some(frame) = record.frame {
-                    frames.delete_local(frame, object.addr());
+                    frames.delete_local(frame, object as usize);
                 }
             }
         }
@@ -192,7 +192,7 @@ pub(super) fn delete_reference(object: jobject, kind: ReferenceKind) {
 }
 
 pub(super) fn reference_type(object: jobject) -> jobjectRefType {
-    match table().record(object.addr()).map(|record| record.kind) {
+    match table().record(object as usize).map(|record| record.kind) {
         Some(ReferenceKind::Local) => jobjectRefType::JNILocalRefType,
         Some(ReferenceKind::Global) => jobjectRefType::JNIGlobalRefType,
         Some(ReferenceKind::WeakGlobal) => jobjectRefType::JNIWeakGlobalRefType,

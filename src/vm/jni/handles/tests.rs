@@ -76,7 +76,7 @@ fn jni_handles_locals_are_thread_owned_but_globals_are_shared() {
     let target = HEAP.create_array("[I", 0);
     let local = new_local(target);
     let global = new_reference(local, ReferenceKind::Global);
-    let (local_token, global_token) = (local.addr(), global.addr());
+    let (local_token, global_token) = (local as usize, global as usize);
     std::thread::spawn(move || {
         assert!(matches!(
             reference_type(as_object(local_token)),

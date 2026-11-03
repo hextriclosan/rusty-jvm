@@ -101,7 +101,7 @@ impl LocalFrames {
             return Err(HandleError::MissingFrame);
         }
         let mut table = handles::table();
-        let target = table.resolve(object.addr())?;
+        let target = table.resolve(object as usize)?;
         let parent = self.frames.len() - 2;
         // Destination first. A failure leaves the child and all its records intact.
         let result = if target == 0 {
