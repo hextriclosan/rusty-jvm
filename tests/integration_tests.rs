@@ -4814,6 +4814,48 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 }
 
 #[test]
+fn should_convert_modified_utf8_in_jni() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.javacore.loadlibrary.stringops.JniModifiedUtf8Demo",
+        &[],
+        r#"decode empty = ""
+decode ascii = "value"
+decode two bytes = "\u00e9"
+decode three bytes = "\u20ac"
+decode surrogate pair = "\ud83d\ude00"
+decode lone high surrogate = "a\ud83db"
+decode lone low surrogate = "a\ude00b"
+decode reversed surrogates = "\ude00\ud83d"
+decode modified nul = "a\u0000b"
+decode standard four bytes = "\u00f0"
+decode truncated three bytes = "\u00e2"
+decode lone continuation = "a\u0080"
+decode bad continuation = "\u00c3A"
+encode empty = [] length=0/0
+encode ascii = [76 61 6c 75 65] length=5/5
+encode two bytes = [c3 a9] length=2/2
+encode three bytes = [e2 82 ac] length=3/3
+encode surrogate pair = [ed a0 bd ed b8 80] length=6/6
+encode lone high surrogate = [61 ed a0 bd 62] length=5/5
+encode lone low surrogate = [61 ed b8 80 62] length=5/5
+encode reversed surrogates = [ed b8 80 ed a0 bd] length=6/6
+encode modified nul = [61 c0 80 62] length=4/4
+"#,
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.stringops.JniModifiedUtf8Demo in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_throw_for_invalid_jni_string_regions() {
     let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
     utils::assert_with_all_args(
