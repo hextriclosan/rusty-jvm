@@ -3692,6 +3692,16 @@ fn should_support_locales() {
 }
 
 #[test]
+fn should_enumerate_network_interfaces() {
+    // The interfaces are the host's, so the reference JVM gives the expected output
+    utils::assert_same_as_reference_jvm(
+        &[],
+        "samples.net.networkinterfaces.NetworkInterfacesExample",
+        Success,
+    );
+}
+
+#[test]
 fn should_support_random_access_files() {
     let file = NamedTempFile::new().expect("Failed to create temp file");
     let expected_out = r#"=== RandomAccessFile example ===
