@@ -1,5 +1,5 @@
 use super::*;
-use crate::vm::safepoint::{self, Event, Reason, COORDINATOR};
+use crate::vm::safepoint::{self, Event, COORDINATOR};
 use std::cell::Cell;
 use std::sync::mpsc::{channel, Receiver};
 
