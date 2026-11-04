@@ -15,6 +15,7 @@ use crate::vm::threads;
 use dashmap::DashMap;
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr;
+use std::sync::atomic::{AtomicI32, AtomicI64, Ordering};
 use std::sync::LazyLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -176,6 +177,13 @@ fn compare_and_x_int(
     expected: i32,
     x: i32,
 ) -> Result<(bool, i32)> {
+    if obj_ref == 0 {
+        let atomic: &AtomicI32 = raw_atomic(offset)?;
+        return match atomic.compare_exchange(expected, x, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(witness) => Ok((true, witness)),
+            Err(witness) => Ok((false, witness)),
+        };
+    }
     let class_name = HEAP.get_instance_name(obj_ref)?;
     let (old, swapped) = if class_name.starts_with("[") {
         HEAP.compare_and_exchange_array_by_raw_offset(
@@ -423,12 +431,10 @@ fn compare_and_x_long(
     x: i64,
 ) -> Result<(bool, i64)> {
     if obj_ref == 0 {
-        let old_value: i64 = read_raw(offset);
-        return if old_value == expected {
-            write_raw(offset, x);
-            Ok((true, old_value))
-        } else {
-            Ok((false, old_value))
+        let atomic: &AtomicI64 = raw_atomic(offset)?;
+        return match atomic.compare_exchange(expected, x, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(witness) => Ok((true, witness)),
+            Err(witness) => Ok((false, witness)),
         };
     }
 
@@ -529,6 +535,20 @@ fn put_value(obj_ref: i32, offset: i64, value: PutValue) -> Result<()> {
     }
 }
 
+/// The atomic at the absolute `address`. Unsafe requires CAS addresses to be aligned to the value's
+/// size, and an atomic access to a misaligned address is undefined behaviour in Rust, so a
+/// misaligned address is an error.
+fn raw_atomic<'a, A>(address: i64) -> Result<&'a A> {
+    let ptr = address as usize as *const A;
+    if !ptr.is_aligned() {
+        return Err(Error::new_execution(&format!(
+            "misaligned address {address:#x} for an atomic access of {} bytes",
+            size_of::<A>()
+        )));
+    }
+    Ok(unsafe { &*ptr })
+}
+
 fn write_raw<T: Copy>(address: i64, value: T) {
     let ptr = address as usize as *mut u8;
     let src = &value as *const T as *const u8;
@@ -598,8 +618,7 @@ pub(crate) fn allocate_memory0(_this: i32, bytes: i64) -> Result<i64> {
         return Ok(0);
     }
     let size = bytes as usize;
-    let layout =
-        Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory allocation"))?;
+    let layout = allocation_layout(size)?;
     let ptr = unsafe { alloc(layout) };
     if ptr.is_null() {
         return Err(Error::new_native("Failed to allocate memory"));
@@ -621,11 +640,15 @@ pub(crate) fn free_memory0(_this: i32, address: i64) -> Result<()> {
         return Ok(());
     }
     if let Some((_, size)) = ALLOCATIONS.remove(&address) {
-        let layout =
-            Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory free"))?;
-        unsafe { dealloc(address as usize as *mut u8, layout) };
+        unsafe { dealloc(address as usize as *mut u8, allocation_layout(size)?) };
     }
     Ok(())
+}
+
+/// The layout of an `allocateMemory0` block of `size` bytes. Unsafe promises a block aligned for
+/// all value types; like HotSpot's `malloc`, we align to 16.
+fn allocation_layout(size: usize) -> Result<Layout> {
+    Layout::from_size_align(size, 16).map_err(|_| Error::new_native("Invalid memory allocation"))
 }
 
 // Todo: for all *_ref/offset pairs:
