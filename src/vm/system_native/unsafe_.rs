@@ -639,15 +639,17 @@ pub(crate) fn copy_memory0(
     dest_offset: i64,
     bytes: i64,
 ) -> Result<()> {
+    // Unsafe.copyMemory has already checked that both bases are null or primitive arrays and that
+    // the offsets and size are not negative
+    let bytes = bytes as usize;
     if src_base_ref != 0 {
         // Collect source bytes into a local Vec before acquiring the dest guard to avoid
         // deadlock when src and dest are in the same DashMap shard.
-        // todo: only arrays are supported so far (add check isArray)
         let to_copy = {
             let raw = HEAP.get_entire_raw_data(src_base_ref)?;
             raw.iter()
                 .skip(src_offset as usize)
-                .take(bytes as usize)
+                .take(bytes)
                 .copied()
                 .collect::<Vec<_>>()
         };
@@ -661,21 +663,27 @@ pub(crate) fn copy_memory0(
                 ptr::copy(src, dst, len);
             }
         } else {
-            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
-            let input = &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?;
+            let input = &mut arr_copy_to[dest_offset as usize..dest_offset as usize + bytes];
             input.copy_from_slice(to_copy.as_slice());
         }
     } else {
         if dest_base_ref == 0 {
-            unimplemented!("dest_base_ref == null not supported yet");
+            // both are absolute addresses; ptr::copy handles overlapping ranges like memmove
+            unsafe {
+                ptr::copy(
+                    src_offset as usize as *const u8,
+                    dest_offset as usize as *mut u8,
+                    bytes,
+                );
+            }
         } else {
             let ptr_copy_from = src_offset as usize as *const u8;
-            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?; // todo: only arrays are supported so far (add check isArray)
+            let mut arr_copy_to = HEAP.get_entire_raw_data_mut(dest_base_ref)?;
             unsafe {
-                let output =
-                    &mut arr_copy_to[dest_offset as usize..(dest_offset + bytes) as usize];
+                let output = &mut arr_copy_to[dest_offset as usize..dest_offset as usize + bytes];
 
-                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes as usize);
+                ptr::copy(ptr_copy_from, output.as_mut_ptr(), bytes);
             }
         }
     }

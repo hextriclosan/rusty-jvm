@@ -1037,6 +1037,16 @@ fn should_set_unsafe_array_memory() {
     );
 }
 
+#[test]
+fn should_copy_unsafe_raw_memory() {
+    // copies between multi-byte array elements depend on the platform's byte order
+    utils::assert_same_as_reference_jvm(
+        &["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"],
+        "samples.jdkinternal.unsafe.copyraw.UnsafeCopyRawMemory",
+        Success,
+    );
+}
+
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
