@@ -1,9 +1,9 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::properties::classpath::classpath;
 use crate::vm::system_native::properties_provider::properties::{
-    data_model, os_arch,
-    endianness, file_separator, java_home, line_separator, os_name, os_version, path_separator,
-    sun_boot_library_path, sun_jnu_encoding, tmp_dir, user_dir, user_home, user_name,
+    data_model, endianness, file_separator, java_home, line_separator, os_arch, os_name,
+    os_version, path_separator, sun_boot_library_path, sun_jnu_encoding, tmp_dir, user_dir,
+    user_home, user_name,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;

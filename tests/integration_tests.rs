@@ -2042,6 +2042,16 @@ fn should_match_host_jnu_encoding() {
 }
 
 #[test]
+fn should_match_host_architecture_properties() {
+    // os.arch and sun.arch.data.model are the platform's
+    utils::assert_same_as_reference_jvm(
+        &[],
+        "samples.system.archproperties.ArchProperties",
+        Success,
+    );
+}
+
+#[test]
 fn should_match_host_user_properties() {
     // user.name and user.home are the host's
     utils::assert_same_as_reference_jvm(
