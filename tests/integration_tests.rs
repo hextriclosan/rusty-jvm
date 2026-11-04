@@ -2052,6 +2052,16 @@ fn should_match_host_architecture_properties() {
 }
 
 #[test]
+fn should_match_host_unicode_encoding_property() {
+    // sun.io.unicode.encoding follows the platform's byte order
+    utils::assert_same_as_reference_jvm(
+        &[],
+        "samples.system.unicodeencoding.UnicodeEncodingProperty",
+        Success,
+    );
+}
+
+#[test]
 fn should_match_host_user_properties() {
     // user.name and user.home are the host's
     utils::assert_same_as_reference_jvm(
