@@ -6,6 +6,7 @@ mod define_class_demo;
 mod direct_buffer_demo;
 mod exception_demo;
 mod gc_identity_demo;
+mod gc_jni_demo;
 mod gc_thread_demo;
 mod get_module_demo;
 mod inherited_fields_demo;

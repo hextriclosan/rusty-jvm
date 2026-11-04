@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::heap::construction::InstancePlan;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::undecorate;
@@ -337,20 +338,44 @@ impl LoadedClasses {
             vec![class_loader_ref.unwrap_or(0)],
         )?;
 
-        let (module_ref, patch) = with_method_area(|a| {
+        let (module_ref, patch, is_unnamed_module) = with_method_area(|a| {
             let file_name = format!("{}.class", Self::module_owner(klass.this_class_name()));
             if let Some(package) = a.modules_mapping().get(&file_name) {
                 let modules = a.modules();
                 let registry = modules.registry();
                 let module_ref = registry.get(package).map(|got| *got.value()).unwrap_or(0);
                 let patch = package == "java.base" && module_ref == 0;
-                Ok::<_, Error>((module_ref, patch))
+                Ok::<_, Error>((module_ref, patch, false))
             } else {
-                // Set unnamed module
-                let module_ref = UNNAMED_MODULE_REF.get().copied().unwrap_or(0); // todo: use unnamed module per classloader
-                Ok::<_, Error>((module_ref, false))
+                Ok::<_, Error>((0, false, true))
             }
         })?;
+        // System.initPhase3 may load the configured system-loader class before the VM publishes
+        // its canonical unnamed-module reference. Use the defining loader's module in that window.
+        let early_unnamed_module = if is_unnamed_module && UNNAMED_MODULE_REF.get().is_none() {
+            class_loader_ref
+                .filter(|class_loader_ref| *class_loader_ref != 0)
+                .map(|class_loader_ref| {
+                    Executor::invoke_non_static_method(
+                        "java/lang/ClassLoader",
+                        "getUnnamedModule:()Ljava/lang/Module;",
+                        class_loader_ref,
+                        &[],
+                    )
+                })
+                .transpose()?
+        } else {
+            None
+        };
+        let module_ref = if is_unnamed_module {
+            early_unnamed_module
+                .as_ref()
+                .map(|module| module[0].value())
+                .or_else(|| UNNAMED_MODULE_REF.get().copied())
+                .unwrap_or(0)
+        } else {
+            module_ref
+        };
         HEAP.set_object_field_value(class_instance_id, CLASS, "module", vec![module_ref])?;
 
         with_method_area(|method_area| {
