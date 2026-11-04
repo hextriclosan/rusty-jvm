@@ -201,6 +201,39 @@ pub(crate) fn os_name() -> &'static str {
     &OS_NAME
 }
 
+/// The JDK build names the CPU for `os.arch` (`OPENJDK_TARGET_CPU_OSARCH`), and Windows knows
+/// only `amd64` and `aarch64`
+pub(crate) fn os_arch() -> &'static str {
+    if cfg!(windows) {
+        return match env::consts::ARCH {
+            "x86_64" => "amd64",
+            "aarch64" => "aarch64",
+            _ => "unknown",
+        };
+    }
+    match env::consts::ARCH {
+        "x86_64" if cfg!(target_pointer_width = "32") => "x32",
+        "x86_64" if cfg!(target_os = "macos") => "x86_64",
+        "x86_64" => "amd64",
+        "x86" if cfg!(target_os = "linux") => "i386",
+        "powerpc" => "ppc",
+        "powerpc64" if cfg!(target_endian = "little") => "ppc64le",
+        "powerpc64" => "ppc64",
+        "mips" if cfg!(target_endian = "little") => "mipsel",
+        "mips64" if cfg!(target_endian = "little") => "mips64el",
+        "sparc64" => "sparcv9",
+        architecture => architecture,
+    }
+}
+
+pub(crate) fn data_model() -> &'static str {
+    if cfg!(target_pointer_width = "64") {
+        "64"
+    } else {
+        "32"
+    }
+}
+
 static USER_DIR: LazyLock<String> = LazyLock::new(|| {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     current_dir.display().to_string()
