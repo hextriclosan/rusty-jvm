@@ -4,7 +4,8 @@ import java.lang.invoke.VarHandle;
 
 public class VarHandleFullFence {
     public static void main(String[] args) {
-        // each fence reaches the native Unsafe.fullFence, directly or through Unsafe.loadFence and storeFence
+        // each fence reaches the native Unsafe.fullFence, directly or through Unsafe.loadFence and storeFence.
+        // A fence can't be observed from one thread, so this only checks that the calls complete
         VarHandle.fullFence();
         System.out.println("fullFence");
         VarHandle.acquireFence();
