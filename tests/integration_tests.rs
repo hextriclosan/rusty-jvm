@@ -991,7 +991,19 @@ fn should_return_zero_for_zero_byte_unsafe_allocation() {
 
 #[test]
 fn should_read_chars_from_unsafe_raw_memory() {
-    assert_success("samples.jdkinternal.unsafe.rawchar.UnsafeRawChar", "Ж\n");
+    assert_success(
+        "samples.jdkinternal.unsafe.rawchar.UnsafeRawChar",
+        "char 1046\n\
+        char 65534\n\
+        short -2\n\
+        int -1985229329\n\
+        byte -128\n\
+        char 1046\n\
+        char 65534\n\
+        short -2\n\
+        int -1985229329\n\
+        byte -128\n",
+    );
 }
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")

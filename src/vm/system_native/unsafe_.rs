@@ -278,8 +278,7 @@ pub(crate) fn get_byte(_this: i32, obj_ref: i32, offset: i64) -> Result<i8> {
             todo!("implement get_byte for class field");
         }
     } else {
-        let addr = offset as usize as *const u8;
-        unsafe { Ok(ptr::read(addr) as i8) }
+        Ok(read_raw(offset))
     }
 }
 
@@ -294,8 +293,7 @@ pub(crate) fn get_short(_this: i32, obj_ref: i32, offset: i64) -> Result<i16> {
             todo!("implement get_short for class field");
         }
     } else {
-        let addr = offset as usize as *const i16;
-        unsafe { Ok(ptr::read(addr)) }
+        Ok(read_raw(offset))
     }
 }
 
@@ -324,11 +322,7 @@ pub(crate) fn get_int(_this: i32, obj_ref: i32, offset: i64) -> Result<i32> {
 }
 
 fn get_int_raw(address: i64) -> Result<i32> {
-    let ptr = address as usize as *const i32;
-    unsafe {
-        let ptr = ptr.add(0);
-        Ok(ptr::read(ptr))
-    }
+    Ok(read_raw(address))
 }
 fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
     if obj_ref != 0 {
