@@ -246,16 +246,7 @@ pub(crate) fn get_reference(_this: i32, obj_ref: i32, offset: i64) -> Result<i32
     let raw_value = if class_name.starts_with("[") {
         HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?
     } else {
-        if class_name == "java/lang/Class" {
-            // Special case for java/lang/Class<T>, in fact it is getting of static field of T
-            let t_jc = klass(obj_ref)?;
-            let static_field = t_jc.get_static_field_by_offset(offset)?;
-            static_field.raw_value()?
-        } else {
-            let klass = CLASSES.get(class_name.as_str())?;
-            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-            HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?
-        }
+        get_field_raw_value(obj_ref, offset)?
     };
 
     Ok(raw_value[0])
@@ -312,6 +303,8 @@ pub(crate) fn get_char(_this: i32, obj_ref: i32, offset: i64) -> Result<u16> {
     }
 }
 
+/// The value of the field at `offset` of a non-array object. A `Class<T>` receiver with a static
+/// offset, as `staticFieldBase` and `staticFieldOffset` give, means a static field of T.
 fn get_field_raw_value(obj_ref: i32, offset: i64) -> Result<Vec<i32>> {
     let class_name = HEAP.get_instance_name(obj_ref)?;
     if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
@@ -322,6 +315,19 @@ fn get_field_raw_value(obj_ref: i32, offset: i64) -> Result<Vec<i32>> {
     let class = CLASSES.get(&class_name)?;
     let (declaring_class, field_name) = class.get_field_name_by_offset(offset)?;
     HEAP.get_object_field_value(obj_ref, &declaring_class, &field_name)
+}
+
+/// Sets the field at `offset` of a non-array object, as [`get_field_raw_value`] finds it.
+fn set_field_raw_value(obj_ref: i32, offset: i64, value: Vec<i32>) -> Result<()> {
+    let class_name = HEAP.get_instance_name(obj_ref)?;
+    if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
+        return klass(obj_ref)?
+            .get_static_field_by_offset(offset)?
+            .set_raw_value(value);
+    }
+    let class = CLASSES.get(&class_name)?;
+    let (declaring_class, field_name) = class.get_field_name_by_offset(offset)?;
+    HEAP.set_object_field_value(obj_ref, &declaring_class, &field_name, value)
 }
 
 /// `jdk.internal.misc.Unsafe.getInt(Ljava/lang/Object;J)I`
@@ -342,18 +348,8 @@ fn get_int_via_object(obj_ref: i32, offset: i64) -> Result<i32> {
         if class_name.starts_with("[") {
             let result = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 4)?;
             Ok(result[0])
-        } else if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
-            // A `Class<T>` receiver with a static offset is a read of T's static field (e.g.
-            // `Thread$ThreadNumbering` uses `Unsafe.getAndAddInt` on a static counter).
-            let t_jc = klass(obj_ref)?;
-            let static_field = t_jc.get_static_field_by_offset(offset)?;
-            Ok(static_field.raw_value()?[0])
         } else {
-            let klass = CLASSES.get(class_name.as_str())?;
-            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
-            let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
-            Ok(result[0])
+            Ok(get_field_raw_value(obj_ref, offset)?[0])
         }
     } else {
         todo!("implement get_int for null object");
@@ -381,14 +377,7 @@ pub(crate) fn get_long(_this: i32, obj_ref: i32, offset: i64) -> Result<i64> {
             let bytes = HEAP.get_array_value_by_raw_offset(obj_ref, offset as usize, 8)?;
             Ok(vec_to_i64(&bytes))
         } else {
-            let class_name = HEAP.get_instance_name(obj_ref)?;
-
-            let klass = CLASSES.get(class_name.as_str())?;
-
-            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
-            let result = HEAP.get_object_field_value(obj_ref, &class_name, &field_name)?;
-            Ok(vec_to_i64(&result))
+            Ok(vec_to_i64(&get_field_raw_value(obj_ref, offset)?))
         }
     } else {
         Ok(read_raw(offset))
@@ -484,17 +473,7 @@ pub(crate) fn put_reference(_this: i32, obj_ref: i32, offset: i64, ref_value: i3
             size_of::<i32>(),
         )
     } else {
-        if class_name == "java/lang/Class" && offset >= STATIC_FIELDS_START {
-            // Special case for java/lang/Class<T>, in fact it is modification of static field of T
-            let t_jc = klass(obj_ref)?;
-            let static_field = t_jc.get_static_field_by_offset(offset)?;
-            static_field.set_raw_value(vec![ref_value])
-        } else {
-            let klass = CLASSES.get(class_name.as_str())?;
-            let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-
-            HEAP.set_object_field_value(obj_ref, &class_name, &field_name, vec![ref_value])
-        }
+        set_field_raw_value(obj_ref, offset, vec![ref_value])
     }
 }
 
@@ -574,9 +553,7 @@ fn put_value_via_object(
     if class_name.starts_with('[') {
         HEAP.set_array_value_by_raw_offset(obj_ref, offset as usize, raw_value, value_size)
     } else {
-        let klass = CLASSES.get(&class_name)?;
-        let (class_name, field_name) = klass.get_field_name_by_offset(offset)?;
-        HEAP.set_object_field_value(obj_ref, &class_name, &field_name, raw_value)
+        set_field_raw_value(obj_ref, offset, raw_value)
     }
 }
 
