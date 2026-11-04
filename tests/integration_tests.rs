@@ -1079,6 +1079,18 @@ fn should_compare_and_exchange_unsafe_raw_memory_atomically() {
     );
 }
 
+#[test]
+fn should_execute_var_handle_fences() {
+    assert_success(
+        "samples.javacore.varhandle.fullfence.VarHandleFullFence",
+        "fullFence\n\
+        acquireFence\n\
+        releaseFence\n\
+        loadLoadFence\n\
+        storeStoreFence\n",
+    );
+}
+
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
