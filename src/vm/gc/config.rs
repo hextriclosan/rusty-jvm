@@ -109,7 +109,7 @@ fn default_max_heap_bytes() -> u64 {
     #[cfg(target_os = "linux")]
     {
         let meminfo = std::fs::read_to_string("/proc/meminfo").ok();
-        return default_max_heap_bytes_from(meminfo.as_deref());
+        default_max_heap_bytes_from(meminfo.as_deref())
     }
 
     #[cfg(not(target_os = "linux"))]

@@ -20,6 +20,9 @@ use std::sync::{Arc, LazyLock};
 pub(crate) static COORDINATOR: LazyLock<Arc<Coordinator>> =
     LazyLock::new(|| Arc::new(Coordinator::new()));
 
+#[cfg(test)]
+type SafepointObserver = Box<dyn Fn(Event)>;
+
 thread_local! {
     static PARTICIPANT: Cell<Option<u64>> = const { Cell::new(None) };
     // Unlike a counter local to Engine::execute, this survives all nested invocations.
@@ -28,7 +31,7 @@ thread_local! {
     // itself, so the mirror is exact, and it keeps every JNI entry off the coordinator mutex.
     static MANAGED: Cell<bool> = const { Cell::new(false) };
     #[cfg(test)]
-    static OBSERVER: RefCell<Option<Box<dyn Fn(Event)>>> = RefCell::new(None);
+    static OBSERVER: RefCell<Option<SafepointObserver>> = RefCell::new(None);
 }
 
 pub(crate) fn current() -> Option<u64> {

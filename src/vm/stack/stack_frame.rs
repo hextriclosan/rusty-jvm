@@ -159,8 +159,11 @@ impl StackFrames {
 }
 
 #[cfg(test)]
+type FramePopObserver = Box<dyn Fn(&StackFrames)>;
+
+#[cfg(test)]
 thread_local! {
-    static FRAME_POP_OBSERVER: std::cell::RefCell<Option<Box<dyn Fn(&StackFrames)>>> =
+    static FRAME_POP_OBSERVER: std::cell::RefCell<Option<FramePopObserver>> =
         const { std::cell::RefCell::new(None) };
 }
 

@@ -537,8 +537,11 @@ mod budget_tests;
 mod construction_tests;
 
 #[cfg(test)]
+type ArrayAllocationObserver = Box<dyn Fn(i32)>;
+
+#[cfg(test)]
 thread_local! {
-    static ARRAY_ALLOCATION_OBSERVER: std::cell::RefCell<Option<Box<dyn Fn(i32)>>> =
+    static ARRAY_ALLOCATION_OBSERVER: std::cell::RefCell<Option<ArrayAllocationObserver>> =
         const { std::cell::RefCell::new(None) };
 }
 
