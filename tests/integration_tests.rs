@@ -1005,6 +1005,27 @@ fn should_read_chars_from_unsafe_raw_memory() {
         byte -128\n",
     );
 }
+
+#[test]
+fn should_access_instance_and_static_fields_with_unsafe() {
+    assert_success(
+        "samples.jdkinternal.unsafe.subwordfields.UnsafeSubwordFields",
+        "byte=-7\n\
+        short=1234\n\
+        char=1071\n\
+        int=123456789\n\
+        long=-1234567890123\n\
+        reference=instance\n\
+        after put: 127 -32768 65535 -2147483648 9223372036854775807 put\n\
+        static byte=9\n\
+        static short=-300\n\
+        static char=8364\n\
+        static int=-42\n\
+        static long=9876543210\n\
+        static reference=static\n\
+        after static put: -1 32767 65 2147483647 -9223372036854775808 static put\n",
+    );
+}
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }

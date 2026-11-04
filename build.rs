@@ -88,6 +88,7 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
         "UnsafeGetLongUnalignedExample.java",
         "UnsafeUsage.java",
         "UnsafeRawChar.java",
+        "UnsafeSubwordFields.java",
         "UnsafeObjectFieldOffset.java",
         "UnsafeObjectFieldOffsetErrors.java",
         "UnsafePutReferenceVolatileExample.java",
@@ -206,6 +207,14 @@ fn compile(dest_dir: &Path) -> anyhow::Result<()> {
                 "-d",
             ],
             "UnsafeRawChar.java",
+        ),
+        (
+            &[
+                "--add-exports",
+                "java.base/jdk.internal.misc=ALL-UNNAMED",
+                "-d",
+            ],
+            "UnsafeSubwordFields.java",
         ),
         (
             &[
