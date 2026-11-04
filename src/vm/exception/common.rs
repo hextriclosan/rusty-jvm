@@ -53,13 +53,16 @@ pub fn throw_exception_with_ref(
                 enter_handler(frame, handler as i16, throwable_ref)?;
                 return Ok((Cow::Borrowed("java/lang/OutOfMemoryError"), handler as i16));
             }
-            stack_frames.propagate_exception();
+            if stack_frames.propagate_exception().is_err() {
+                return Err(ownership);
+            }
         }
         return Err(ownership);
     }
     let exception_name = HEAP.get_instance_name(throwable_ref)?;
     trace!("<THROWING> -> about to throw: throwable_ref={throwable_ref}, exception_name={exception_name}");
-    let found_exception_handler = unwind_stack(throwable_ref, stack_frames, ownership)?;
+    let (found_exception_handler, exception_name) =
+        unwind_stack(throwable_ref, stack_frames, ownership)?;
 
     Ok((Cow::Owned(exception_name), found_exception_handler))
 }
@@ -81,7 +84,7 @@ fn unwind_stack(
     throwable_ref: i32,
     stack_frames: &mut StackFrames,
     ownership: Error,
-) -> Result<i16> {
+) -> Result<(i16, String)> {
     let exception_name = HEAP.get_instance_name(throwable_ref)?;
     while !stack_frames.is_empty() {
         let stack_frame = last_frame_mut(stack_frames)?;
@@ -95,10 +98,12 @@ fn unwind_stack(
         )? {
             Some(exception_handler) => {
                 enter_handler(stack_frame, exception_handler as i16, throwable_ref)?;
-                return Ok(exception_handler as i16);
+                return Ok((exception_handler as i16, exception_name));
             }
             None => {
-                stack_frames.propagate_exception();
+                if stack_frames.propagate_exception().is_err() {
+                    return Err(ownership);
+                }
             }
         }
     }
@@ -144,6 +149,32 @@ mod tests {
     #[test]
     fn should_position_the_frame_at_the_handler() {
         assert_eq!(frame_at_handler().pc(), HANDLER_PC as usize);
+    }
+
+    #[test]
+    fn exception_unwind_preserves_throwable_when_synchronized_exit_fails() {
+        let throwable = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
+        let monitor = HEAP
+            .create_array(
+                "[I",
+                0,
+                &mut crate::vm::stack::rooted_slots::RootedSlots::new(),
+            )
+            .unwrap();
+        let mut frame = StackFrame::for_test(1, 0);
+        frame.set_synchronized_method(true, false);
+        frame.set_synchronized_monitor(monitor);
+        let mut frames = StackFrames::new(vec![frame]);
+
+        let error = throw_exception_with_ref(Slot::Ref(throwable), &mut frames).unwrap_err();
+
+        assert_eq!(error.throwable_ref(), Some(throwable));
     }
 
     #[test]

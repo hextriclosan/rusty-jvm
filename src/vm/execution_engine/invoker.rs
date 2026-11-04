@@ -1,9 +1,11 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::execution_engine::common::{last_frame_mut, push_slots};
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::{get_length, is_reference, ref_arg_chunks, validate_arg_slots};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::StackFrames;
@@ -50,6 +52,12 @@ pub(crate) fn invoke(
     };
     validate_arg_slots(&ref_arg_chunks(argument_type, !is_static)?, method_args)?;
 
+    let mut native_monitor = if java_method.is_native() && java_method.is_synchronized() {
+        Some(SynchronizedNativeMonitor::enter(&java_method, method_args)?)
+    } else {
+        None
+    };
+
     if java_method.is_native() {
         // The caller owns this slot before native resolution, Java callbacks or frame teardown.
         let mut destination = RootedSlots::new();
@@ -69,11 +77,20 @@ pub(crate) fn invoke(
             // Extract into an owned slot while the native frame is still published.
             let pending = pop_native_frame(stack_frames);
             if let Some(throwable) = pending {
+                if let Some(monitor) = &mut native_monitor {
+                    let _ = monitor.release();
+                }
                 throw_exception_with_ref(throwable.slot(), stack_frames)?;
                 return Ok(());
             }
             result
         };
+        if let Some(monitor) = &mut native_monitor {
+            if !monitor.release() {
+                throw_illegal_monitor_state_exception(stack_frames)?;
+                return Ok(());
+            }
+        }
         result?;
 
         if let Some(throwable) = JavaThread::take_pending_exception_rooted() {
@@ -95,11 +112,67 @@ pub(crate) fn invoke(
     Ok(())
 }
 
+struct SynchronizedNativeMonitor {
+    reference: Option<i32>,
+}
+
+impl SynchronizedNativeMonitor {
+    fn enter(method: &JavaMethod, args: &[Slot]) -> Result<Self> {
+        let reference = if method.is_static() {
+            CLASSES.class_mirror_ref(method.class_name())?
+        } else {
+            let receiver = args.first().ok_or_else(|| {
+                Error::new_execution("Synchronized native method has no receiver")
+            })?;
+            if !receiver.is_ref() {
+                return Err(Error::new_execution(
+                    "Synchronized native method receiver is not a reference",
+                ));
+            }
+            receiver.value()
+        };
+        if reference == 0 {
+            return Err(Error::new_execution(
+                "Synchronized native method has a null monitor reference",
+            ));
+        }
+        crate::vm::monitor::enter(reference);
+        Ok(Self {
+            reference: Some(reference),
+        })
+    }
+
+    fn release(&mut self) -> bool {
+        if let Some(reference) = self.reference.take() {
+            crate::vm::monitor::exit_synchronized_method(reference)
+        } else {
+            true
+        }
+    }
+}
+
+impl Drop for SynchronizedNativeMonitor {
+    fn drop(&mut self) {
+        if let Some(reference) = self.reference.take() {
+            crate::vm::monitor::exit_synchronized_method(reference);
+        }
+    }
+}
+
+fn throw_illegal_monitor_state_exception(stack_frames: &mut StackFrames) -> Result<()> {
+    let throwable =
+        Executor::invoke_default_constructor("java/lang/IllegalMonitorStateException")?;
+    throw_exception_with_ref(Slot::Ref(throwable[0].value()), stack_frames)?;
+    Ok(())
+}
+
 /// This ordering is shared by every ordinary native call, on success and failure.
 fn pop_native_frame(stack_frames: &mut StackFrames) -> Option<crate::vm::error::RootedThrowable> {
     let pending = JavaThread::take_pending_exception_rooted();
     crate::vm::safepoint::event(crate::vm::safepoint::Event::NativeFramePop);
-    stack_frames.propagate_exception();
+    stack_frames
+        .propagate_exception()
+        .expect("native frame monitor release failed");
     pending
 }
 

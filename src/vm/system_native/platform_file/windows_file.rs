@@ -15,6 +15,14 @@ use winapi::um::winnt::HANDLE;
 pub struct PlatformFile {}
 
 impl PlatformFile {
+    pub(crate) fn cleanup_close0(_fd: i32, handle: i64) -> Result<()> {
+        let raw_handle = handle as HANDLE;
+        if !raw_handle.is_null() && raw_handle != INVALID_HANDLE_VALUE {
+            drop(unsafe { File::from_raw_handle(raw_handle as RawHandle) });
+        }
+        Ok(())
+    }
+
     pub fn close(file_descriptor_ref: i32) -> Result<()> {
         let raw =
             HEAP.get_object_field_value(file_descriptor_ref, "java/io/FileDescriptor", "handle")?;

@@ -24,6 +24,8 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rustc-env=JNI_TEST_LIB_PATH={}", path.display());
 
     println!("cargo:rerun-if-changed=tests/test_data");
+    println!("cargo:rerun-if-changed=tests/test_data/GcRootsDemo.java");
+    println!("cargo:rerun-if-changed=tests/test_data/GcThreadsDemo.java");
     // the test classes are compiled by, and must match, the JDK under `JAVA_HOME`
     println!("cargo:rerun-if-env-changed=JAVA_HOME");
     let dest_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or(String::from("target")))

@@ -88,7 +88,7 @@ impl JavaMethod {
     }
 
     pub fn new_stack_frame(&self) -> Result<StackFrame> {
-        match &self.code_context {
+        let mut frame = match &self.code_context {
             Some(context) => Ok(StackFrame::new(
                 Arc::clone(&self.name_signature),
                 context.max_locals() as usize,
@@ -102,7 +102,9 @@ impl JavaMethod {
                 "Code context is missing for {}.{}",
                 self.class_name, self.name_signature
             ))),
-        }
+        }?;
+        frame.set_synchronized_method(self.is_synchronized(), self.is_static());
+        Ok(frame)
     }
 
     /// Builds a synthetic stack frame for this native method so it appears on the thread's stack
@@ -402,6 +404,11 @@ impl JavaMethod {
     pub fn is_static(&self) -> bool {
         MethodModifier::from_bits_truncate(self.access_flags as u16)
             .contains(MethodModifier::Static)
+    }
+
+    pub fn is_synchronized(&self) -> bool {
+        MethodModifier::from_bits_truncate(self.access_flags as u16)
+            .contains(MethodModifier::Synchronized)
     }
 
     /// Whether this is a `@PolymorphicSignature` intrinsic (`MethodHandle.invoke*`, `VarHandle`

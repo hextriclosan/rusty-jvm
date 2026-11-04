@@ -73,6 +73,11 @@ pub(crate) fn has_record(reference: i32) -> bool {
     MONITORS.contains_key(&reference)
 }
 
+#[cfg(test)]
+pub(crate) fn record_count() -> usize {
+    MONITORS.len()
+}
+
 /// Atomically reads and clears the calling thread's `Thread.interrupted` flag, returning its prior
 /// value (a real `getAndClearInterrupt`). `Thread.interrupt()` sets this Java field before asking the
 /// VM to wake the thread, so a blocked `wait`/`sleep` observes it here and throws
@@ -161,6 +166,28 @@ pub(crate) fn exit(obj_ref: i32) -> Result<()> {
     drop(s);
     JavaThread::unroot_monitor(obj_ref);
     Ok(())
+}
+
+/// Releases the monitor acquired implicitly for a synchronized method. The caller reports
+/// `false` as `IllegalMonitorStateException` so an exception already unwinding is not silently
+/// replaced by a Rust-side monitor error.
+pub(crate) fn exit_synchronized_method(obj_ref: i32) -> bool {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = safepoint::lock(&m.state);
+    if s.owner != Some(tid) {
+        drop(s);
+        JavaThread::unroot_monitor_if_present(obj_ref);
+        return false;
+    }
+    s.count -= 1;
+    if s.count == 0 {
+        s.owner = None;
+        m.cv.notify_all();
+    }
+    drop(s);
+    JavaThread::unroot_monitor_if_present(obj_ref);
+    true
 }
 
 /// `Object.wait(timeout)`: atomically releases the monitor (all reentrant levels), blocks until

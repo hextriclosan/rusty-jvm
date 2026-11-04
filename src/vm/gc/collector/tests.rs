@@ -8,6 +8,7 @@ use crate::vm::method_area::field::{FieldInfo, FieldValue};
 use crate::vm::safepoint::{Coordinator, Snapshot};
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::slot::Slot;
+use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use std::sync::{mpsc::channel, Arc};
 use std::time::Duration;
 
@@ -321,18 +322,193 @@ fn gc_collect_pending_wait_returns_running_after_collection_publishes() {
 fn gc_collect_prunes_idle_monitors_but_keeps_owned_identity() {
     let _serial = safepoint::tests::SERIAL.lock().unwrap();
     safepoint::attach();
-    let idle = array(&HEAP, "[I", &[]);
+    let before = crate::vm::monitor::record_count();
+    let idle = [
+        array(&HEAP, "[I", &[]),
+        array(&HEAP, "[I", &[]),
+        array(&HEAP, "[I", &[]),
+    ];
     let owned = array(&HEAP, "[I", &[]);
-    crate::vm::monitor::holds_lock(idle);
+    for reference in idle {
+        crate::vm::monitor::holds_lock(reference);
+    }
     crate::vm::monitor::enter(owned);
+    assert_eq!(crate::vm::monitor::record_count(), before + idle.len() + 1);
     collect(Cause::Explicit).unwrap();
-    assert!(!HEAP.contains(idle));
-    assert!(!crate::vm::monitor::has_record(idle));
+    assert_eq!(crate::vm::monitor::record_count(), before + 1);
+    for reference in idle {
+        assert!(!HEAP.contains(reference));
+        assert!(!crate::vm::monitor::has_record(reference));
+    }
     assert!(HEAP.contains(owned));
     assert!(crate::vm::monitor::holds_lock(owned));
     crate::vm::monitor::exit(owned).unwrap();
     collect(Cause::Explicit).unwrap();
     assert!(!crate::vm::monitor::has_record(owned));
+    assert_eq!(crate::vm::monitor::record_count(), before);
+    safepoint::retire();
+}
+
+#[test]
+fn gc_collect_keeps_synchronized_monitor_after_receiver_slot_overwrite() {
+    use crate::vm::safepoint;
+    use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
+
+    let _serial = safepoint::tests::SERIAL.lock().unwrap();
+    safepoint::attach();
+    let mut allocation_roots = RootedSlots::new();
+    let monitor = HEAP.create_array("[I", 0, &mut allocation_roots).unwrap();
+    let identity_hash = crate::vm::system_native::object::identity_hashcode(monitor).unwrap();
+    let mut frame = StackFrame::for_test(1, 0);
+    frame.set_synchronized_method(true, false);
+    frame.set_local(0, Slot::Ref(monitor));
+    frame.set_synchronized_monitor(monitor);
+    frame.set_local_raw(0, 99);
+    drop(allocation_roots);
+    let mut frames = StackFrames::new(vec![frame]);
+    let _frames = JavaThread::register_stack_frames(&mut frames);
+
+    collect(Cause::Explicit).unwrap();
+
+    assert!(HEAP.contains(monitor));
+    assert_eq!(
+        crate::vm::system_native::object::identity_hashcode(monitor).unwrap(),
+        identity_hash
+    );
+    safepoint::retire();
+}
+
+#[test]
+fn gc_collect_synchronized_method_monitor_field_is_a_root() {
+    let _serial = safepoint::tests::SERIAL.lock().unwrap();
+    safepoint::attach();
+    let monitor_ref = array(&HEAP, "[I", &[]);
+    let _dead = array(&HEAP, "[I", &[7]);
+
+    crate::vm::monitor::enter(monitor_ref);
+    let mut frame = StackFrame::for_test(1, 0);
+    frame.set_local_raw(0, 0);
+    frame.set_synchronized_method(true, false);
+    frame.set_synchronized_monitor(monitor_ref);
+    let mut frames = StackFrames::new(vec![frame]);
+    let _frames = JavaThread::register_stack_frames(&mut frames);
+
+    // The real monitor owner root is intentionally removed so this frame field
+    // is the only collector-visible edge to the still-owned object.
+    JavaThread::unroot_monitor(monitor_ref);
+    let stats = collect(Cause::Explicit).unwrap();
+    assert!(stats.reclaimed > 0);
+    assert!(HEAP.contains(monitor_ref));
+    assert!(crate::vm::monitor::holds_lock(monitor_ref));
+
+    // Restore the monitor bookkeeping pair before the normal exit path.
+    JavaThread::root_monitor(monitor_ref);
+    crate::vm::monitor::exit(monitor_ref).unwrap();
+    safepoint::retire();
+}
+
+#[test]
+fn gc_collect_blocked_worker_local_reference_survives_real_cycle() {
+    use crate::vm::safepoint::{self, Blocking, Event, Reason};
+    use crate::vm::stack::slot::Slot;
+    use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
+    use std::sync::mpsc::channel;
+    use std::time::Duration;
+
+    let _serial = safepoint::tests::SERIAL.lock().unwrap();
+    safepoint::attach();
+    let (events, observed) = channel::<String>();
+    let (published, publication) = channel();
+    let (release, released) = channel();
+    let (survived, survival) = channel();
+    let worker_events = events.clone();
+    let worker = std::thread::spawn(move || {
+        safepoint::attach();
+        let mut rooted = RootedSlots::new();
+        let only_root = HEAP.create_array("[I", 1, &mut rooted).unwrap();
+        let _unreachable = HEAP.create_array("[I", 1, &mut RootedSlots::new()).unwrap();
+        let mut frame = StackFrame::for_test(1, 0);
+        frame.set_local(0, Slot::Ref(only_root));
+        drop(rooted);
+        let mut frames = StackFrames::new(vec![frame]);
+        let _frames = JavaThread::register_stack_frames(&mut frames);
+        safepoint::observe(move |event| {
+            if event == Event::SnapshotPublished {
+                worker_events.send(format!("worker:{event:?}")).unwrap();
+                published.send(()).unwrap();
+            } else if matches!(event, Event::Resumed | Event::GuardReacquired) {
+                worker_events.send(format!("worker:{event:?}")).unwrap();
+            }
+        });
+
+        let blocked = Blocking::enter(Reason::Blocking);
+        released
+            .recv_timeout(Duration::from_secs(5))
+            .expect("test wake was not delivered");
+        drop(blocked);
+        let retained = frames
+            .last_mut()
+            .map(|frame| frame.get_local::<Slot>(0))
+            .is_some_and(|slot| slot.is_ref() && HEAP.get_array_len(slot.value()).is_ok());
+        survived.send(retained).unwrap();
+        safepoint::retire();
+    });
+
+    publication
+        .recv_timeout(Duration::from_secs(5))
+        .expect("worker did not publish its blocked root snapshot");
+    events.send("request:collect".to_string()).unwrap();
+    safepoint::observe({
+        let owner_events = events.clone();
+        move |event| {
+            if matches!(
+                event,
+                Event::SnapshotPublished | Event::Election | Event::Resumed
+            ) {
+                owner_events.send(format!("owner:{event:?}")).unwrap();
+            }
+        }
+    });
+    let stats = collect(Cause::Explicit).expect("collection rendezvous was skipped");
+    assert!(
+        stats.reclaimed > 0,
+        "the cycle reclaimed no unreachable object"
+    );
+    assert!(
+        survival.try_recv().is_err(),
+        "worker woke before the explicit wake"
+    );
+    events.send("wake:release".to_string()).unwrap();
+    release.send(()).unwrap();
+    assert!(
+        survival
+            .recv_timeout(Duration::from_secs(5))
+            .expect("worker failed to resume after wake"),
+        "blocked worker's only-root frame reference was reclaimed"
+    );
+    worker.join().unwrap();
+
+    let mut order = Vec::new();
+    while order.len() < 7 {
+        order.push(
+            observed
+                .recv_timeout(Duration::from_secs(5))
+                .expect("missing rendezvous hook evidence"),
+        );
+    }
+    assert_eq!(
+        order,
+        [
+            "worker:SnapshotPublished",
+            "request:collect",
+            "owner:SnapshotPublished",
+            "owner:Election",
+            "owner:Resumed",
+            "wake:release",
+            "worker:Resumed",
+        ],
+        "unexpected snapshot/request/wake/resume ordering"
+    );
     safepoint::retire();
 }
 

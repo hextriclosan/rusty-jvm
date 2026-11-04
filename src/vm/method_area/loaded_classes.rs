@@ -58,6 +58,23 @@ impl LoadedClasses {
     pub(crate) fn get_loaded(&self, name: &str) -> Option<Arc<JavaClass>> {
         self.get_full_impl(name).map(|(_, _, klass)| klass)
     }
+
+    /// Returns the class mirror for a synchronized static method. A class can be inserted into
+    /// the registry just before its mirror is published, so wait for the same per-name publication
+    /// claim instead of running the method with a missing class monitor.
+    pub(crate) fn class_mirror_ref(&self, name: &str) -> Result<i32> {
+        if let Some(reference) = self
+            .get_full_impl(name)
+            .and_then(|(_, _, klass)| klass.mirror_ref_if_present())
+        {
+            return Ok(reference);
+        }
+
+        let _claim = self.loading.claim(name);
+        self.get_full_impl(name)
+            .and_then(|(_, _, klass)| klass.mirror_ref_if_present())
+            .ok_or_else(|| Error::new_execution("Class mirror is not published"))
+    }
     /// Checks if class is already loaded
     pub fn is_loaded(&self, fully_qualified_class_name: &str) -> bool {
         let fully_qualified_class_name = undecorate(fully_qualified_class_name);

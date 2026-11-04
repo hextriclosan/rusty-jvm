@@ -13,6 +13,11 @@ pub(crate) fn close0(fd_ref: i32) -> Result<()> {
     Ok(())
 }
 
+/// `java.io.FileCleanable.cleanupClose0(IJ)V`
+pub(crate) fn cleanup_close0(fd: i32, handle: i64) -> Result<()> {
+    PlatformFile::cleanup_close0(fd, handle)
+}
+
 /// `java.io.FileDescriptor.getHandle(I)J`
 pub(crate) fn get_handle(fd: i32) -> Result<i64> {
     let handle = PlatformFile::get_handle(fd)?;

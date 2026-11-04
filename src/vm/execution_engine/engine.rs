@@ -5,6 +5,7 @@ use crate::vm::execution_engine::{
     ops_reference_processor, ops_stack_processor, ops_store_processor,
 };
 use crate::vm::jni::java_thread::JavaThread;
+use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::safepoint;
 use crate::vm::stack::rooted_slots::RootedSlots;
 use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
@@ -28,6 +29,7 @@ impl Engine {
         // guard pops it on return/unwind, keeping the chain correct across native re-entries.
         let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
         while !stack_frames.is_empty() {
+            Self::enter_synchronized_method(&mut stack_frames)?;
             safepoint::dispatch_bytecode();
             // Stamp the instruction's start pc so that, if this opcode raises an implicit
             // NullPointerException, the throwable's backtrace records the faulting bytecode index
@@ -92,16 +94,71 @@ impl Engine {
             })();
             if let Err(error) = result {
                 if let Some(throwable) = error.throwable_ref() {
-                    crate::vm::exception::common::throw_exception_with_ref(
-                        crate::vm::stack::slot::Slot::Ref(throwable),
-                        &mut stack_frames,
-                    )?;
+                    if let Err(unwind_error) =
+                        crate::vm::exception::common::throw_exception_with_ref(
+                            crate::vm::stack::slot::Slot::Ref(throwable),
+                            &mut stack_frames,
+                        )
+                    {
+                        Self::release_remaining_frames(&mut stack_frames);
+                        return Err(unwind_error);
+                    }
                 } else {
+                    Self::release_remaining_frames(&mut stack_frames);
                     return Err(error);
                 }
             }
         }
 
         Ok(destination)
+    }
+
+    fn release_remaining_frames(stack_frames: &mut StackFrames) {
+        while !stack_frames.is_empty() {
+            stack_frames
+                .propagate_exception()
+                .expect("releasing a Java frame during interpreter teardown");
+        }
+    }
+
+    fn enter_synchronized_method(stack_frames: &mut StackFrames) -> Result<()> {
+        let (is_static, class_name, receiver) = {
+            let frame = stack_frames
+                .last_mut()
+                .ok_or(Error::new_execution("Error getting stack frame"))?;
+            if !frame.needs_synchronized_monitor() {
+                return Ok(());
+            }
+            if frame.synchronized_static() {
+                (true, frame.current_class_name().to_owned(), 0)
+            } else {
+                let receiver = frame.get_local_slot(0);
+                if !receiver.is_ref() {
+                    return Err(Error::new_execution(
+                        "Synchronized instance method has no reference receiver",
+                    ));
+                }
+                (false, String::new(), receiver.value())
+            }
+        };
+        let reference = if is_static {
+            CLASSES.class_mirror_ref(&class_name)?
+        } else {
+            receiver
+        };
+        if reference == 0 {
+            return Err(Error::new_execution(
+                "Synchronized method has a null monitor reference",
+            ));
+        }
+
+        crate::vm::monitor::enter(reference);
+        stack_frames
+            .last_mut()
+            .ok_or(Error::new_execution(
+                "Synchronized method frame disappeared",
+            ))?
+            .set_synchronized_monitor(reference);
+        Ok(())
     }
 }

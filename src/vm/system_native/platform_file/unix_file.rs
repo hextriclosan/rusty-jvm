@@ -12,6 +12,13 @@ use std::os::fd::{AsFd, FromRawFd, IntoRawFd};
 pub struct PlatformFile {}
 
 impl PlatformFile {
+    pub(crate) fn cleanup_close0(fd: i32, _handle: i64) -> Result<()> {
+        if fd >= 0 {
+            drop(unsafe { File::from_raw_fd(fd) });
+        }
+        Ok(())
+    }
+
     pub fn close(file_descriptor_ref: i32) -> Result<()> {
         let raw_fd = get_handle(file_descriptor_ref)?;
 

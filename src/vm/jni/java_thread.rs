@@ -303,14 +303,22 @@ impl JavaThread {
     }
 
     pub(crate) fn unroot_monitor(reference: i32) {
+        assert!(
+            Self::unroot_monitor_if_present(reference),
+            "successful monitor exit has an owned root"
+        );
+    }
+
+    pub(crate) fn unroot_monitor_if_present(reference: i32) -> bool {
         JAVA_THREAD.with(|thread| {
             let mut roots = thread.monitor_roots.borrow_mut();
-            let index = roots
-                .iter()
-                .rposition(|&root| root == reference)
-                .expect("successful monitor exit has an owned root");
-            roots.remove(index);
-        });
+            if let Some(index) = roots.iter().rposition(|&root| root == reference) {
+                roots.remove(index);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// Registers `stack_frames` as the newest segment of the calling thread's stack chain for

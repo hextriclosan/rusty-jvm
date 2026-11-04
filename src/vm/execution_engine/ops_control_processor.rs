@@ -71,7 +71,15 @@ pub(crate) fn process(
         LRETURN | DRETURN => perform_return(stack_frames, destination, 2)?,
         RETURN => {
             destination.replace(vec![]);
-            stack_frames.exit_frame();
+            let (_, monitor_owned) = stack_frames.exit_frame()?;
+            if !monitor_owned {
+                return crate::vm::exception::common::construct_exception_and_throw(
+                    "java/lang/IllegalMonitorStateException",
+                    "<init>:()V",
+                    &[],
+                    stack_frames,
+                );
+            }
             trace!("RETURN");
         }
         _ => {
@@ -94,7 +102,16 @@ fn perform_return(
     let slots = (0..width).map(|_| stack_frame.pop_slot()).collect();
     destination.replace(slots);
 
-    stack_frames.exit_frame();
+    let (_, monitor_owned) = stack_frames.exit_frame()?;
+    if !monitor_owned {
+        destination.replace(vec![]);
+        return crate::vm::exception::common::construct_exception_and_throw(
+            "java/lang/IllegalMonitorStateException",
+            "<init>:()V",
+            &[],
+            stack_frames,
+        );
+    }
     // Publish into the caller before releasing the transfer destination.
     if let Some(next_frame) = stack_frames.last_mut() {
         push_slots(next_frame, destination)?;

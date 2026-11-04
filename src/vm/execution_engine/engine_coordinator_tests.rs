@@ -1,7 +1,14 @@
 use super::*;
 use crate::vm::execution_engine::opcode::RETURN;
+use crate::vm::gc::collector::{collect, Cause};
+use crate::vm::heap::heap::HEAP;
+use crate::vm::method_area::java_method::{CodeContext, JavaMethod};
+use crate::vm::monitor;
 use crate::vm::safepoint::{self, Event, COORDINATOR};
+use crate::vm::stack::rooted_slots::RootedSlots;
+use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack_frame::ExceptionTable;
+use jclassmodel::modifiers::MethodModifier;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,5 +62,73 @@ fn gc_coordinator_nested_engine_invocations_share_one_poll_budget() {
         "a chain of single-bytecode invocations never reached a safepoint"
     );
     dumper.join().expect("dumper finished");
+    safepoint::retire();
+}
+
+#[test]
+fn gc_coordinator_synchronized_method_waits_and_releases_across_collection() {
+    let _serial = safepoint::tests::SERIAL.lock().unwrap();
+    safepoint::attach();
+    let monitor_ref = HEAP.create_array("[I", 0, &mut RootedSlots::new()).unwrap();
+    let dead = HEAP.create_array("[I", 1, &mut RootedSlots::new()).unwrap();
+    assert!(HEAP.contains(dead));
+    monitor::enter(monitor_ref);
+
+    let method = JavaMethod::new(
+        "()V".parse().unwrap(),
+        "SyncTest",
+        "run:()V",
+        Some(CodeContext::new(
+            0,
+            1,
+            Arc::new(vec![RETURN]),
+            Arc::new(Default::default()),
+            Arc::new(ExceptionTable::new(Vec::new())),
+            Arc::new(Vec::new()),
+        )),
+        false,
+        vec![],
+        (MethodModifier::Public | MethodModifier::Synchronized).bits() as i32,
+        "run",
+        None,
+        None,
+        Default::default(),
+        0,
+    );
+    let mut frame = method.new_stack_frame().unwrap();
+    frame.set_local(0, Slot::Ref(monitor_ref));
+
+    let (published, publication) = channel();
+    let (finished, completion) = channel();
+    let worker = std::thread::spawn(move || {
+        safepoint::attach();
+        safepoint::observe(move |event| {
+            if event == Event::SnapshotPublished {
+                published.send(()).unwrap();
+            }
+        });
+        let result = Engine::execute(frame, "synchronized method monitor test");
+        finished.send(result.is_ok()).unwrap();
+        safepoint::retire();
+    });
+
+    publication
+        .recv_timeout(Duration::from_secs(5))
+        .expect("synchronized method did not park on the held monitor");
+    let stats = collect(Cause::Explicit).expect("collection rendezvous was skipped");
+    assert!(
+        stats.reclaimed > 0,
+        "the collection reclaimed no dead object"
+    );
+    assert!(HEAP.contains(monitor_ref));
+    monitor::exit(monitor_ref).unwrap();
+    assert!(
+        completion
+            .recv_timeout(Duration::from_secs(5))
+            .expect("synchronized method did not resume"),
+        "synchronized method execution failed"
+    );
+    worker.join().unwrap();
+    assert!(!HEAP.contains(dead));
     safepoint::retire();
 }

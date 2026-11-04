@@ -536,6 +536,7 @@ builtin_natives! {
     "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => sn::file_descriptor::get_handle;
     "java/io/FileDescriptor": static fn getAppend(fd: int) -> boolean => sn::file_descriptor::get_append;
     "java/io/FileDescriptor": instance fn close0() -> void => sn::file_descriptor::close0;
+    "java/io/FileCleanable": static fn cleanupClose0(fd: int, handle: long) -> void => sn::file_descriptor::cleanup_close0;
 
     "java/io/FileInputStream": static fn initIDs() -> void => sn::file_input_stream::init_ids;
     "java/io/FileInputStream": instance fn open0(name: string) -> void => sn::file_input_stream::open0;
@@ -873,4 +874,14 @@ pub(crate) fn validate_builtin_natives() -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_builtin_native;
+
+    #[test]
+    fn file_cleanable_cleanup_close_is_registered_for_dispatch() {
+        assert!(find_builtin_native("java/io/FileCleanable:cleanupClose0:(IJ)V").is_some());
+    }
 }

@@ -34,6 +34,9 @@ pub(crate) struct StackFrame {
     current_class_name: Arc<String>,
     line_numbers: Arc<BTreeMap<u16, u16>>,
     exception_table: Arc<ExceptionTable>,
+    synchronized_method: bool,
+    synchronized_static: bool,
+    synchronized_monitor: Option<i32>,
 }
 
 #[derive(Debug, new)]
@@ -115,8 +118,12 @@ impl StackFrames {
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Resets the exception program counter (ex_pc) of the next frame if it exists since it is normal stack unwinding.
-    pub fn exit_frame(&mut self) -> Option<StackFrame> {
+    pub fn exit_frame(&mut self) -> Result<(Option<StackFrame>, bool)> {
         let popped_frame = self.pop();
+        let monitor_owned = match &popped_frame {
+            Some(frame) => frame.release_synchronized_monitor(),
+            None => true,
+        };
 
         // Resetting the exception program counter (ex_pc) of the next frame is an intentional
         // part of the normal stack unwinding process.
@@ -124,13 +131,18 @@ impl StackFrames {
             next_frame.reset_ex_pc()
         }
 
-        popped_frame
+        Ok((popped_frame, monitor_owned))
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Doesn't reset the exception program counter (ex_pc) of the next frame since it is not normal stack unwinding, and it will be used for correct exception handling.
-    pub fn propagate_exception(&mut self) -> Option<StackFrame> {
-        self.pop()
+    pub fn propagate_exception(&mut self) -> Result<(Option<StackFrame>, bool)> {
+        let popped_frame = self.pop();
+        let monitor_owned = match &popped_frame {
+            Some(frame) => frame.release_synchronized_monitor(),
+            None => true,
+        };
+        Ok((popped_frame, monitor_owned))
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
@@ -194,6 +206,9 @@ impl StackFrame {
             current_class_name,
             line_numbers,
             exception_table,
+            synchronized_method: false,
+            synchronized_static: false,
+            synchronized_monitor: None,
         }
     }
 
@@ -239,6 +254,9 @@ impl StackFrame {
             current_class_name,
             line_numbers: Arc::new(BTreeMap::new()),
             exception_table: Arc::new(ExceptionTable::new(Vec::new())),
+            synchronized_method: false,
+            synchronized_static: false,
+            synchronized_monitor: None,
         }
     }
 
@@ -409,14 +427,43 @@ impl StackFrame {
         self.locals[index] = slot;
     }
 
+    pub(crate) fn set_synchronized_method(&mut self, synchronized: bool, is_static: bool) {
+        self.synchronized_method = synchronized;
+        self.synchronized_static = is_static;
+    }
+
+    pub(crate) fn needs_synchronized_monitor(&self) -> bool {
+        self.synchronized_method && self.synchronized_monitor.is_none()
+    }
+
+    pub(crate) fn synchronized_static(&self) -> bool {
+        self.synchronized_static
+    }
+
+    pub(crate) fn set_synchronized_monitor(&mut self, reference: i32) {
+        assert!(self.synchronized_method);
+        assert!(self.synchronized_monitor.is_none());
+        assert_ne!(reference, 0);
+        self.synchronized_monitor = Some(reference);
+    }
+
+    fn release_synchronized_monitor(&self) -> bool {
+        if self.synchronized_method {
+            self.synchronized_monitor
+                .is_some_and(crate::vm::monitor::exit_synchronized_method)
+        } else {
+            true
+        }
+    }
+
     /// Reads a local with its tag intact; the counterpart of [`Self::set_local_slot`], reached
     /// through [`Self::get_local`].
     pub(crate) fn get_local_slot(&self, index: usize) -> Slot {
         *self.locals.get(index).expect("No value at index")
     }
 
-    /// Every heap reference this frame holds, in locals and on the operand stack — the frame's
-    /// contribution to a garbage collector's root set.
+    /// Every heap reference this frame holds, including its synchronized-method monitor — the
+    /// frame's contribution to a garbage collector's root set.
     ///
     /// Only slots the interpreter tagged are reported, so an `int` that happens to equal a live
     /// reference is not mistaken for one.
@@ -427,6 +474,7 @@ impl StackFrame {
             .chain(self.operand_stack.iter())
             .filter(|slot| slot.is_ref())
             .map(|slot| slot.value())
+            .chain(self.synchronized_monitor)
     }
 
     pub fn line_numbers(&self) -> &BTreeMap<u16, u16> {
@@ -488,6 +536,25 @@ mod tests {
 
         // The untagged `7` and `9` are ordinary ints that merely look like references.
         assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![7, 9]);
+    }
+
+    #[test]
+    fn should_keep_synchronized_monitor_as_root_after_receiver_slot_overwrite() {
+        let mut frame = frame(1, 0);
+        frame.set_synchronized_method(true, false);
+        frame.set_local(0, Slot::Ref(7));
+        frame.set_synchronized_monitor(7);
+        frame.set_local_raw(0, 99);
+
+        assert_eq!(frame.ref_slots().collect::<Vec<_>>(), vec![7]);
+    }
+
+    #[test]
+    fn synchronized_method_without_an_acquired_monitor_does_not_release_successfully() {
+        let mut frame = frame(1, 0);
+        frame.set_synchronized_method(true, false);
+
+        assert!(!frame.release_synchronized_monitor());
     }
 
     #[test]
