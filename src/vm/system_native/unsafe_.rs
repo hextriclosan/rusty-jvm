@@ -618,8 +618,7 @@ pub(crate) fn allocate_memory0(_this: i32, bytes: i64) -> Result<i64> {
         return Ok(0);
     }
     let size = bytes as usize;
-    let layout =
-        Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory allocation"))?;
+    let layout = allocation_layout(size)?;
     let ptr = unsafe { alloc(layout) };
     if ptr.is_null() {
         return Err(Error::new_native("Failed to allocate memory"));
@@ -641,11 +640,15 @@ pub(crate) fn free_memory0(_this: i32, address: i64) -> Result<()> {
         return Ok(());
     }
     if let Some((_, size)) = ALLOCATIONS.remove(&address) {
-        let layout =
-            Layout::array::<u8>(size).map_err(|_| Error::new_native("Invalid memory free"))?;
-        unsafe { dealloc(address as usize as *mut u8, layout) };
+        unsafe { dealloc(address as usize as *mut u8, allocation_layout(size)?) };
     }
     Ok(())
+}
+
+/// The layout of an `allocateMemory0` block of `size` bytes. Unsafe promises a block aligned for
+/// all value types; like HotSpot's `malloc`, we align to 16.
+fn allocation_layout(size: usize) -> Result<Layout> {
+    Layout::from_size_align(size, 16).map_err(|_| Error::new_native("Invalid memory allocation"))
 }
 
 // Todo: for all *_ref/offset pairs:

@@ -8,6 +8,15 @@ public class UnsafeRawAtomicCas {
     private static final int INCREMENTS = 2_000;
 
     public static void main(String[] args) throws InterruptedException {
+        // blocks are aligned for all value types, whatever their size
+        boolean aligned = true;
+        for (long size = 1; size <= 33; size++) {
+            long block = U.allocateMemory(size);
+            aligned &= block % Long.BYTES == 0;
+            U.freeMemory(block);
+        }
+        System.out.println("allocations aligned: " + aligned);
+
         long address = U.allocateMemory(16);
         try {
             U.putInt(null, address, 10);

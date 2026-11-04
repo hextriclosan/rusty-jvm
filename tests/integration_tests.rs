@@ -1061,7 +1061,8 @@ fn should_copy_swap_unsafe_raw_memory() {
 fn should_compare_and_exchange_unsafe_raw_memory_atomically() {
     assert_success(
         "samples.jdkinternal.unsafe.rawatomic.UnsafeRawAtomicCas",
-        "int set: true\n\
+        "allocations aligned: true\n\
+        int set: true\n\
         int set, stale: false\n\
         int exchange, stale: 20\n\
         int exchange: 20\n\
