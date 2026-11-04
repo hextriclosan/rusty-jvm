@@ -1,3 +1,9 @@
+//! Precise, nonmoving mark-sweep collection, root enumeration and managed-heap admission.
+//!
+//! Collection runs under an exclusive safepoint operation and fails closed: incomplete roots
+//! or invalid edges skip a cycle before sweep. See `docs/garbage_collection.md` for contracts,
+//! accounting and supported limits.
+
 pub(crate) mod budget;
 pub(crate) mod collector;
 mod config;

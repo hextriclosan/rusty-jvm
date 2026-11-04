@@ -16,6 +16,7 @@ graph TD
     VM["vm/mod.rs<br/>(bootstrap & wiring)"]
     MA["method_area<br/>(class loading, vtable)"]
     HEAP["heap<br/>(object & array storage)"]
+    GC["gc<br/>(roots, mark/sweep, budget)"]
     EE["execution_engine<br/>(bytecode interpreter)"]
     STACK["stack<br/>(operand stack / frames)"]
     JNI["jni<br/>(JNI ABI bridge)"]
@@ -27,6 +28,9 @@ graph TD
     CLI --> VM
     VM --> MA
     VM --> HEAP
+    VM --> GC
+    GC --> HEAP
+    GC --> JNI
     VM --> EE
     EE --> MA
     EE --> HEAP
@@ -100,8 +104,9 @@ Refer to the dedicated document [class_static_initialization.md](class_static_in
 ## 3. Heap Memory Model
 
 The heap is represented by a `Heap` wrapper whose backing storage is `data: AutoDashMapI32<HeapValue>` (a helper based on `DashMap`).
-Every object reference in the VM is a plain `i32` (matching the JVM operand-stack word size).
-References start at 1; 0 is the JVM null.
+Every internal object reference in the VM is a plain `i32` (matching the JVM operand-stack word size).
+References start at 1; 0 is the JVM null. The nonmoving collector removes unreachable heap entries
+without reusing their IDs; JNI uses separate opaque pointer-width reference tokens.
 
 ```mermaid
 classDiagram
@@ -234,12 +239,29 @@ Each Java platform thread is backed by one OS thread. Per-thread state (the
 `JNIEnv`, pending exception, current `Thread`, and the live `StackFrames` chain)
 lives in a `thread_local!` `JavaThread`, while shared state (`HEAP`, `CLASSES`,
 `METHOD_AREA`) is behind concurrent maps and per-class init locks. Object
-monitors back `synchronized`/`wait`/`notify`/`join`; interrupts, `sleep`,
+monitors back `synchronized`/`ACC_SYNCHRONIZED` interpreted methods/`wait`/`notify`/`join`; interrupts, `sleep`,
 `LockSupport`, atomic `Unsafe` CAS, `ThreadLocal`, and `Thread.getState()` are all
-implemented. A cooperative safepoint (polled by the interpreter loop) lets one
-thread pause another to snapshot its stack for `Thread.getStackTrace()` — the same
-primitive a future stop-the-world GC would use to pause threads for root scanning.
+implemented. A cooperative safepoint lets one thread pause another to snapshot its stack for
+`Thread.getStackTrace()` and lets the collector rendezvous all mutators for root scanning.
 
-See [threading.md](threading.md) for the full design.
+See [threading.md](threading.md) for the threading design and
+[garbage_collection.md](garbage_collection.md) for collector operation, accounting and limits.
+
+---
+
+## 8. Garbage collection
+
+`vm/gc` implements a precise, nonmoving, stop-the-world mark-sweep collector. The elected
+coordinator operation remains exclusive from the all-thread rendezvous through owned-root
+snapshotting, iterative tracing, reference processing and sweep. Every participant publishes
+roots from its own frames and thread-local state; global roots include class metadata, JNI globals,
+runtime state and permanent caches. Missing roots or invalid heap edges abort the cycle before
+destructive processing.
+
+Allocation admission and sweep share the recorded managed-heap accounting policy. A pressure
+collection may clear eligible soft references; ordinary explicit and threshold collections retain
+them. Weak and phantom references are cleared and added once to the pending-reference chain. The
+collector does not move objects, unload classes or perform finalization. See
+[garbage_collection.md](garbage_collection.md) for the four contracts and limits.
 
 [jvms-5.4.5]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5

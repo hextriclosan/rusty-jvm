@@ -12,7 +12,8 @@
 This project is a Java Virtual Machine (JVM) implemented in Rust, built to run Java programs independently of existing JVMs.
 Everything related to Java is implemented from scratch.
 The current version executes Java bytecode in interpreted mode, with the introduction of a Just-In-Time (JIT) compiler identified as a future milestone.
-The next major objectives include the integration of garbage collection.
+The VM includes a precise, nonmoving mark-sweep garbage collector with configurable managed-heap
+accounting. See [the GC guide](docs/garbage_collection.md) for its behavior, options and limits.
 
 ## Implemented Key Features
 
@@ -27,6 +28,7 @@ The next major objectives include the integration of garbage collection.
 - Program arguments ([JLS §12.1.4][jls-12.1.4])
 - Assertions ([JLS §14.10][jls-14.10])
 - [Multithreading][java.lang.thread-api]
+- Nonmoving mark-sweep garbage collection ([design and limits](docs/garbage_collection.md))
 - [Dynamic Language Support][java.lang.invoke-api] (partially)
 - [Stream API][java.util.stream-api] (partially)
 - [Reflection][java.lang.reflect-api] (some features)
@@ -98,8 +100,7 @@ graph TD
 
 ## Roadmap
 
-1. **Garbage Collection** — a tracing GC to reclaim unreachable heap objects.
-2. **JIT Compilation** — profile-guided native code generation for hot methods.
+1. **JIT Compilation** — profile-guided native code generation for hot methods.
 
 ## Java Standard Library Classes
 

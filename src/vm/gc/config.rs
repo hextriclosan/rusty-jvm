@@ -1,3 +1,7 @@
+//! Parsing and installation of the VM's managed-heap and collection options.
+//!
+//! The configured maximum bounds policy-v1 managed storage accounting, not process RSS.
+
 use crate::vm::error::{Error, Result};
 use crate::Arguments;
 use std::sync::OnceLock;

@@ -1,3 +1,10 @@
+# Unreleased
+
+## What's Changed
+* Add a precise, nonmoving mark-sweep garbage collector with managed-heap limits, JNI reference
+  tracking, Java reference processing and opt-in `-Xlog:gc` output
+* Support `ACC_SYNCHRONIZED` on interpreted methods
+
 # 0.6.0
 
 ## What's Changed

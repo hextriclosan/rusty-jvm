@@ -39,17 +39,16 @@ The test suite is an integration test that compiles a set of small Java programs
 and runs them through the VM, comparing stdout with expected output.
 
 ```sh
-# Run all tests (fastest with nextest)
+# Run all tests. `cargo-nextest` runs each test in its own process and is required here.
 cargo nextest run --workspace
 
 # Run a specific test by name
 cargo nextest run should_print_hello_world
-
-# Run with the standard test runner
-cargo test --workspace
 ```
 
-> **Note:** The integration tests require the JDK to be on `PATH` (for `javac`) and
+> **Note:** Use `cargo nextest`, not `cargo test --workspace`. Tests share process-global state,
+> including a `JAVA_HOME` `OnceLock`, and the standard runner can fail when tests run in one
+> process. The integration tests also require the JDK to be on `PATH` (for `javac`) and
 > `JAVA_HOME` to be set.
 
 ---

@@ -28,8 +28,12 @@ The trade-off is that `i32` keys in the heap `DashMap` are not *unforgeable* - a
 can fabricate an integer can produce a seemingly valid reference.
 This is acceptable because the only code that touches the heap is the trusted VM core, not
 untrusted user code.
-When a garbage collector is added, compacting GC will require changing this to indirect handles
-anyway, so the abstraction surface is deliberately kept thin.
+The collector is now a precise, nonmoving mark-sweep collector, so keys remain stable and no
+compacting handle table is needed. JNI references use separate opaque pointer-width identities;
+they resolve to these internal heap keys.
+
+See [garbage_collection.md](garbage_collection.md) for collection, rooting, accounting and
+identity limits.
 
 ---
 
@@ -73,17 +77,16 @@ not raw `*mut` pointers.
 **Reasoning:**
 Using raw pointers would require `unsafe` throughout the codebase and would make the heap
 vulnerable to use-after-free if any reference were dangling.
-Because `rusty-jvm` does not yet implement a garbage collector, objects live for the entire
-duration of the program; an indirect key-based map is therefore both safe and sufficient.
+The nonmoving mark-sweep collector reclaims unreachable entries without relocating live objects,
+so the key-based map remains safe and references remain stable.
 
 An `AutoDashMapI32` helper (based on `DashMap`) was chosen over a `Mutex<HashMap>` to allow concurrent read access from multiple
 native-method calls without a global lock.
 The auto-incrementing key (`AutoDashMapI32`) starts at 1 to ensure 0 is permanently reserved
 as the null reference.
 
-When a real GC is introduced, the `i32` keys will naturally evolve into an *object-handle table*
-(as used by, e.g., the JNI local/global reference model), without requiring changes to any code
-that currently holds an `i32` reference.
+JNI local, global and weak-global references are represented by separate opaque tokens that
+resolve through a handle table. The VM's internal Java references remain `i32` heap keys.
 
 ---
 
@@ -163,7 +166,7 @@ an unpark target, so no separate thread-id scheme is required.
 
 Keeping monitors in a side-table keyed by the `i32` reference (see decision #1) mirrors
 HotSpot's lazily-inflated monitors and avoids widening every heap object with lock words;
-because there is no GC yet, the reference key is stable for the object's lifetime. The
+because collection is nonmoving, the reference key is stable for the object's lifetime. The
 monitor itself is a reentrant `parking_lot::Mutex` + `Condvar` tracking owner/recursion,
 which gives `synchronized`, `wait`/`notify`, and `join` directly.
 
@@ -171,11 +174,11 @@ The shared runtime (`HEAP`, `CLASSES`, `METHOD_AREA`) was already behind concurr
 and per-class init locks, so the main correctness addition for lock-free code is a genuinely
 atomic compare-and-swap (read-compare-write under a single entry lock).
 
-Pausing a thread to read its stack (`Thread.getStackTrace`, and later stop-the-world GC) uses a
-**cooperative safepoint** — the interpreter polls a per-thread flag and stops itself — rather than
-OS-level thread suspension. Cooperative polling keeps the mechanism portable and lets a paused
-thread read its *own* frames (so no thread ever touches another's live stack), at the cost of not
-being able to pause a thread blocked in a native. Full details are in [threading.md](threading.md).
+Pausing a thread to read its stack (`Thread.getStackTrace`) and to collect the heap uses a
+**cooperative safepoint** rather than OS-level thread suspension. Each thread publishes its own
+immutable root snapshot; the collector never walks a different thread's live stack. External
+native calls participate through the safe transition. Full details are in [threading.md](threading.md)
+and [garbage_collection.md](garbage_collection.md).
 
 [jvms-2.6.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.2
 [jvms-4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
