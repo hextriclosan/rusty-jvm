@@ -3,23 +3,30 @@ use crate::vm::exception::pending_helpers::{
     set_pending_io_exception, set_pending_null_pointer_exception_with_message,
 };
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
-use crate::vm::system_native::file_system::{delete0 as delete_impl, Access};
+use crate::vm::system_native::file_system::{delete0 as delete_impl, file_path, Access};
 use crate::vm::system_native::platform_native_dispatcher::windows_helpers::{
     get_last_error, strip_string,
 };
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use crate::vm::system_native::win_util::wide_cstring::WideCString;
+use std::fs::{FileTimes, Metadata, OpenOptions};
+use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
 use std::path::Path;
 use std::ptr::null_mut;
+use std::time::{Duration, UNIX_EPOCH};
 use winapi::shared::minwindef::{DWORD, MAX_PATH};
 use winapi::um::errhandlingapi::{GetLastError, SetLastError};
 use winapi::um::fileapi::{
-    CreateFileW, GetFinalPathNameByHandleW, GetVolumeInformationW, OPEN_EXISTING,
+    CreateFileW, GetDiskFreeSpaceExW, GetFileAttributesW, GetFinalPathNameByHandleW,
+    GetVolumeInformationW, GetVolumePathNameW, SetFileAttributesW, INVALID_FILE_ATTRIBUTES,
+    OPEN_EXISTING,
 };
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-use winapi::um::winbase::FILE_FLAG_BACKUP_SEMANTICS;
+use winapi::um::winbase::{MoveFileExW, FILE_FLAG_BACKUP_SEMANTICS, MOVEFILE_COPY_ALLOWED};
 use winapi::um::winnt::{
-    FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE, WCHAR,
+    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY, FILE_ATTRIBUTE_REPARSE_POINT,
+    FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
+    FILE_WRITE_ATTRIBUTES, HANDLE, ULARGE_INTEGER, WCHAR,
 };
 
 pub(super) fn check_access_winnt_impl(path: &Path, mode: Access) -> bool {
@@ -179,4 +186,122 @@ pub(super) fn is_hidden_winnt(path: &Path) -> bool {
     } else {
         attr & FILE_ATTRIBUTE_HIDDEN != 0
     }
+}
+
+/// Whether `delete0` removes the entry as a directory: like HotSpot, by its directory attribute,
+/// which a symbolic link or junction to a directory also has, and `RemoveDirectoryW` removes those
+/// as links.
+pub(super) fn is_directory_winnt(metadata: &Metadata) -> bool {
+    metadata.file_attributes() & FILE_ATTRIBUTE_DIRECTORY != 0
+}
+
+/// `java.io.WinNTFileSystem.setPermission0(Ljava/io/File;IZZ)Z`
+///
+/// Like HotSpot, only write access of a file can change, through its read-only attribute. Read and
+/// execute access can't be taken away, so changing them only succeeds when enabling them.
+pub(crate) fn set_permission0(
+    _this: i32,
+    file_ref: i32,
+    access: i32,
+    enable: bool,
+    _owner_only: bool,
+) -> Result<bool> {
+    if access == Access::ACCESS_READ.bits() || access == Access::ACCESS_EXECUTE.bits() {
+        return Ok(enable);
+    }
+    let Some((path, attributes)) = file_target_attributes(&file_path(file_ref)?) else {
+        return Ok(false);
+    };
+    let attributes = if enable {
+        attributes & !FILE_ATTRIBUTE_READONLY
+    } else {
+        attributes | FILE_ATTRIBUTE_READONLY
+    };
+    Ok(unsafe { SetFileAttributesW(path.as_ptr(), attributes) } != 0)
+}
+
+/// `java.io.WinNTFileSystem.setReadOnly0(Ljava/io/File;)Z`
+pub(crate) fn set_read_only0(_this: i32, file_ref: i32) -> Result<bool> {
+    let Some((path, attributes)) = file_target_attributes(&file_path(file_ref)?) else {
+        return Ok(false);
+    };
+    Ok(unsafe { SetFileAttributesW(path.as_ptr(), attributes | FILE_ATTRIBUTE_READONLY) } != 0)
+}
+
+/// The attributes of the file at `path`, or of the final target if it is a reparse point such as a
+/// symbolic link, with the path they belong to. `None` if there is no such file, or if it is a
+/// directory: like HotSpot, the read-only attribute of a directory isn't changed.
+fn file_target_attributes(path: &str) -> Option<(WideCString, DWORD)> {
+    let mut path = WideCString::new(path);
+    let mut attributes = unsafe { GetFileAttributesW(path.as_ptr()) };
+    if attributes != INVALID_FILE_ATTRIBUTES && attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        attributes = match get_final_path0_impl(&path) {
+            Ok(final_path) => {
+                path = WideCString::new(&final_path);
+                unsafe { GetFileAttributesW(path.as_ptr()) }
+            }
+            Err(_) => INVALID_FILE_ATTRIBUTES,
+        };
+    }
+
+    let is_file =
+        attributes != INVALID_FILE_ATTRIBUTES && attributes & FILE_ATTRIBUTE_DIRECTORY == 0;
+    is_file.then_some((path, attributes))
+}
+
+/// `java.io.WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z`
+///
+/// Like `_wrename`, which HotSpot calls, this doesn't replace an existing destination, and may move
+/// a file to another volume.
+pub(crate) fn rename0(_this: i32, from_ref: i32, to_ref: i32) -> Result<bool> {
+    let from = WideCString::new(&file_path(from_ref)?);
+    let to = WideCString::new(&file_path(to_ref)?);
+    Ok(unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), MOVEFILE_COPY_ALLOWED) } != 0)
+}
+
+/// `java.io.WinNTFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z`
+///
+/// Opens the file or directory like HotSpot, only to write its attributes, so that this works on
+/// a read-only file. `File.setLastModified` rejects negative times.
+pub(crate) fn set_last_modified_time0(_this: i32, file_ref: i32, time: i64) -> Result<bool> {
+    let modified = UNIX_EPOCH + Duration::from_millis(time as u64);
+    let result = OpenOptions::new()
+        .access_mode(FILE_WRITE_ATTRIBUTES)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+        .open(file_path(file_ref)?)
+        .and_then(|file| file.set_times(FileTimes::new().set_modified(modified)));
+    Ok(result.is_ok())
+}
+
+/// `java.io.WinNTFileSystem.getSpace0(Ljava/io/File;I)J`
+///
+/// The total, free or usable space (`FileSystem.SPACE_TOTAL`, `SPACE_FREE` and `SPACE_USABLE`) of
+/// the volume holding the file, or 0 on failure.
+pub(crate) fn get_space0(_this: i32, file_ref: i32, space_type: i32) -> Result<i64> {
+    // like HotSpot's fileToNTPath, which makes relative paths absolute
+    let Ok(path) = std::path::absolute(file_path(file_ref)?) else {
+        return Ok(0);
+    };
+    let path = path.to_string_lossy();
+    // the volume path is at most the path with a trailing backslash
+    let capacity = path.encode_utf16().count() + 2;
+    let mut volume = vec![0 as WCHAR; capacity];
+    let path = WideCString::new(&path);
+    if unsafe { GetVolumePathNameW(path.as_ptr(), volume.as_mut_ptr(), capacity as DWORD) } == 0 {
+        return Ok(0);
+    }
+
+    let (mut usable, mut total, mut free): (ULARGE_INTEGER, ULARGE_INTEGER, ULARGE_INTEGER) =
+        unsafe { std::mem::zeroed() };
+    if unsafe { GetDiskFreeSpaceExW(volume.as_ptr(), &mut usable, &mut total, &mut free) } == 0 {
+        return Ok(0);
+    }
+    let space = match space_type {
+        0 => total,
+        1 => free,
+        2 => usable,
+        _ => return Ok(0),
+    };
+    Ok(unsafe { *space.QuadPart() } as i64)
 }

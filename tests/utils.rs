@@ -2,7 +2,7 @@
 use assert_cmd::{cargo_bin_cmd, Command};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{env, fs, iter};
 use tempfile::TempDir;
 
@@ -187,6 +187,16 @@ pub fn run_reference_jvm_with_envs(
     entry: &str,
     envs: &HashMap<String, String>,
 ) -> ReferenceOutput {
+    run_reference_jvm_with_all_args(jvm_args, entry, &[], envs)
+}
+
+/// [`run_reference_jvm`] with arguments for the program and extra environment variables.
+pub fn run_reference_jvm_with_all_args(
+    jvm_args: &[&str],
+    entry: &str,
+    program_args: &[&str],
+    envs: &HashMap<String, String>,
+) -> ReferenceOutput {
     let java_home = env::var("JAVA_HOME").expect("JAVA_HOME is not set");
     let mut java = PathBuf::from(java_home).join("bin").join("java");
     if cfg!(windows) {
@@ -202,6 +212,7 @@ pub fn run_reference_jvm_with_envs(
         .envs(envs)
         .args(jvm_args)
         .arg(entry)
+        .args(program_args)
         .output()
         .expect("Failed to run the reference JVM");
     let to_string = |bytes: Vec<u8>| {
@@ -253,6 +264,37 @@ pub fn assert_same_as_reference_jvm_with_envs(
         expected_result,
         reference.exit_code,
         envs,
+    );
+}
+
+/// [`assert_same_as_reference_jvm`] for a program that changes files. Its only argument is a new
+/// directory, a different one for each JVM, which `setup` prepares first.
+pub fn assert_same_as_reference_jvm_in_new_dir(entry: &str, setup: impl Fn(&Path)) {
+    let new_dir = || {
+        let dir = TempDir::new().expect("Failed to create a temporary directory");
+        setup(dir.path());
+        dir
+    };
+
+    let reference_dir = new_dir();
+    let reference_dir_path = reference_dir.path().to_str().unwrap();
+    let reference =
+        run_reference_jvm_with_all_args(&[], entry, &[reference_dir_path], &HashMap::default());
+    let dir = new_dir();
+    let expected_result = if reference.exit_code == 0 {
+        ExecutionResult::Success
+    } else {
+        ExecutionResult::Failure
+    };
+    assert_with_all_args(
+        &[],
+        entry,
+        &[dir.path().to_str().unwrap()],
+        &reference.stdout,
+        &reference.stderr,
+        expected_result,
+        reference.exit_code,
+        HashMap::default(),
     );
 }
 

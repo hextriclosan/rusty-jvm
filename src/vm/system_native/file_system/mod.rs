@@ -5,16 +5,18 @@ use crate::vm::heap::heap::HEAP;
 use crate::vm::system_native::string::get_utf8_string_by_ref;
 use bitflags::bitflags;
 use path_absolutize::Absolutize;
-use std::fs::{FileTimes, OpenOptions};
 use std::path::Path;
-use std::time::UNIX_EPOCH;
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(unix)]
 use unix::check_access_unix_impl as check_access;
+#[cfg(unix)]
+use unix::is_directory_unix as is_directory;
 #[cfg(unix)]
 use unix::is_hidden_unix as is_hidden;
 #[cfg(windows)]
 use winnt::check_access_winnt_impl as check_access;
+#[cfg(windows)]
+use winnt::is_directory_winnt as is_directory;
 #[cfg(windows)]
 use winnt::is_hidden_winnt as is_hidden;
 
@@ -113,6 +115,11 @@ fn extract_path(file_ref: i32) -> Result<i32> {
     Ok(raw[0])
 }
 
+/// The path of a `java.io.File`.
+fn file_path(file_ref: i32) -> Result<String> {
+    get_utf8_string_by_ref(extract_path(file_ref)?)
+}
+
 bitflags! {
 #[derive(Debug, PartialEq)]
     struct Access: i32 {
@@ -137,71 +144,31 @@ pub(crate) fn check_access0(_this: i32, file_ref: i32, access: i32) -> Result<bo
     Ok(check_access(path, access_flags))
 }
 
-pub(crate) fn set_permission0(
-    _this: i32,
-    file_ref: i32,
-    access: i32,
-    enable: bool,
-    _owner_only: bool,
-) -> Result<bool> {
-    let path_ref = extract_path(file_ref)?;
-    let path = get_utf8_string_by_ref(path_ref)?;
-    let mut permissions = match std::fs::metadata(&path) {
-        Ok(metadata) => metadata.permissions(),
-        Err(_) => return Ok(false),
-    };
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-
-        let mask = match Access::from_bits(access) {
-            Some(Access::ACCESS_READ) => 0o400 | if _owner_only { 0 } else { 0o044 },
-            Some(Access::ACCESS_WRITE) => 0o200 | if _owner_only { 0 } else { 0o022 },
-            Some(Access::ACCESS_EXECUTE) => 0o100 | if _owner_only { 0 } else { 0o011 },
-            _ => return Ok(false),
-        };
-        let mode = if enable {
-            permissions.mode() | mask
-        } else {
-            permissions.mode() & !mask
-        };
-        permissions.set_mode(mode);
-    }
-
-    #[cfg(windows)]
-    {
-        if access != Access::ACCESS_WRITE.bits() {
-            return Ok(enable);
-        }
-        permissions.set_readonly(!enable);
-    }
-
-    Ok(std::fs::set_permissions(path, permissions).is_ok())
-}
-
 /// `java.io.WinNTFileSystem.delete0(Ljava/io/File;)Z`
 /// `java.io.UnixFileSystem.delete0(Ljava/io/File;)Z`
+///
+/// Deletes a file or an empty directory. Like HotSpot, a symbolic link is deleted itself, even if
+/// its target doesn't exist.
 pub(crate) fn delete0(_this: i32, file_ref: i32) -> Result<bool> {
-    let path_ref = extract_path(file_ref)?;
-
-    let path = get_utf8_string_by_ref(path_ref)?;
-    let path = Path::new(&path);
-
-    if !path.exists() {
+    let path = file_path(file_ref)?;
+    let Ok(metadata) = std::fs::symlink_metadata(&path) else {
         return Ok(false);
-    }
-
-    let result = if path.is_dir() {
-        std::fs::remove_dir(path)
-    } else {
-        std::fs::remove_file(path)
     };
 
-    match result {
-        Ok(_) => Ok(true),
-        Err(_) => Ok(false),
-    }
+    let result = if is_directory(&metadata) {
+        std::fs::remove_dir(&path)
+    } else {
+        std::fs::remove_file(&path)
+    };
+    Ok(result.is_ok())
+}
+
+/// `java.io.WinNTFileSystem.createDirectory0(Ljava/io/File;)Z`
+/// `java.io.UnixFileSystem.createDirectory0(Ljava/io/File;)Z`
+///
+/// Like HotSpot, `mkdir` with mode 0777 on Unix and `CreateDirectoryW` on Windows.
+pub(crate) fn create_directory0(_this: i32, file_ref: i32) -> Result<bool> {
+    Ok(std::fs::create_dir(file_path(file_ref)?).is_ok())
 }
 
 /// `java.io.WinNTFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;`
@@ -227,16 +194,6 @@ pub(crate) fn list0(_this: i32, file_ref: i32) -> Result<i32> {
     }
 
     Ok(HEAP.create_array_with_values("[Ljava/lang/String;", &names))
-pub(crate) fn create_directory0(_this: i32, file_ref: i32) -> Result<bool> {
-    let path_ref = extract_path(file_ref)?;
-    let path = get_utf8_string_by_ref(path_ref)?;
-    Ok(std::fs::create_dir(path).is_ok())
-pub(crate) fn rename0(_this: i32, source_ref: i32, destination_ref: i32) -> Result<bool> {
-    let source_path_ref = extract_path(source_ref)?;
-    let destination_path_ref = extract_path(destination_ref)?;
-    let source = get_utf8_string_by_ref(source_path_ref)?;
-    let destination = get_utf8_string_by_ref(destination_path_ref)?;
-    Ok(std::fs::rename(source, destination).is_ok())
 }
 
 /// Get the length of the file in bytes.
@@ -258,56 +215,21 @@ pub(crate) fn get_length0(_this: i32, file_ref: i32) -> Result<i64> {
     Ok(len as i64)
 }
 
+/// `java.io.WinNTFileSystem.getLastModifiedTime0(Ljava/io/File;)J`
+/// `java.io.UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J`
+///
+/// The time in milliseconds since the epoch, or 0 if the file can't be read.
 pub(crate) fn get_last_modified_time0(_this: i32, file_ref: i32) -> Result<i64> {
-    let path_ref = extract_path(file_ref)?;
-    let path = get_utf8_string_by_ref(path_ref)?;
-    let modified = std::fs::metadata(path)
-        .and_then(|metadata| metadata.modified())
-        .ok()
-        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
-        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
-        .unwrap_or(0);
+    let modified =
+        std::fs::metadata(file_path(file_ref)?).and_then(|metadata| metadata.modified());
+    Ok(modified.map_or(0, millis_since_epoch))
+}
 
-    Ok(modified)
-pub(crate) fn set_last_modified_time0(
-    _this: i32,
-    file_ref: i32,
-    time_millis: i64,
-) -> Result<bool> {
-    if time_millis < 0 {
-        return Ok(false);
-    }
-    let path_ref = extract_path(file_ref)?;
-    let path = get_utf8_string_by_ref(path_ref)?;
-    let Some(modified) = UNIX_EPOCH.checked_add(Duration::from_millis(time_millis as u64)) else {
-        return Ok(false);
+/// Milliseconds since the epoch, rounded down like HotSpot does, also for times before it.
+fn millis_since_epoch(time: SystemTime) -> i64 {
+    let nanos = match time.duration_since(UNIX_EPOCH) {
+        Ok(after) => after.as_nanos() as i128,
+        Err(before) => -(before.duration().as_nanos() as i128),
     };
-    let result = OpenOptions::new()
-        .write(true)
-        .open(path)
-        .and_then(|file| file.set_times(FileTimes::new().set_modified(modified)));
-
-    Ok(result.is_ok())
-pub(crate) fn set_read_only0(_this: i32, file_ref: i32) -> Result<bool> {
-    let path_ref = extract_path(file_ref)?;
-    let path = get_utf8_string_by_ref(path_ref)?;
-    let mut permissions = match std::fs::metadata(&path) {
-        Ok(metadata) => metadata.permissions(),
-        Err(_) => return Ok(false),
-    };
-    permissions.set_readonly(true);
-    Ok(std::fs::set_permissions(path, permissions).is_ok())
-pub(crate) fn get_space0(_this: i32, file_ref: i32, space_type: i32) -> Result<i64> {
-    let path_ref = extract_path(file_ref)?;
-    let path = get_utf8_string_by_ref(path_ref)?;
-    let space = match space_type {
-        0 => fs2::total_space(path),
-        1 => fs2::free_space(path),
-        2 => fs2::available_space(path),
-        _ => return Ok(0),
-    }
-    .unwrap_or(0)
-    .min(i64::MAX as u64);
-
-    Ok(space as i64)
+    nanos.div_euclid(1_000_000) as i64
 }
