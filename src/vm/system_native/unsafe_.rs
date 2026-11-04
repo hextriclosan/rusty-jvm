@@ -701,15 +701,14 @@ pub(crate) fn copy_swap_memory0(
     bytes: i64,
     elem_size: i64,
 ) -> Result<()> {
-    let total_bytes = usize::try_from(bytes)
-        .map_err(|_| Error::new_execution("copySwapMemory length is negative"))?;
-    let elem_size = usize::try_from(elem_size)
-        .map_err(|_| Error::new_execution("copySwapMemory element size is negative"))?;
+    // Unsafe.copySwapMemory has already checked that both bases are null or primitive arrays, that
+    // the offsets and size are not negative, and that the size is a multiple of an element size
+    // of 2, 4 or 8
+    let total_bytes = bytes as usize;
+    let elem_size = elem_size as usize;
 
-    if elem_size == 0 || total_bytes % elem_size != 0 {
-        return Err(Error::new_execution("Invalid elem_size or bytes"));
-    }
-
+    // Copying the source out first gives memmove semantics for overlapping ranges, and avoids a
+    // deadlock when src and dest are in the same DashMap shard
     let src_data = if src_base_ref == 0 {
         unsafe {
             std::slice::from_raw_parts(src_offset as usize as *const u8, total_bytes).to_vec()
