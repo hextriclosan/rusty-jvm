@@ -170,9 +170,7 @@ fn throw_illegal_monitor_state_exception(stack_frames: &mut StackFrames) -> Resu
 fn pop_native_frame(stack_frames: &mut StackFrames) -> Option<crate::vm::error::RootedThrowable> {
     let pending = JavaThread::take_pending_exception_rooted();
     crate::vm::safepoint::event(crate::vm::safepoint::Event::NativeFramePop);
-    stack_frames
-        .propagate_exception()
-        .expect("native frame monitor release failed");
+    stack_frames.propagate_exception();
     pending
 }
 

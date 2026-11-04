@@ -118,7 +118,7 @@ impl StackFrames {
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Resets the exception program counter (ex_pc) of the next frame if it exists since it is normal stack unwinding.
-    pub fn exit_frame(&mut self) -> Result<(Option<StackFrame>, bool)> {
+    pub fn exit_frame(&mut self) -> (Option<StackFrame>, bool) {
         let popped_frame = self.pop();
         let monitor_owned = match &popped_frame {
             Some(frame) => frame.release_synchronized_monitor(),
@@ -131,18 +131,18 @@ impl StackFrames {
             next_frame.reset_ex_pc()
         }
 
-        Ok((popped_frame, monitor_owned))
+        (popped_frame, monitor_owned)
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Doesn't reset the exception program counter (ex_pc) of the next frame since it is not normal stack unwinding, and it will be used for correct exception handling.
-    pub fn propagate_exception(&mut self) -> Result<(Option<StackFrame>, bool)> {
+    pub fn propagate_exception(&mut self) -> (Option<StackFrame>, bool) {
         let popped_frame = self.pop();
         let monitor_owned = match &popped_frame {
             Some(frame) => frame.release_synchronized_monitor(),
             None => true,
         };
-        Ok((popped_frame, monitor_owned))
+        (popped_frame, monitor_owned)
     }
 
     /// Pops the top stack frame from the stack frames and returns it.

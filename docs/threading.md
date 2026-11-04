@@ -92,7 +92,9 @@ struct ObjectMonitor { state: Mutex<MonitorState>, cv: Condvar }   // parking_lo
 - **`monitorenter` / `monitorexit`** acquire/release reentrantly.
 - **`ACC_SYNCHRONIZED` interpreted methods** acquire the receiver monitor, or the declaring
   class mirror for a static method, on first dispatch into the frame and release it when the
-  frame exits or unwinds.
+  frame returns, unwinds for a Java exception, or is cleaned up after an internal VM error. The
+  monitor reference stays rooted until release, and internal errors retain their original result
+  after remaining frames are cleaned up.
 - **`Object.wait(timeout)`** fully releases the monitor (remembering the recursion
   depth), blocks on the condvar until notified/timed-out/interrupted, then
   re-acquires and restores the depth. `notify`/`notifyAll` hand out wake tokens via

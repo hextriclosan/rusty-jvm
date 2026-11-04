@@ -71,7 +71,7 @@ pub(crate) fn process(
         LRETURN | DRETURN => perform_return(stack_frames, destination, 2)?,
         RETURN => {
             destination.replace(vec![]);
-            let (_, monitor_owned) = stack_frames.exit_frame()?;
+            let (_, monitor_owned) = stack_frames.exit_frame();
             if !monitor_owned {
                 return crate::vm::exception::common::construct_exception_and_throw(
                     "java/lang/IllegalMonitorStateException",
@@ -102,7 +102,7 @@ fn perform_return(
     let slots = (0..width).map(|_| stack_frame.pop_slot()).collect();
     destination.replace(slots);
 
-    let (_, monitor_owned) = stack_frames.exit_frame()?;
+    let (_, monitor_owned) = stack_frames.exit_frame();
     if !monitor_owned {
         destination.replace(vec![]);
         return crate::vm::exception::common::construct_exception_and_throw(

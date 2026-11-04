@@ -53,9 +53,7 @@ pub fn throw_exception_with_ref(
                 enter_handler(frame, handler as i16, throwable_ref)?;
                 return Ok((Cow::Borrowed("java/lang/OutOfMemoryError"), handler as i16));
             }
-            if stack_frames.propagate_exception().is_err() {
-                return Err(ownership);
-            }
+            stack_frames.propagate_exception();
         }
         return Err(ownership);
     }
@@ -101,9 +99,7 @@ fn unwind_stack(
                 return Ok((exception_handler as i16, exception_name));
             }
             None => {
-                if stack_frames.propagate_exception().is_err() {
-                    return Err(ownership);
-                }
+                stack_frames.propagate_exception();
             }
         }
     }

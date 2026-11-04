@@ -13,8 +13,16 @@ use crate::vm::stack::stack_frames_util::StackFramesUtil;
 use tracing::{span, trace, Level};
 
 #[cfg(test)]
+use std::cell::Cell;
+
+#[cfg(test)]
 #[path = "engine_coordinator_tests.rs"]
 mod coordinator_tests;
+
+#[cfg(test)]
+thread_local! {
+    static INJECT_INTERNAL_ERROR: Cell<bool> = const { Cell::new(false) };
+}
 
 pub(crate) struct Engine {}
 
@@ -28,86 +36,96 @@ impl Engine {
         // stack-walking natives can traverse it (and older segments) without a parameter. The
         // guard pops it on return/unwind, keeping the chain correct across native re-entries.
         let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
-        while !stack_frames.is_empty() {
-            Self::enter_synchronized_method(&mut stack_frames)?;
-            safepoint::dispatch_bytecode();
-            // Stamp the instruction's start pc so that, if this opcode raises an implicit
-            // NullPointerException, the throwable's backtrace records the faulting bytecode index
-            // (JEP 358) even though the handler advances `pc` while reading operands.
-            {
-                let frame = stack_frames
-                    .last_mut()
-                    .ok_or(Error::new_execution("Error getting stack frame"))?;
-                let pc = frame.pc();
-                frame.set_bci(pc);
-            }
-            let (class, code, pc, line_numbers) = {
-                let frame = stack_frames
-                    .last()
-                    .ok_or(Error::new_execution("Error getting stack frame"))?;
-                (
-                    frame.current_class_name().to_string(),
-                    frame.get_bytecode_byte(),
-                    frame.pc(),
-                    frame.line_numbers(),
-                )
-            };
-            let instruction_line_num = StackFramesUtil::extract_line_number(line_numbers, pc);
-            let span = span!(Level::TRACE, "", "{class}:{instruction_line_num}");
-            let _entered = span.enter();
-
-            let result = (|| -> Result<()> {
-                match code {
-                    0u8..=20u8 => {
-                        ops_constant_processor::process(code, &class, &mut stack_frames)?;
-                    }
-                    21u8..=53u8 => {
-                        ops_load_processor::process(code, &mut stack_frames)?;
-                    }
-                    54u8..=86u8 => {
-                        ops_store_processor::process(code, &mut stack_frames)?;
-                    }
-                    87u8..=95u8 => {
-                        ops_stack_processor::process(code, &mut stack_frames)?;
-                    }
-                    96u8..=132u8 => {
-                        ops_math_processor::process(code, &mut stack_frames)?;
-                    }
-                    133u8..=147u8 => {
-                        ops_conversion_processor::process(code, &mut stack_frames)?;
-                    }
-                    148u8..=166u8 => {
-                        ops_comparison_processor::process(code, &mut stack_frames)?;
-                    }
-                    167u8..=177u8 => {
-                        ops_control_processor::process(code, &mut stack_frames, &mut destination)?;
-                    }
-                    178u8..=195u8 => {
-                        ops_reference_processor::process(code, &class, &mut stack_frames)?;
-                    }
-                    196u8..=201u8 => {
-                        ops_extended_processor::process(code, &class, &mut stack_frames)?;
-                    }
-                    _ => unreachable!("{}", format! {"xxx = {}", code}),
+        let execution_result = (|| -> Result<()> {
+            while !stack_frames.is_empty() {
+                Self::enter_synchronized_method(&mut stack_frames)?;
+                #[cfg(test)]
+                if INJECT_INTERNAL_ERROR.with(|inject| inject.replace(false)) {
+                    return Err(Error::new_execution("injected internal execution error"));
                 }
-                Ok(())
-            })();
-            if let Err(error) = result {
-                if let Some(throwable) = error.throwable_ref() {
-                    if let Err(unwind_error) =
+                safepoint::dispatch_bytecode();
+                // Stamp the instruction's start pc so that, if this opcode raises an implicit
+                // NullPointerException, the throwable's backtrace records the faulting bytecode index
+                // (JEP 358) even though the handler advances `pc` while reading operands.
+                {
+                    let frame = stack_frames
+                        .last_mut()
+                        .ok_or(Error::new_execution("Error getting stack frame"))?;
+                    let pc = frame.pc();
+                    frame.set_bci(pc);
+                }
+                let (class, code, pc, line_numbers) = {
+                    let frame = stack_frames
+                        .last()
+                        .ok_or(Error::new_execution("Error getting stack frame"))?;
+                    (
+                        frame.current_class_name().to_string(),
+                        frame.get_bytecode_byte(),
+                        frame.pc(),
+                        frame.line_numbers(),
+                    )
+                };
+                let instruction_line_num = StackFramesUtil::extract_line_number(line_numbers, pc);
+                let span = span!(Level::TRACE, "", "{class}:{instruction_line_num}");
+                let _entered = span.enter();
+
+                let result = (|| -> Result<()> {
+                    match code {
+                        0u8..=20u8 => {
+                            ops_constant_processor::process(code, &class, &mut stack_frames)?;
+                        }
+                        21u8..=53u8 => {
+                            ops_load_processor::process(code, &mut stack_frames)?;
+                        }
+                        54u8..=86u8 => {
+                            ops_store_processor::process(code, &mut stack_frames)?;
+                        }
+                        87u8..=95u8 => {
+                            ops_stack_processor::process(code, &mut stack_frames)?;
+                        }
+                        96u8..=132u8 => {
+                            ops_math_processor::process(code, &mut stack_frames)?;
+                        }
+                        133u8..=147u8 => {
+                            ops_conversion_processor::process(code, &mut stack_frames)?;
+                        }
+                        148u8..=166u8 => {
+                            ops_comparison_processor::process(code, &mut stack_frames)?;
+                        }
+                        167u8..=177u8 => {
+                            ops_control_processor::process(
+                                code,
+                                &mut stack_frames,
+                                &mut destination,
+                            )?;
+                        }
+                        178u8..=195u8 => {
+                            ops_reference_processor::process(code, &class, &mut stack_frames)?;
+                        }
+                        196u8..=201u8 => {
+                            ops_extended_processor::process(code, &class, &mut stack_frames)?;
+                        }
+                        _ => unreachable!("{}", format! {"xxx = {}", code}),
+                    }
+                    Ok(())
+                })();
+                if let Err(error) = result {
+                    if let Some(throwable) = error.throwable_ref() {
                         crate::vm::exception::common::throw_exception_with_ref(
                             crate::vm::stack::slot::Slot::Ref(throwable),
                             &mut stack_frames,
-                        )
-                    {
-                        Self::release_remaining_frames(&mut stack_frames);
-                        return Err(unwind_error);
+                        )?;
+                    } else {
+                        return Err(error);
                     }
-                } else {
-                    Self::release_remaining_frames(&mut stack_frames);
-                    return Err(error);
                 }
             }
+            Ok(())
+        })();
+
+        if let Err(error) = execution_result {
+            Self::release_remaining_frames(&mut stack_frames);
+            return Err(error);
         }
 
         Ok(destination)
@@ -115,9 +133,7 @@ impl Engine {
 
     fn release_remaining_frames(stack_frames: &mut StackFrames) {
         while !stack_frames.is_empty() {
-            stack_frames
-                .propagate_exception()
-                .expect("releasing a Java frame during interpreter teardown");
+            stack_frames.propagate_exception();
         }
     }
 

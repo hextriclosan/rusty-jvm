@@ -78,6 +78,18 @@ pub(crate) fn record_count() -> usize {
     MONITORS.len()
 }
 
+#[cfg(test)]
+pub(crate) fn state_for_test(obj_ref: i32) -> (bool, u32, u32) {
+    let monitor = MONITORS
+        .get(&obj_ref)
+        .map(|entry| Arc::clone(entry.value()));
+    let Some(monitor) = monitor else {
+        return (false, 0, 0);
+    };
+    let state = safepoint::lock(&monitor.state);
+    (state.owner.is_some(), state.count, state.entrants)
+}
+
 /// Atomically reads and clears the calling thread's `Thread.interrupted` flag, returning its prior
 /// value (a real `getAndClearInterrupt`). `Thread.interrupt()` sets this Java field before asking the
 /// VM to wake the thread, so a blocked `wait`/`sleep` observes it here and throws

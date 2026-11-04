@@ -132,3 +132,62 @@ fn gc_coordinator_synchronized_method_waits_and_releases_across_collection() {
     assert!(!HEAP.contains(dead));
     safepoint::retire();
 }
+
+#[test]
+fn internal_error_releases_synchronized_method_monitor() {
+    let monitor_ref = HEAP.create_array("[I", 0, &mut RootedSlots::new()).unwrap();
+    let method = JavaMethod::new(
+        "()V".parse().unwrap(),
+        "SyncTest",
+        "run:()V",
+        Some(CodeContext::new(
+            0,
+            1,
+            Arc::new(vec![RETURN]),
+            Arc::new(Default::default()),
+            Arc::new(ExceptionTable::new(Vec::new())),
+            Arc::new(Vec::new()),
+        )),
+        false,
+        vec![],
+        (MethodModifier::Public | MethodModifier::Synchronized).bits() as i32,
+        "run",
+        None,
+        None,
+        Default::default(),
+        0,
+    );
+    let mut frame = method.new_stack_frame().unwrap();
+    frame.set_local(0, Slot::Ref(monitor_ref));
+
+    let (finished, completion) = channel();
+    let worker = std::thread::spawn(move || {
+        safepoint::attach();
+        INJECT_INTERNAL_ERROR.with(|inject| inject.set(true));
+        let error = Engine::execute(frame, "synchronized internal-error test").unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Execution Error: injected internal execution error"
+        );
+        finished.send(()).unwrap();
+        safepoint::retire();
+    });
+
+    completion
+        .recv_timeout(Duration::from_secs(5))
+        .expect("internal error did not return from synchronized method");
+    worker.join().unwrap();
+    assert_eq!(monitor::state_for_test(monitor_ref), (false, 0, 0));
+
+    let (acquired, acquisition) = channel();
+    let contender = std::thread::spawn(move || {
+        monitor::enter(monitor_ref);
+        acquired.send(()).unwrap();
+        monitor::exit(monitor_ref).unwrap();
+    });
+    acquisition
+        .recv_timeout(Duration::from_secs(5))
+        .expect("another thread could not acquire the released monitor");
+    contender.join().unwrap();
+    assert_eq!(monitor::state_for_test(monitor_ref), (false, 0, 0));
+}

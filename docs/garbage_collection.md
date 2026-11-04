@@ -115,9 +115,9 @@ the permanently rooted emergency `OutOfMemoryError` fails VM startup.
   `Call*Method` and reflection fails before native execution: `Executor::exec_jc` requests a
   bytecode stack frame, but native methods have no code context. These unsupported paths do not
   execute the method unlocked.
-- An internal VM error that returns early from the interpreter can bypass cleanup of remaining
-  frames and leave their synchronized monitors held; ordinary Java exception unwinding releases
-  them.
+- Synchronized method monitors remain rooted until released and are released when their frames
+  return, unwind for a Java exception, or are cleaned up after an internal VM error. The original
+  internal error is preserved while remaining frames are released.
 - The VM implements only a subset of `java.lang.reflect.Array` native accessors; reflective uses
   of unimplemented typed `getX`/`setX` accessors can fail with a missing native symbol.
 - 32-bit targets fail to compile: `src/vm/jni/utils.rs` has a `compile_error!` for targets
