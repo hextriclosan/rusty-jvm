@@ -531,6 +531,11 @@ builtin_natives! {
     "java/lang/ref/Reference": static fn hasReferencePendingList() -> boolean => sn::reference::has_reference_pending_list;
 
     "java/lang/reflect/Array": static fn newArray(component_type: class, length: int) -> object => sn::reflect_array::new_array;
+    "java/lang/reflect/Array": static fn getLength(array: object) -> int => sn::reflect_array::get_length;
+    "java/lang/reflect/Array": static fn get(array: object, index: int) -> object => sn::reflect_array::get;
+    "java/lang/reflect/Array": static fn getInt(array: object, index: int) -> int => sn::reflect_array::get_int;
+    "java/lang/reflect/Array": static fn set(array: object, index: int, value: object) -> void => sn::reflect_array::set;
+    "java/lang/reflect/Array": static fn setInt(array: object, index: int, value: int) -> void => sn::reflect_array::set_int;
 
     "java/io/FileDescriptor": static fn initIDs() -> void => sn::file_descriptor::init_ids; // todo: implement me
     "java/io/FileDescriptor": static fn getHandle(fd: int) -> long => sn::file_descriptor::get_handle;
