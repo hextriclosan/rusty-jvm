@@ -1061,9 +1061,23 @@ fn should_copy_swap_unsafe_raw_memory() {
 fn should_compare_and_exchange_unsafe_raw_memory_atomically() {
     assert_success(
         "samples.jdkinternal.unsafe.rawatomic.UnsafeRawAtomicCas",
-        "int success=true\nint witness=20\nlong success=true\nlong witness=200\n",
+        "int set: true\n\
+        int set, stale: false\n\
+        int exchange, stale: 20\n\
+        int exchange: 20\n\
+        ints: 10 30\n\
+        long set: true\n\
+        long set, stale: false\n\
+        long exchange, stale: -9223372036854775808\n\
+        long exchange: -9223372036854775808\n\
+        long: -1\n\
+        getAndAddInt: 10 -> 15\n\
+        getAndSetLong: -1 -> 42\n\
+        concurrent int: 8000\n\
+        concurrent long: 24000\n",
     );
 }
+
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }

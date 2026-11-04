@@ -178,7 +178,7 @@ fn compare_and_x_int(
     x: i32,
 ) -> Result<(bool, i32)> {
     if obj_ref == 0 {
-        let atomic = unsafe { &*(offset as usize as *const AtomicI32) };
+        let atomic: &AtomicI32 = raw_atomic(offset)?;
         return match atomic.compare_exchange(expected, x, Ordering::SeqCst, Ordering::SeqCst) {
             Ok(witness) => Ok((true, witness)),
             Err(witness) => Ok((false, witness)),
@@ -431,7 +431,7 @@ fn compare_and_x_long(
     x: i64,
 ) -> Result<(bool, i64)> {
     if obj_ref == 0 {
-        let atomic = unsafe { &*(offset as usize as *const AtomicI64) };
+        let atomic: &AtomicI64 = raw_atomic(offset)?;
         return match atomic.compare_exchange(expected, x, Ordering::SeqCst, Ordering::SeqCst) {
             Ok(witness) => Ok((true, witness)),
             Err(witness) => Ok((false, witness)),
@@ -533,6 +533,20 @@ fn put_value(obj_ref: i32, offset: i64, value: PutValue) -> Result<()> {
         let raw_value = value.to_raw_vec();
         put_value_via_object(obj_ref, offset, raw_value, value.size())
     }
+}
+
+/// The atomic at the absolute `address`. Unsafe requires CAS addresses to be aligned to the value's
+/// size, and an atomic access to a misaligned address is undefined behaviour in Rust, so a
+/// misaligned address is an error.
+fn raw_atomic<'a, A>(address: i64) -> Result<&'a A> {
+    let ptr = address as usize as *const A;
+    if !ptr.is_aligned() {
+        return Err(Error::new_execution(&format!(
+            "misaligned address {address:#x} for an atomic access of {} bytes",
+            size_of::<A>()
+        )));
+    }
+    Ok(unsafe { &*ptr })
 }
 
 fn write_raw<T: Copy>(address: i64, value: T) {
