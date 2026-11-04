@@ -35,7 +35,7 @@ public final class GcJniDemo {
     private static native void invokeCallback(Callback callback);
     private static native boolean holdCopiedBufferAcrossGc(int[] values, CountDownLatch ready);
     private static native void releaseHeldBuffer();
-    private static native boolean exerciseReleaseModes(int[] values);
+    private static native int exerciseReleaseModes(int[] values);
 
     private interface Callback {
         void run();
@@ -72,8 +72,10 @@ public final class GcJniDemo {
     private static void proveReleasedBufferDoesNotRootArray() {
         int[] values = {1, 2};
         WeakReference<int[]> weak = new WeakReference<>(values);
-        require(exerciseReleaseModes(values), "array release-mode exercise failed");
-        require(values[0] == 30 && values[1] == 2, "JNI release modes copied wrong contents");
+        int releaseChecks = exerciseReleaseModes(values);
+        require((releaseChecks & 1) != 0, "JNI_COMMIT did not copy back");
+        require((releaseChecks & 2) != 0, "JNI_ABORT copied back");
+        require(values[0] == 30 && values[1] == 2, "release mode 0 did not copy back");
         values = null;
         System.gc();
         require(weak.get() == null, "released JNI buffers kept the array alive");

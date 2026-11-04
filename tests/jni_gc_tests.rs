@@ -6,7 +6,6 @@ use std::time::Duration;
 fn ensure_jni_test_lib_is_built() {
     let status = std::process::Command::new("cargo")
         .args(["build", "-p", "jni_test_lib"])
-        .env("JAVA_HOME", "/usr/lib/jvm/java-25-openjdk-amd64")
         .status()
         .expect("failed to build JNI test library");
     assert!(status.success(), "JNI test library build failed");

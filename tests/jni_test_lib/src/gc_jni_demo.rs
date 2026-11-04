@@ -1,5 +1,5 @@
 use jni::sys::{
-    jboolean, jclass, jintArray, jobject, jstring, JNIEnv, JNI_ABORT, JNI_COMMIT, JNI_TRUE,
+    jboolean, jclass, jint, jintArray, jobject, jstring, JNIEnv, JNI_ABORT, JNI_COMMIT,
 };
 use std::ffi::CStr;
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -274,12 +274,12 @@ pub extern "system" fn Java_samples_gc_GcJniDemo_exerciseReleaseModes(
     env: *mut JNIEnv,
     _class: jclass,
     array: jintArray,
-) -> jboolean {
+) -> jint {
     unsafe {
         let jni = &(*(*env)).v24;
         let elements = (jni.GetIntArrayElements)(env, array, std::ptr::null_mut());
         if elements.is_null() {
-            return false;
+            return 0;
         }
         elements.write(10);
         (jni.ReleaseIntArrayElements)(env, array, elements, JNI_COMMIT);
@@ -288,10 +288,12 @@ pub extern "system" fn Java_samples_gc_GcJniDemo_exerciseReleaseModes(
 
         let elements = (jni.GetIntArrayElements)(env, array, std::ptr::null_mut());
         if elements.is_null() {
-            return false;
+            return 0;
         }
+        let commit_copied_back = elements.read() == 10;
+        let abort_discarded = elements.add(1).read() == 2;
         elements.write(30);
         (jni.ReleaseIntArrayElements)(env, array, elements, 0);
-        JNI_TRUE
+        (commit_copied_back as jint) | ((abort_discarded as jint) << 1)
     }
 }
