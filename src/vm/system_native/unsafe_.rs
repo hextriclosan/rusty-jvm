@@ -798,7 +798,18 @@ pub(crate) fn set_memory0(
     value: i8,
 ) -> Result<()> {
     if obj_ref != 0 {
-        unimplemented!("implement this for objects")
+        // Unsafe.setMemory has already checked that the object is a primitive array and that
+        // offset and bytes are not negative. HotSpot doesn't check the range; we can't write
+        // outside the array, so that is an error
+        let start = offset as usize;
+        let mut data = HEAP.get_entire_raw_data_mut(obj_ref)?;
+        let region = data.get_mut(start..start + bytes as usize).ok_or_else(|| {
+            Error::new_execution(&format!(
+                "setMemory of {bytes} bytes at offset {offset} is out of bounds of the array"
+            ))
+        })?;
+        region.fill(value as u8);
+        return Ok(());
     }
 
     let dst_ptr = offset as *mut u8;

@@ -1026,6 +1026,17 @@ fn should_access_instance_and_static_fields_with_unsafe() {
         after static put: -1 32767 65 2147483647 -9223372036854775808 static put\n",
     );
 }
+
+#[test]
+fn should_set_unsafe_array_memory() {
+    // partially filled multi-byte elements depend on the platform's byte order
+    utils::assert_same_as_reference_jvm(
+        &["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"],
+        "samples.jdkinternal.unsafe.setmemory.UnsafeSetMemoryArray",
+        Success,
+    );
+}
+
 fn get_ne_bytes_as_string(bytes: &[u8]) -> String {
     bytes.iter().map(|b| b.to_string()).join(", ")
 }
