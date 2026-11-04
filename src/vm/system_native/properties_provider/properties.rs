@@ -31,7 +31,9 @@ pub(crate) fn endianness() -> &'static str {
 }
 
 pub(crate) fn unicode_encoding() -> &'static str {
-    if is_bigendian() {
+    // HotSpot tests `BYTE_ORDER == _LITTLE_ENDIAN` on macOS, which lacks `_LITTLE_ENDIAN`, so
+    // it reports UnicodeBig there despite the little-endian CPUs
+    if is_bigendian() || cfg!(target_os = "macos") {
         "UnicodeBig"
     } else {
         "UnicodeLittle"
