@@ -1436,100 +1436,22 @@ fn should_resize_random_access_file() {
         "4\n6\n",
     );
     assert_eq!(std::fs::read(file_path).unwrap(), b"abcX\0\0");
-fn should_delete_empty_directory() {
-    let temp = tempfile::TempDir::new().unwrap();
-    let directory = temp.path().join("delete-me");
-    std::fs::create_dir(&directory).unwrap();
-    let path = directory.to_str().unwrap();
-    utils::assert_success_with_args(
-        "samples.io.deletedirectory.DeleteDirectory",
-        &[path],
-        "true\nfalse\n",
-fn should_report_file_last_modified_time() {
-    let (file_path, _guard) = tmp_file("last-modified.txt");
-    std::fs::write(&file_path, b"timestamp").unwrap();
-    let modified = std::fs::metadata(&file_path)
-fn should_set_file_last_modified_time() {
-    const MODIFIED_MILLIS: u128 = 1_600_000_000_000;
-    let (file_path, _guard) = tmp_file("set-last-modified.txt");
-    std::fs::write(&file_path, b"timestamp").unwrap();
-    utils::assert_success_with_args(
-        "samples.io.setfilelastmodified.SetFileLastModified",
-        &[&file_path, &MODIFIED_MILLIS.to_string()],
-        "true\n",
-    );
-    let modified = std::fs::metadata(file_path)
-        .unwrap()
-        .modified()
-        .unwrap()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    utils::assert_success_with_args(
-        "samples.io.filelastmodified.FileLastModified",
-        &[&file_path],
-        &format!("{modified}\n"),
-fn should_create_directory() {
-    let temp = tempfile::TempDir::new().unwrap();
-    let directory = temp.path().join("created-by-java");
-    let path = directory.to_str().unwrap();
-    utils::assert_success_with_args(
-        "samples.io.createdirectory.CreateDirectory",
-        &[path],
-        "true\ntrue\nfalse\n",
-    );
-fn should_rename_file() {
-    let temp = tempfile::TempDir::new().unwrap();
-    let source = temp.path().join("source.txt");
-    let destination = temp.path().join("destination.txt");
-    std::fs::write(&source, b"renamed").unwrap();
-    utils::assert_success_with_args(
-        "samples.io.renamefile.RenameFile",
-        &[source.to_str().unwrap(), destination.to_str().unwrap()],
-        "true\nfalse\ntrue\n",
-    );
-    assert_eq!(std::fs::read(destination).unwrap(), b"renamed");
-    assert_eq!(modified, MODIFIED_MILLIS);
-fn should_set_file_read_only() {
-    let (file_path, _guard) = tmp_file("read-only.txt");
-    std::fs::write(&file_path, b"immutable").unwrap();
-    utils::assert_success_with_args(
-        "samples.io.setfilereadonly.SetFileReadOnly",
-        &[&file_path],
-        "true\n",
-    );
-    let mut permissions = std::fs::metadata(&file_path).unwrap().permissions();
-    assert!(permissions.readonly());
-    permissions.set_readonly(false);
-fn should_update_file_permissions() {
-    let (file_path, _guard) = tmp_file("permissions.txt");
-    std::fs::write(&file_path, b"permissions").unwrap();
-    utils::assert_success_with_args(
-        "samples.io.setfilepermission.SetFilePermission",
-        &[&file_path],
-        "true\n",
-    );
+}
 
-    let mut permissions = std::fs::metadata(&file_path).unwrap().permissions();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-
-        assert_eq!(permissions.mode() & 0o222, 0);
-        permissions.set_mode(permissions.mode() | 0o200);
-    }
-    #[cfg(windows)]
-    {
-        assert!(permissions.readonly());
-        permissions.set_readonly(false);
-    }
-    std::fs::set_permissions(file_path, permissions).unwrap();
-fn should_report_file_system_space() {
-    let temp = tempfile::TempDir::new().unwrap();
-    utils::assert_success_with_args(
-        "samples.io.filespace.FileSpace",
-        &[temp.path().to_str().unwrap()],
-        "true\ntrue\ntrue\n",
+#[test]
+fn should_create_change_and_delete_files() {
+    utils::assert_same_as_reference_jvm_in_new_dir(
+        "samples.io.fileoperations.FileOperations",
+        |dir| {
+            // links to delete; Windows needs privileges to make them
+            #[cfg(unix)]
+            {
+                std::os::unix::fs::symlink("nowhere", dir.join("dangling")).unwrap();
+                std::os::unix::fs::symlink("a", dir.join("linked")).unwrap();
+            }
+            #[cfg(windows)]
+            let _ = dir;
+        },
     );
 }
 
