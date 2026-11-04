@@ -243,8 +243,10 @@ See [garbage_collection.md](garbage_collection.md) for the coordinator and root 
 - **Priorities** (`setPriority0`) are advisory no-ops.
 - **`clearInterruptEvent`** is a no-op — the `interrupted` field is the sole
   interrupt source of truth.
-- Native synchronized methods entered through `Executor`, JNI or reflection do not yet acquire
-  their implicit monitor; synchronized-method support currently covers interpreted methods.
+- A native synchronized method invoked from bytecode acquires its implicit monitor before the
+  native body and releases it on return or exception. Entry through `Executor` paths used by JNI
+  `Call*Method` and reflection fails before native execution because `Executor::exec_jc` requests
+  a bytecode stack frame and native methods have no code context; these paths do not run unlocked.
 
 [//]: # (links)
 [jls-12.8]: https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.8

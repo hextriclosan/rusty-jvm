@@ -101,6 +101,8 @@ the permanently rooted emergency `OutOfMemoryError` fails VM startup.
 
 ## Known limitations
 
+- Verified on Linux x86-64 with JDK 25 only. s390x (big-endian), Windows and macOS were not run
+  for this work; those platforms are covered only by CI when it runs.
 - No moving, generational or concurrent collection; no class unloading or finalization.
 - Classes and selected caches are permanent roots. Runtime `String.intern()` can retain an
   input-dependent number of strings.
@@ -108,15 +110,18 @@ the permanently rooted emergency `OutOfMemoryError` fails VM startup.
   exhaust, although exhaustion is checked and identities are not reused.
 - The collector cannot bound RSS or make infallible host allocations recoverable. Very large
   individual arrays have the documented `i32::MAX - 8` payload cap.
-- Native synchronized methods entered through `Executor`, JNI or reflection do not yet acquire
-  their implicit monitor. `ACC_SYNCHRONIZED` handling currently covers interpreted methods.
+- A native synchronized method invoked from bytecode acquires its implicit monitor before the
+  native body and releases it on return or exception. Entry through `Executor` paths used by JNI
+  `Call*Method` and reflection fails before native execution: `Executor::exec_jc` requests a
+  bytecode stack frame, but native methods have no code context. These unsupported paths do not
+  execute the method unlocked.
 - An internal VM error that returns early from the interpreter can bypass cleanup of remaining
   frames and leave their synchronized monitors held; ordinary Java exception unwinding releases
   them.
 - The VM implements only a subset of `java.lang.reflect.Array` native accessors; reflective uses
   of unimplemented typed `getX`/`setX` accessors can fail with a missing native symbol.
-- The 32-bit pointer-width JNI conversion branch is not covered by local x86-64 verification; the
-  `jmethodID` encoding is explicitly 64-bit-only. Do not infer 32-bit target support.
+- 32-bit targets fail to compile: `src/vm/jni/utils.rs` has a `compile_error!` for targets
+  without 64-bit pointers because its `jmethodID` encoding uses a 64-bit layout.
 - Classes initialized before and after startup can currently receive different `Module` objects
   rather than the defining loader's shared unnamed module.
 
