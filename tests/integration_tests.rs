@@ -1540,6 +1540,40 @@ fn should_write_read_static_fields() {
 }
 
 #[test]
+fn should_resolve_jni_static_fields_by_declaring_class_and_signature() {
+    let lib_dir_path = format!("-Djava.library.path={}", env!("JNI_TEST_LIB_PATH"));
+    utils::assert_with_all_args(
+        &[&lib_dir_path],
+        "samples.jni.staticfields.JniStaticFieldResolution",
+        &[],
+        // matches the reference JVM
+        "int value of the parent: 17\n\
+        long value of the child: 9000000000\n\
+        static field behind an instance field: 1\n\
+        field of an uninitialized superinterface: 0\n\
+        field of an uninitialized interface: 0\n\
+        initialize the interfaces: 8 shared\n\
+        field of a superinterface: 7\n\
+        field of an interface: 8\n\
+        object field of a superinterface: shared\n\
+        missing field: java.lang.NoSuchFieldError: missing\n\
+        wrong type: java.lang.NoSuchFieldError: CONSTANT\n\
+        malformed signature: java.lang.NoSuchFieldError: value\n\
+        set the parent's field: 42 9000000000\n\
+        set a missing field: java.lang.NoSuchFieldError: missing\n",
+        r#"WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by samples.jni.staticfields.JniStaticFieldResolution in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+"#,
+        utils::ExecutionResult::Success,
+        0,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_work_with_arrays_of_long_with_unsafe() {
     assert_success(
         "samples.jdkinternal.unsafe.getlongunaligned.UnsafeGetLongUnalignedExample",
