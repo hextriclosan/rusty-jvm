@@ -2153,14 +2153,6 @@ fn should_return_system_properties() {
         tmp_dir,
         env::temp_dir().to_str().expect("tmp_dir is not UTF-8")
     );
-
-    let language = json["display.language"].as_str().unwrap();
-    assert!(!language.is_empty());
-    assert!(!language.ends_with("_VALUE"));
-    assert_eq!(json["format.language"], language);
-    assert_eq!(json["format.country"], json["display.country"]);
-    assert_eq!(json["format.script"], json["display.script"]);
-    assert_eq!(json["format.variant"], json["display.variant"]);
 }
 
 #[test]
@@ -2186,6 +2178,35 @@ fn should_match_host_unicode_encoding_property() {
         &[],
         "samples.system.unicodeencoding.UnicodeEncodingProperty",
         Success,
+    );
+}
+
+#[rstest]
+#[case::inherited(&[])]
+#[case::c(&[("LC_ALL", "C")])]
+#[case::posix(&[("LC_ALL", "POSIX")])]
+#[case::c_utf8(&[("LANG", "C.UTF-8")])]
+#[case::us(&[("LANG", "en_US.UTF-8")])]
+#[case::german(&[("LANG", "de_DE.UTF-8")])]
+#[case::messages_differ(&[("LANG", "C.UTF-8"), ("LC_MESSAGES", "POSIX")])]
+fn should_match_host_locale_properties(#[case] locale_envs: &[(&str, &str)]) {
+    // the host locale: on Linux from these variables (locales that aren't installed fall back to
+    // C), on macOS from the preferred languages, and on Windows from the user and UI languages
+    let mut envs = ["LC_ALL", "LC_CTYPE", "LC_MESSAGES", "LANG"]
+        .into_iter()
+        .filter(|_| !locale_envs.is_empty())
+        .map(|name| (name.to_string(), String::new()))
+        .collect::<HashMap<_, _>>();
+    envs.extend(
+        locale_envs
+            .iter()
+            .map(|(name, value)| (name.to_string(), value.to_string())),
+    );
+    utils::assert_same_as_reference_jvm_with_envs(
+        &[],
+        "samples.system.localeproperties.LocaleProperties",
+        Success,
+        envs,
     );
 }
 

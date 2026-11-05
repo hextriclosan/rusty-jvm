@@ -42,7 +42,6 @@ miniz_oxide = "0.9.1"
 crc32fast = "1.5.0"
 strum = { version = "0.28.0", features = ["derive"] }
 sysinfo = { version = "0.40.1", default-features = false, features = ["system"] }
-sys-locale = "0.3.2"
 rand = "0.10.1"
 page_size = "0.6.0"
 memmap2 = "0.9.10"
@@ -63,7 +62,7 @@ realpath-ext = "0.1.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.4"
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSString", "NSPathUtilities"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSLocale", "NSString", "NSPathUtilities"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.1"
