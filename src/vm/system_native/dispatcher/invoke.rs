@@ -1,8 +1,9 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::exception::pending_helpers::set_pending_unsatisfied_link_error_without_message;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::helper::clazz_ref;
 use crate::vm::jni::jni_env::get_jni_env;
-use crate::vm::jni::native_registration_impl::registered_native_address;
+use crate::vm::jni::native_registration_impl::{registered_native, RegisteredNative};
 use crate::vm::stack::stack_value::StackValue;
 use crate::vm::system_native::dispatcher::args::build_args;
 use crate::vm::system_native::dispatcher::builtin_natives::find_builtin_native;
@@ -30,10 +31,18 @@ pub(crate) fn invoke(method_signature: &str, args: &[i32], is_static: bool) -> R
         })?;
     let clazz_ref = clazz_ref(class_name)?;
     let name_signature = format!("{method_name}:{descriptor}");
-    let symbol_address = find_builtin_native(method_signature)
-        .or_else(|| registered_native_address(class_name, &name_signature))
-        .map(Ok)
-        .unwrap_or_else(|| resolve_library_symbol(clazz_ref, &short_name, &long_name))?;
+    // like HotSpot, a binding of RegisterNatives takes precedence
+    let symbol_address = match registered_native(class_name, &name_signature) {
+        Some(RegisteredNative::Function(address)) => address,
+        Some(RegisteredNative::Unlinked) => {
+            set_pending_unsatisfied_link_error_without_message()?;
+            return Ok(vec![]);
+        }
+        None => match find_builtin_native(method_signature) {
+            Some(address) => address,
+            None => resolve_library_symbol(clazz_ref, &short_name, &long_name)?,
+        },
+    };
 
     let fun_ptr: *mut c_void =
         std::ptr::with_exposed_provenance_mut::<c_void>(symbol_address as usize);

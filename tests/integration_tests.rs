@@ -1580,7 +1580,34 @@ fn should_register_jni_native_method_pointers() {
         &[&lib_dir_path],
         "samples.jni.registernatives.RegisterNativesDemo",
         &[],
-        "0\n42\n0\n0\n7\nmissing:()V\n",
+        // the same as the reference JVM prints
+        "register: 0\n\
+        call: 42\n\
+        register another function: 0\n\
+        call: -4\n\
+        call the JNI symbol: 42\n\
+        register over the JNI symbol: 0\n\
+        call: 13\n\
+        register no function: 0\n\
+        call: java.lang.UnsatisfiedLinkError\n\
+        register over the JNI symbol: 0\n\
+        unregister: 0\n\
+        call: 42\n\
+        register a missing method: java.lang.NoSuchMethodError: Method 'int samples.jni.registernatives.RegisterNativesDemo.toString()' name or signature does not match\n\
+        register a wrong signature: java.lang.NoSuchMethodError: Method 'int samples.jni.registernatives.RegisterNativesDemo.registered(int)' name or signature does not match\n\
+        register a malformed signature: java.lang.NoSuchMethodError: Method ' samples.jni.registernatives.RegisterNativesDemo.registered(int, int)' name or signature does not match\n\
+        register a method that isn't native: java.lang.NoSuchMethodError: Method 'int samples.jni.registernatives.RegisterNativesDemo.notNative(int, int)' is not declared as native\n\
+        register a batch with a missing method: java.lang.NoSuchMethodError: Method 'int samples.jni.registernatives.RegisterNativesDemo.toString()' name or signature does not match\n\
+        call the method before it: 42\n\
+        register a negative count: 0\n\
+        register a count of 0: 0\n\
+        call the JNI symbol of the superclass: 1\n\
+        register through the subclass: 0\n\
+        call: 100\n\
+        unregister the subclass: 0\n\
+        call: 100\n\
+        unregister the superclass: 0\n\
+        call: 1\n",
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.jni.registernatives.RegisterNativesDemo in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module

@@ -72,8 +72,7 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
-    jshort, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_,
-    JavaVM,
+    jshort, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JavaVM,
 };
 use std::ffi::c_void;
 
