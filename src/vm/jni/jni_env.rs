@@ -37,6 +37,7 @@ use crate::vm::jni::instance_methods_impl::{
 };
 use crate::vm::jni::java_vm_interface_impl::get_java_vm;
 use crate::vm::jni::monitor_impl::{monitor_enter, monitor_exit};
+use crate::vm::jni::native_registration_impl::{register_natives, unregister_natives};
 use crate::vm::jni::object_fields_impl::{
     get_boolean_field, get_byte_field, get_char_field, get_double_field, get_field_id,
     get_float_field, get_int_field, get_long_field, get_object_field, get_short_field,
@@ -71,8 +72,7 @@ use crate::vm::jni::string_operations_impl::{
 use crate::vm::jni::version_information_impl::get_version;
 use jni_sys::{
     jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
-    jshort, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JNINativeMethod,
-    JavaVM,
+    jshort, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JavaVM,
 };
 use std::ffi::c_void;
 
@@ -230,8 +230,6 @@ jni_variadic_stub!(CallStaticDoubleMethod, CallStaticDoubleMethod_ptr, (jclass, 
 jni_stub!(CallStaticDoubleMethodV(jclass, jmethodID, va_list) -> jdouble);
 jni_variadic_stub!(CallStaticVoidMethod, CallStaticVoidMethod_ptr, (jclass, jmethodID) -> ());
 jni_stub!(CallStaticVoidMethodV(jclass, jmethodID, va_list) -> ());
-jni_stub!(RegisterNatives(jclass, *const JNINativeMethod, jint) -> jint);
-jni_stub!(UnregisterNatives(jclass) -> jint);
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 
@@ -456,8 +454,8 @@ static VTABLE: Wrapper = {
     ni.v24.SetLongArrayRegion = set_long_array_region;
     ni.v24.SetFloatArrayRegion = set_float_array_region;
     ni.v24.SetDoubleArrayRegion = set_double_array_region;
-    ni.v24.RegisterNatives = RegisterNatives;
-    ni.v24.UnregisterNatives = UnregisterNatives;
+    ni.v24.RegisterNatives = register_natives;
+    ni.v24.UnregisterNatives = unregister_natives;
     ni.v24.MonitorEnter = monitor_enter;
     ni.v24.MonitorExit = monitor_exit;
     ni.v24.GetJavaVM = get_java_vm;

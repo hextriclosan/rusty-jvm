@@ -10,6 +10,7 @@ pub(crate) mod jni_env;
 mod jni_invoke;
 mod jni_value;
 mod monitor_impl;
+pub(crate) mod native_registration_impl;
 mod object_fields_impl;
 mod object_operations_impl;
 mod reflection_impl;

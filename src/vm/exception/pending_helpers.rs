@@ -84,6 +84,11 @@ pub(crate) fn set_pending_illegal_argument_exception(message: &str) -> Result<()
     set_pending_exception_with_message("java/lang/IllegalArgumentException", message)
 }
 
+/// Sets a pending `UnsatisfiedLinkError` (no message).
+pub(crate) fn set_pending_unsatisfied_link_error_without_message() -> Result<()> {
+    set_pending_exception("java/lang/UnsatisfiedLinkError", "<init>:()V", &[])
+}
+
 /// Sets a pending `UnsatisfiedLinkError` with the given message.
 pub(crate) fn set_pending_unsatisfied_link_error(message: &str) -> Result<()> {
     set_pending_exception_with_message("java/lang/UnsatisfiedLinkError", message)
