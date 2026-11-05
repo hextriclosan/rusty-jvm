@@ -3930,10 +3930,16 @@ stringValue = Water boils at 100 °C
 0020: 57 61 74 65 72 20 62 6F 69 6C 73 20 61 74 20 31  Water boils at 1
 0030: 30 30 20 C2 B0 43 00 00 00 00 00 00 00 00 00 00  00 ..C..........
 "#;
-    assert_success_with_args(
+    // printf formats the doubles in the default locale
+    utils::assert_with_all_args(
+        &utils::US_LOCALE,
         "samples.io.randomaccessfilevsmmapexample.RandomAccessFileVsMMapExample",
         &[&file.path().display().to_string()],
         expected_out,
+        "",
+        Success,
+        0,
+        HashMap::default(),
     );
 }
 
@@ -3958,8 +3964,11 @@ fn should_support_arrays_to_string() {
 
 #[test]
 fn should_support_locales_advanced_slowtest() {
-    assert_success(
+    // display names are in the language of the default locale
+    utils::assert_with_all_args(
+        &utils::US_LOCALE,
         "samples.locale.showlocale.ShowLocale",
+        &[],
         r#"--- Locale: ja_JP ---
 Language:           'ja'
 Country:            'JP'
@@ -4009,6 +4018,10 @@ Currency Format: $1,234,567.89
 Date Format:     sábado, 24 de agosto de 1991
 
 "#,
+        "",
+        Success,
+        0,
+        HashMap::default(),
     );
 }
 
@@ -4156,6 +4169,9 @@ fn should_load_native_library_and_call_native_method_slowtest() {
     utils::assert_with_all_args(
         &[
             &lib_dir_path,
+            // printf formats the doubles in the default locale
+            utils::US_LOCALE[0],
+            utils::US_LOCALE[1],
             // "--enable-native-access=ALL-UNNAMED", /* suppress warning */ todo implement and uncomment
         ],
         "samples.javacore.loadlibrary.example.LoadLibraryExample",
