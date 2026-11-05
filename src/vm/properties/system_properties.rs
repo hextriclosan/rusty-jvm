@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::properties::classpath::classpath;
+use crate::vm::system_native::properties_provider::locale::{display_locale, format_locale};
 use crate::vm::system_native::properties_provider::properties::{
     data_model, endianness, file_separator, java_home, line_separator, os_arch, os_name,
     os_version, path_separator, sun_boot_library_path, sun_jnu_encoding, tmp_dir,
@@ -9,48 +10,48 @@ use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
 use std::sync::LazyLock;
 
-static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| {
+static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, Option<&str>>> = LazyLock::new(|| {
     IndexMap::from([
-        ("display.country", "display.country_VALUE"),
-        ("display.language", "display.language_VALUE"),
-        ("display.script", "display.script_VALUE"),
-        ("display.variant", "display.variant_VALUE"),
-        ("file.separator", file_separator()),
-        ("format.country", "format.country_VALUE"),
-        ("format.language", "format.language_VALUE"),
-        ("format.script", "format.script_VALUE"),
-        ("format.variant", "format.variant_VALUE"),
-        ("ftp.nonProxyHosts", "ftp.nonProxyHosts_VALUE"),
-        ("ftp.proxyHost", "ftp.proxyHost_VALUE"),
-        ("ftp.proxyPort", "ftp.proxyPort_VALUE"),
-        ("http.nonProxyHosts", "http.nonProxyHosts_VALUE"),
-        ("http.proxyHost", "http.proxyHost_VALUE"),
-        ("http.proxyPort", "http.proxyPort_VALUE"),
-        ("https.proxyHost", "https.proxyHost_VALUE"),
-        ("https.proxyPort", "https.proxyPort_VALUE"),
-        ("java.io.tmpdir", tmp_dir()),
-        ("line.separator", line_separator()),
-        ("native.encoding", "native.encoding_VALUE"),
-        ("os.arch", os_arch()),
-        ("os.name", os_name()),
-        ("os.version", os_version()),
-        ("path.separator", path_separator()),
-        ("socksNonProxyHosts", "socksNonProxyHosts_VALUE"),
-        ("socksProxyHost", "socksProxyHost_VALUE"),
-        ("socksProxyPort", "socksProxyPort_VALUE"),
-        ("stderr.encoding", "cp437"), // todo: https://github.com/hextriclosan/rusty-jvm/issues/489
-        ("stdin.encoding", "native.encoding_VALUE"),
-        ("stdout.encoding", "stdout.encoding_VALUE"),
-        ("sun.arch.abi", "sun.arch.abi_VALUE"),
-        ("sun.arch.data.model", data_model()),
-        ("sun.cpu.endian", endianness()),
-        ("sun.cpu.isalist", "sun.cpu.isalist_VALUE"),
-        ("sun.io.unicode.encoding", unicode_encoding()),
-        ("sun.jnu.encoding", sun_jnu_encoding()),
-        ("sun.os.patch.level", "sun.os.patch.level_VALUE"),
-        ("user.dir", user_dir()),
-        ("user.home", user_home()),
-        ("user.name", user_name()),
+        ("display.country", display_locale().country.as_deref()),
+        ("display.language", display_locale().language.as_deref()),
+        ("display.script", display_locale().script.as_deref()),
+        ("display.variant", display_locale().variant.as_deref()),
+        ("file.separator", Some(file_separator())),
+        ("format.country", format_locale().country.as_deref()),
+        ("format.language", format_locale().language.as_deref()),
+        ("format.script", format_locale().script.as_deref()),
+        ("format.variant", format_locale().variant.as_deref()),
+        ("ftp.nonProxyHosts", Some("ftp.nonProxyHosts_VALUE")),
+        ("ftp.proxyHost", Some("ftp.proxyHost_VALUE")),
+        ("ftp.proxyPort", Some("ftp.proxyPort_VALUE")),
+        ("http.nonProxyHosts", Some("http.nonProxyHosts_VALUE")),
+        ("http.proxyHost", Some("http.proxyHost_VALUE")),
+        ("http.proxyPort", Some("http.proxyPort_VALUE")),
+        ("https.proxyHost", Some("https.proxyHost_VALUE")),
+        ("https.proxyPort", Some("https.proxyPort_VALUE")),
+        ("java.io.tmpdir", Some(tmp_dir())),
+        ("line.separator", Some(line_separator())),
+        ("native.encoding", Some("native.encoding_VALUE")),
+        ("os.arch", Some(os_arch())),
+        ("os.name", Some(os_name())),
+        ("os.version", Some(os_version())),
+        ("path.separator", Some(path_separator())),
+        ("socksNonProxyHosts", Some("socksNonProxyHosts_VALUE")),
+        ("socksProxyHost", Some("socksProxyHost_VALUE")),
+        ("socksProxyPort", Some("socksProxyPort_VALUE")),
+        ("stderr.encoding", Some("cp437")), // todo: https://github.com/hextriclosan/rusty-jvm/issues/489
+        ("stdin.encoding", Some("native.encoding_VALUE")),
+        ("stdout.encoding", Some("stdout.encoding_VALUE")),
+        ("sun.arch.abi", Some("sun.arch.abi_VALUE")),
+        ("sun.arch.data.model", Some(data_model())),
+        ("sun.cpu.endian", Some(endianness())),
+        ("sun.cpu.isalist", Some("sun.cpu.isalist_VALUE")),
+        ("sun.io.unicode.encoding", Some(unicode_encoding())),
+        ("sun.jnu.encoding", Some(sun_jnu_encoding())),
+        ("sun.os.patch.level", Some("sun.os.patch.level_VALUE")),
+        ("user.dir", Some(user_dir())),
+        ("user.home", Some(user_home())),
+        ("user.name", Some(user_name())),
     ])
 });
 
@@ -62,18 +63,24 @@ static DEFAULT_VM_PROPERTIES: LazyLock<IndexMap<&str, &str>> = LazyLock::new(|| 
     ])
 });
 
-pub static OVERRIDDEN_PLATFORM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
+/// The platform properties, in the order of `SystemProps.Raw`. A `None` value is null there.
+pub static OVERRIDDEN_PLATFORM_PROPERTIES: OnceCell<IndexMap<String, Option<String>>> =
+    OnceCell::new();
 pub static OVERRIDDEN_VM_PROPERTIES: OnceCell<IndexMap<String, String>> = OnceCell::new();
 
 pub fn init_system_properties(system_properties: IndexMap<String, String>) -> Result<()> {
-    let mut overridden_platform_props = deep_clone(&DEFAULT_PLATFORM_PROPERTIES);
+    let mut overridden_platform_props: IndexMap<String, Option<String>> =
+        DEFAULT_PLATFORM_PROPERTIES
+            .iter()
+            .map(|(key, value)| (key.to_string(), value.map(str::to_string)))
+            .collect();
     let mut overridden_vm_props = deep_clone(&DEFAULT_VM_PROPERTIES);
 
     let (platform, vm): (IndexMap<String, String>, IndexMap<String, String>) = system_properties
         .into_iter()
         .partition(|(key, _value)| overridden_platform_props.contains_key(key));
 
-    overridden_platform_props.extend(platform);
+    overridden_platform_props.extend(platform.into_iter().map(|(key, value)| (key, Some(value))));
     overridden_vm_props.extend(vm);
 
     OVERRIDDEN_PLATFORM_PROPERTIES
@@ -125,7 +132,7 @@ mod tests {
         let vm_properties = OVERRIDDEN_VM_PROPERTIES.get().unwrap();
         assert_eq!(
             platform_properties.get("os.name"),
-            Some(&"new_os_name".to_string())
+            Some(&Some("new_os_name".to_string()))
         );
         assert_eq!(platform_properties.len(), 40);
 

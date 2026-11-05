@@ -21,6 +21,10 @@ pub(crate) static TEST_PATH: Lazy<PathBuf> = Lazy::new(|| {
     out_dir
 });
 
+/// JVM arguments that make the default locale en_US, for programs that format numbers or show
+/// names of the default locale, which otherwise follow the host locale.
+pub const US_LOCALE: [&str; 2] = ["-Duser.language=en", "-Duser.country=US"];
+
 pub fn is_bigendian() -> bool {
     cfg!(target_endian = "big")
 }
