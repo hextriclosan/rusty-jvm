@@ -27,8 +27,12 @@ public class FileOperations {
         }
         print("mkdir over a file", file.mkdir());
 
-        // getLastModifiedTime0 and setLastModifiedTime0
-        print("setLastModified", file.setLastModified(1_600_000_000_123L));
+        // getLastModifiedTime0 and setLastModifiedTime0; whole seconds on s390x, whose CI runs the
+        // reference JVM under QEMU, which loses the milliseconds of last-modified times
+        boolean wholeSeconds = "s390x".equals(System.getProperty("os.arch"));
+        long time = wholeSeconds ? 1_600_000_000_000L : 1_600_000_000_123L;
+        long readOnlyTime = wholeSeconds ? 1_600_000_000_000L : 1_600_000_000_456L;
+        print("setLastModified", file.setLastModified(time));
         print("lastModified", file.lastModified());
         print("setLastModified of a directory", dir.setLastModified(1_500_000_000_000L));
         print("lastModified of a directory", dir.lastModified());
@@ -43,7 +47,7 @@ public class FileOperations {
         // setReadOnly0 and setPermission0
         print("setReadOnly", file.setReadOnly());
         print("canWrite", file.canWrite());
-        print("setLastModified of a read-only file", file.setLastModified(1_600_000_000_456L));
+        print("setLastModified of a read-only file", file.setLastModified(readOnlyTime));
         print("lastModified of a read-only file", file.lastModified());
         print("setWritable", file.setWritable(true));
         print("canWrite", file.canWrite());
