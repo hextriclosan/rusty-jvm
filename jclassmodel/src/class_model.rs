@@ -294,6 +294,8 @@ pub struct FieldModel {
     pub name: String,
     pub descriptor: TypeDescriptor,
     pub modifiers: FieldModifier,
+    pub signature: Option<String>,
+    pub annotations_raw: Option<Vec<u8>>,
 }
 
 impl MethodModel {
@@ -442,9 +444,16 @@ impl FieldModel {
             )
         })?;
 
+        let attributes = Attributes::new(field_info.attributes());
+        let signature = attributes.get_signature(constant_pool)?;
+        let annotations_raw = attributes
+            .get_annotations(constant_pool)
+            .map(|(_, raw)| raw);
         Ok(Self {
             name,
             descriptor,
+            signature,
+            annotations_raw,
             modifiers: FieldModifier::from_bits_truncate(field_info.access_flags().bits()),
         })
     }

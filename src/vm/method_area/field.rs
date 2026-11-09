@@ -1,6 +1,7 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{clazz_ref, default_value};
 use getset::{CopyGetters, Getters};
 use jdescriptor::TypeDescriptor;
@@ -18,6 +19,8 @@ pub(crate) struct FieldInfo {
     reflection_ref: OnceCell<i32>,
     class_name: String,
     name: String,
+    signature: Option<String>,
+    annotations_raw: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -81,7 +84,19 @@ impl FieldInfo {
             reflection_ref: OnceCell::new(),
             class_name,
             name,
+            signature: None,
+            annotations_raw: None,
         }
+    }
+
+    pub fn with_reflection_metadata(
+        mut self,
+        signature: Option<String>,
+        annotations_raw: Option<Vec<u8>>,
+    ) -> Self {
+        self.signature = signature;
+        self.annotations_raw = annotations_raw;
+        self
     }
 
     pub fn reflection_ref(&self) -> Result<i32> {
@@ -115,8 +130,20 @@ impl FieldInfo {
         let modifiers = self.flags as i32;
         let trusted_final = 0; // we don't support this yet
         let slot = 0; // we don't support this yet
-        let signature_ref = 0; // todo https://github.com/hextriclosan/rusty-jvm/issues/386
-        let annotations = 0; // todo https://github.com/hextriclosan/rusty-jvm/issues/386
+        let signature_ref = self
+            .signature
+            .as_deref()
+            .map(StringPoolHelper::get_string)
+            .transpose()?
+            .unwrap_or(0);
+        let annotations = self
+            .annotations_raw
+            .as_ref()
+            .map(|raw| {
+                let values: Vec<i32> = raw.iter().map(|byte| *byte as i32).collect();
+                HEAP.create_array_with_values("[B", &values)
+            })
+            .unwrap_or(0);
 
         let args = &[
             declaring_class_ref.into(),

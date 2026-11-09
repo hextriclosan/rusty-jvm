@@ -138,10 +138,10 @@ pub(super) extern "system" fn set_field<T: JNIValue>(
         .expect("Failed to set object field value");
 }
 
-fn encode_field_id(offset: i64) -> jfieldID {
+pub(super) fn encode_field_id(offset: i64) -> jfieldID {
     (offset + 1) as usize as jfieldID
 }
 
-fn decode_field_id(field_id: jfieldID) -> i64 {
+pub(super) fn decode_field_id(field_id: jfieldID) -> i64 {
     field_id as usize as i64 - 1
 }

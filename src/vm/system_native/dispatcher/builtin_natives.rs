@@ -335,6 +335,7 @@ builtin_natives! {
     "java/lang/Class": instance fn getDeclaredFields0(flag: boolean) -> field_object_array => sn::class::get_declared_fields0;
     "java/lang/Class": instance fn getDeclaredMethods0(flag: boolean) -> method_object_array => sn::class::get_declared_methods0;
     "java/lang/Class": instance fn getDeclaredConstructors0(flag: boolean) -> constructor_object_array => sn::class::get_declared_constructors0;
+    "java/lang/Class": instance fn getGenericSignature0() -> string => sn::class::get_generic_signature0;
     "java/lang/Class": instance fn getRawAnnotations() -> byte_array => sn::class::get_raw_annotations;
     "java/lang/Class": instance fn getEnclosingMethod0() -> object_array => sn::class::get_enclosing_method0;
     "java/lang/Class": instance fn getSimpleBinaryName0() -> string => sn::class::get_simple_binary_name0;
