@@ -55,6 +55,20 @@ fn reflected_field_generics_and_annotations_match_reference() {
     );
 }
 
+#[test]
+fn bootstrap_initializes_reference_access_with_utf8_encodings() {
+    utils::assert_with_all_args(
+        &["-Dnative.encoding=UTF-8", "-Dsun.jnu.encoding=UTF-8"],
+        "samples.properties.EncodingPropertiesDemo",
+        &[],
+        "native.encoding=UTF-8\nstdin.encoding=UTF-8\nstdout.encoding=UTF-8\nstderr.encoding=UTF-8\nencoding-properties-ok\n",
+        "",
+        utils::ExecutionResult::Success,
+        0,
+        Default::default(),
+    );
+}
+
 fn assert_encoding_properties(locale: Option<&str>, piped_input: bool) {
     let java_home = std::env::var_os("JAVA_HOME").expect("JAVA_HOME is required");
     let java =
