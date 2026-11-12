@@ -208,6 +208,7 @@ fn init() -> Result<()> {
         Executor::create_primordial_thread(&[main_tg_ref.into(), main_name_ref.into()])?;
 
     StaticInit::initialize("java/lang/reflect/Method")?;
+    StaticInit::initialize("java/lang/ref/Finalizer")?;
     Executor::invoke_static_method("java/lang/System", "initPhase1:()V", &[])?;
     let init_phase2_result = Executor::invoke_static_method(
         "java/lang/System",

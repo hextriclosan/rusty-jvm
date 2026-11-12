@@ -208,6 +208,7 @@ pub fn run_reference_jvm_with_all_args(
     }
     let output = std::process::Command::new(&java)
         .current_dir(TEST_PATH.as_path())
+        .args(["-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"])
         // options the VM under test doesn't read, which would also make the launcher print
         // "Picked up ..." notices to stderr
         .env_remove("JAVA_TOOL_OPTIONS")
@@ -366,9 +367,14 @@ pub fn assert_file_with_args(
 
 fn get_command(arguments: &[&str], envs: HashMap<String, String>) -> Command {
     let mut cmd = cargo_bin_cmd!("rusty-jvm");
-    cmd.current_dir(TEST_PATH.as_path())
-        .args(arguments)
-        .envs(&envs);
+    cmd.current_dir(TEST_PATH.as_path()).envs(&envs);
+    if !matches!(
+        arguments.first(),
+        Some(&"-h" | &"--help" | &"-V" | &"--version")
+    ) {
+        cmd.args(["-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"]);
+    }
+    cmd.args(arguments);
     cmd
 }
 

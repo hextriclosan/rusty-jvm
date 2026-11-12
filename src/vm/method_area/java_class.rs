@@ -237,12 +237,15 @@ impl JavaClass {
             let is_static = field.is_static();
             info.insert(
                 field.name.clone(),
-                Arc::new(FieldInfo::new(
-                    field.descriptor.clone(),
-                    field.modifiers.bits(),
-                    class_name.to_string(),
-                    field.name.clone(),
-                )),
+                Arc::new(
+                    FieldInfo::new(
+                        field.descriptor.clone(),
+                        field.modifiers.bits(),
+                        class_name.to_string(),
+                        field.name.clone(),
+                    )
+                    .with_reflection_metadata(field.signature, field.annotations_raw),
+                ),
             );
             if is_static {
                 static_values.insert(field.name, Arc::new(FieldValue::new(field.descriptor)?));
@@ -399,6 +402,14 @@ impl JavaClass {
         })?;
         let real_offset = STATIC_FIELDS_START + offset as i64;
         Ok(real_offset)
+    }
+
+    pub fn get_static_field_info_by_offset(&self, offset: i64) -> Result<&Arc<FieldInfo>> {
+        let field = self
+            .static_fields
+            .get_index((offset - STATIC_FIELDS_START) as usize)
+            .and_then(|(name, _)| self.fields_info.get(name));
+        field.ok_or_else(|| Error::new_execution(&format!("Invalid static field offset {offset}")))
     }
 
     pub fn get_static_field_by_offset(&self, offset: i64) -> Result<Arc<FieldValue>> {

@@ -11,7 +11,7 @@ readme = "README.md"
 keywords = ["jvm", "java", "bytecode", "interpreter", "virtual-machine"]
 categories = ["command-line-utilities", "emulators", "compilers"]
 license = "MIT"
-exclude = [".*", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml", "build.rs"]
+exclude = [".*", "tests/**", "utils/**", "Cross.toml", "renovate.json", "rustfmt.toml"]
 
 [workspace]
 members = ["jclassfile", "jclassmodel", "jdescriptor", "jimage-rs", "jniname", "tests/jni_test_lib"]
@@ -21,7 +21,7 @@ clap = "4.6.1"
 getset = "0.1.6"
 derive-new = "0.7.0"
 once_cell = "1.21.4"
-jclassmodel = "0.1.1"
+jclassmodel = { version = "0.2.0", path = "jclassmodel" }
 jdescriptor = "0.2.0"
 jimage-rs = "0.0.5"
 indexmap = { version = "2.14.0" , features = ["serde"] }
@@ -54,7 +54,7 @@ whoami = "2.1.2"
 cesu8 = "1.1.0"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef", "fileapi", "winnt", "minwinbase", "securitybaseapi", "processthreadsapi", "sysinfoapi", "winerror", "handleapi", "errhandlingapi", "ntdef", "winnls", "stringapiset", "netioapi", "ifdef", "ipifcons", "nldef", "ws2def", "ws2ipdef", "inaddr", "in6addr", "shlobj", "knownfolders", "combaseapi"] }
+winapi = { version = "0.3.9", features = ["winbase", "processenv", "minwindef", "fileapi", "winnt", "minwinbase", "securitybaseapi", "processthreadsapi", "sysinfoapi", "winerror", "handleapi", "errhandlingapi", "ntdef", "winnls", "consoleapi", "stringapiset", "netioapi", "ifdef", "ipifcons", "nldef", "ws2def", "ws2ipdef", "inaddr", "in6addr", "shlobj", "knownfolders", "combaseapi"] }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31.1", features = ["fs", "uio", "user"] }
@@ -73,5 +73,6 @@ rstest = "0.28.0"
 ctor = "1.0.0"
 
 [build-dependencies]
+cc = "1.2"
 anyhow = "1.0.102"
 fs_extra = "1.3.0"
