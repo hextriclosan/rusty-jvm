@@ -24,6 +24,22 @@ impl Engine {
         // stack-walking natives can traverse it (and older segments) without a parameter. The
         // guard pops it on return/unwind, keeping the chain correct across native re-entries.
         let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
+
+        let result = Self::interpret(&mut stack_frames);
+        if result.is_err() {
+            // An error discards this segment, frames and all, instead of unwinding it: an uncaught
+            // exception coming out of a nested segment (a failing class initializer, say) or an
+            // internal error. Nothing pops those frames, so the monitors their `synchronized`
+            // methods hold would stay owned by a thread that may be about to die, with every other
+            // thread that needs them blocked for good.
+            stack_frames.release_held_monitors();
+        }
+        result
+    }
+
+    /// The interpreter loop over `stack_frames`, until its last frame returns or an error, a
+    /// Java exception no frame of the segment handles among them, ends it.
+    fn interpret(stack_frames: &mut StackFrames) -> Result<Vec<i32>> {
         // Grabbed once per invocation, not per instruction. The safepoint is polled only every
         // `SAFEPOINT_POLL_INTERVAL` bytecodes (a cheap local-counter test each iteration); that
         // bounds time-to-safepoint to a few microseconds while keeping the hot loop's overhead to a
@@ -63,34 +79,34 @@ impl Engine {
 
             match code {
                 0u8..=20u8 => {
-                    ops_constant_processor::process(code, &class, &mut stack_frames)?;
+                    ops_constant_processor::process(code, &class, stack_frames)?;
                 }
                 21u8..=53u8 => {
-                    ops_load_processor::process(code, &mut stack_frames)?;
+                    ops_load_processor::process(code, stack_frames)?;
                 }
                 54u8..=86u8 => {
-                    ops_store_processor::process(code, &mut stack_frames)?;
+                    ops_store_processor::process(code, stack_frames)?;
                 }
                 87u8..=95u8 => {
-                    ops_stack_processor::process(code, &mut stack_frames)?;
+                    ops_stack_processor::process(code, stack_frames)?;
                 }
                 96u8..=132u8 => {
-                    ops_math_processor::process(code, &mut stack_frames)?;
+                    ops_math_processor::process(code, stack_frames)?;
                 }
                 133u8..=147u8 => {
-                    ops_conversion_processor::process(code, &mut stack_frames)?;
+                    ops_conversion_processor::process(code, stack_frames)?;
                 }
                 148u8..=166u8 => {
-                    ops_comparison_processor::process(code, &mut stack_frames)?;
+                    ops_comparison_processor::process(code, stack_frames)?;
                 }
                 167u8..=177u8 => {
-                    last_value = ops_control_processor::process(code, &mut stack_frames)?;
+                    last_value = ops_control_processor::process(code, stack_frames)?;
                 }
                 178u8..=195u8 => {
-                    ops_reference_processor::process(code, &class, &mut stack_frames)?;
+                    ops_reference_processor::process(code, &class, stack_frames)?;
                 }
                 196u8..=201u8 => {
-                    ops_extended_processor::process(code, &class, &mut stack_frames)?;
+                    ops_extended_processor::process(code, &class, stack_frames)?;
                 }
                 _ => unreachable!("{}", format! {"xxx = {}", code}),
             }

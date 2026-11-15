@@ -12,7 +12,7 @@ use std::fmt::Display;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
-use tracing::trace;
+use tracing::{error, trace};
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -123,6 +123,24 @@ impl StackFrames {
     /// Doesn't reset the exception program counter (ex_pc) of the next frame since it is not normal stack unwinding, and it will be used for correct exception handling.
     pub fn propagate_exception(&mut self) -> Result<Option<StackFrame>> {
         self.pop()
+    }
+
+    /// Releases the monitors of every frame still on the stack, newest first, and empties it: for
+    /// a segment that an error discards rather than unwinds. The frames are gone either way, and
+    /// the monitors their `synchronized` methods held must not stay owned by a thread that will
+    /// never exit them. A monitor that cannot be released is logged rather than cut short, so the
+    /// rest are still let go.
+    pub fn release_held_monitors(&mut self) {
+        while let Some(frame) = self.frames.pop() {
+            if let Some(obj_ref) = frame.held_monitor() {
+                if let Err(e) = monitor::exit(obj_ref) {
+                    error!(
+                        "releasing the monitor of {obj_ref} held by the discarded frame of {}: {e}",
+                        frame.method_name()
+                    );
+                }
+            }
+        }
     }
 
     /// Pops the top stack frame from the stack frames and returns it, releasing the monitor its
@@ -600,6 +618,16 @@ mod held_monitor_tests {
         assert!(monitor::holds_lock(LOCKED_OBJECT));
         stack_frames.propagate_exception().unwrap();
         assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    /// A segment discarded on an error, with the synchronized frame buried under another one.
+    #[test]
+    fn should_release_every_monitor_of_a_discarded_segment() {
+        let mut stack_frames = frames_holding_the_monitor();
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        stack_frames.release_held_monitors();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+        assert!(stack_frames.is_empty());
     }
 
     #[test]

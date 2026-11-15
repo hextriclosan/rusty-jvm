@@ -3307,7 +3307,8 @@ fn should_serialize_shared_state_with_synchronized() {
 fn should_lock_in_synchronized_methods() {
     // `synchronized` methods (ACC_SYNCHRONIZED) hold their receiver's monitor, or the class's for
     // a static method: observable through `holdsLock` inside and after the call, reentrant, let go
-    // when an exception leaves the method, exclusive between four threads, and enough for `wait`.
+    // when an exception leaves the method and when the thread dies of a failed class
+    // initialization inside it, exclusive between four threads, and enough for `wait`.
     assert_success(
         "samples.concurrency.threads.SynchronizedMethodsExample",
         r#"held inside instance method: true
@@ -3315,6 +3316,8 @@ held inside static method: true
 held after return: false false
 reentrant: true true true
 released after exception: true
+worker died: true
+entered after worker died: true
 counters: 100000 100000
 taken: 42
 "#,
