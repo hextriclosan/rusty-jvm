@@ -7,6 +7,7 @@ public class HelpfulNpeDebugInfo {
     static class Node {
         Node next;
         int value;
+        long total;
     }
 
     static void invokeVirtualOnLocal() {
@@ -37,6 +38,22 @@ public class HelpfulNpeDebugInfo {
         System.out.println(((CharSequence) raw).length());
     }
 
+    static void writeFieldOnLocal() {
+        Node node = null;
+        node.value = 42;
+    }
+
+    // A two-slot value sits above the receiver on the operand stack.
+    static void writeLongFieldOnParam(Node node) {
+        node.total = 42L;
+    }
+
+    // The value is built by `new`, `dup` and a constructor call before the store faults.
+    static void writeReferenceFieldOnLocal() {
+        Node node = null;
+        node.next = new Node();
+    }
+
     public static void main(String[] args) {
         Runnable[] cases = {
                 HelpfulNpeDebugInfo::invokeVirtualOnLocal,
@@ -45,6 +62,9 @@ public class HelpfulNpeDebugInfo {
                 HelpfulNpeDebugInfo::loadFromArrayLocal,
                 () -> invokeWithArgsReceiver("!"),
                 () -> invokeAfterCast(null),
+                HelpfulNpeDebugInfo::writeFieldOnLocal,
+                () -> writeLongFieldOnParam(null),
+                HelpfulNpeDebugInfo::writeReferenceFieldOnLocal,
         };
         String[] labels = {
                 "invokeVirtualOnLocal",
@@ -53,6 +73,9 @@ public class HelpfulNpeDebugInfo {
                 "loadFromArrayLocal",
                 "invokeWithArgsReceiver",
                 "invokeAfterCast",
+                "writeFieldOnLocal",
+                "writeLongFieldOnParam",
+                "writeReferenceFieldOnLocal",
         };
         for (int i = 0; i < cases.length; i++) {
             try {
