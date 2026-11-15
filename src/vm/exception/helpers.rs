@@ -24,6 +24,18 @@ pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()
     )
 }
 
+/// Throws an `ArithmeticException` carrying `message`, as `idiv`, `ldiv`, `irem` and `lrem` raise
+/// for a zero divisor (JVMS §6.5).
+pub fn throw_arithmetic_exception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
+    let message_ref = StringPoolHelper::create_string(message)?;
+    construct_exception_and_throw(
+        "java/lang/ArithmeticException",
+        "<init>:(Ljava/lang/String;)V",
+        &[StackValueKind::from(message_ref)],
+        stack_frames,
+    )
+}
+
 pub fn check_array_access(
     array_ref: i32,
     index: i32,
