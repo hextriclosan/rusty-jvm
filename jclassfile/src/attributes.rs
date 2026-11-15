@@ -101,7 +101,9 @@ pub enum Attribute {
         uses_index: Vec<u16>,
         provides: Vec<ProvidesRecord>,
     },
-    ModulePackages,
+    ModulePackages {
+        package_index: Vec<u16>,
+    },
     ModuleMainClass,
     NestHost {
         host_class_index: u16,
@@ -933,6 +935,9 @@ fn get_attribute(
                 provides,
             }
         }
+        "ModulePackages" => ModulePackages {
+            package_index: get_index_table(&data, &mut start_from)?,
+        },
         "NestHost" => NestHost {
             host_class_index: get_int(&data, &mut start_from)?,
         },
