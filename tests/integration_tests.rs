@@ -5200,6 +5200,11 @@ other thread BLOCKED, acquired=false
 exit=0
 other thread acquired after exit=true
 null enter caught
+held in synchronized native=true
+held after synchronized native=false
+held in static synchronized native=true
+held after static synchronized native=false
+released after native threw=true
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.monitor.JniMonitorDemo in an unnamed module

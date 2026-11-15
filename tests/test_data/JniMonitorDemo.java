@@ -11,6 +11,15 @@ public class JniMonitorDemo {
     private static native int exit(Object object);
     private static native int enter(Object object);
 
+    private synchronized native boolean heldInNative();
+    private static synchronized native boolean heldInStaticNative();
+    private synchronized native void throwInNative();
+
+    /// What the synchronized natives ask through JNI; `Thread.holdsLock` itself is native.
+    private static boolean holdsLockOf(Object object) {
+        return Thread.holdsLock(object);
+    }
+
     public static void main(String[] args) throws Exception {
         Object monitor = new Object();
         System.out.println("round trip=" + roundTrip(monitor));
@@ -29,6 +38,25 @@ public class JniMonitorDemo {
             System.out.println("missing exception");
         } catch (NullPointerException expected) {
             System.out.println("null enter caught");
+        }
+
+        synchronizedNatives();
+    }
+
+    /// A `synchronized native` method holds its monitor while the native runs, and gives it up
+    /// afterwards, whether the native returned or left through a pending exception.
+    private static void synchronizedNatives() {
+        JniMonitorDemo demo = new JniMonitorDemo();
+        System.out.println("held in synchronized native=" + demo.heldInNative());
+        System.out.println("held after synchronized native=" + Thread.holdsLock(demo));
+        System.out.println("held in static synchronized native=" + heldInStaticNative());
+        System.out.println("held after static synchronized native="
+                + Thread.holdsLock(JniMonitorDemo.class));
+        try {
+            demo.throwInNative();
+            System.out.println("missing exception");
+        } catch (IllegalStateException expected) {
+            System.out.println("released after native threw=" + !Thread.holdsLock(demo));
         }
     }
 
