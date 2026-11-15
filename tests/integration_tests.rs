@@ -3304,6 +3304,24 @@ fn should_serialize_shared_state_with_synchronized() {
 }
 
 #[test]
+fn should_lock_in_synchronized_methods() {
+    // `synchronized` methods (ACC_SYNCHRONIZED) hold their receiver's monitor, or the class's for
+    // a static method: observable through `holdsLock` inside and after the call, reentrant, let go
+    // when an exception leaves the method, exclusive between four threads, and enough for `wait`.
+    assert_success(
+        "samples.concurrency.threads.SynchronizedMethodsExample",
+        r#"held inside instance method: true
+held inside static method: true
+held after return: false false
+reentrant: true true true
+released after exception: true
+counters: 100000 100000
+taken: 42
+"#,
+    );
+}
+
+#[test]
 fn should_coordinate_with_wait_notify() {
     // Classic monitor handshake: main waits on `lock` until the producer sets a flag and notifies.
     assert_success(

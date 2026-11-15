@@ -1,5 +1,6 @@
 use crate::vm::error::Result;
 use crate::vm::execution_engine::engine::Engine;
+use crate::vm::execution_engine::invoker::enter_method_monitor;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_class::JavaClass;
@@ -154,6 +155,7 @@ impl Executor {
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
         Self::set_stack_arguments(&mut stack_frame, &java_method, args)?;
+        enter_method_monitor(&mut stack_frame, &java_method)?;
         Engine::execute(
             stack_frame,
             &format!(

@@ -348,6 +348,13 @@ impl JavaMethod {
             .contains(MethodModifier::Static)
     }
 
+    /// Whether the method is declared `synchronized`, and so holds its receiver's monitor, or its
+    /// class's for a static method, for as long as it runs (JVMS §2.11.10).
+    pub fn is_synchronized(&self) -> bool {
+        MethodModifier::from_bits_truncate(self.access_flags as u16)
+            .contains(MethodModifier::Synchronized)
+    }
+
     /// Whether this is a `@PolymorphicSignature` intrinsic (`MethodHandle.invoke*`, `VarHandle`
     /// accessors).
     ///

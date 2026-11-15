@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::method_area::instance_checker::InstanceChecker;
+use crate::vm::monitor;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack::Stack;
 use crate::vm::stack::stack_value::StackValue;
@@ -28,6 +29,10 @@ pub(crate) struct StackFrame {
     bci: usize,
     /// Stores the current program counter (pc) in `ex_pc` before invoking a method. This value is later used as the current `pc` if an exception is thrown.
     ex_pc: Option<usize>,
+    /// The object whose monitor this frame's `synchronized` method holds (JVMS §2.11.10): entered
+    /// on invocation, and exited by [`StackFrames`] when the frame is popped, on a return as much
+    /// as on an exception unwinding through the method.
+    held_monitor: Option<i32>,
     locals: Box<[Slot]>,
     operand_stack: Stack<Slot>,
     bytecode_ref: Arc<Vec<u8>>,
@@ -102,8 +107,8 @@ impl StackFrames {
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Resets the exception program counter (ex_pc) of the next frame if it exists since it is normal stack unwinding.
-    pub fn exit_frame(&mut self) -> Option<StackFrame> {
-        let popped_frame = self.pop();
+    pub fn exit_frame(&mut self) -> Result<Option<StackFrame>> {
+        let popped_frame = self.pop()?;
 
         // Resetting the exception program counter (ex_pc) of the next frame is an intentional
         // part of the normal stack unwinding process.
@@ -111,18 +116,24 @@ impl StackFrames {
             next_frame.reset_ex_pc()
         }
 
-        popped_frame
+        Ok(popped_frame)
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Doesn't reset the exception program counter (ex_pc) of the next frame since it is not normal stack unwinding, and it will be used for correct exception handling.
-    pub fn propagate_exception(&mut self) -> Option<StackFrame> {
+    pub fn propagate_exception(&mut self) -> Result<Option<StackFrame>> {
         self.pop()
     }
 
-    /// Pops the top stack frame from the stack frames and returns it.
-    fn pop(&mut self) -> Option<StackFrame> {
-        self.frames.pop()
+    /// Pops the top stack frame from the stack frames and returns it, releasing the monitor its
+    /// `synchronized` method held: a method gives its monitor up on every exit, a return as much as
+    /// an exception unwinding through it (JVMS §2.11.10).
+    fn pop(&mut self) -> Result<Option<StackFrame>> {
+        let popped_frame = self.frames.pop();
+        if let Some(obj_ref) = popped_frame.as_ref().and_then(StackFrame::held_monitor) {
+            monitor::exit(obj_ref)?;
+        }
+        Ok(popped_frame)
     }
 }
 
@@ -142,6 +153,7 @@ impl StackFrame {
             pc: 0,
             bci: 0,
             ex_pc: None,
+            held_monitor: None,
             locals: vec![Slot::Value(0); locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
@@ -187,6 +199,7 @@ impl StackFrame {
             pc: 0,
             bci: 0,
             ex_pc: None,
+            held_monitor: None,
             locals: args.into_boxed_slice(),
             operand_stack: Stack::with_capacity(0),
             bytecode_ref: Arc::new(Vec::new()),
@@ -294,6 +307,17 @@ impl StackFrame {
     /// Resets the exception program counter (ex_pc) to None.
     pub fn reset_ex_pc(&mut self) {
         self.ex_pc = None;
+    }
+
+    /// Records that this frame's `synchronized` method holds the monitor of `obj_ref`, for
+    /// [`StackFrames`] to release when the frame is popped. See the `held_monitor` field.
+    pub fn hold_monitor(&mut self, obj_ref: i32) {
+        self.held_monitor = Some(obj_ref);
+    }
+
+    /// The object whose monitor this frame's `synchronized` method holds, if any.
+    pub fn held_monitor(&self) -> Option<i32> {
+        self.held_monitor
     }
 
     pub fn clear_stack(&mut self) {
@@ -546,5 +570,45 @@ mod tests {
         frame.set_local(0, f64::MAX);
 
         assert_eq!(frame.ref_slots().count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod held_monitor_tests {
+    use super::*;
+
+    const LOCKED_OBJECT: i32 = 4242;
+
+    fn frames_holding_the_monitor() -> StackFrames {
+        let mut frame = StackFrame::for_test(0, 1);
+        monitor::enter(LOCKED_OBJECT);
+        frame.hold_monitor(LOCKED_OBJECT);
+        StackFrames::new(vec![StackFrame::for_test(0, 1), frame])
+    }
+
+    #[test]
+    fn should_release_the_monitor_on_return() {
+        let mut stack_frames = frames_holding_the_monitor();
+        assert!(monitor::holds_lock(LOCKED_OBJECT));
+        stack_frames.exit_frame().unwrap();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    #[test]
+    fn should_release_the_monitor_when_an_exception_unwinds_the_frame() {
+        let mut stack_frames = frames_holding_the_monitor();
+        assert!(monitor::holds_lock(LOCKED_OBJECT));
+        stack_frames.propagate_exception().unwrap();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    #[test]
+    fn should_leave_other_frames_monitors_alone() {
+        let mut stack_frames = frames_holding_the_monitor();
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        stack_frames.exit_frame().unwrap();
+        assert!(monitor::holds_lock(LOCKED_OBJECT));
+        stack_frames.exit_frame().unwrap();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
     }
 }
