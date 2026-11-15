@@ -15,6 +15,15 @@ public class AllNPEExamples {
         int x = point.x;
     }
 
+    static void fieldAssign() {
+        int placeholder0 = 10;
+        int placeholder1 = 11;
+        int placeholder2 = 12;
+        int placeholder3 = 13;
+        Point point = null;
+        point.x = 42;
+    }
+
     static void methodCallVirtual() {
         Object placeholder0 = null;
         String str = null;
@@ -115,6 +124,7 @@ public class AllNPEExamples {
     public static void main(String[] args) {
         Case[] tests = {
                 new Case("Field access", AllNPEExamples::fieldAccess),
+                new Case("Field assign", AllNPEExamples::fieldAssign),
                 new Case("Method call (invokevirtual)", AllNPEExamples::methodCallVirtual),
                 new Case("Method call (invokeinterface)", AllNPEExamples::methodCallInterface),
                 new Case("Method call on param", () -> methodCallOnParam(null, null)),

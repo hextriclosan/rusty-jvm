@@ -3879,6 +3879,7 @@ fn should_handle_null_pointer_exceptions() {
         // inside `java.lang.reflect.Field`/`Method`, which the JDK ships with a LocalVariableTable,
         // so those name the source parameter (`obj`). Output matches real `java` verbatim.
         r#"Field access: Cannot read field "x" because "<local4>" is null
+Field assign: Cannot assign field "x" because "<local4>" is null
 Method call (invokevirtual): Cannot invoke "String.length()" because "<local1>" is null
 Method call (invokeinterface): Cannot invoke "java.lang.Runnable.run()" because "<local1>" is null
 Method call on param: Cannot invoke "String.length()" because "<parameter2>" is null
@@ -3910,6 +3911,9 @@ readArrayLengthOnLocal: Cannot read the array length because "numbers" is null
 loadFromArrayLocal: Cannot load from object array because "names" is null
 invokeWithArgsReceiver: Cannot invoke "String.concat(String)" because "target" is null
 invokeAfterCast: Cannot invoke "java.lang.CharSequence.length()" because "raw" is null
+writeFieldOnLocal: Cannot assign field "value" because "node" is null
+writeLongFieldOnParam: Cannot assign field "total" because "node" is null
+writeReferenceFieldOnLocal: Cannot assign field "next" because "node" is null
 "#,
     );
 }

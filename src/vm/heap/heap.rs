@@ -171,6 +171,24 @@ impl Heap {
         Ok(Some(result))
     }
 
+    /// [`Heap::set_object_field_value`] for `putfield`: a null `objectref` throws a
+    /// `NullPointerException` on `stack_frames` and yields `None`, like the getter above.
+    pub fn set_object_field_value_throwing(
+        &self,
+        objectref: i32,
+        class_name: &str,
+        field_name_type: &str,
+        value: Vec<i32>,
+        stack_frames: &mut StackFrames,
+    ) -> Throws<()> {
+        if objectref == 0 {
+            bail_thrown!(throw_null_pointer_exception(stack_frames));
+        }
+
+        self.set_object_field_value(objectref, class_name, field_name_type, value)?;
+        Ok(Some(()))
+    }
+
     pub fn get_instance_name(&self, objectref: i32) -> Result<String> {
         if let Some(entry) = self.data.get(objectref) {
             match entry.value() {

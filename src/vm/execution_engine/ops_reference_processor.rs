@@ -115,32 +115,41 @@ pub(crate) fn process(
             trace!("GETFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name}, value={value:?}");
         }
         PUTFIELD => {
-            let stack_frame = last_frame_mut(stack_frames)?;
-            let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
-            let type_descriptor = lookup::lookup_for_field_descriptor(&class_name, &field_name)
-                .ok_or_else(|| {
-                    Error::new_constant_pool(&format!(
-                        "Error getting type descriptor for {class_name}.{field_name}"
-                    ))
-                })?;
-            let len = get_length(&type_descriptor)?;
+            let (class_name, field_name, value, objectref) = {
+                let stack_frame = last_frame_mut(stack_frames)?;
+                let (class_name, field_name) = get_field_info(stack_frame, current_class_name)?;
+                let type_descriptor =
+                    lookup::lookup_for_field_descriptor(&class_name, &field_name).ok_or_else(
+                        || {
+                            Error::new_constant_pool(&format!(
+                                "Error getting type descriptor for {class_name}.{field_name}"
+                            ))
+                        },
+                    )?;
+                let len = get_length(&type_descriptor)?;
 
-            let mut value = Vec::with_capacity(len as usize);
-            for _ in 0..len {
-                value.push(stack_frame.pop());
-            }
+                let mut value = Vec::with_capacity(len as usize);
+                for _ in 0..len {
+                    value.push(stack_frame.pop());
+                }
 
-            let objectref = stack_frame.pop();
+                let objectref = stack_frame.pop();
+                (class_name, field_name, value, objectref)
+            };
 
-            HEAP.set_object_field_value(
+            let stored = HEAP.set_object_field_value_throwing(
                 objectref,
                 class_name.as_str(),
                 field_name.as_str(),
                 value.clone(),
+                stack_frames,
             )?;
+            if stored.is_none() {
+                return Ok(());
+            }
 
             trace!("PUTFIELD -> objectref={objectref}, class_name={class_name}, field_name={field_name} value={value:?}");
-            stack_frame.incr_pc();
+            last_frame_mut(stack_frames)?.incr_pc();
         }
         INVOKEVIRTUAL => {
             store_ex_pc(stack_frames)?;
