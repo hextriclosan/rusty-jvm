@@ -6,6 +6,7 @@ use jclassfile::attributes::TargetType::METHOD_FORMAL_PARAMETER;
 use jclassfile::attributes::VerificationTypeInfo::*;
 use jclassfile::attributes::*;
 use jclassfile::class_file::{parse, ClassFile, ClassFlags};
+use jclassfile::constant_pool::ConstantPool;
 use jclassfile::constant_pool::ConstantPool::*;
 use jclassfile::fields::{FieldFlags, FieldInfo};
 use jclassfile::methods::{MethodFlags, MethodInfo};
@@ -1759,6 +1760,154 @@ fn should_load_and_parse_runtime_visible_type_annotations() {
         vec![SourceFile {
             sourcefile_index: 9,
         }],
+    );
+
+    assert_eq!(actual_class_file, expected_class_file)
+}
+
+#[test]
+fn should_load_and_parse_module() {
+    let bytes = include_bytes!("test_data/module/module-info.class");
+    let actual_class_file = parse(bytes).unwrap();
+
+    let expected_class_file = ClassFile::new(
+        0xCAFEBABE,
+        0,
+        69,
+        vec![
+            Empty, //                                               0
+            Class {
+                //                                                  1
+                name_index: 2,
+            },
+            Utf8 {
+                //                                                  2
+                value: "module-info".into(),
+            },
+            Utf8 {
+                //                                                  3
+                value: "SourceFile".into(),
+            },
+            Utf8 {
+                //                                                  4
+                value: "module-info.java".into(),
+            },
+            Utf8 {
+                //                                                  5
+                value: "Module".into(),
+            },
+            ConstantPool::Module {
+                //                                                  6
+                name_index: 7,
+            },
+            Utf8 {
+                //                                                  7
+                value: "sample".into(),
+            },
+            Utf8 {
+                //                                                  8
+                value: "1.0".into(),
+            },
+            ConstantPool::Module {
+                //                                                  9
+                name_index: 10,
+            },
+            Utf8 {
+                //                                                  10
+                value: "java.base".into(),
+            },
+            Utf8 {
+                //                                                  11
+                value: "25.0.4.1".into(),
+            },
+            ConstantPool::Module {
+                //                                                  12
+                name_index: 13,
+            },
+            Utf8 {
+                //                                                  13
+                value: "java.logging".into(),
+            },
+            ConstantPool::Module {
+                //                                                  14
+                name_index: 15,
+            },
+            Utf8 {
+                //                                                  15
+                value: "java.compiler".into(),
+            },
+            Package {
+                //                                                  16
+                name_index: 17,
+            },
+            Utf8 {
+                //                                                  17
+                value: "sample/api".into(),
+            },
+            Package {
+                //                                                  18
+                name_index: 19,
+            },
+            Utf8 {
+                //                                                  19
+                value: "sample/impl".into(),
+            },
+            Class {
+                //                                                  20
+                name_index: 21,
+            },
+            Utf8 {
+                //                                                  21
+                value: "sample/api/Service".into(),
+            },
+            Class {
+                //                                                  22
+                name_index: 23,
+            },
+            Utf8 {
+                //                                                  23
+                value: "sample/impl/FirstService".into(),
+            },
+            Class {
+                //                                                  24
+                name_index: 25,
+            },
+            Utf8 {
+                //                                                  25
+                value: "sample/impl/SecondService".into(),
+            },
+        ],
+        ClassFlags::ACC_MODULE,
+        1,
+        0,
+        vec![],
+        vec![],
+        vec![],
+        vec![
+            SourceFile {
+                sourcefile_index: 4,
+            },
+            Attribute::Module {
+                module_name_index: 6,
+                module_flags: ModuleFlags::empty(),
+                module_version_index: 8,
+                requires: vec![
+                    RequiresRecord::new(9, RequiresFlags::ACC_MANDATED, 11),
+                    RequiresRecord::new(12, RequiresFlags::ACC_TRANSITIVE, 11),
+                    RequiresRecord::new(14, RequiresFlags::ACC_STATIC_PHASE, 11),
+                ],
+                exports: vec![
+                    ExportsRecord::new(16, ExportsFlags::empty(), vec![]),
+                    ExportsRecord::new(18, ExportsFlags::empty(), vec![12, 14]),
+                ],
+                opens: vec![
+                    OpensRecord::new(16, OpensFlags::empty(), vec![]),
+                    OpensRecord::new(18, OpensFlags::empty(), vec![12]),
+                ],
+                uses_index: vec![20],
+                provides: vec![ProvidesRecord::new(20, vec![22, 24])],
+            },
+        ],
     );
 
     assert_eq!(actual_class_file, expected_class_file)

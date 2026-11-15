@@ -56,7 +56,7 @@ The following sections of the Java Virtual Machine Specification (JVMS, Java SE 
   - [x] The AnnotationDefault Attribute ([§4.7.22][jvms-4.7.22])
   - [x] The BootstrapMethods Attribute ([§4.7.23][jvms-4.7.23])
   - [x] The MethodParameters Attribute ([§4.7.24][jvms-4.7.24])
-  - [ ] The Module Attribute ([§4.7.25][jvms-4.7.25])
+  - [x] The Module Attribute ([§4.7.25][jvms-4.7.25])
   - [ ] The ModulePackages Attribute ([§4.7.26][jvms-4.7.26])
   - [ ] The ModuleMainClass Attribute ([§4.7.27][jvms-4.7.27])
   - [x] The NestHost Attribute ([§4.7.28][jvms-4.7.28])

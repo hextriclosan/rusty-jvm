@@ -91,7 +91,16 @@ pub enum Attribute {
     MethodParameters {
         parameters: Vec<MethodParameterRecord>,
     },
-    Module,
+    Module {
+        module_name_index: u16,
+        module_flags: ModuleFlags,
+        module_version_index: u16,
+        requires: Vec<RequiresRecord>,
+        exports: Vec<ExportsRecord>,
+        opens: Vec<OpensRecord>,
+        uses_index: Vec<u16>,
+        provides: Vec<ProvidesRecord>,
+    },
     ModulePackages,
     ModuleMainClass,
     NestHost {
@@ -178,6 +187,128 @@ pub struct MethodParameterRecord {
     name_index: u16,
     #[get = "pub"]
     access_flags: MethodParameterFlags,
+}
+
+bitflags! {
+    #[derive(Debug, PartialEq, Clone)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    /// `module_flags` of the `Module` attribute (JVMS §4.7.25).
+    pub struct ModuleFlags: u16 {
+        /// Indicates that this module is open.
+        const ACC_OPEN = 0x0020;
+        /// Indicates that this module was not explicitly or implicitly declared.
+        const ACC_SYNTHETIC = 0x1000;
+        /// Indicates that this module was implicitly declared.
+        const ACC_MANDATED = 0x8000;
+    }
+}
+
+bitflags! {
+    #[derive(Debug, PartialEq, Clone)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    /// `requires_flags` of a `requires` entry (JVMS §4.7.25).
+    pub struct RequiresFlags: u16 {
+        /// Indicates that any module which depends on the current module, implicitly declares
+        /// a dependence on the module indicated by this entry.
+        const ACC_TRANSITIVE = 0x0020;
+        /// Indicates that this dependence is mandatory in the static phase, i.e., at compile time,
+        /// but is optional in the dynamic phase, i.e., at run time.
+        const ACC_STATIC_PHASE = 0x0040;
+        /// Indicates that this dependence was not explicitly or implicitly declared
+        /// in the source of the module declaration.
+        const ACC_SYNTHETIC = 0x1000;
+        /// Indicates that this dependence was implicitly declared
+        /// in the source of the module declaration.
+        const ACC_MANDATED = 0x8000;
+    }
+}
+
+bitflags! {
+    #[derive(Debug, PartialEq, Clone)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    /// `exports_flags` of an `exports` entry (JVMS §4.7.25).
+    pub struct ExportsFlags: u16 {
+        /// Indicates that this export was not explicitly or implicitly declared
+        /// in the source of the module declaration.
+        const ACC_SYNTHETIC = 0x1000;
+        /// Indicates that this export was implicitly declared
+        /// in the source of the module declaration.
+        const ACC_MANDATED = 0x8000;
+    }
+}
+
+bitflags! {
+    #[derive(Debug, PartialEq, Clone)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    /// `opens_flags` of an `opens` entry (JVMS §4.7.25).
+    pub struct OpensFlags: u16 {
+        /// Indicates that this opening was not explicitly or implicitly declared
+        /// in the source of the module declaration.
+        const ACC_SYNTHETIC = 0x1000;
+        /// Indicates that this opening was implicitly declared
+        /// in the source of the module declaration.
+        const ACC_MANDATED = 0x8000;
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `requires` entry of the `Module` attribute (JVMS §4.7.25).
+pub struct RequiresRecord {
+    #[get_copy = "pub"]
+    /// Index of a `Module` entry in the constant pool denoting the required module
+    requires_index: u16,
+    #[get = "pub"]
+    /// Flags of the dependence
+    requires_flags: RequiresFlags,
+    #[get_copy = "pub"]
+    /// Index of a `Utf8` entry in the constant pool denoting the required module's version,
+    /// or zero if no version information is present
+    requires_version_index: u16,
+}
+
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `exports` entry of the `Module` attribute (JVMS §4.7.25).
+pub struct ExportsRecord {
+    #[get_copy = "pub"]
+    /// Index of a `Package` entry in the constant pool denoting the exported package
+    exports_index: u16,
+    #[get = "pub"]
+    /// Flags of the export
+    exports_flags: ExportsFlags,
+    #[get = "pub"]
+    /// Indexes of `Module` entries in the constant pool denoting the modules the package is
+    /// exported to; empty for an unqualified export
+    exports_to_index: Vec<u16>,
+}
+
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `opens` entry of the `Module` attribute (JVMS §4.7.25).
+pub struct OpensRecord {
+    #[get_copy = "pub"]
+    /// Index of a `Package` entry in the constant pool denoting the opened package
+    opens_index: u16,
+    #[get = "pub"]
+    /// Flags of the opening
+    opens_flags: OpensFlags,
+    #[get = "pub"]
+    /// Indexes of `Module` entries in the constant pool denoting the modules the package is
+    /// opened to; empty for an unqualified opening
+    opens_to_index: Vec<u16>,
+}
+
+#[derive(Debug, PartialEq, Clone, Getters, CopyGetters, new)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// `provides` entry of the `Module` attribute (JVMS §4.7.25).
+pub struct ProvidesRecord {
+    #[get_copy = "pub"]
+    /// Index of a `Class` entry in the constant pool denoting the provided service interface
+    provides_index: u16,
+    #[get = "pub"]
+    /// Indexes of `Class` entries in the constant pool denoting the service implementations
+    provides_with_index: Vec<u16>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -745,6 +876,63 @@ fn get_attribute(
             }
             MethodParameters { parameters }
         }
+        "Module" => {
+            let module_name_index = get_int(&data, &mut start_from)?;
+            let module_flags = get_bitfield(&data, &mut start_from)?;
+            let module_version_index = get_int(&data, &mut start_from)?;
+
+            let requires_count: u16 = get_int(&data, &mut start_from)?;
+            let mut requires = Vec::with_capacity(requires_count as usize);
+            for _ in 0..requires_count {
+                requires.push(RequiresRecord::new(
+                    get_int(&data, &mut start_from)?,
+                    get_bitfield(&data, &mut start_from)?,
+                    get_int(&data, &mut start_from)?,
+                ));
+            }
+
+            let exports_count: u16 = get_int(&data, &mut start_from)?;
+            let mut exports = Vec::with_capacity(exports_count as usize);
+            for _ in 0..exports_count {
+                exports.push(ExportsRecord::new(
+                    get_int(&data, &mut start_from)?,
+                    get_bitfield(&data, &mut start_from)?,
+                    get_index_table(&data, &mut start_from)?,
+                ));
+            }
+
+            let opens_count: u16 = get_int(&data, &mut start_from)?;
+            let mut opens = Vec::with_capacity(opens_count as usize);
+            for _ in 0..opens_count {
+                opens.push(OpensRecord::new(
+                    get_int(&data, &mut start_from)?,
+                    get_bitfield(&data, &mut start_from)?,
+                    get_index_table(&data, &mut start_from)?,
+                ));
+            }
+
+            let uses_index = get_index_table(&data, &mut start_from)?;
+
+            let provides_count: u16 = get_int(&data, &mut start_from)?;
+            let mut provides = Vec::with_capacity(provides_count as usize);
+            for _ in 0..provides_count {
+                provides.push(ProvidesRecord::new(
+                    get_int(&data, &mut start_from)?,
+                    get_index_table(&data, &mut start_from)?,
+                ));
+            }
+
+            Attribute::Module {
+                module_name_index,
+                module_flags,
+                module_version_index,
+                requires,
+                exports,
+                opens,
+                uses_index,
+                provides,
+            }
+        }
         "NestHost" => NestHost {
             host_class_index: get_int(&data, &mut start_from)?,
         },
@@ -794,6 +982,17 @@ fn get_attribute(
     };
 
     Ok(attribute)
+}
+
+/// Reads a `u16` count followed by that many `u16` constant pool indexes.
+fn get_index_table(data: &[u8], start_from: &mut usize) -> Result<Vec<u16>> {
+    let count: u16 = get_int(&data, start_from)?;
+    let mut table = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        table.push(get_int(&data, start_from)?);
+    }
+
+    Ok(table)
 }
 
 fn get_verification_type_info(
