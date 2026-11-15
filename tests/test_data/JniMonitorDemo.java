@@ -42,6 +42,27 @@ public class JniMonitorDemo {
 
         synchronizedNatives();
         unbalancedExit();
+        unbalancedBlockExit();
+    }
+
+    /// JNI MonitorExit of a synchronized block's monitor from inside an inner try: the block's own
+    /// monitorexit then finds nothing to release and, as in HotSpot, raises nothing, so the inner
+    /// handler is never a candidate and the block is left normally.
+    private static void unbalancedBlockExit() {
+        Object monitor = new Object();
+        try {
+            synchronized (monitor) {
+                try {
+                    System.out.println("jni exit inside synchronized block=" + exit(monitor));
+                } catch (IllegalStateException wrongHandler) {
+                    System.out.println("wrong handler");
+                }
+            }
+            System.out.println("block left normally");
+        } catch (IllegalMonitorStateException unexpected) {
+            System.out.println("block monitorexit raised " + unexpected);
+        }
+        System.out.println("held after leaving the block=" + Thread.holdsLock(monitor));
     }
 
     /// A synchronized method that releases its own monitor through JNI before returning. The

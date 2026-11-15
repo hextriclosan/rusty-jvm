@@ -55,12 +55,19 @@ impl Engine {
             // Stamp the instruction's start pc so that, if this opcode raises an implicit
             // NullPointerException, the throwable's backtrace records the faulting bytecode index
             // (JEP 358) even though the handler advances `pc` while reading operands.
+            //
+            // And forget the call site the frame may have saved: a frame that dispatches an
+            // instruction has no call of its own in flight, whatever ended the last one (a return,
+            // a handler entered here, a native that came back, an `invokedynamic` resolved on the
+            // side). Left behind, that site would locate an exception this instruction raises
+            // itself at the earlier call, and so at the wrong handler and line.
             {
                 let frame = stack_frames
                     .last_mut()
                     .ok_or(Error::new_execution("Error getting stack frame"))?;
                 let pc = frame.pc();
                 frame.set_bci(pc);
+                frame.reset_ex_pc();
             }
             let (class, code, pc, line_numbers) = {
                 let frame = stack_frames

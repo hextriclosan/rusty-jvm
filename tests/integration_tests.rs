@@ -1309,6 +1309,7 @@ long /: java.lang.ArithmeticException: / by zero
 long %: java.lang.ArithmeticException: / by zero
 int / in callee: java.lang.ArithmeticException: / by zero
 int / after a caught callee exception = 101
+int / after a native call = 101
 int MIN_VALUE / -1 = -2147483648
 int MIN_VALUE % -1 = 0
 long MIN_VALUE / -1 = -9223372036854775808
@@ -1327,7 +1328,7 @@ fn should_report_uncaught_integral_division_by_zero() {
         &["uncaught"],
         "",
         r#"Exception in thread "main" java.lang.ArithmeticException: / by zero
-	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:42)
+	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:43)
 	at samples.arithmetics.divbyzero.IntegralDivisionByZero.main(IntegralDivisionByZero.java:15)
 
 "#,
@@ -5207,6 +5208,9 @@ held after static synchronized native=false
 released after native threw=true
 exit of own monitor inside synchronized method=0
 held after exiting own monitor=false
+jni exit inside synchronized block=0
+block left normally
+held after leaving the block=false
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.monitor.JniMonitorDemo in an unnamed module
