@@ -1309,6 +1309,7 @@ long /: java.lang.ArithmeticException: / by zero
 long %: java.lang.ArithmeticException: / by zero
 int / in callee: java.lang.ArithmeticException: / by zero
 int / after a caught callee exception = 101
+int / after a native call = 101
 int MIN_VALUE / -1 = -2147483648
 int MIN_VALUE % -1 = 0
 long MIN_VALUE / -1 = -9223372036854775808
@@ -1327,7 +1328,7 @@ fn should_report_uncaught_integral_division_by_zero() {
         &["uncaught"],
         "",
         r#"Exception in thread "main" java.lang.ArithmeticException: / by zero
-	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:42)
+	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:43)
 	at samples.arithmetics.divbyzero.IntegralDivisionByZero.main(IntegralDivisionByZero.java:15)
 
 "#,
@@ -3098,6 +3099,17 @@ fn should_handle_operand_stack_overflow() {
 }
 
 #[test]
+fn should_throw_for_monitorexit_of_a_monitor_the_frame_never_entered() {
+    // Hand-made bytecode (see `utils/classfile_generators`): `aload_0; monitorexit; return` on an
+    // object the method never entered. JVMS §6.5: `IllegalMonitorStateException`, thrown at the
+    // instruction so that the caller's handler catches it, and without a message, as HotSpot's.
+    assert_success(
+        "samples.invalidprograms.unownedmonitorexit.UnownedMonitorExitExample",
+        "java.lang.IllegalMonitorStateException\n",
+    );
+}
+
+#[test]
 fn should_support_file_dispatcher_for_various_os() {
     let (file_path, _guard) = tmp_file("file_dispatcher_example.txt");
     assert_file_with_args(
@@ -3301,6 +3313,27 @@ fn should_serialize_shared_state_with_synchronized() {
     // Two (unnamed) threads each do 100_000 `synchronized(lock) { counter++; }`, joined by main.
     // The result is exactly 200000 only if the monitor provides real mutual exclusion.
     assert_success("samples.concurrency.threads.SyncCounterDemo", "200000\n");
+}
+
+#[test]
+fn should_lock_in_synchronized_methods() {
+    // `synchronized` methods (ACC_SYNCHRONIZED) hold their receiver's monitor, or the class's for
+    // a static method: observable through `holdsLock` inside and after the call, reentrant, let go
+    // when an exception leaves the method and when the thread dies of a failed class
+    // initialization inside it, exclusive between four threads, and enough for `wait`.
+    assert_success(
+        "samples.concurrency.threads.SynchronizedMethodsExample",
+        r#"held inside instance method: true
+held inside static method: true
+held after return: false false
+reentrant: true true true
+released after exception: true
+worker died: true
+entered after worker died: true
+counters: 100000 100000
+taken: 42
+"#,
+    );
 }
 
 #[test]
@@ -5179,6 +5212,16 @@ other thread BLOCKED, acquired=false
 exit=0
 other thread acquired after exit=true
 null enter caught
+held in synchronized native=true
+held after synchronized native=false
+held in static synchronized native=true
+held after static synchronized native=false
+released after native threw=true
+exit of own monitor inside synchronized method=0
+held after exiting own monitor=false
+jni exit inside synchronized block=0
+block left normally
+held after leaving the block=false
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.monitor.JniMonitorDemo in an unnamed module

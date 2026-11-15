@@ -1,5 +1,6 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::method_area::instance_checker::InstanceChecker;
+use crate::vm::monitor;
 use crate::vm::stack::slot::Slot;
 use crate::vm::stack::stack::Stack;
 use crate::vm::stack::stack_value::StackValue;
@@ -28,6 +29,14 @@ pub(crate) struct StackFrame {
     bci: usize,
     /// Stores the current program counter (pc) in `ex_pc` before invoking a method. This value is later used as the current `pc` if an exception is thrown.
     ex_pc: Option<usize>,
+    /// The object whose monitor this frame's `synchronized` method holds (JVMS §2.11.10): entered
+    /// on invocation, and exited by [`StackFrames`] when the frame is popped, on a return as much
+    /// as on an exception unwinding through the method.
+    held_monitor: Option<i32>,
+    /// The objects this frame's own `monitorenter`s acquired and its `monitorexit`s have not yet
+    /// released, oldest first and with repeats for nested blocks on one object: HotSpot's monitor
+    /// block. A `monitorexit` on anything else is JVMS §6.5's `IllegalMonitorStateException`.
+    entered_monitors: Vec<i32>,
     locals: Box<[Slot]>,
     operand_stack: Stack<Slot>,
     bytecode_ref: Arc<Vec<u8>>,
@@ -120,9 +129,29 @@ impl StackFrames {
         self.pop()
     }
 
-    /// Pops the top stack frame from the stack frames and returns it.
+    /// Releases the monitors of every frame still on the stack, newest first, and empties it: for
+    /// a segment that an error discards rather than unwinds. The frames are gone either way, and
+    /// the monitors their `synchronized` methods held must not stay owned by a thread that will
+    /// never exit them.
+    pub fn release_held_monitors(&mut self) {
+        while self.pop().is_some() {}
+    }
+
+    /// Pops the top stack frame from the stack frames and returns it, releasing the monitor its
+    /// `synchronized` method held: a method gives its monitor up on every exit, a return as much as
+    /// an exception unwinding through it (JVMS §2.11.10). A monitor the method body already gave
+    /// up itself (through JNI `MonitorExit`, say) is left alone, as HotSpot leaves it.
     fn pop(&mut self) -> Option<StackFrame> {
-        self.frames.pop()
+        let popped_frame = self.frames.pop();
+        if let Some(obj_ref) = popped_frame.as_ref().and_then(StackFrame::held_monitor) {
+            if !monitor::exit_if_owned(obj_ref) {
+                trace!(
+                    "the frame of {} gave up the monitor of {obj_ref} before its exit",
+                    popped_frame.as_ref().map_or("?", StackFrame::method_name)
+                );
+            }
+        }
+        popped_frame
     }
 }
 
@@ -142,6 +171,8 @@ impl StackFrame {
             pc: 0,
             bci: 0,
             ex_pc: None,
+            held_monitor: None,
+            entered_monitors: Vec::new(),
             locals: vec![Slot::Value(0); locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
@@ -187,6 +218,8 @@ impl StackFrame {
             pc: 0,
             bci: 0,
             ex_pc: None,
+            held_monitor: None,
+            entered_monitors: Vec::new(),
             locals: args.into_boxed_slice(),
             operand_stack: Stack::with_capacity(0),
             bytecode_ref: Arc::new(Vec::new()),
@@ -294,6 +327,38 @@ impl StackFrame {
     /// Resets the exception program counter (ex_pc) to None.
     pub fn reset_ex_pc(&mut self) {
         self.ex_pc = None;
+    }
+
+    /// Records that this frame's `synchronized` method holds the monitor of `obj_ref`, for
+    /// [`StackFrames`] to release when the frame is popped. See the `held_monitor` field.
+    pub fn hold_monitor(&mut self, obj_ref: i32) {
+        self.held_monitor = Some(obj_ref);
+    }
+
+    /// The object whose monitor this frame's `synchronized` method holds, if any.
+    pub fn held_monitor(&self) -> Option<i32> {
+        self.held_monitor
+    }
+
+    /// Records that a `monitorenter` of this frame acquired `obj_ref`. See `entered_monitors`.
+    pub fn note_monitor_entered(&mut self, obj_ref: i32) {
+        self.entered_monitors.push(obj_ref);
+    }
+
+    /// Forgets the most recent `monitorenter` of `obj_ref` by this frame, for its `monitorexit`,
+    /// and tells whether there was one to forget.
+    pub fn forget_monitor_entered(&mut self, obj_ref: i32) -> bool {
+        match self
+            .entered_monitors
+            .iter()
+            .rposition(|&entered| entered == obj_ref)
+        {
+            Some(position) => {
+                self.entered_monitors.remove(position);
+                true
+            }
+            None => false,
+        }
     }
 
     pub fn clear_stack(&mut self) {
@@ -546,5 +611,94 @@ mod tests {
         frame.set_local(0, f64::MAX);
 
         assert_eq!(frame.ref_slots().count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod held_monitor_tests {
+    use super::*;
+    use crate::vm::jni::java_thread::JavaThread;
+
+    const LOCKED_OBJECT: i32 = 4242;
+
+    fn frames_holding_the_monitor() -> StackFrames {
+        let mut frame = StackFrame::for_test(0, 1);
+        monitor::enter(LOCKED_OBJECT);
+        frame.hold_monitor(LOCKED_OBJECT);
+        StackFrames::new(vec![StackFrame::for_test(0, 1), frame])
+    }
+
+    #[test]
+    fn should_release_the_monitor_on_return() {
+        let mut stack_frames = frames_holding_the_monitor();
+        assert!(monitor::holds_lock(LOCKED_OBJECT));
+        stack_frames.exit_frame();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    #[test]
+    fn should_release_the_monitor_when_an_exception_unwinds_the_frame() {
+        let mut stack_frames = frames_holding_the_monitor();
+        assert!(monitor::holds_lock(LOCKED_OBJECT));
+        stack_frames.propagate_exception();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    /// A segment discarded on an error, with the synchronized frame buried under another one.
+    #[test]
+    fn should_release_every_monitor_of_a_discarded_segment() {
+        let mut stack_frames = frames_holding_the_monitor();
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        stack_frames.release_held_monitors();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+        assert!(stack_frames.is_empty());
+    }
+
+    #[test]
+    fn should_leave_other_frames_monitors_alone() {
+        let mut stack_frames = frames_holding_the_monitor();
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        stack_frames.exit_frame();
+        assert!(monitor::holds_lock(LOCKED_OBJECT));
+        stack_frames.exit_frame();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    /// The method body gave its monitor up before returning: nothing to release, nothing raised,
+    /// and no exception left pending to surface somewhere unrelated.
+    #[test]
+    fn should_tolerate_a_monitor_the_method_gave_up_itself() {
+        let mut stack_frames = frames_holding_the_monitor();
+        monitor::exit(LOCKED_OBJECT).unwrap();
+        stack_frames.exit_frame();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+        assert_eq!(JavaThread::take_pending_exception(), None);
+    }
+}
+
+#[cfg(test)]
+mod entered_monitor_tests {
+    use super::*;
+
+    #[test]
+    fn should_only_forget_what_was_entered() {
+        let mut frame = StackFrame::for_test(0, 1);
+        assert!(!frame.forget_monitor_entered(7));
+        frame.note_monitor_entered(7);
+        assert!(frame.forget_monitor_entered(7));
+        assert!(!frame.forget_monitor_entered(7));
+    }
+
+    /// Nested blocks on one object enter it twice and must be able to exit it twice.
+    #[test]
+    fn should_count_repeated_entries() {
+        let mut frame = StackFrame::for_test(0, 1);
+        frame.note_monitor_entered(7);
+        frame.note_monitor_entered(8);
+        frame.note_monitor_entered(7);
+        assert!(frame.forget_monitor_entered(7));
+        assert!(frame.forget_monitor_entered(7));
+        assert!(!frame.forget_monitor_entered(7));
+        assert!(frame.forget_monitor_entered(8));
     }
 }

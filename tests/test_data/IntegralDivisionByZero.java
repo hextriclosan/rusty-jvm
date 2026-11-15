@@ -22,6 +22,7 @@ public class IntegralDivisionByZero {
         attempt("long %", () -> 7L % zero());
         attempt("int / in callee", () -> divide(7, zero()));
         attempt("int / after a caught callee exception", () -> divideAfterCaughtCall(zero()));
+        attempt("int / after a native call", () -> divideAfterNativeCall(zero()));
 
         System.out.println("int MIN_VALUE / -1 = " + (Integer.MIN_VALUE / minusOne()));
         System.out.println("int MIN_VALUE % -1 = " + (Integer.MIN_VALUE % minusOne()));
@@ -66,6 +67,25 @@ public class IntegralDivisionByZero {
 
     private interface Division {
         Object compute();
+    }
+
+    // A native call that returns normally, then a division by zero with no further call in
+    // between: the frame must locate the exception at the division, not at the native call site
+    // the first try block covers.
+    private static int divideAfterNativeCall(int divisor) {
+        int outcome = 0;
+        try {
+            System.nanoTime(); // a native method
+            outcome = 1;
+        } catch (IllegalStateException e) {
+            outcome = -1;
+        }
+        try {
+            outcome += 10 / divisor;
+        } catch (ArithmeticException e) {
+            outcome += 100;
+        }
+        return outcome;
     }
 
     private static void attempt(String label, Division division) {

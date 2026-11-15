@@ -4,8 +4,10 @@ use crate::vm::execution_engine::common::{last_frame_mut, push_typed};
 use crate::vm::helper::{arg_slots, polymorphic_arg_slots};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
+use crate::vm::method_area::loaded_classes::CLASSES;
+use crate::vm::monitor;
 use crate::vm::stack::slot::Slot;
-use crate::vm::stack::stack_frame::StackFrames;
+use crate::vm::stack::stack_frame::{StackFrame, StackFrames};
 use crate::vm::system_native::dispatcher::invoke::invoke as invoke_native;
 use crate::vm::system_native::dispatcher::polymorphic::invoke_polymorphic;
 use jdescriptor::MethodDescriptor;
@@ -95,6 +97,7 @@ pub(crate) fn invoke(
                 ))
             })?;
             stack_frames.new_frame(java_method.new_native_stack_frame(args));
+            enter_method_monitor(last_frame_mut(stack_frames)?, &java_method)?;
             let result = invoke_native(&full_native_signature, method_args, is_static);
             // Plain pop (no ex_pc reset) leaves the caller frame exactly as the native call found
             // it, so pending-exception dispatch below is unaffected by the synthetic frame.
@@ -170,6 +173,32 @@ pub(crate) fn invoke(
         }
 
         stack_frames.new_frame(next_frame);
+        enter_method_monitor(last_frame_mut(stack_frames)?, &java_method)?;
     }
+    Ok(())
+}
+
+/// Enters the monitor a `synchronized` method holds for as long as its frame, `frame`, is on the
+/// stack (JVMS §2.11.10): the receiver's for an instance method, the declaring class's mirror for
+/// a static one. The frame records it and releases it when it is popped, on return or on an
+/// exception unwinding through the method. Any other method needs nothing.
+///
+/// Entering may block this OS thread until the monitor is free, so it comes last, once the
+/// arguments are in the frame's locals and the frame is, where there is one, on the stack: a
+/// stack trace taken meanwhile then shows the blocked method, as in HotSpot.
+pub(crate) fn enter_method_monitor(
+    frame: &mut StackFrame,
+    java_method: &JavaMethod,
+) -> Result<()> {
+    if !java_method.is_synchronized() {
+        return Ok(());
+    }
+    let obj_ref = if java_method.is_static() {
+        CLASSES.get(java_method.class_name())?.mirror_clazz_ref()?
+    } else {
+        frame.get_local_raw(0)
+    };
+    frame.hold_monitor(obj_ref);
+    monitor::enter(obj_ref);
     Ok(())
 }

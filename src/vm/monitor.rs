@@ -111,6 +111,25 @@ pub(crate) fn enter(obj_ref: i32) {
     }
 }
 
+/// The implicit `monitorexit` of a `synchronized` method's frame: releases one level of the
+/// current thread's ownership if it holds the monitor, and reports whether it did. Not holding it
+/// means the method body gave the monitor up itself, through JNI `MonitorExit` say; HotSpot's
+/// method exit then has nothing to release and raises nothing, and neither does this one.
+pub(crate) fn exit_if_owned(obj_ref: i32) -> bool {
+    let m = monitor_for(obj_ref);
+    let tid = std::thread::current().id();
+    let mut s = m.state.lock();
+    if s.owner != Some(tid) {
+        return false;
+    }
+    s.count -= 1;
+    if s.count == 0 {
+        s.owner = None;
+        m.cv.notify_all();
+    }
+    true
+}
+
 /// `monitorexit`: release one level of the current thread's ownership. A mismatch (not the owner)
 /// is a broken-bytecode situation; we surface it as `IllegalMonitorStateException` like the spec.
 pub(crate) fn exit(obj_ref: i32) -> Result<()> {

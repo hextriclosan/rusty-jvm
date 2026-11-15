@@ -24,6 +24,17 @@ pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()
     )
 }
 
+/// Throws an `IllegalMonitorStateException` without a message, as `monitorexit` raises for a
+/// monitor the frame never entered (JVMS §6.5); HotSpot's carries no message either.
+pub fn throw_illegal_monitor_state_exception(stack_frames: &mut StackFrames) -> Result<()> {
+    construct_exception_and_throw(
+        "java/lang/IllegalMonitorStateException",
+        "<init>:()V",
+        &[],
+        stack_frames,
+    )
+}
+
 /// Throws an `ArithmeticException` carrying `message`, as `idiv`, `ldiv`, `irem` and `lrem` raise
 /// for a zero divisor (JVMS §6.5).
 pub fn throw_arithmetic_exception(message: &str, stack_frames: &mut StackFrames) -> Result<()> {
