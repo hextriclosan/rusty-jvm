@@ -52,8 +52,12 @@ impl StaticInit {
                     let klass = CLASSES.get(parent_name)?;
                     if let Err(error) = Self::initialization_impl(&klass) {
                         // JVMS §5.5, step 7: the superclass's failure is this class's failure,
-                        // with the very same exception
+                        // with the very same exception, and that is what this class's later
+                        // uses are told it died of
                         guard.set_inner_state(InnerState::Erroneous);
+                        if let Some(throwable_ref) = error.throwable_ref() {
+                            guard.set_failure(Self::describe_failure(throwable_ref));
+                        }
                         return Err(error);
                     }
                 }
@@ -74,7 +78,7 @@ impl StaticInit {
                     if let Err(error) = outcome {
                         guard.set_inner_state(InnerState::Erroneous);
                         if let Some(throwable_ref) = error.throwable_ref() {
-                            guard.set_failure(Self::describe_failure(throwable_ref)?);
+                            guard.set_failure(Self::describe_failure(throwable_ref));
                         }
                         return Err(Self::initialization_failure(java_class, error)?);
                     }
@@ -117,21 +121,27 @@ impl StaticInit {
 
     /// HotSpot's record of what an initialization died of, `Exception <throwable> [in thread
     /// "<name>"]`, which becomes the message of the cause of every later `NoClassDefFoundError`.
-    fn describe_failure(throwable_ref: i32) -> Result<String> {
-        let description_ref =
-            Self::invoke_virtual(throwable_ref, "toString:()Ljava/lang/String;", &[])?;
-        let thread_name = match JavaThread::current_thread() {
-            Some(thread_ref) => {
-                let name_ref =
-                    Self::invoke_virtual(thread_ref, "getName:()Ljava/lang/String;", &[])?;
-                get_utf8_string_by_ref(name_ref)?
-            }
-            None => "main".to_string(),
-        };
-        Ok(format!(
-            "Exception {} [in thread \"{thread_name}\"]",
-            get_utf8_string_by_ref(description_ref)?
-        ))
+    ///
+    /// Best effort, as nothing about describing the failure may replace the failure itself: the
+    /// throwable's `toString` runs Java and may throw, in which case the throwable's class name
+    /// stands in for it, as in HotSpot.
+    fn describe_failure(throwable_ref: i32) -> String {
+        let description =
+            Self::invoke_virtual(throwable_ref, "toString:()Ljava/lang/String;", &[])
+                .and_then(get_utf8_string_by_ref)
+                .or_else(|_| {
+                    HEAP.get_instance_name(throwable_ref)
+                        .map(|name| name.replace('/', "."))
+                })
+                .unwrap_or_else(|_| "?".to_string());
+        let thread_name = JavaThread::current_thread()
+            .and_then(|thread_ref| {
+                Self::invoke_virtual(thread_ref, "getName:()Ljava/lang/String;", &[])
+                    .and_then(get_utf8_string_by_ref)
+                    .ok()
+            })
+            .unwrap_or_else(|| "main".to_string());
+        format!("Exception {description} [in thread \"{thread_name}\"]")
     }
 
     /// The `NoClassDefFoundError` for a class that failed to initialize before, worded and caused

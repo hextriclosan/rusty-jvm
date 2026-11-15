@@ -42,6 +42,25 @@ public class NestedExceptionsExample {
         }
     }
 
+    /** Its initializer's exception cannot even describe itself. */
+    static class Undescribable extends RuntimeException {
+        @Override
+        public String toString() {
+            throw new UnsupportedOperationException("no description");
+        }
+    }
+
+    static class BrokenUndescribably {
+        static final int VALUE = fail();
+
+        static int fail() {
+            throw new Undescribable();
+        }
+
+        static void touch() {
+        }
+    }
+
     /** Reached by name, through Class.forName, which initializes it from a native. */
     static class BrokenByName {
         static final int VALUE = fail();
@@ -64,6 +83,9 @@ public class NestedExceptionsExample {
         attempt("second use", Broken::touch);
         attempt("error in initializer", BrokenWithError::touch);
         attempt("subclass of the broken class", ChildOfBroken::touch);
+        attempt("subclass of the broken class, second use", ChildOfBroken::touch);
+        attempt("undescribable failure", BrokenUndescribably::touch);
+        attempt("undescribable failure, second use", BrokenUndescribably::touch);
         attempt("Class.forName", () -> Class.forName(BrokenByName.class.getName()));
         attempt("reflected method", () -> NestedExceptionsExample.class.getDeclaredMethod("thrower").invoke(null));
         System.out.println("still running");
@@ -74,11 +96,19 @@ public class NestedExceptionsExample {
             action.run();
             System.out.println(label + ": no exception");
         } catch (Throwable t) {
-            StringBuilder line = new StringBuilder(label).append(": ").append(t);
+            StringBuilder line = new StringBuilder(label).append(": ").append(describe(t));
             for (Throwable cause = t.getCause(); cause != null; cause = cause.getCause()) {
-                line.append(" caused by ").append(cause);
+                line.append(" caused by ").append(describe(cause));
             }
             System.out.println(line);
+        }
+    }
+
+    private static String describe(Throwable t) {
+        try {
+            return t.toString();
+        } catch (RuntimeException e) {
+            return t.getClass().getName() + " (whose toString threw " + e.getClass().getName() + ")";
         }
     }
 }
