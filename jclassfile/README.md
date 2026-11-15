@@ -58,7 +58,7 @@ The following sections of the Java Virtual Machine Specification (JVMS, Java SE 
   - [x] The MethodParameters Attribute ([§4.7.24][jvms-4.7.24])
   - [x] The Module Attribute ([§4.7.25][jvms-4.7.25])
   - [x] The ModulePackages Attribute ([§4.7.26][jvms-4.7.26])
-  - [ ] The ModuleMainClass Attribute ([§4.7.27][jvms-4.7.27])
+  - [x] The ModuleMainClass Attribute ([§4.7.27][jvms-4.7.27])
   - [x] The NestHost Attribute ([§4.7.28][jvms-4.7.28])
   - [x] The NestMembers Attribute ([§4.7.29][jvms-4.7.29])
   - [x] The Record Attribute ([§4.7.30][jvms-4.7.30])
