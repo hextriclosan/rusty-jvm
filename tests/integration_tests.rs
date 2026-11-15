@@ -1298,6 +1298,45 @@ sub overflow: 9223372036854775807
 }
 
 #[test]
+fn should_throw_arithmetic_exception_for_integral_division_by_zero() {
+    // JVMS §6.5: `idiv`/`ldiv`/`irem`/`lrem` throw for a zero divisor, with HotSpot's message, and
+    // the exception unwinds like any other. The only overflowing division wraps and doesn't throw.
+    assert_success(
+        "samples.arithmetics.divbyzero.IntegralDivisionByZero",
+        r#"int /: java.lang.ArithmeticException: / by zero
+int %: java.lang.ArithmeticException: / by zero
+long /: java.lang.ArithmeticException: / by zero
+long %: java.lang.ArithmeticException: / by zero
+int / in callee: java.lang.ArithmeticException: / by zero
+int MIN_VALUE / -1 = -2147483648
+int MIN_VALUE % -1 = 0
+long MIN_VALUE / -1 = -9223372036854775808
+long MIN_VALUE % -1 = 0
+"#,
+    );
+}
+
+#[test]
+fn should_report_uncaught_integral_division_by_zero() {
+    // The trace must point at the dividing instruction, so the exception has to be raised before
+    // the VM moves past it.
+    utils::assert_with_all_args(
+        &[],
+        "samples.arithmetics.divbyzero.IntegralDivisionByZero",
+        &["uncaught"],
+        "",
+        r#"Exception in thread "main" java.lang.ArithmeticException: / by zero
+	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:41)
+	at samples.arithmetics.divbyzero.IntegralDivisionByZero.main(IntegralDivisionByZero.java:15)
+
+"#,
+        utils::ExecutionResult::Failure,
+        1,
+        HashMap::default(),
+    );
+}
+
+#[test]
 fn should_print_to_stdout() {
     assert_success("samples.system.outexample.SystemOutExample", "42\n");
 }
