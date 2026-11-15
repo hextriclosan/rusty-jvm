@@ -3115,9 +3115,10 @@ fn should_propagate_exceptions_out_of_vm_initiated_calls() {
     // target, may throw; the exception reaches the code that caused the call, catchable there:
     // wrapped in ExceptionInInitializerError unless it is an Error, with the class left erroneous
     // so that every later use fails with HotSpot's NoClassDefFoundError and its cause, which a
-    // subclass of the broken class records as well, and which falls back to the exception's class
-    // name when its toString throws; through Class.forName, which initializes from a native; and
-    // as InvocationTargetException from Method.invoke. Output matches the reference JVM verbatim.
+    // subclass of the broken class records as well, and which renders the exception from its class
+    // name and message without calling its toString, overridden to throw or to use the class from
+    // another thread; through Class.forName, which initializes from a native; and as
+    // InvocationTargetException from Method.invoke. Output matches the reference JVM verbatim.
     assert_success(
         "samples.javacore.nestedexceptions.NestedExceptionsExample",
         r#"first use: java.lang.ExceptionInInitializerError caused by java.lang.IllegalStateException: broken <clinit>
@@ -3127,6 +3128,8 @@ subclass of the broken class: java.lang.NoClassDefFoundError: Could not initiali
 subclass of the broken class, second use: java.lang.NoClassDefFoundError: Could not initialize class samples.javacore.nestedexceptions.NestedExceptionsExample$ChildOfBroken caused by java.lang.ExceptionInInitializerError: Exception java.lang.NoClassDefFoundError: Could not initialize class samples.javacore.nestedexceptions.NestedExceptionsExample$Broken [in thread "main"]
 undescribable failure: java.lang.ExceptionInInitializerError caused by samples.javacore.nestedexceptions.NestedExceptionsExample$Undescribable (whose toString threw java.lang.UnsupportedOperationException)
 undescribable failure, second use: java.lang.NoClassDefFoundError: Could not initialize class samples.javacore.nestedexceptions.NestedExceptionsExample$BrokenUndescribably caused by java.lang.ExceptionInInitializerError: Exception samples.javacore.nestedexceptions.NestedExceptionsExample$Undescribable [in thread "main"]
+prying failure: java.lang.ExceptionInInitializerError caused by prying exception, the worker saw java.lang.NoClassDefFoundError
+prying failure, second use: java.lang.NoClassDefFoundError: Could not initialize class samples.javacore.nestedexceptions.NestedExceptionsExample$BrokenPryingly caused by java.lang.ExceptionInInitializerError: Exception samples.javacore.nestedexceptions.NestedExceptionsExample$Prying [in thread "main"]
 Class.forName: java.lang.ExceptionInInitializerError caused by java.lang.IllegalArgumentException: broken <clinit> reached by name
 reflected method: java.lang.reflect.InvocationTargetException caused by java.lang.IllegalArgumentException: from a reflected method
 still running

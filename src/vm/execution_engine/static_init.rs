@@ -29,70 +29,81 @@ impl StaticInit {
     }
 
     fn initialization_impl(java_class: &JavaClass) -> Result<()> {
-        let guard = java_class.static_fields_init_state().lock();
-
-        match guard.get_inner_state() {
-            InnerState::Initialized => {
-                // already initialized doing nothing
-            }
-            InnerState::Initializing => {
-                // initialization is in progress, doing nothing, just log
-                trace!("{}: recursively initializing", java_class.this_class_name());
-            }
-            InnerState::Erroneous => {
-                // JVMS §5.5, step 5: a class whose initialization failed before fails every
-                // attempt since with a NoClassDefFoundError, caused by what it died of back then
-                let error_ref = Self::could_not_initialize(java_class, guard.failure())?;
-                return Err(Error::uncaught_exception(error_ref));
-            }
-            InnerState::NotInitialized => {
-                guard.set_inner_state(InnerState::Initializing);
-
-                if let Some(parent_name) = java_class.parent() {
-                    let klass = CLASSES.get(parent_name)?;
-                    if let Err(error) = Self::initialization_impl(&klass) {
-                        // JVMS §5.5, step 7: the superclass's failure is this class's failure,
-                        // with the very same exception, and that is what this class's later
-                        // uses are told it died of
-                        guard.set_inner_state(InnerState::Erroneous);
-                        if let Some(throwable_ref) = error.throwable_ref() {
-                            guard.set_failure(Self::describe_failure(throwable_ref));
+        // The lock is held while the state is read and changed and while the superclass and
+        // `<clinit>` run, so that other threads wait for the outcome (JVMS §5.5, step 2). It is not
+        // held while a failure is described or its errors are built: that runs Java code of the
+        // failed initializer's own exception, which may well use the class from another thread,
+        // and that thread must then find the class erroneous rather than wait for this one.
+        let failure = {
+            let guard = java_class.static_fields_init_state().lock();
+            match guard.get_inner_state() {
+                InnerState::Initialized => return Ok(()), // already initialized, nothing to do
+                InnerState::Initializing => {
+                    // initialization is in progress, doing nothing, just log
+                    trace!("{}: recursively initializing", java_class.this_class_name());
+                    return Ok(());
+                }
+                InnerState::Erroneous => {
+                    // JVMS §5.5, step 5: a class whose initialization failed before fails every
+                    // attempt since with a NoClassDefFoundError, caused by what it died of then
+                    let failure = guard.failure();
+                    drop(guard);
+                    let error_ref = Self::could_not_initialize(java_class, failure)?;
+                    return Err(Error::uncaught_exception(error_ref));
+                }
+                InnerState::NotInitialized => {
+                    guard.set_inner_state(InnerState::Initializing);
+                    match Self::initialize_superclass_and_run_initializer(java_class) {
+                        Ok(()) => {
+                            guard.set_inner_state(InnerState::Initialized);
+                            return Ok(());
                         }
-                        return Err(error);
+                        Err(error) => {
+                            guard.set_inner_state(InnerState::Erroneous);
+                            error
+                        }
                     }
                 }
-
-                let curr_counter = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                trace!(
-                    ">>> {curr_counter} initializing {}",
-                    java_class.this_class_name()
-                );
-
-                if let Some(static_init_method) =
-                    java_class.try_get_method(Self::STATIC_INIT_METHOD)
-                {
-                    let outcome = Engine::execute(
-                        static_init_method.new_stack_frame()?,
-                        &format!("static initialization {}", java_class.this_class_name()),
-                    );
-                    if let Err(error) = outcome {
-                        guard.set_inner_state(InnerState::Erroneous);
-                        if let Some(throwable_ref) = error.throwable_ref() {
-                            guard.set_failure(Self::describe_failure(throwable_ref));
-                        }
-                        return Err(Self::initialization_failure(java_class, error)?);
-                    }
-                }
-
-                guard.set_inner_state(InnerState::Initialized);
-
-                trace!(
-                    "<<< {curr_counter} initialised {}",
-                    java_class.this_class_name()
-                );
             }
+        };
+
+        // The class is erroneous and the lock released: what it died of is what its later uses
+        // are told, whether its own initializer threw or its superclass's did (JVMS §5.5, step 7)
+        if let Some(throwable_ref) = failure.throwable_ref() {
+            let description = Self::describe_failure(throwable_ref);
+            java_class
+                .static_fields_init_state()
+                .lock()
+                .set_failure(description);
+        }
+        Err(Self::initialization_failure(java_class, failure)?)
+    }
+
+    /// JVMS §5.5, steps 7 and 9: the superclass first, whose failure is this class's failure with
+    /// the very same exception, then this class's own `<clinit>`.
+    fn initialize_superclass_and_run_initializer(java_class: &JavaClass) -> Result<()> {
+        if let Some(parent_name) = java_class.parent() {
+            let klass = CLASSES.get(parent_name)?;
+            Self::initialization_impl(&klass)?;
         }
 
+        let curr_counter = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        trace!(
+            ">>> {curr_counter} initializing {}",
+            java_class.this_class_name()
+        );
+
+        if let Some(static_init_method) = java_class.try_get_method(Self::STATIC_INIT_METHOD) {
+            Engine::execute(
+                static_init_method.new_stack_frame()?,
+                &format!("static initialization {}", java_class.this_class_name()),
+            )?;
+        }
+
+        trace!(
+            "<<< {curr_counter} initialised {}",
+            java_class.this_class_name()
+        );
         Ok(())
     }
 
@@ -122,26 +133,37 @@ impl StaticInit {
     /// HotSpot's record of what an initialization died of, `Exception <throwable> [in thread
     /// "<name>"]`, which becomes the message of the cause of every later `NoClassDefFoundError`.
     ///
-    /// Best effort, as nothing about describing the failure may replace the failure itself: the
-    /// throwable's `toString` runs Java and may throw, in which case the throwable's class name
-    /// stands in for it, as in HotSpot.
+    /// The throwable is rendered the way `Throwable.toString` renders it by default, from its
+    /// class name and its detail message, without calling `toString` itself: that may be
+    /// overridden, and HotSpot runs nothing of the exception's own here either. Best effort
+    /// throughout, as nothing about describing the failure may replace the failure itself.
     fn describe_failure(throwable_ref: i32) -> String {
-        let description =
-            Self::invoke_virtual(throwable_ref, "toString:()Ljava/lang/String;", &[])
-                .and_then(get_utf8_string_by_ref)
-                .or_else(|_| {
-                    HEAP.get_instance_name(throwable_ref)
-                        .map(|name| name.replace('/', "."))
-                })
-                .unwrap_or_else(|_| "?".to_string());
+        let class_name = HEAP
+            .get_instance_name(throwable_ref)
+            .unwrap_or_else(|_| "?".to_string());
+        let description = match Self::string_field(throwable_ref, &class_name, "detailMessage") {
+            Some(message) => format!("{}: {message}", class_name.replace('/', ".")),
+            None => class_name.replace('/', "."),
+        };
         let thread_name = JavaThread::current_thread()
             .and_then(|thread_ref| {
-                Self::invoke_virtual(thread_ref, "getName:()Ljava/lang/String;", &[])
-                    .and_then(get_utf8_string_by_ref)
-                    .ok()
+                let thread_class = HEAP.get_instance_name(thread_ref).ok()?;
+                Self::string_field(thread_ref, &thread_class, "name")
             })
             .unwrap_or_else(|| "main".to_string());
         format!("Exception {description} [in thread \"{thread_name}\"]")
+    }
+
+    /// The value of a `String` field of `object_ref`, or `None` for `null` or any failure.
+    fn string_field(object_ref: i32, class_name: &str, field_name: &str) -> Option<String> {
+        let string_ref = *HEAP
+            .get_object_field_value(object_ref, class_name, field_name)
+            .ok()?
+            .first()?;
+        if string_ref == 0 {
+            return None;
+        }
+        get_utf8_string_by_ref(string_ref).ok()
     }
 
     /// The `NoClassDefFoundError` for a class that failed to initialize before, worded and caused

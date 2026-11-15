@@ -61,6 +61,41 @@ public class NestedExceptionsExample {
         }
     }
 
+    /** Its initializer's exception describes itself by asking another thread, which uses the class. */
+    static class Prying extends RuntimeException {
+        @Override
+        public String toString() {
+            String[] seen = {"nothing, the worker got stuck"};
+            Thread worker = new Thread(() -> {
+                try {
+                    BrokenPryingly.touch();
+                    seen[0] = "no exception";
+                } catch (Throwable t) {
+                    seen[0] = t.getClass().getName();
+                }
+            });
+            worker.setDaemon(true); // a stuck worker must not keep the VM alive either
+            worker.start();
+            try {
+                worker.join(5_000);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+            return "prying exception, the worker saw " + seen[0];
+        }
+    }
+
+    static class BrokenPryingly {
+        static final int VALUE = fail();
+
+        static int fail() {
+            throw new Prying();
+        }
+
+        static void touch() {
+        }
+    }
+
     /** Reached by name, through Class.forName, which initializes it from a native. */
     static class BrokenByName {
         static final int VALUE = fail();
@@ -86,6 +121,8 @@ public class NestedExceptionsExample {
         attempt("subclass of the broken class, second use", ChildOfBroken::touch);
         attempt("undescribable failure", BrokenUndescribably::touch);
         attempt("undescribable failure, second use", BrokenUndescribably::touch);
+        attempt("prying failure", BrokenPryingly::touch);
+        attempt("prying failure, second use", BrokenPryingly::touch);
         attempt("Class.forName", () -> Class.forName(BrokenByName.class.getName()));
         attempt("reflected method", () -> NestedExceptionsExample.class.getDeclaredMethod("thrower").invoke(null));
         System.out.println("still running");
