@@ -49,12 +49,18 @@ pub fn throw_exception_with_ref(
 /// Positions a frame at its exception handler: pc at the handler, operand stack discarded and
 /// replaced by the throwable alone, per JVMS §2.10.
 ///
+/// The frame's saved call-site pc is forgotten as well. It located this exception when it came out
+/// of a callee, but the handler runs the frame's own code, so an exception that code raises before
+/// the next call (a division by zero, an array index out of bounds, ...) must be located at its own
+/// pc, not at the call whose exception has already been handled.
+///
 /// The throwable is pushed as a reference. It has to be: `clear_stack` has just discarded
 /// everything else, so for as long as the handler runs this slot is the frame's only operand-stack
 /// root, and an untagged one would hide the in-flight exception — and everything it references,
 /// including its backtrace — from a root scan.
 fn enter_handler(stack_frame: &mut StackFrame, handler_pc: i16, throwable_ref: i32) -> Result<()> {
     stack_frame.set_pc(handler_pc);
+    stack_frame.reset_ex_pc();
     stack_frame.clear_stack(); // according to JVM spec
     stack_frame.push(Slot::Ref(throwable_ref))
 }
@@ -117,5 +123,16 @@ mod tests {
     #[test]
     fn should_position_the_frame_at_the_handler() {
         assert_eq!(frame_at_handler().pc(), HANDLER_PC as usize);
+    }
+
+    /// A call site saved for the exception this handler catches must not locate the next
+    /// exception the handler's own code raises.
+    #[test]
+    fn should_forget_the_caught_call_site() {
+        let mut stack_frame = StackFrame::for_test(0, 4);
+        stack_frame.set_pc(3);
+        stack_frame.store_ex_pc();
+        enter_handler(&mut stack_frame, HANDLER_PC, THROWABLE).unwrap();
+        assert_eq!(stack_frame.ex_pc(), HANDLER_PC as usize);
     }
 }

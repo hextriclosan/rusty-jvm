@@ -21,6 +21,7 @@ public class IntegralDivisionByZero {
         attempt("long /", () -> 7L / zero());
         attempt("long %", () -> 7L % zero());
         attempt("int / in callee", () -> divide(7, zero()));
+        attempt("int / after a caught callee exception", () -> divideAfterCaughtCall(zero()));
 
         System.out.println("int MIN_VALUE / -1 = " + (Integer.MIN_VALUE / minusOne()));
         System.out.println("int MIN_VALUE % -1 = " + (Integer.MIN_VALUE % minusOne()));
@@ -39,6 +40,28 @@ public class IntegralDivisionByZero {
 
     private static int divide(int dividend, int divisor) {
         return dividend / divisor;
+    }
+
+    private static void throwing() {
+        throw new IllegalStateException("callee");
+    }
+
+    // A caught callee exception, then a division by zero with no call in between (not even a string
+    // concatenation): the frame must locate the second exception at the division, not at the call
+    // whose exception it has already handled.
+    private static int divideAfterCaughtCall(int divisor) {
+        int outcome = 0;
+        try {
+            throwing();
+        } catch (IllegalStateException e) {
+            outcome = 1;
+        }
+        try {
+            outcome += 10 / divisor;
+        } catch (ArithmeticException e) {
+            outcome += 100;
+        }
+        return outcome;
     }
 
     private interface Division {

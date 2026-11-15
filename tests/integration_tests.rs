@@ -1308,6 +1308,7 @@ int %: java.lang.ArithmeticException: / by zero
 long /: java.lang.ArithmeticException: / by zero
 long %: java.lang.ArithmeticException: / by zero
 int / in callee: java.lang.ArithmeticException: / by zero
+int / after a caught callee exception = 101
 int MIN_VALUE / -1 = -2147483648
 int MIN_VALUE % -1 = 0
 long MIN_VALUE / -1 = -9223372036854775808
@@ -1326,7 +1327,7 @@ fn should_report_uncaught_integral_division_by_zero() {
         &["uncaught"],
         "",
         r#"Exception in thread "main" java.lang.ArithmeticException: / by zero
-	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:41)
+	at samples.arithmetics.divbyzero.IntegralDivisionByZero.divide(IntegralDivisionByZero.java:42)
 	at samples.arithmetics.divbyzero.IntegralDivisionByZero.main(IntegralDivisionByZero.java:15)
 
 "#,
