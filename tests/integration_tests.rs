@@ -3138,6 +3138,21 @@ still running
 }
 
 #[test]
+fn should_throw_stack_overflow_error_for_runaway_recursion() {
+    // JVMS §2.5.2: a thread that runs out of stack gets a StackOverflowError, here past a fixed
+    // number of frames since they live on the heap. Catchable, with the stack usable again
+    // afterwards; a thread that lets it escape dies of it. Output matches the reference JVM.
+    assert_success(
+        "samples.javacore.stackoverflow.StackOverflowExample",
+        r#"caught java.lang.StackOverflowError, deeper than 1000: true, message: null
+fibonacci after the overflow: 6765
+worker died of java.lang.StackOverflowError, deeper than 1000: true
+still running
+"#,
+    );
+}
+
+#[test]
 fn should_support_file_dispatcher_for_various_os() {
     let (file_path, _guard) = tmp_file("file_dispatcher_example.txt");
     assert_file_with_args(

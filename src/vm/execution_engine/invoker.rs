@@ -1,6 +1,8 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
+use crate::vm::exception::helpers::throw_stack_overflow_error;
 use crate::vm::execution_engine::common::{last_frame_mut, push_typed};
+use crate::vm::execution_engine::stack_depth;
 use crate::vm::helper::{arg_slots, polymorphic_arg_slots};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
@@ -41,6 +43,13 @@ pub(crate) fn invoke(
     java_method: Arc<JavaMethod>,
     class_name: &str,
 ) -> Result<()> {
+    if let Some(_raising) = stack_depth::exhausted() {
+        // No stack left for the callee's frame (JVMS §2.5.2): the error goes where that frame
+        // would have gone, the call site.
+        throw_stack_overflow_error(stack_frames)?;
+        return Ok(());
+    }
+
     if java_method.is_native() {
         let is_polymorphic = java_method.is_polymorphic_signature();
         let is_static = java_method.is_static();

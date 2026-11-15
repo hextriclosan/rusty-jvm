@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::monitor;
 use crate::vm::stack::slot::Slot;
@@ -104,9 +105,10 @@ impl StackFrames {
         self.frames.last_mut()
     }
 
-    /// Pushes a new stack frame onto the stack frames.
+    /// Pushes a new stack frame onto the stack frames, counting it on the thread's Java stack.
     pub fn new_frame(&mut self, frame: StackFrame) {
         self.frames.push(frame);
+        JavaThread::frame_pushed();
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
@@ -143,6 +145,9 @@ impl StackFrames {
     /// up itself (through JNI `MonitorExit`, say) is left alone, as HotSpot leaves it.
     fn pop(&mut self) -> Option<StackFrame> {
         let popped_frame = self.frames.pop();
+        if popped_frame.is_some() {
+            JavaThread::frame_popped();
+        }
         if let Some(obj_ref) = popped_frame.as_ref().and_then(StackFrame::held_monitor) {
             if !monitor::exit_if_owned(obj_ref) {
                 trace!(
@@ -673,6 +678,30 @@ mod held_monitor_tests {
         stack_frames.exit_frame();
         assert!(!monitor::holds_lock(LOCKED_OBJECT));
         assert_eq!(JavaThread::take_pending_exception(), None);
+    }
+}
+
+#[cfg(test)]
+mod frame_depth_tests {
+    use super::*;
+
+    /// Every way of pushing and popping keeps the thread's frame count.
+    #[test]
+    fn should_count_the_thread_frames() {
+        let before = JavaThread::frame_depth();
+        let mut stack_frames = StackFrames::new(vec![]);
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        stack_frames.new_frame(StackFrame::for_test(0, 1));
+        assert_eq!(JavaThread::frame_depth(), before + 3);
+        stack_frames.exit_frame();
+        assert_eq!(JavaThread::frame_depth(), before + 2);
+        stack_frames.propagate_exception();
+        assert_eq!(JavaThread::frame_depth(), before + 1);
+        stack_frames.release_held_monitors();
+        assert_eq!(JavaThread::frame_depth(), before);
+        stack_frames.exit_frame(); // nothing left to pop
+        assert_eq!(JavaThread::frame_depth(), before);
     }
 }
 
