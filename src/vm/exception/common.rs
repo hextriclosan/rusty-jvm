@@ -81,7 +81,7 @@ fn unwind_stack(throwable_ref: i32, stack_frames: &mut StackFrames) -> Result<i1
                 return Ok(exception_handler as i16);
             }
             None => {
-                stack_frames.propagate_exception()?;
+                stack_frames.propagate_exception();
             }
         }
     }

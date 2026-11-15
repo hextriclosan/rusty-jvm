@@ -101,7 +101,7 @@ pub(crate) fn invoke(
             let result = invoke_native(&full_native_signature, method_args, is_static);
             // Plain pop (no ex_pc reset) leaves the caller frame exactly as the native call found
             // it, so pending-exception dispatch below is unaffected by the synthetic frame.
-            stack_frames.propagate_exception()?;
+            stack_frames.propagate_exception();
             result
         };
         let result = result?;

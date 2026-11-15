@@ -5205,6 +5205,8 @@ held after synchronized native=false
 held in static synchronized native=true
 held after static synchronized native=false
 released after native threw=true
+exit of own monitor inside synchronized method=0
+held after exiting own monitor=false
 "#,
         r#"WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::loadLibrary has been called by samples.javacore.loadlibrary.monitor.JniMonitorDemo in an unnamed module

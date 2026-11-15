@@ -73,7 +73,7 @@ pub(crate) fn process(code: u8, stack_frames: &mut StackFrames) -> Result<Vec<i3
         ARETURN => last_value = perform_return::<Slot>(stack_frames, "ARETURN")?,
         RETURN => {
             last_value = vec![];
-            stack_frames.exit_frame()?;
+            stack_frames.exit_frame();
             trace!("RETURN");
         }
         _ => {
@@ -94,7 +94,7 @@ fn perform_return<T: StackValue + Copy + Display>(
     let stack_frame = last_frame_mut(stack_frames)?;
     let result: T = stack_frame.pop();
 
-    stack_frames.exit_frame()?;
+    stack_frames.exit_frame();
     // if we have next frame - populate return value to it
     if let Some(next_frame) = stack_frames.last_mut() {
         next_frame.push(result)?;

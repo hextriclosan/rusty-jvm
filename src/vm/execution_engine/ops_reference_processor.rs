@@ -8,6 +8,7 @@ use crate::vm::execution_engine::opcode::*;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::helper::{argument_length, get_length};
+use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::method_area::loaded_classes::CLASSES;
 use crate::vm::method_area::lookup;
@@ -506,8 +507,15 @@ pub(crate) fn process(
                 throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
-            stack_frame.incr_pc();
             monitor::exit(objectref)?;
+            // Not the owner: `exit` left an `IllegalMonitorStateException` pending, as it does for
+            // JNI `MonitorExit`, where the native boundary throws it. Here that boundary may be
+            // far away, so throw it now, at this instruction.
+            if let Some(throwable_ref) = JavaThread::take_pending_exception() {
+                throw_exception_with_ref(throwable_ref, stack_frames)?;
+                return Ok(());
+            }
+            stack_frame.incr_pc();
             trace!("MONITOREXIT -> objectref={objectref}");
         }
         _ => {

@@ -12,7 +12,7 @@ use std::fmt::Display;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
-use tracing::{error, trace};
+use tracing::trace;
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -107,8 +107,8 @@ impl StackFrames {
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Resets the exception program counter (ex_pc) of the next frame if it exists since it is normal stack unwinding.
-    pub fn exit_frame(&mut self) -> Result<Option<StackFrame>> {
-        let popped_frame = self.pop()?;
+    pub fn exit_frame(&mut self) -> Option<StackFrame> {
+        let popped_frame = self.pop();
 
         // Resetting the exception program counter (ex_pc) of the next frame is an intentional
         // part of the normal stack unwinding process.
@@ -116,42 +116,38 @@ impl StackFrames {
             next_frame.reset_ex_pc()
         }
 
-        Ok(popped_frame)
+        popped_frame
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
     /// Doesn't reset the exception program counter (ex_pc) of the next frame since it is not normal stack unwinding, and it will be used for correct exception handling.
-    pub fn propagate_exception(&mut self) -> Result<Option<StackFrame>> {
+    pub fn propagate_exception(&mut self) -> Option<StackFrame> {
         self.pop()
     }
 
     /// Releases the monitors of every frame still on the stack, newest first, and empties it: for
     /// a segment that an error discards rather than unwinds. The frames are gone either way, and
     /// the monitors their `synchronized` methods held must not stay owned by a thread that will
-    /// never exit them. A monitor that cannot be released is logged rather than cut short, so the
-    /// rest are still let go.
+    /// never exit them.
     pub fn release_held_monitors(&mut self) {
-        while let Some(frame) = self.frames.pop() {
-            if let Some(obj_ref) = frame.held_monitor() {
-                if let Err(e) = monitor::exit(obj_ref) {
-                    error!(
-                        "releasing the monitor of {obj_ref} held by the discarded frame of {}: {e}",
-                        frame.method_name()
-                    );
-                }
-            }
-        }
+        while self.pop().is_some() {}
     }
 
     /// Pops the top stack frame from the stack frames and returns it, releasing the monitor its
     /// `synchronized` method held: a method gives its monitor up on every exit, a return as much as
-    /// an exception unwinding through it (JVMS §2.11.10).
-    fn pop(&mut self) -> Result<Option<StackFrame>> {
+    /// an exception unwinding through it (JVMS §2.11.10). A monitor the method body already gave
+    /// up itself (through JNI `MonitorExit`, say) is left alone, as HotSpot leaves it.
+    fn pop(&mut self) -> Option<StackFrame> {
         let popped_frame = self.frames.pop();
         if let Some(obj_ref) = popped_frame.as_ref().and_then(StackFrame::held_monitor) {
-            monitor::exit(obj_ref)?;
+            if !monitor::exit_if_owned(obj_ref) {
+                trace!(
+                    "the frame of {} gave up the monitor of {obj_ref} before its exit",
+                    popped_frame.as_ref().map_or("?", StackFrame::method_name)
+                );
+            }
         }
-        Ok(popped_frame)
+        popped_frame
     }
 }
 
@@ -594,6 +590,7 @@ mod tests {
 #[cfg(test)]
 mod held_monitor_tests {
     use super::*;
+    use crate::vm::jni::java_thread::JavaThread;
 
     const LOCKED_OBJECT: i32 = 4242;
 
@@ -608,7 +605,7 @@ mod held_monitor_tests {
     fn should_release_the_monitor_on_return() {
         let mut stack_frames = frames_holding_the_monitor();
         assert!(monitor::holds_lock(LOCKED_OBJECT));
-        stack_frames.exit_frame().unwrap();
+        stack_frames.exit_frame();
         assert!(!monitor::holds_lock(LOCKED_OBJECT));
     }
 
@@ -616,7 +613,7 @@ mod held_monitor_tests {
     fn should_release_the_monitor_when_an_exception_unwinds_the_frame() {
         let mut stack_frames = frames_holding_the_monitor();
         assert!(monitor::holds_lock(LOCKED_OBJECT));
-        stack_frames.propagate_exception().unwrap();
+        stack_frames.propagate_exception();
         assert!(!monitor::holds_lock(LOCKED_OBJECT));
     }
 
@@ -634,9 +631,20 @@ mod held_monitor_tests {
     fn should_leave_other_frames_monitors_alone() {
         let mut stack_frames = frames_holding_the_monitor();
         stack_frames.new_frame(StackFrame::for_test(0, 1));
-        stack_frames.exit_frame().unwrap();
+        stack_frames.exit_frame();
         assert!(monitor::holds_lock(LOCKED_OBJECT));
-        stack_frames.exit_frame().unwrap();
+        stack_frames.exit_frame();
         assert!(!monitor::holds_lock(LOCKED_OBJECT));
+    }
+
+    /// The method body gave its monitor up before returning: nothing to release, nothing raised,
+    /// and no exception left pending to surface somewhere unrelated.
+    #[test]
+    fn should_tolerate_a_monitor_the_method_gave_up_itself() {
+        let mut stack_frames = frames_holding_the_monitor();
+        monitor::exit(LOCKED_OBJECT).unwrap();
+        stack_frames.exit_frame();
+        assert!(!monitor::holds_lock(LOCKED_OBJECT));
+        assert_eq!(JavaThread::take_pending_exception(), None);
     }
 }

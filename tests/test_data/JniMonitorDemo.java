@@ -41,6 +41,20 @@ public class JniMonitorDemo {
         }
 
         synchronizedNatives();
+        unbalancedExit();
+    }
+
+    /// A synchronized method that releases its own monitor through JNI before returning. The
+    /// implicit exit then has nothing to release and, as in HotSpot, nothing to complain about:
+    /// no exception, and none left pending to surface somewhere unrelated later.
+    private static void unbalancedExit() {
+        JniMonitorDemo demo = new JniMonitorDemo();
+        System.out.println("exit of own monitor inside synchronized method=" + demo.exitOwnMonitor());
+        System.out.println("held after exiting own monitor=" + Thread.holdsLock(demo));
+    }
+
+    private synchronized int exitOwnMonitor() {
+        return exit(this);
     }
 
     /// A `synchronized native` method holds its monitor while the native runs, and gives it up
