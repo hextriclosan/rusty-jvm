@@ -33,6 +33,10 @@ pub(crate) struct StackFrame {
     /// on invocation, and exited by [`StackFrames`] when the frame is popped, on a return as much
     /// as on an exception unwinding through the method.
     held_monitor: Option<i32>,
+    /// The objects this frame's own `monitorenter`s acquired and its `monitorexit`s have not yet
+    /// released, oldest first and with repeats for nested blocks on one object: HotSpot's monitor
+    /// block. A `monitorexit` on anything else is JVMS §6.5's `IllegalMonitorStateException`.
+    entered_monitors: Vec<i32>,
     locals: Box<[Slot]>,
     operand_stack: Stack<Slot>,
     bytecode_ref: Arc<Vec<u8>>,
@@ -168,6 +172,7 @@ impl StackFrame {
             bci: 0,
             ex_pc: None,
             held_monitor: None,
+            entered_monitors: Vec::new(),
             locals: vec![Slot::Value(0); locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
@@ -214,6 +219,7 @@ impl StackFrame {
             bci: 0,
             ex_pc: None,
             held_monitor: None,
+            entered_monitors: Vec::new(),
             locals: args.into_boxed_slice(),
             operand_stack: Stack::with_capacity(0),
             bytecode_ref: Arc::new(Vec::new()),
@@ -332,6 +338,27 @@ impl StackFrame {
     /// The object whose monitor this frame's `synchronized` method holds, if any.
     pub fn held_monitor(&self) -> Option<i32> {
         self.held_monitor
+    }
+
+    /// Records that a `monitorenter` of this frame acquired `obj_ref`. See `entered_monitors`.
+    pub fn note_monitor_entered(&mut self, obj_ref: i32) {
+        self.entered_monitors.push(obj_ref);
+    }
+
+    /// Forgets the most recent `monitorenter` of `obj_ref` by this frame, for its `monitorexit`,
+    /// and tells whether there was one to forget.
+    pub fn forget_monitor_entered(&mut self, obj_ref: i32) -> bool {
+        match self
+            .entered_monitors
+            .iter()
+            .rposition(|&entered| entered == obj_ref)
+        {
+            Some(position) => {
+                self.entered_monitors.remove(position);
+                true
+            }
+            None => false,
+        }
     }
 
     pub fn clear_stack(&mut self) {
@@ -646,5 +673,32 @@ mod held_monitor_tests {
         stack_frames.exit_frame();
         assert!(!monitor::holds_lock(LOCKED_OBJECT));
         assert_eq!(JavaThread::take_pending_exception(), None);
+    }
+}
+
+#[cfg(test)]
+mod entered_monitor_tests {
+    use super::*;
+
+    #[test]
+    fn should_only_forget_what_was_entered() {
+        let mut frame = StackFrame::for_test(0, 1);
+        assert!(!frame.forget_monitor_entered(7));
+        frame.note_monitor_entered(7);
+        assert!(frame.forget_monitor_entered(7));
+        assert!(!frame.forget_monitor_entered(7));
+    }
+
+    /// Nested blocks on one object enter it twice and must be able to exit it twice.
+    #[test]
+    fn should_count_repeated_entries() {
+        let mut frame = StackFrame::for_test(0, 1);
+        frame.note_monitor_entered(7);
+        frame.note_monitor_entered(8);
+        frame.note_monitor_entered(7);
+        assert!(frame.forget_monitor_entered(7));
+        assert!(frame.forget_monitor_entered(7));
+        assert!(!frame.forget_monitor_entered(7));
+        assert!(frame.forget_monitor_entered(8));
     }
 }

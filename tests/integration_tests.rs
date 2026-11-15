@@ -3099,6 +3099,17 @@ fn should_handle_operand_stack_overflow() {
 }
 
 #[test]
+fn should_throw_for_monitorexit_of_a_monitor_the_frame_never_entered() {
+    // Hand-made bytecode (see `utils/classfile_generators`): `aload_0; monitorexit; return` on an
+    // object the method never entered. JVMS §6.5: `IllegalMonitorStateException`, thrown at the
+    // instruction so that the caller's handler catches it, and without a message, as HotSpot's.
+    assert_success(
+        "samples.invalidprograms.unownedmonitorexit.UnownedMonitorExitExample",
+        "java.lang.IllegalMonitorStateException\n",
+    );
+}
+
+#[test]
 fn should_support_file_dispatcher_for_various_os() {
     let (file_path, _guard) = tmp_file("file_dispatcher_example.txt");
     assert_file_with_args(

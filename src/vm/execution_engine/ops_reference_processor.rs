@@ -1,7 +1,9 @@
 use crate::vm::error::{Error, Result};
 use crate::vm::exception::class_cast::throw_class_cast_exception;
 use crate::vm::exception::common::throw_exception_with_ref;
-use crate::vm::exception::helpers::throw_null_pointer_exception;
+use crate::vm::exception::helpers::{
+    throw_illegal_monitor_state_exception, throw_null_pointer_exception,
+};
 use crate::vm::execution_engine::common::{last_frame_mut, push_typed, store_ex_pc};
 use crate::vm::execution_engine::invoker::{invoke, SignatureOrigin};
 use crate::vm::execution_engine::opcode::*;
@@ -497,6 +499,7 @@ pub(crate) fn process(
             stack_frame.incr_pc();
             // Acquire after advancing pc; enter() may block this OS thread until the monitor is free.
             monitor::enter(objectref);
+            stack_frame.note_monitor_entered(objectref);
             trace!("MONITORENTER -> objectref={objectref}");
         }
         MONITOREXIT => {
@@ -506,13 +509,19 @@ pub(crate) fn process(
                 throw_null_pointer_exception(stack_frames)?;
                 return Ok(());
             }
-            // Not the owner: the block's body gave the monitor up itself, through JNI
-            // `MonitorExit` say. JVMS §6.5 names `IllegalMonitorStateException` for that, but
-            // HotSpot lets the exit pass, and so does this VM: javac covers a synchronized block's
-            // own `monitorexit` with the catch-all handler that would run it again and rethrow,
-            // and an exception raised here would loop between the two forever.
+            if !stack_frame.forget_monitor_entered(objectref) {
+                // Never entered by this frame: JVMS §6.5's IllegalMonitorStateException, thrown at
+                // this instruction. Only hand-made bytecode gets here; javac's synchronized blocks
+                // always exit what they entered.
+                throw_illegal_monitor_state_exception(stack_frames)?;
+                return Ok(());
+            }
+            // Entered by this frame, but possibly given up since by its body, through JNI
+            // `MonitorExit` say: HotSpot lets such an exit pass, and so does this VM. An exception
+            // here would land in the catch-all handler javac wraps around a synchronized block,
+            // whose own `monitorexit` would raise it again, forever.
             if !monitor::exit_if_owned(objectref) {
-                trace!("MONITOREXIT -> objectref={objectref} is not owned by this thread; nothing to release");
+                trace!("MONITOREXIT -> objectref={objectref} is no longer owned by this thread; nothing to release");
             }
             stack_frame.incr_pc();
             trace!("MONITOREXIT -> objectref={objectref}");
