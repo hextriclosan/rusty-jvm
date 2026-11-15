@@ -58,9 +58,10 @@ pub(crate) struct JavaThread {
     ///
     /// Scopes nest and unwind in LIFO order via [`TempRootsGuard`], so this is a stack, not a set.
     temp_roots: RefCell<Vec<Slot>>,
-    /// Frames on this thread's Java stack, over all its interpreter segments, kept by the frame
-    /// stacks as they push and pop. See `execution_engine::stack_depth`.
-    frame_depth: Cell<usize>,
+    /// What the frames on this thread's Java stack take of it, over all its interpreter
+    /// segments, kept by the frame stacks as they push and pop. See
+    /// `execution_engine::thread_stack`.
+    stack_used: Cell<usize>,
     /// Whether a `StackOverflowError` is being raised on this thread: the frames that takes are
     /// let past the limit, or raising it would overflow in turn, forever.
     handling_stack_overflow: Cell<bool>,
@@ -75,7 +76,7 @@ thread_local! {
         stack_frames: RefCell::new(Vec::new()),
         safepoint: Safepoint::new(),
         temp_roots: RefCell::new(Vec::new()),
-        frame_depth: Cell::new(0),
+        stack_used: Cell::new(0),
         handling_stack_overflow: Cell::new(false),
     };
 }
@@ -161,19 +162,19 @@ impl JavaThread {
         JAVA_THREAD.with(|t| (&raw const t.env) as *mut JNIEnv)
     }
 
-    /// One more frame on the current thread's Java stack.
-    pub(crate) fn frame_pushed() {
-        JAVA_THREAD.with(|t| t.frame_depth.set(t.frame_depth.get() + 1));
+    /// A frame taking `bytes` more of the current thread's Java stack.
+    pub(crate) fn frame_pushed(bytes: usize) {
+        JAVA_THREAD.with(|t| t.stack_used.set(t.stack_used.get() + bytes));
     }
 
-    /// One frame less on the current thread's Java stack.
-    pub(crate) fn frame_popped() {
-        JAVA_THREAD.with(|t| t.frame_depth.set(t.frame_depth.get().saturating_sub(1)));
+    /// A frame giving `bytes` of the current thread's Java stack back.
+    pub(crate) fn frame_popped(bytes: usize) {
+        JAVA_THREAD.with(|t| t.stack_used.set(t.stack_used.get().saturating_sub(bytes)));
     }
 
-    /// Frames on the current thread's Java stack, over all its interpreter segments.
-    pub(crate) fn frame_depth() -> usize {
-        JAVA_THREAD.with(|t| t.frame_depth.get())
+    /// What the frames on the current thread's Java stack take of it, over all its segments.
+    pub(crate) fn stack_used() -> usize {
+        JAVA_THREAD.with(|t| t.stack_used.get())
     }
 
     /// Marks a `StackOverflowError` as being raised on the current thread, for as long as the

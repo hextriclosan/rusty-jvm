@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::execution_engine::thread_stack;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::instance_checker::InstanceChecker;
 use crate::vm::monitor;
@@ -38,6 +39,8 @@ pub(crate) struct StackFrame {
     /// released, oldest first and with repeats for nested blocks on one object: HotSpot's monitor
     /// block. A `monitorexit` on anything else is JVMS §6.5's `IllegalMonitorStateException`.
     entered_monitors: Vec<i32>,
+    /// What this frame takes of the thread's Java stack. See `execution_engine::thread_stack`.
+    stack_bytes: usize,
     locals: Box<[Slot]>,
     operand_stack: Stack<Slot>,
     bytecode_ref: Arc<Vec<u8>>,
@@ -105,10 +108,10 @@ impl StackFrames {
         self.frames.last_mut()
     }
 
-    /// Pushes a new stack frame onto the stack frames, counting it on the thread's Java stack.
+    /// Pushes a new stack frame onto the stack frames, charging it to the thread's Java stack.
     pub fn new_frame(&mut self, frame: StackFrame) {
+        JavaThread::frame_pushed(frame.stack_bytes());
         self.frames.push(frame);
-        JavaThread::frame_pushed();
     }
 
     /// Pops the top stack frame from the stack frames and returns it.
@@ -145,8 +148,8 @@ impl StackFrames {
     /// up itself (through JNI `MonitorExit`, say) is left alone, as HotSpot leaves it.
     fn pop(&mut self) -> Option<StackFrame> {
         let popped_frame = self.frames.pop();
-        if popped_frame.is_some() {
-            JavaThread::frame_popped();
+        if let Some(frame) = &popped_frame {
+            JavaThread::frame_popped(frame.stack_bytes());
         }
         if let Some(obj_ref) = popped_frame.as_ref().and_then(StackFrame::held_monitor) {
             if !monitor::exit_if_owned(obj_ref) {
@@ -178,6 +181,7 @@ impl StackFrame {
             ex_pc: None,
             held_monitor: None,
             entered_monitors: Vec::new(),
+            stack_bytes: thread_stack::frame_bytes(locals_size, stack_size),
             locals: vec![Slot::Value(0); locals_size].into_boxed_slice(),
             operand_stack: Stack::with_capacity(stack_size),
             bytecode_ref,
@@ -225,6 +229,7 @@ impl StackFrame {
             ex_pc: None,
             held_monitor: None,
             entered_monitors: Vec::new(),
+            stack_bytes: thread_stack::frame_bytes(args.len(), 0),
             locals: args.into_boxed_slice(),
             operand_stack: Stack::with_capacity(0),
             bytecode_ref: Arc::new(Vec::new()),
@@ -343,6 +348,11 @@ impl StackFrame {
     /// The object whose monitor this frame's `synchronized` method holds, if any.
     pub fn held_monitor(&self) -> Option<i32> {
         self.held_monitor
+    }
+
+    /// What this frame takes of the thread's Java stack. See `execution_engine::thread_stack`.
+    pub fn stack_bytes(&self) -> usize {
+        self.stack_bytes
     }
 
     /// Records that a `monitorenter` of this frame acquired `obj_ref`. See `entered_monitors`.
@@ -682,26 +692,30 @@ mod held_monitor_tests {
 }
 
 #[cfg(test)]
-mod frame_depth_tests {
+mod stack_bytes_tests {
     use super::*;
 
-    /// Every way of pushing and popping keeps the thread's frame count.
+    /// Every way of pushing and popping keeps the thread's account of its stack, each frame
+    /// charged for its own size.
     #[test]
-    fn should_count_the_thread_frames() {
-        let before = JavaThread::frame_depth();
+    fn should_charge_and_refund_every_frame() {
+        let before = JavaThread::stack_used();
+        let small = StackFrame::for_test(0, 1).stack_bytes();
+        let large = StackFrame::for_test(8, 4).stack_bytes();
+        assert!(large > small);
         let mut stack_frames = StackFrames::new(vec![]);
+        stack_frames.new_frame(StackFrame::for_test(8, 4));
         stack_frames.new_frame(StackFrame::for_test(0, 1));
         stack_frames.new_frame(StackFrame::for_test(0, 1));
-        stack_frames.new_frame(StackFrame::for_test(0, 1));
-        assert_eq!(JavaThread::frame_depth(), before + 3);
+        assert_eq!(JavaThread::stack_used(), before + large + 2 * small);
         stack_frames.exit_frame();
-        assert_eq!(JavaThread::frame_depth(), before + 2);
+        assert_eq!(JavaThread::stack_used(), before + large + small);
         stack_frames.propagate_exception();
-        assert_eq!(JavaThread::frame_depth(), before + 1);
+        assert_eq!(JavaThread::stack_used(), before + large);
         stack_frames.release_held_monitors();
-        assert_eq!(JavaThread::frame_depth(), before);
+        assert_eq!(JavaThread::stack_used(), before);
         stack_frames.exit_frame(); // nothing left to pop
-        assert_eq!(JavaThread::frame_depth(), before);
+        assert_eq!(JavaThread::stack_used(), before);
     }
 }
 

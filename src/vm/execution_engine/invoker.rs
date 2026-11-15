@@ -2,7 +2,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::exception::helpers::throw_stack_overflow_error;
 use crate::vm::execution_engine::common::{last_frame_mut, push_typed};
-use crate::vm::execution_engine::stack_depth;
+use crate::vm::execution_engine::thread_stack;
 use crate::vm::helper::{arg_slots, polymorphic_arg_slots};
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_method::JavaMethod;
@@ -43,13 +43,6 @@ pub(crate) fn invoke(
     java_method: Arc<JavaMethod>,
     class_name: &str,
 ) -> Result<()> {
-    if let Some(_raising) = stack_depth::exhausted() {
-        // No stack left for the callee's frame (JVMS §2.5.2): the error goes where that frame
-        // would have gone, the call site.
-        throw_stack_overflow_error(stack_frames)?;
-        return Ok(());
-    }
-
     if java_method.is_native() {
         let is_polymorphic = java_method.is_polymorphic_signature();
         let is_static = java_method.is_static();
@@ -105,7 +98,14 @@ pub(crate) fn invoke(
                     "invoking native {class_name}.{full_signature}: {e}"
                 ))
             })?;
-            stack_frames.new_frame(java_method.new_native_stack_frame(args));
+            let native_frame = java_method.new_native_stack_frame(args);
+            if let Some(_raising) = thread_stack::exhausted(native_frame.stack_bytes()) {
+                // No stack left for the native's frame (JVMS §2.5.2): the error goes where that
+                // frame would have gone, the call site.
+                throw_stack_overflow_error(stack_frames)?;
+                return Ok(());
+            }
+            stack_frames.new_frame(native_frame);
             enter_method_monitor(last_frame_mut(stack_frames)?, &java_method)?;
             let result = invoke_native(&full_native_signature, method_args, is_static);
             // Plain pop (no ex_pc reset) leaves the caller frame exactly as the native call found
@@ -159,6 +159,12 @@ pub(crate) fn invoke(
         }
     } else {
         let mut next_frame = java_method.new_stack_frame()?;
+        if let Some(_raising) = thread_stack::exhausted(next_frame.stack_bytes()) {
+            // No stack left for the callee's frame (JVMS §2.5.2): the error goes where that frame
+            // would have gone, the call site.
+            throw_stack_overflow_error(stack_frames)?;
+            return Ok(());
+        }
 
         // Arguments were popped off the caller's operand stack as raw chunks, losing their tags on
         // the way. The method's cached mask restores them, exactly as it does for the native frame

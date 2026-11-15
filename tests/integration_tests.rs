@@ -3139,9 +3139,10 @@ still running
 
 #[test]
 fn should_throw_stack_overflow_error_for_runaway_recursion() {
-    // JVMS §2.5.2: a thread that runs out of stack gets a StackOverflowError, here past a fixed
-    // number of frames since they live on the heap. Catchable, with the stack usable again
-    // afterwards; a thread that lets it escape dies of it. Output matches the reference JVM.
+    // JVMS §2.5.2: a thread that runs out of stack gets a StackOverflowError, here once its frames,
+    // charged as HotSpot's interpreter lays them out, fill the stack size `-Xss` sets. Catchable,
+    // with the stack usable again afterwards; a thread that lets it escape dies of it. Output
+    // matches the reference JVM.
     assert_success(
         "samples.javacore.stackoverflow.StackOverflowExample",
         r#"caught java.lang.StackOverflowError, deeper than 1000: true, message: null
@@ -3149,6 +3150,45 @@ fibonacci after the overflow: 6765
 worker died of java.lang.StackOverflowError, deeper than 1000: true
 still running
 "#,
+    );
+}
+
+#[test]
+fn should_size_the_thread_stack_by_xss() {
+    // `-Xss` sets the stack every thread's frames fill, so the depth a runaway recursion reaches
+    // follows it: a quarter of the default gives fewer frames, twice the default more, and eight
+    // times the size well over four times the depth, since a frame's charge is mostly its slots.
+    let depth_at_overflow = |jvm_option: Option<&str>| -> usize {
+        let args: Vec<&str> = jvm_option
+            .into_iter()
+            .chain(["samples.javacore.stackoverflow.StackSizeExample"])
+            .collect();
+        utils::get_output_with_raw_args(&args)
+            .trim()
+            .parse()
+            .expect("the depth at overflow")
+    };
+    let quarter = depth_at_overflow(Some("-Xss256k"));
+    let default = depth_at_overflow(None);
+    let double = depth_at_overflow(Some("-Xss2m"));
+    assert!(
+        quarter < default && default < double,
+        "{quarter} {default} {double}"
+    );
+    assert!(double > 4 * quarter, "{quarter} {double}");
+}
+
+#[test]
+fn should_reject_an_invalid_thread_stack_size() {
+    utils::assert_with_all_args(
+        &["-Xss1x"],
+        "samples.javacore.stackoverflow.StackSizeExample",
+        &[],
+        "",
+        "VM execution failed: Execution Error: Invalid thread stack size: -Xss1x\n",
+        utils::ExecutionResult::Failure,
+        1,
+        HashMap::default(),
     );
 }
 

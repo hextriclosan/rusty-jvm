@@ -18,4 +18,4 @@ mod ops_store_processor;
 pub(crate) mod static_init;
 pub(crate) mod string_pool_helper;
 
-pub(crate) mod stack_depth;
+pub(crate) mod thread_stack;

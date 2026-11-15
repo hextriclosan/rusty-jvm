@@ -20,11 +20,12 @@ impl Engine {
     pub(crate) fn execute(initial_stack_frame: StackFrame, reason: &str) -> Result<Vec<i32>> {
         trace!("@@@ Entering execute: {reason}");
 
+        // The initial frame is pushed by no `new_frame`, so it is charged here.
+        JavaThread::frame_pushed(initial_stack_frame.stack_bytes());
         let mut stack_frames = StackFrames::new(vec![initial_stack_frame]);
-        JavaThread::frame_pushed(); // the initial frame, pushed by no `new_frame`
-                                    // Register this segment on the thread's stack chain for the whole interpreter loop so
-                                    // stack-walking natives can traverse it (and older segments) without a parameter. The
-                                    // guard pops it on return/unwind, keeping the chain correct across native re-entries.
+        // Register this segment on the thread's stack chain for the whole interpreter loop so
+        // stack-walking natives can traverse it (and older segments) without a parameter. The
+        // guard pops it on return/unwind, keeping the chain correct across native re-entries.
         let _stack_frames_guard = JavaThread::register_stack_frames(&mut stack_frames);
 
         let result = Self::interpret(&mut stack_frames);
