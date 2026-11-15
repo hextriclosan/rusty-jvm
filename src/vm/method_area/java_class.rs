@@ -84,6 +84,10 @@ pub(crate) struct JavaClass {
 #[derive(Debug, Default)]
 pub struct InitState {
     inner_state: RefCell<InnerState>,
+    /// For an [`InnerState::Erroneous`] class, the description of what its initialization died
+    /// of, as HotSpot words the cause of every later `NoClassDefFoundError`: the exception, and
+    /// the thread it was thrown in.
+    failure: RefCell<Option<String>>,
 }
 
 impl InitState {
@@ -94,6 +98,14 @@ impl InitState {
     pub fn get_inner_state(&self) -> InnerState {
         *self.inner_state.borrow()
     }
+
+    pub fn set_failure(&self, description: String) {
+        *self.failure.borrow_mut() = Some(description);
+    }
+
+    pub fn failure(&self) -> Option<String> {
+        self.failure.borrow().clone()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -102,6 +114,9 @@ pub enum InnerState {
     NotInitialized,
     Initializing,
     Initialized,
+    /// Initialization failed, this time or any time before: the class is unusable, and every
+    /// attempt to initialize it fails with a `NoClassDefFoundError` (JVMS §5.5).
+    Erroneous,
 }
 
 impl JavaClass {

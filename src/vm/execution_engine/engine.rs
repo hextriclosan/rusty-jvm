@@ -1,4 +1,5 @@
 use crate::vm::error::{Error, Result};
+use crate::vm::exception::common::throw_exception_with_ref;
 use crate::vm::execution_engine::{
     ops_comparison_processor, ops_constant_processor, ops_control_processor,
     ops_conversion_processor, ops_extended_processor, ops_load_processor, ops_math_processor,
@@ -84,38 +85,35 @@ impl Engine {
             let span = span!(Level::TRACE, "", "{class}:{instruction_line_num}");
             let _entered = span.enter();
 
-            match code {
-                0u8..=20u8 => {
-                    ops_constant_processor::process(code, &class, stack_frames)?;
-                }
-                21u8..=53u8 => {
-                    ops_load_processor::process(code, stack_frames)?;
-                }
-                54u8..=86u8 => {
-                    ops_store_processor::process(code, stack_frames)?;
-                }
-                87u8..=95u8 => {
-                    ops_stack_processor::process(code, stack_frames)?;
-                }
-                96u8..=132u8 => {
-                    ops_math_processor::process(code, stack_frames)?;
-                }
-                133u8..=147u8 => {
-                    ops_conversion_processor::process(code, stack_frames)?;
-                }
-                148u8..=166u8 => {
-                    ops_comparison_processor::process(code, stack_frames)?;
-                }
-                167u8..=177u8 => {
-                    last_value = ops_control_processor::process(code, stack_frames)?;
-                }
-                178u8..=195u8 => {
-                    ops_reference_processor::process(code, &class, stack_frames)?;
-                }
-                196u8..=201u8 => {
-                    ops_extended_processor::process(code, &class, stack_frames)?;
-                }
+            let outcome = match code {
+                0u8..=20u8 => ops_constant_processor::process(code, &class, stack_frames),
+                21u8..=53u8 => ops_load_processor::process(code, stack_frames),
+                54u8..=86u8 => ops_store_processor::process(code, stack_frames),
+                87u8..=95u8 => ops_stack_processor::process(code, stack_frames),
+                96u8..=132u8 => ops_math_processor::process(code, stack_frames),
+                133u8..=147u8 => ops_conversion_processor::process(code, stack_frames),
+                148u8..=166u8 => ops_comparison_processor::process(code, stack_frames),
+                167u8..=177u8 => ops_control_processor::process(code, stack_frames)
+                    .map(|value| last_value = value),
+                178u8..=195u8 => ops_reference_processor::process(code, &class, stack_frames),
+                196u8..=201u8 => ops_extended_processor::process(code, &class, stack_frames),
                 _ => unreachable!("{}", format! {"xxx = {}", code}),
+            };
+            if let Err(error) = outcome {
+                // A Java exception that no frame of a nested segment handled comes back as an
+                // error: out of the class initialization an instruction triggered, out of the Java
+                // code a native or an `invokedynamic` bootstrap called, and so on. It is thrown
+                // here, at the instruction that caused it, so that this segment's frames get their
+                // turn at handling it; past the last of them, it goes on to the segment below the
+                // same way. An empty stack means this segment has just unwound for it itself.
+                // Anything but a Java exception is the VM's own failure and ends the run.
+                let Some(throwable_ref) = error.throwable_ref() else {
+                    return Err(error);
+                };
+                if stack_frames.is_empty() {
+                    return Err(error);
+                }
+                throw_exception_with_ref(throwable_ref, stack_frames)?;
             }
         }
 
