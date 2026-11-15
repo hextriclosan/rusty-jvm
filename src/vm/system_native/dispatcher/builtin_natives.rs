@@ -186,6 +186,22 @@ jni_types! {
 /// The wrapper's signature is derived entirely from the same type tokens used to
 /// build the JVM descriptor, so the descriptor and the Rust signature can never
 /// drift apart, and the call to `$inner` is type-checked against those tokens.
+/// Reports a failed built-in native to Java. A Java exception that came back uncaught from code
+/// the native called is left pending as it is, for the call site to throw, like an exception the
+/// native raised itself; anything else is the VM's own failure, reported as an `InternalError`.
+fn set_pending_from_error(error: crate::vm::error::Error) {
+    match error.throwable_ref() {
+        Some(throwable_ref) => {
+            if let Err(e) =
+                crate::vm::jni::java_thread::JavaThread::try_set_pending_exception(throwable_ref)
+            {
+                tracing::warn!("Dropping an exception out of a built-in native: {e}");
+            }
+        }
+        None => set_pending_internal_error(&error.to_string()),
+    }
+}
+
 macro_rules! builtin_wrapper {
     // Static native: 2nd JNI arg is the `jclass` and is ignored.
     (static $name:ident ( $($pname:ident : $pty:ident),* ) -> $ret:ident => $inner:path) => {
@@ -198,7 +214,7 @@ macro_rules! builtin_wrapper {
             match $inner($(jni_arg_cast!($pty, $pname)),*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {
-                    set_pending_internal_error(&__error.to_string());
+                    set_pending_from_error(__error);
                     jni_ret_default!($ret)
                 }
             }
@@ -215,7 +231,7 @@ macro_rules! builtin_wrapper {
             match $inner(this as i32 $(, jni_arg_cast!($pty, $pname))*) {
                 Ok(__value) => jni_ret_conv!($ret, __value),
                 Err(__error) => {
-                    set_pending_internal_error(&__error.to_string());
+                    set_pending_from_error(__error);
                     jni_ret_default!($ret)
                 }
             }

@@ -299,6 +299,9 @@ pub(crate) fn process(
             invoke_dynamic_runner
                 .run(stack_frames, current_class_name, invokedynamic_index)
                 .map_err(|e| {
+                    if e.is_uncaught_exception() {
+                        return e; // a Java exception, for the engine to throw here
+                    }
                     Error::new_execution(&format!(
                         "Error running invokedynamic for class {current_class_name} on index {invokedynamic_index}: {e}"
                     ))
