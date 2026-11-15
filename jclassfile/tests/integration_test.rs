@@ -1914,6 +1914,107 @@ fn should_load_and_parse_module() {
 }
 
 #[test]
+fn should_load_and_parse_module_packages() {
+    let bytes = include_bytes!("test_data/module_packages/module-info.class");
+    let actual_class_file = parse(bytes).unwrap();
+
+    let expected_class_file = ClassFile::new(
+        0xCAFEBABE,
+        0,
+        69,
+        vec![
+            Empty, //                                               0
+            Class {
+                //                                                  1
+                name_index: 2,
+            },
+            Utf8 {
+                //                                                  2
+                value: "module-info".into(),
+            },
+            Utf8 {
+                //                                                  3
+                value: "SourceFile".into(),
+            },
+            Utf8 {
+                //                                                  4
+                value: "module-info.java".into(),
+            },
+            Utf8 {
+                //                                                  5
+                value: "Module".into(),
+            },
+            ConstantPool::Module {
+                //                                                  6
+                name_index: 7,
+            },
+            Utf8 {
+                //                                                  7
+                value: "packaged".into(),
+            },
+            ConstantPool::Module {
+                //                                                  8
+                name_index: 9,
+            },
+            Utf8 {
+                //                                                  9
+                value: "java.base".into(),
+            },
+            Utf8 {
+                //                                                  10
+                value: "25.0.4.1".into(),
+            },
+            Package {
+                //                                                  11
+                name_index: 12,
+            },
+            Utf8 {
+                //                                                  12
+                value: "packaged/api".into(),
+            },
+            Utf8 {
+                //                                                  13
+                value: "ModulePackages".into(),
+            },
+            Utf8 {
+                //                                                  14
+                value: "packaged/internal".into(),
+            },
+            Package {
+                //                                                  15
+                name_index: 14,
+            },
+        ],
+        ClassFlags::ACC_MODULE,
+        1,
+        0,
+        vec![],
+        vec![],
+        vec![],
+        vec![
+            SourceFile {
+                sourcefile_index: 4,
+            },
+            Attribute::Module {
+                module_name_index: 6,
+                module_flags: ModuleFlags::empty(),
+                module_version_index: 0,
+                requires: vec![RequiresRecord::new(8, RequiresFlags::ACC_MANDATED, 10)],
+                exports: vec![ExportsRecord::new(11, ExportsFlags::empty(), vec![])],
+                opens: vec![],
+                uses_index: vec![],
+                provides: vec![],
+            },
+            ModulePackages {
+                package_index: vec![11, 15],
+            },
+        ],
+    );
+
+    assert_eq!(actual_class_file, expected_class_file)
+}
+
+#[test]
 #[cfg(feature = "serde")]
 fn should_serialize_to_string() {
     let bytes = include_bytes!("test_data/Mutf8.class");
