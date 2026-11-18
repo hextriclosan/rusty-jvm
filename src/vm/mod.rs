@@ -22,6 +22,7 @@ use crate::vm::error::{Error, Result};
 use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::static_init::StaticInit;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
+use crate::vm::execution_engine::thread_stack::init_stack_size;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::launcher::resolve_and_execute_main_method;
 use crate::vm::launcher::LaunchMode::{LmClass, LmJar};
@@ -66,6 +67,7 @@ pub fn run(arguments: &Arguments, java_home: &Path) -> Result<()> {
     init_java_assertions(arguments.java_standard_options())?;
 
     init_perf_file(arguments)?;
+    init_stack_size(arguments.jvm_options())?;
 
     let result = (|| -> Result<()> {
         prelude()?;
