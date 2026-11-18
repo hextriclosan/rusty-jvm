@@ -48,7 +48,9 @@ use crate::vm::jni::object_operations_impl::{
     alloc_object, get_object_class, get_object_ref_type, is_instance_of, is_same_object,
     is_virtual_thread, new_object_a,
 };
-use crate::vm::jni::reflection_impl::{from_reflected_method, to_reflected_method};
+use crate::vm::jni::reflection_impl::{
+    from_reflected_field, from_reflected_method, to_reflected_field, to_reflected_method,
+};
 use crate::vm::jni::static_fields_impl::{
     get_static_boolean_field, get_static_byte_field, get_static_char_field,
     get_static_double_field, get_static_field_id, get_static_float_field, get_static_int_field,
@@ -69,11 +71,9 @@ use crate::vm::jni::string_operations_impl::{
     get_string_utf_region, new_string, new_string_utf8, release_string_chars,
     release_string_critical, release_string_utf_chars,
 };
+use crate::vm::jni::variadic::*;
 use crate::vm::jni::version_information_impl::get_version;
-use jni_sys::{
-    jboolean, jbyte, jchar, jclass, jdouble, jfieldID, jfloat, jint, jlong, jmethodID, jobject,
-    jshort, jweak, va_list, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JavaVM,
-};
+use jni_sys::{jint, jobject, jweak, JNIEnv, JNIInvokeInterface_, JNINativeInterface_, JavaVM};
 use std::ffi::c_void;
 
 /// Returns a pointer to the global JNI function table.
@@ -131,105 +131,11 @@ macro_rules! jni_vm_stub {
     };
 }
 
-macro_rules! jni_variadic_stub {
-    ($name:ident, $ptr:ident, ( $($arg:ty),* ) -> $ret:ty) => {
-        #[allow(non_snake_case)]
-        pub unsafe extern "system" fn $name(
-            _env: *mut jni_sys::JNIEnv,
-            $(_: $arg),*
-        ) -> $ret {
-            unimplemented!(concat!(
-                "JNI ",
-                stringify!($name),
-                "(",
-                stringify!($($arg),*),
-                ") -> ",
-                stringify!($ret)
-            ));
-        }
-
-        #[allow(non_upper_case_globals, non_snake_case)]
-        pub const $ptr: unsafe extern "C" fn(
-            *mut jni_sys::JNIEnv,
-            $($arg),*,
-            ...
-        ) -> $ret = unsafe {
-            std::mem::transmute::<
-                unsafe extern "system" fn(*mut jni_sys::JNIEnv, $($arg),*) -> $ret, unsafe extern "C" fn(*mut jni_sys::JNIEnv, $($arg),*, ...) -> $ret,
-            >($name)
-        };
-    };
-}
-
-jni_stub!(FromReflectedField(jobject) -> jfieldID);
-jni_stub!(ToReflectedField(jclass, jfieldID, jboolean) -> jobject);
 jni_stub!(NewGlobalRef(jobject) -> jobject);
 jni_stub!(DeleteGlobalRef(jobject) -> ());
 jni_stub!(DeleteLocalRef(jobject) -> ());
 jni_stub!(NewLocalRef(jobject) -> jobject);
 jni_stub!(EnsureLocalCapacity(jint) -> jint);
-jni_variadic_stub!(NewObject, NewObject_ptr, (jclass, jmethodID) -> jobject);
-jni_stub!(NewObjectV(jclass, jmethodID, va_list) -> jobject);
-jni_variadic_stub!(CallObjectMethod, CallObjectMethod_ptr, (jobject, jmethodID) -> jobject);
-jni_stub!(CallObjectMethodV(jobject, jmethodID, va_list) -> jobject);
-jni_variadic_stub!(CallBooleanMethod, CallBooleanMethod_ptr, (jobject, jmethodID) -> jboolean);
-jni_stub!(CallBooleanMethodV(jobject, jmethodID, va_list) -> jboolean);
-jni_variadic_stub!(CallByteMethod, CallByteMethod_ptr, (jobject, jmethodID) -> jbyte);
-jni_stub!(CallByteMethodV(jobject, jmethodID, va_list) -> jbyte);
-jni_variadic_stub!(CallCharMethod, CallCharMethod_ptr, (jobject, jmethodID) -> jchar);
-jni_stub!(CallCharMethodV(jobject, jmethodID, va_list) -> jchar);
-jni_variadic_stub!(CallShortMethod, CallShortMethod_ptr, (jobject, jmethodID) -> jshort);
-jni_stub!(CallShortMethodV(jobject, jmethodID, va_list) -> jshort);
-jni_variadic_stub!(CallIntMethod, CallIntMethod_ptr, (jobject, jmethodID) -> jint);
-jni_stub!(CallIntMethodV(jobject, jmethodID, va_list) -> jint);
-jni_variadic_stub!(CallLongMethod, CallLongMethod_ptr, (jobject, jmethodID) -> jlong);
-jni_stub!(CallLongMethodV(jobject, jmethodID, va_list) -> jlong);
-jni_variadic_stub!(CallFloatMethod, CallFloatMethod_ptr, (jobject, jmethodID) -> jfloat);
-jni_stub!(CallFloatMethodV(jobject, jmethodID, va_list) -> jfloat);
-jni_variadic_stub!(CallDoubleMethod, CallDoubleMethod_ptr, (jobject, jmethodID) -> jdouble);
-jni_stub!(CallDoubleMethodV(jobject, jmethodID, va_list) -> jdouble);
-jni_variadic_stub!(CallVoidMethod, CallVoidMethod_ptr, (jobject, jmethodID) -> ());
-jni_stub!(CallVoidMethodV(jobject, jmethodID, va_list) -> ());
-jni_variadic_stub!(CallNonvirtualObjectMethod, CallNonvirtualObjectMethod_ptr, (jobject, jclass, jmethodID) -> jobject);
-jni_stub!(CallNonvirtualObjectMethodV(jobject, jclass, jmethodID, va_list) -> jobject);
-jni_variadic_stub!(CallNonvirtualBooleanMethod, CallNonvirtualBooleanMethod_ptr, (jobject, jclass, jmethodID) -> jboolean);
-jni_stub!(CallNonvirtualBooleanMethodV(jobject, jclass, jmethodID, va_list) -> jboolean);
-jni_variadic_stub!(CallNonvirtualByteMethod, CallNonvirtualByteMethod_ptr, (jobject, jclass, jmethodID) -> jbyte);
-jni_stub!(CallNonvirtualByteMethodV(jobject, jclass, jmethodID, va_list) -> jbyte);
-jni_variadic_stub!(CallNonvirtualCharMethod, CallNonvirtualCharMethod_ptr, (jobject, jclass, jmethodID) -> jchar);
-jni_stub!(CallNonvirtualCharMethodV(jobject, jclass, jmethodID, va_list) -> jchar);
-jni_variadic_stub!(CallNonvirtualShortMethod, CallNonvirtualShortMethod_ptr, (jobject, jclass, jmethodID) -> jshort);
-jni_stub!(CallNonvirtualShortMethodV(jobject, jclass, jmethodID, va_list) -> jshort);
-jni_variadic_stub!(CallNonvirtualIntMethod, CallNonvirtualIntMethod_ptr, (jobject, jclass, jmethodID) -> jint);
-jni_stub!(CallNonvirtualIntMethodV(jobject, jclass, jmethodID, va_list) -> jint);
-jni_variadic_stub!(CallNonvirtualLongMethod, CallNonvirtualLongMethod_ptr, (jobject, jclass, jmethodID) -> jlong);
-jni_stub!(CallNonvirtualLongMethodV(jobject, jclass, jmethodID, va_list) -> jlong);
-jni_variadic_stub!(CallNonvirtualFloatMethod, CallNonvirtualFloatMethod_ptr, (jobject, jclass, jmethodID) -> jfloat);
-jni_stub!(CallNonvirtualFloatMethodV(jobject, jclass, jmethodID, va_list) -> jfloat);
-jni_variadic_stub!(CallNonvirtualDoubleMethod, CallNonvirtualDoubleMethod_ptr, (jobject, jclass, jmethodID) -> jdouble);
-jni_stub!(CallNonvirtualDoubleMethodV(jobject, jclass, jmethodID, va_list) -> jdouble);
-jni_variadic_stub!(CallNonvirtualVoidMethod, CallNonvirtualVoidMethod_ptr, (jobject, jclass, jmethodID) -> ());
-jni_stub!(CallNonvirtualVoidMethodV(jobject, jclass, jmethodID, va_list) -> ());
-jni_variadic_stub!(CallStaticObjectMethod, CallStaticObjectMethod_ptr, (jclass, jmethodID) -> jobject);
-jni_stub!(CallStaticObjectMethodV(jclass, jmethodID, va_list) -> jobject);
-jni_variadic_stub!(CallStaticBooleanMethod, CallStaticBooleanMethod_ptr, (jclass, jmethodID) -> jboolean);
-jni_stub!(CallStaticBooleanMethodV(jclass, jmethodID, va_list) -> jboolean);
-jni_variadic_stub!(CallStaticByteMethod, CallStaticByteMethod_ptr, (jclass, jmethodID) -> jbyte);
-jni_stub!(CallStaticByteMethodV(jclass, jmethodID, va_list) -> jbyte);
-jni_variadic_stub!(CallStaticCharMethod, CallStaticCharMethod_ptr, (jclass, jmethodID) -> jchar);
-jni_stub!(CallStaticCharMethodV(jclass, jmethodID, va_list) -> jchar);
-jni_variadic_stub!(CallStaticShortMethod, CallStaticShortMethod_ptr, (jclass, jmethodID) -> jshort);
-jni_stub!(CallStaticShortMethodV(jclass, jmethodID, va_list) -> jshort);
-jni_variadic_stub!(CallStaticIntMethod, CallStaticIntMethod_ptr, (jclass, jmethodID) -> jint);
-jni_stub!(CallStaticIntMethodV(jclass, jmethodID, va_list) -> jint);
-jni_variadic_stub!(CallStaticLongMethod, CallStaticLongMethod_ptr, (jclass, jmethodID) -> jlong);
-jni_stub!(CallStaticLongMethodV(jclass, jmethodID, va_list) -> jlong);
-jni_variadic_stub!(CallStaticFloatMethod, CallStaticFloatMethod_ptr, (jclass, jmethodID) -> jfloat);
-jni_stub!(CallStaticFloatMethodV(jclass, jmethodID, va_list) -> jfloat);
-jni_variadic_stub!(CallStaticDoubleMethod, CallStaticDoubleMethod_ptr, (jclass, jmethodID) -> jdouble);
-jni_stub!(CallStaticDoubleMethodV(jclass, jmethodID, va_list) -> jdouble);
-jni_variadic_stub!(CallStaticVoidMethod, CallStaticVoidMethod_ptr, (jclass, jmethodID) -> ());
-jni_stub!(CallStaticVoidMethodV(jclass, jmethodID, va_list) -> ());
 jni_stub!(NewWeakGlobalRef(jobject) -> jweak);
 jni_stub!(DeleteWeakGlobalRef(jweak) -> ());
 
@@ -247,11 +153,11 @@ static VTABLE: Wrapper = {
     ni.v24.DefineClass = define_class;
     ni.v24.FindClass = find_class;
     ni.v24.FromReflectedMethod = from_reflected_method;
-    ni.v24.FromReflectedField = FromReflectedField;
+    ni.v24.FromReflectedField = from_reflected_field;
     ni.v24.ToReflectedMethod = to_reflected_method;
     ni.v24.GetSuperclass = get_superclass;
     ni.v24.IsAssignableFrom = is_assignable_from;
-    ni.v24.ToReflectedField = ToReflectedField;
+    ni.v24.ToReflectedField = to_reflected_field;
     ni.v24.Throw = throw;
     ni.v24.ThrowNew = throw_new;
     ni.v24.ExceptionOccurred = exception_occurred;
@@ -267,71 +173,71 @@ static VTABLE: Wrapper = {
     ni.v24.NewLocalRef = NewLocalRef;
     ni.v24.EnsureLocalCapacity = EnsureLocalCapacity;
     ni.v24.AllocObject = alloc_object;
-    ni.v24.NewObject = NewObject_ptr;
-    ni.v24.NewObjectV = NewObjectV;
+    ni.v24.NewObject = rusty_jvm_NewObject;
+    ni.v24.NewObjectV = rusty_jvm_NewObjectV;
     ni.v24.NewObjectA = new_object_a;
     ni.v24.GetObjectClass = get_object_class;
     ni.v24.IsInstanceOf = is_instance_of;
     ni.v24.GetMethodID = get_method_id;
-    ni.v24.CallObjectMethod = CallObjectMethod_ptr;
-    ni.v24.CallObjectMethodV = CallObjectMethodV;
+    ni.v24.CallObjectMethod = rusty_jvm_CallObjectMethod;
+    ni.v24.CallObjectMethodV = rusty_jvm_CallObjectMethodV;
     ni.v24.CallObjectMethodA = call_object_method_a;
-    ni.v24.CallBooleanMethod = CallBooleanMethod_ptr;
-    ni.v24.CallBooleanMethodV = CallBooleanMethodV;
+    ni.v24.CallBooleanMethod = rusty_jvm_CallBooleanMethod;
+    ni.v24.CallBooleanMethodV = rusty_jvm_CallBooleanMethodV;
     ni.v24.CallBooleanMethodA = call_boolean_method_a;
-    ni.v24.CallByteMethod = CallByteMethod_ptr;
-    ni.v24.CallByteMethodV = CallByteMethodV;
+    ni.v24.CallByteMethod = rusty_jvm_CallByteMethod;
+    ni.v24.CallByteMethodV = rusty_jvm_CallByteMethodV;
     ni.v24.CallByteMethodA = call_byte_method_a;
-    ni.v24.CallCharMethod = CallCharMethod_ptr;
-    ni.v24.CallCharMethodV = CallCharMethodV;
+    ni.v24.CallCharMethod = rusty_jvm_CallCharMethod;
+    ni.v24.CallCharMethodV = rusty_jvm_CallCharMethodV;
     ni.v24.CallCharMethodA = call_char_method_a;
-    ni.v24.CallShortMethod = CallShortMethod_ptr;
-    ni.v24.CallShortMethodV = CallShortMethodV;
+    ni.v24.CallShortMethod = rusty_jvm_CallShortMethod;
+    ni.v24.CallShortMethodV = rusty_jvm_CallShortMethodV;
     ni.v24.CallShortMethodA = call_short_method_a;
-    ni.v24.CallIntMethod = CallIntMethod_ptr;
-    ni.v24.CallIntMethodV = CallIntMethodV;
+    ni.v24.CallIntMethod = rusty_jvm_CallIntMethod;
+    ni.v24.CallIntMethodV = rusty_jvm_CallIntMethodV;
     ni.v24.CallIntMethodA = call_int_method_a;
-    ni.v24.CallLongMethod = CallLongMethod_ptr;
-    ni.v24.CallLongMethodV = CallLongMethodV;
+    ni.v24.CallLongMethod = rusty_jvm_CallLongMethod;
+    ni.v24.CallLongMethodV = rusty_jvm_CallLongMethodV;
     ni.v24.CallLongMethodA = call_long_method_a;
-    ni.v24.CallFloatMethod = CallFloatMethod_ptr;
-    ni.v24.CallFloatMethodV = CallFloatMethodV;
+    ni.v24.CallFloatMethod = rusty_jvm_CallFloatMethod;
+    ni.v24.CallFloatMethodV = rusty_jvm_CallFloatMethodV;
     ni.v24.CallFloatMethodA = call_float_method_a;
-    ni.v24.CallDoubleMethod = CallDoubleMethod_ptr;
-    ni.v24.CallDoubleMethodV = CallDoubleMethodV;
+    ni.v24.CallDoubleMethod = rusty_jvm_CallDoubleMethod;
+    ni.v24.CallDoubleMethodV = rusty_jvm_CallDoubleMethodV;
     ni.v24.CallDoubleMethodA = call_double_method_a;
-    ni.v24.CallVoidMethod = CallVoidMethod_ptr;
-    ni.v24.CallVoidMethodV = CallVoidMethodV;
+    ni.v24.CallVoidMethod = rusty_jvm_CallVoidMethod;
+    ni.v24.CallVoidMethodV = rusty_jvm_CallVoidMethodV;
     ni.v24.CallVoidMethodA = call_void_method_a;
-    ni.v24.CallNonvirtualObjectMethod = CallNonvirtualObjectMethod_ptr;
-    ni.v24.CallNonvirtualObjectMethodV = CallNonvirtualObjectMethodV;
+    ni.v24.CallNonvirtualObjectMethod = rusty_jvm_CallNonvirtualObjectMethod;
+    ni.v24.CallNonvirtualObjectMethodV = rusty_jvm_CallNonvirtualObjectMethodV;
     ni.v24.CallNonvirtualObjectMethodA = call_non_virtual_object_method_a;
-    ni.v24.CallNonvirtualBooleanMethod = CallNonvirtualBooleanMethod_ptr;
-    ni.v24.CallNonvirtualBooleanMethodV = CallNonvirtualBooleanMethodV;
+    ni.v24.CallNonvirtualBooleanMethod = rusty_jvm_CallNonvirtualBooleanMethod;
+    ni.v24.CallNonvirtualBooleanMethodV = rusty_jvm_CallNonvirtualBooleanMethodV;
     ni.v24.CallNonvirtualBooleanMethodA = call_non_virtual_boolean_method_a;
-    ni.v24.CallNonvirtualByteMethod = CallNonvirtualByteMethod_ptr;
-    ni.v24.CallNonvirtualByteMethodV = CallNonvirtualByteMethodV;
+    ni.v24.CallNonvirtualByteMethod = rusty_jvm_CallNonvirtualByteMethod;
+    ni.v24.CallNonvirtualByteMethodV = rusty_jvm_CallNonvirtualByteMethodV;
     ni.v24.CallNonvirtualByteMethodA = call_non_virtual_byte_method_a;
-    ni.v24.CallNonvirtualCharMethod = CallNonvirtualCharMethod_ptr;
-    ni.v24.CallNonvirtualCharMethodV = CallNonvirtualCharMethodV;
+    ni.v24.CallNonvirtualCharMethod = rusty_jvm_CallNonvirtualCharMethod;
+    ni.v24.CallNonvirtualCharMethodV = rusty_jvm_CallNonvirtualCharMethodV;
     ni.v24.CallNonvirtualCharMethodA = call_non_virtual_char_method_a;
-    ni.v24.CallNonvirtualShortMethod = CallNonvirtualShortMethod_ptr;
-    ni.v24.CallNonvirtualShortMethodV = CallNonvirtualShortMethodV;
+    ni.v24.CallNonvirtualShortMethod = rusty_jvm_CallNonvirtualShortMethod;
+    ni.v24.CallNonvirtualShortMethodV = rusty_jvm_CallNonvirtualShortMethodV;
     ni.v24.CallNonvirtualShortMethodA = call_non_virtual_short_method_a;
-    ni.v24.CallNonvirtualIntMethod = CallNonvirtualIntMethod_ptr;
-    ni.v24.CallNonvirtualIntMethodV = CallNonvirtualIntMethodV;
+    ni.v24.CallNonvirtualIntMethod = rusty_jvm_CallNonvirtualIntMethod;
+    ni.v24.CallNonvirtualIntMethodV = rusty_jvm_CallNonvirtualIntMethodV;
     ni.v24.CallNonvirtualIntMethodA = call_non_virtual_int_method_a;
-    ni.v24.CallNonvirtualLongMethod = CallNonvirtualLongMethod_ptr;
-    ni.v24.CallNonvirtualLongMethodV = CallNonvirtualLongMethodV;
+    ni.v24.CallNonvirtualLongMethod = rusty_jvm_CallNonvirtualLongMethod;
+    ni.v24.CallNonvirtualLongMethodV = rusty_jvm_CallNonvirtualLongMethodV;
     ni.v24.CallNonvirtualLongMethodA = call_non_virtual_long_method_a;
-    ni.v24.CallNonvirtualFloatMethod = CallNonvirtualFloatMethod_ptr;
-    ni.v24.CallNonvirtualFloatMethodV = CallNonvirtualFloatMethodV;
+    ni.v24.CallNonvirtualFloatMethod = rusty_jvm_CallNonvirtualFloatMethod;
+    ni.v24.CallNonvirtualFloatMethodV = rusty_jvm_CallNonvirtualFloatMethodV;
     ni.v24.CallNonvirtualFloatMethodA = call_non_virtual_float_method_a;
-    ni.v24.CallNonvirtualDoubleMethod = CallNonvirtualDoubleMethod_ptr;
-    ni.v24.CallNonvirtualDoubleMethodV = CallNonvirtualDoubleMethodV;
+    ni.v24.CallNonvirtualDoubleMethod = rusty_jvm_CallNonvirtualDoubleMethod;
+    ni.v24.CallNonvirtualDoubleMethodV = rusty_jvm_CallNonvirtualDoubleMethodV;
     ni.v24.CallNonvirtualDoubleMethodA = call_non_virtual_double_method_a;
-    ni.v24.CallNonvirtualVoidMethod = CallNonvirtualVoidMethod_ptr;
-    ni.v24.CallNonvirtualVoidMethodV = CallNonvirtualVoidMethodV;
+    ni.v24.CallNonvirtualVoidMethod = rusty_jvm_CallNonvirtualVoidMethod;
+    ni.v24.CallNonvirtualVoidMethodV = rusty_jvm_CallNonvirtualVoidMethodV;
     ni.v24.CallNonvirtualVoidMethodA = call_non_virtual_void_method_a;
     ni.v24.GetFieldID = get_field_id;
     ni.v24.GetObjectField = get_object_field;
@@ -353,35 +259,35 @@ static VTABLE: Wrapper = {
     ni.v24.SetFloatField = set_float_field;
     ni.v24.SetDoubleField = set_double_field;
     ni.v24.GetStaticMethodID = get_static_method_id;
-    ni.v24.CallStaticObjectMethod = CallStaticObjectMethod_ptr;
-    ni.v24.CallStaticObjectMethodV = CallStaticObjectMethodV;
+    ni.v24.CallStaticObjectMethod = rusty_jvm_CallStaticObjectMethod;
+    ni.v24.CallStaticObjectMethodV = rusty_jvm_CallStaticObjectMethodV;
     ni.v24.CallStaticObjectMethodA = call_static_object_method_a;
-    ni.v24.CallStaticBooleanMethod = CallStaticBooleanMethod_ptr;
-    ni.v24.CallStaticBooleanMethodV = CallStaticBooleanMethodV;
+    ni.v24.CallStaticBooleanMethod = rusty_jvm_CallStaticBooleanMethod;
+    ni.v24.CallStaticBooleanMethodV = rusty_jvm_CallStaticBooleanMethodV;
     ni.v24.CallStaticBooleanMethodA = call_static_boolean_method_a;
-    ni.v24.CallStaticByteMethod = CallStaticByteMethod_ptr;
-    ni.v24.CallStaticByteMethodV = CallStaticByteMethodV;
+    ni.v24.CallStaticByteMethod = rusty_jvm_CallStaticByteMethod;
+    ni.v24.CallStaticByteMethodV = rusty_jvm_CallStaticByteMethodV;
     ni.v24.CallStaticByteMethodA = call_static_byte_method_a;
-    ni.v24.CallStaticCharMethod = CallStaticCharMethod_ptr;
-    ni.v24.CallStaticCharMethodV = CallStaticCharMethodV;
+    ni.v24.CallStaticCharMethod = rusty_jvm_CallStaticCharMethod;
+    ni.v24.CallStaticCharMethodV = rusty_jvm_CallStaticCharMethodV;
     ni.v24.CallStaticCharMethodA = call_static_char_method_a;
-    ni.v24.CallStaticShortMethod = CallStaticShortMethod_ptr;
-    ni.v24.CallStaticShortMethodV = CallStaticShortMethodV;
+    ni.v24.CallStaticShortMethod = rusty_jvm_CallStaticShortMethod;
+    ni.v24.CallStaticShortMethodV = rusty_jvm_CallStaticShortMethodV;
     ni.v24.CallStaticShortMethodA = call_static_short_method_a;
-    ni.v24.CallStaticIntMethod = CallStaticIntMethod_ptr;
-    ni.v24.CallStaticIntMethodV = CallStaticIntMethodV;
+    ni.v24.CallStaticIntMethod = rusty_jvm_CallStaticIntMethod;
+    ni.v24.CallStaticIntMethodV = rusty_jvm_CallStaticIntMethodV;
     ni.v24.CallStaticIntMethodA = call_static_int_method_a;
-    ni.v24.CallStaticLongMethod = CallStaticLongMethod_ptr;
-    ni.v24.CallStaticLongMethodV = CallStaticLongMethodV;
+    ni.v24.CallStaticLongMethod = rusty_jvm_CallStaticLongMethod;
+    ni.v24.CallStaticLongMethodV = rusty_jvm_CallStaticLongMethodV;
     ni.v24.CallStaticLongMethodA = call_static_long_method_a;
-    ni.v24.CallStaticFloatMethod = CallStaticFloatMethod_ptr;
-    ni.v24.CallStaticFloatMethodV = CallStaticFloatMethodV;
+    ni.v24.CallStaticFloatMethod = rusty_jvm_CallStaticFloatMethod;
+    ni.v24.CallStaticFloatMethodV = rusty_jvm_CallStaticFloatMethodV;
     ni.v24.CallStaticFloatMethodA = call_static_float_method_a;
-    ni.v24.CallStaticDoubleMethod = CallStaticDoubleMethod_ptr;
-    ni.v24.CallStaticDoubleMethodV = CallStaticDoubleMethodV;
+    ni.v24.CallStaticDoubleMethod = rusty_jvm_CallStaticDoubleMethod;
+    ni.v24.CallStaticDoubleMethodV = rusty_jvm_CallStaticDoubleMethodV;
     ni.v24.CallStaticDoubleMethodA = call_static_double_method_a;
-    ni.v24.CallStaticVoidMethod = CallStaticVoidMethod_ptr;
-    ni.v24.CallStaticVoidMethodV = CallStaticVoidMethodV;
+    ni.v24.CallStaticVoidMethod = rusty_jvm_CallStaticVoidMethod;
+    ni.v24.CallStaticVoidMethodV = rusty_jvm_CallStaticVoidMethodV;
     ni.v24.CallStaticVoidMethodA = call_static_void_method_a;
     ni.v24.GetStaticFieldID = get_static_field_id;
     ni.v24.GetStaticObjectField = get_static_object_field;

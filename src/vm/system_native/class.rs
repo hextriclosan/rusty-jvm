@@ -270,6 +270,17 @@ pub(crate) fn get_enclosing_method0(class_ref: i32) -> Result<i32> {
     Ok(array_ref) // new Object[] {class_name, name, descriptor}
 }
 
+pub(crate) fn get_generic_signature0(class_ref: i32) -> Result<i32> {
+    let class = klass(class_ref)?;
+    class
+        .attributes()
+        .get_signature(class.constant_pool())?
+        .as_deref()
+        .map(StringPoolHelper::get_string)
+        .transpose()
+        .map(|signature| signature.unwrap_or(0))
+}
+
 /// `java.lang.Class.getRawAnnotations()[B`
 pub(crate) fn get_raw_annotations(class_ref: i32) -> Result<i32> {
     let klass = klass(class_ref)?;

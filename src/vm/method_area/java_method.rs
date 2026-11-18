@@ -26,7 +26,7 @@ pub(crate) struct JavaMethod {
     exceptions: Vec<String>,
     access_flags: i32,
     name: String,
-    _annotation_default_raw: Option<Vec<u8>>,
+    annotation_default_raw: Option<Vec<u8>>,
     annotations_raw: Option<Vec<u8>>,
     runtime_visible_annotations: HashSet<String>,
     slot: i32,
@@ -62,7 +62,7 @@ impl JavaMethod {
         exceptions: Vec<String>,
         access_flags: i32,
         name: &str,
-        _annotation_default_raw: Option<Vec<u8>>,
+        annotation_default_raw: Option<Vec<u8>>,
         annotations_raw: Option<Vec<u8>>,
         runtime_visible_annotations: HashSet<String>,
         slot: i32,
@@ -77,7 +77,7 @@ impl JavaMethod {
             exceptions,
             access_flags,
             name: name.to_string(),
-            _annotation_default_raw,
+            annotation_default_raw,
             annotations_raw,
             runtime_visible_annotations,
             slot,
@@ -207,7 +207,14 @@ impl JavaMethod {
             .unwrap_or(0);
 
         let parameter_annotations = 0; // todo: implement me
-        let annotation_default = 0; // todo: implement me
+        let annotation_default = self
+            .annotation_default_raw
+            .as_ref()
+            .map(|raw| {
+                let values: Vec<i32> = raw.iter().map(|byte| *byte as i32).collect();
+                HEAP.create_array_with_values("[B", &values)
+            })
+            .unwrap_or(0);
 
         let args = &[
             declaring_class_ref.into(),

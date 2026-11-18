@@ -6,6 +6,20 @@ use std::process::{Command, Stdio};
 use std::{env, fs};
 
 fn main() -> anyhow::Result<()> {
+    println!("cargo:rerun-if-env-changed=JAVA_HOME");
+    let java_home = PathBuf::from(env::var("JAVA_HOME")?);
+    let target_os = env::var("CARGO_CFG_TARGET_OS")?;
+    let jni_platform = match target_os.as_str() {
+        "windows" => "win32",
+        "macos" => "darwin",
+        _ => "linux",
+    };
+    cc::Build::new()
+        .file("src/vm/jni/variadic.c")
+        .include(java_home.join("include"))
+        .include(java_home.join("include").join(jni_platform))
+        .compile("jni_variadic");
+    println!("cargo:rerun-if-changed=src/vm/jni/variadic.c");
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
     let target_dir = env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into());
     let target = env::var("TARGET")?;
@@ -23,9 +37,12 @@ fn main() -> anyhow::Result<()> {
     };
     println!("cargo:rustc-env=JNI_TEST_LIB_PATH={}", path.display());
 
+    if !Path::new("tests/test_data").is_dir() {
+        return Ok(());
+    }
+
     println!("cargo:rerun-if-changed=tests/test_data");
     // the test classes are compiled by, and must match, the JDK under `JAVA_HOME`
-    println!("cargo:rerun-if-env-changed=JAVA_HOME");
     let dest_dir = PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or(String::from("target")))
         .join("java_classes_for_tests");
     create_dir_all(&dest_dir)?;

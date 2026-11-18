@@ -2,9 +2,10 @@ use crate::vm::error::{Error, Result};
 use crate::vm::properties::classpath::classpath;
 use crate::vm::system_native::properties_provider::locale::{display_locale, format_locale};
 use crate::vm::system_native::properties_provider::properties::{
-    data_model, endianness, file_separator, java_home, line_separator, os_arch, os_name,
-    os_version, path_separator, sun_boot_library_path, sun_jnu_encoding, tmp_dir,
-    unicode_encoding, user_dir, user_home, user_name,
+    data_model, endianness, file_separator, java_home, line_separator, native_encoding, os_arch,
+    os_name, os_version, path_separator, stderr_encoding, stdin_encoding, stdout_encoding,
+    sun_boot_library_path, sun_jnu_encoding, tmp_dir, unicode_encoding, user_dir, user_home,
+    user_name,
 };
 use indexmap::IndexMap;
 use once_cell::sync::OnceCell;
@@ -31,7 +32,7 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, Option<&str>>> = Laz
         ("https.proxyPort", Some("https.proxyPort_VALUE")),
         ("java.io.tmpdir", Some(tmp_dir())),
         ("line.separator", Some(line_separator())),
-        ("native.encoding", Some("native.encoding_VALUE")),
+        ("native.encoding", Some(native_encoding())),
         ("os.arch", Some(os_arch())),
         ("os.name", Some(os_name())),
         ("os.version", Some(os_version())),
@@ -39,9 +40,9 @@ static DEFAULT_PLATFORM_PROPERTIES: LazyLock<IndexMap<&str, Option<&str>>> = Laz
         ("socksNonProxyHosts", Some("socksNonProxyHosts_VALUE")),
         ("socksProxyHost", Some("socksProxyHost_VALUE")),
         ("socksProxyPort", Some("socksProxyPort_VALUE")),
-        ("stderr.encoding", Some("cp437")), // todo: https://github.com/hextriclosan/rusty-jvm/issues/489
-        ("stdin.encoding", Some("native.encoding_VALUE")),
-        ("stdout.encoding", Some("stdout.encoding_VALUE")),
+        ("stderr.encoding", stderr_encoding()),
+        ("stdin.encoding", stdin_encoding()),
+        ("stdout.encoding", stdout_encoding()),
         ("sun.arch.abi", Some("sun.arch.abi_VALUE")),
         ("sun.arch.data.model", Some(data_model())),
         ("sun.cpu.endian", Some(endianness())),
