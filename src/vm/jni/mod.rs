@@ -18,6 +18,7 @@ mod static_fields_impl;
 mod static_methods_impl;
 mod string_operations_impl;
 mod utils;
+mod variadic;
 mod version_information_impl;
 
 pub(crate) use utils::set_pending_internal_error;

@@ -22,6 +22,7 @@ This guide explains how to build the project, run the tests, and extend the VM w
 
 - **Rust** (stable) - install via [rustup](https://rustup.rs/)
 - **JDK 25 or newer** - must be installed and `JAVA_HOME` must point to it
+- **C compiler** - MSVC on Windows, Clang on macOS, or GCC/Clang on Linux
 - **cargo-nextest** (recommended for running tests) - `cargo install cargo-nextest`
 
 ```sh
@@ -30,6 +31,11 @@ git clone https://github.com/hextriclosan/rusty-jvm
 cd rusty-jvm
 cargo build --workspace
 ```
+
+The JNI variadic entry points use a small C bridge for the platform's `va_list`,
+argument promotions, and `va_copy`. Method lookup and execution remain in Rust and
+reuse the JNI array-based entry points. This avoids requiring Rust 1.99 for its
+stabilized C-variadic API. The bridge uses the JNI headers under `JAVA_HOME`.
 
 ---
 

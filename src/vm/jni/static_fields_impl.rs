@@ -126,13 +126,13 @@ pub(super) extern "system" fn set_static_field<T: JNIValue>(
         .expect("Failed to set raw value of static field")
 }
 
-fn encode_field_id(class_ref: i32, offset: i64) -> jfieldID {
+pub(super) fn encode_field_id(class_ref: i32, offset: i64) -> jfieldID {
     let class_bits = (class_ref as u32 as u64) << 32;
     let offset_bits = offset as u32 as u64;
     (class_bits | offset_bits) as usize as jfieldID
 }
 
-fn decode_field_id(field_id: jfieldID) -> (i32, i64) {
+pub(super) fn decode_field_id(field_id: jfieldID) -> (i32, i64) {
     let raw = field_id as usize as u64;
     ((raw >> 32) as u32 as i32, (raw & 0xFFFF_FFFF) as i64)
 }

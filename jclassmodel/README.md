@@ -119,7 +119,7 @@ declaring your own dependency on it.
 | `ConstantPool` (one entry) | `ConstantTag` | The entry's *kind*, without its payload, for callers that only need the tag byte |
 | `Vec<Attribute>` | `Attributes` | An untyped list becomes a map keyed by attribute kind |
 | `MethodInfo` | `MethodModel` | `name_index`/`descriptor_index` become `name: String` and `descriptor: MethodDescriptor` (parsed via [jdescriptor][jdescriptor]), plus `name_signature` (`"name:descriptor"`) |
-| `FieldInfo` | `FieldModel` | `name_index`/`descriptor_index` become `name: String` and `descriptor: TypeDescriptor` |
+| `FieldInfo` | `FieldModel` | Names and descriptors are resolved; `signature: Option<String>` and `annotations_raw: Option<Vec<u8>>` retain reflection metadata |
 | `jclassfile::error::Error` | `jclassmodel::Error` | A coarse `ErrorKind` (`ClassFile`, `ConstantPool`, `Descriptor`, `Structure`); the parser error stays reachable via `Error::source` |
 
 ### Attributes and the records inside them
@@ -136,10 +136,11 @@ declaring your own dependency on it.
 | `Attribute::EnclosingMethod` | `EnclosingMethodInfo` | Two indexes become an enclosing class name plus an `Option` method name and descriptor, since JVMS §4.7.7 allows `method_index` to be zero |
 | `Attribute::Exceptions` | `MethodModel::exceptions` | `exception_index_table: Vec<u16>` becomes `Vec<String>` of thrown class names, in declaration order |
 | `Attribute::SourceFile` | `ClassModel::source_file` | Index becomes `Option<String>` |
+| `Attribute::Signature` | `Attributes::get_signature`, `FieldModel::signature` | Resolves the generic signature's UTF-8 index; absence remains `None`, while an invalid index is an error |
 | `Attribute::NestHost` | `Attributes::get_nest_host` | Host class index becomes `Option<String>`; `None` means the class hosts its own nest |
 | `Attribute::NestMembers` | `Attributes::get_nest_members` | `classes: Vec<u16>` becomes `Option<Vec<String>>` of member class names |
 | `Attribute::PermittedSubclasses` | `Attributes::get_permitted_subclasses` | `classes: Vec<u16>` becomes `Option<Vec<String>>`; `None` (not sealed) is kept apart from an empty list |
-| `Attribute::RuntimeVisibleAnnotations` | `runtime_visible_annotations: HashSet<String>` | Annotation type indexes become type names; the raw bytes stay available as `annotations_raw` for reflection |
+| `Attribute::RuntimeVisibleAnnotations` | `MethodModel::runtime_visible_annotations`, `annotations_raw` | Method annotation types are resolved; raw annotation bytes remain available on class, method, and field models for reflection |
 | `ClassFlags` | `ClassModifier` | Same bits, owned by this crate so `jclassfile` stays private |
 | `MethodFlags` | `MethodModifier` | Same bits, plus `MethodModel::is_polymorphic_signature()` for the `MethodHandle` case |
 | `FieldFlags` | `FieldModifier` | Same bits, plus `FieldModel::is_static()` for the common case |
@@ -159,7 +160,6 @@ Needed by a JVM eventually, roughly in that order:
 | --- | --- |
 | `ConstantValue` | Static final initializers. JVMS §5.4.2 has the JVM set these during preparation and javac emits no `<clinit>` store for them, so today they are visible only because javac inlines compile-time constants at their use sites; a reflective field read would see the default value |
 | `Record` | Reflection over record components |
-| `Signature` | Generic type information for reflection |
 
 Deliberately out of scope for now: `StackMapTable`. It exists for the bytecode verifier, so it is
 worth modelling the day there is one, and `jclassfile` already parses it into `Vec<StackMapFrame>`

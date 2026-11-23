@@ -382,6 +382,18 @@ impl Attributes {
         }
     }
 
+    pub fn get_signature(&self, constant_pool: &ConstantPool) -> Result<Option<String>> {
+        match self.data.get(&AttributeType::Signature) {
+            Some(Attribute::Signature { signature_index }) => constant_pool
+                .get_utf8(*signature_index)
+                .map(Some)
+                .ok_or_else(|| {
+                    Error::constant_pool(format!("Invalid signature index {signature_index}"))
+                }),
+            _ => Ok(None),
+        }
+    }
+
     pub fn get_annotations(
         &self,
         constant_pool: &ConstantPool,

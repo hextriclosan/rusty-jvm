@@ -3,7 +3,7 @@ use crate::vm::JAVA_HOME;
 use os_info::Type;
 use os_info::Version::Semantic;
 use std::env;
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(unix)]
 use std::ffi::CStr;
 use std::string::ToString;
 use std::sync::LazyLock;
@@ -79,7 +79,8 @@ fn windows_encoding(code_page: u32) -> String {
         0 | 65001 => "UTF-8".to_string(),
         950 if windows_has_hkscs() => "MS950_HKSCS_XP".to_string(),
         936 if windows_has_gb18030() => "GB18030".to_string(),
-        874 | 932 | 936 | 949 | 950 | 1361 => format!("MS{code_page}"),
+        936 => "GBK".to_string(),
+        874 | 932 | 949 | 950 | 1361 => format!("MS{code_page}"),
         54936 => "GB18030".to_string(),
         _ => format!("Cp{code_page}"),
     }
@@ -129,8 +130,8 @@ static SUN_JNU_ENCODING: LazyLock<String> =
 #[cfg(target_os = "macos")]
 static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| "UTF-8".to_string());
 
-#[cfg(all(unix, not(target_os = "macos")))]
-static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| unsafe {
+#[cfg(unix)]
+static NATIVE_ENCODING: LazyLock<String> = LazyLock::new(|| unsafe {
     // like OpenJDK, ignore a failed activation: the still-active locale (e.g. "C") gives the codeset
     nix::libc::setlocale(nix::libc::LC_ALL, c"".as_ptr());
 
@@ -142,14 +143,88 @@ static SUN_JNU_ENCODING: LazyLock<String> = LazyLock::new(|| unsafe {
     match CStr::from_ptr(encoding).to_string_lossy().as_ref() {
         "" => "ISO8859-1".to_string(),
         "646" => "ISO646-US".to_string(),
-        "EUC-JP" => "EUC-JP-LINUX".to_string(),
+        "EUC-JP" if cfg!(target_os = "linux") => "EUC-JP-LINUX".to_string(),
+        "US-ASCII"
+            if cfg!(target_os = "macos")
+                && ["LANG", "LC_ALL", "LC_CTYPE"]
+                    .iter()
+                    .all(|key| env::var_os(key).map_or(true, |value| value.is_empty())) =>
+        {
+            "UTF-8".to_string()
+        }
         encoding => encoding.to_string(),
     }
 });
 
 pub(crate) fn sun_jnu_encoding() -> &'static str {
-    &SUN_JNU_ENCODING
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        native_encoding()
+    }
+    #[cfg(any(windows, target_os = "macos"))]
+    {
+        &SUN_JNU_ENCODING
+    }
 }
+
+pub(crate) fn native_encoding() -> &'static str {
+    #[cfg(windows)]
+    {
+        sun_jnu_encoding()
+    }
+    #[cfg(unix)]
+    {
+        &NATIVE_ENCODING
+    }
+}
+
+pub(crate) fn stdin_encoding() -> Option<&'static str> {
+    STREAM_ENCODINGS[0].as_deref()
+}
+
+pub(crate) fn stdout_encoding() -> Option<&'static str> {
+    STREAM_ENCODINGS[1].as_deref()
+}
+
+pub(crate) fn stderr_encoding() -> Option<&'static str> {
+    STREAM_ENCODINGS[2].as_deref()
+}
+
+#[cfg(unix)]
+static STREAM_ENCODINGS: LazyLock<[Option<String>; 3]> = LazyLock::new(|| {
+    [0, 1, 2].map(|descriptor| {
+        (unsafe { nix::libc::isatty(descriptor) } == 1).then(|| native_encoding().to_string())
+    })
+});
+
+#[cfg(windows)]
+static STREAM_ENCODINGS: LazyLock<[Option<String>; 3]> = LazyLock::new(|| {
+    use winapi::um::consoleapi::{GetConsoleCP, GetConsoleOutputCP};
+    use winapi::um::fileapi::GetFileType;
+    use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+    use winapi::um::processenv::GetStdHandle;
+    use winapi::um::winbase::{
+        FILE_TYPE_CHAR, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
+
+    [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE].map(|descriptor| unsafe {
+        let handle = GetStdHandle(descriptor);
+        if handle == INVALID_HANDLE_VALUE || GetFileType(handle) != FILE_TYPE_CHAR {
+            return None;
+        }
+        let code_page = if descriptor == STD_INPUT_HANDLE {
+            GetConsoleCP()
+        } else {
+            GetConsoleOutputCP()
+        };
+        match code_page {
+            0 => None,
+            65001 => Some("UTF-8".to_string()),
+            874..=950 => Some(format!("ms{code_page}")),
+            _ => Some(format!("cp{code_page}")),
+        }
+    })
+});
 
 static OS_VERSION: LazyLock<String> = LazyLock::new(|| {
     let info = os_info::get();
