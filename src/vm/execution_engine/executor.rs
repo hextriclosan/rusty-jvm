@@ -1,6 +1,8 @@
-use crate::vm::error::Result;
+use crate::vm::error::{Error, Result};
+use crate::vm::exception::helpers::new_stack_overflow_error;
 use crate::vm::execution_engine::engine::Engine;
 use crate::vm::execution_engine::invoker::enter_method_monitor;
+use crate::vm::execution_engine::thread_stack;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::java_thread::JavaThread;
 use crate::vm::method_area::java_class::JavaClass;
@@ -154,6 +156,11 @@ impl Executor {
     ) -> Result<Vec<i32>> {
         let java_method = java_class.get_method(method_name)?;
         let mut stack_frame = java_method.new_stack_frame()?;
+        if let Some(_raising) = thread_stack::exhausted(stack_frame.stack_bytes()) {
+            // A VM-initiated call with no stack left for it (JVMS §2.5.2): the error goes back to
+            // whatever made the call, for the engine to throw in the segment that caused it.
+            return Err(Error::uncaught_exception(new_stack_overflow_error()?));
+        }
         Self::set_stack_arguments(&mut stack_frame, &java_method, args)?;
         enter_method_monitor(&mut stack_frame, &java_method)?;
         Engine::execute(

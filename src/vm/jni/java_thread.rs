@@ -58,6 +58,13 @@ pub(crate) struct JavaThread {
     ///
     /// Scopes nest and unwind in LIFO order via [`TempRootsGuard`], so this is a stack, not a set.
     temp_roots: RefCell<Vec<Slot>>,
+    /// What the frames on this thread's Java stack take of it, over all its interpreter
+    /// segments, kept by the frame stacks as they push and pop. See
+    /// `execution_engine::thread_stack`.
+    stack_used: Cell<usize>,
+    /// Whether a `StackOverflowError` is being raised on this thread: the frames that takes are
+    /// let past the limit, or raising it would overflow in turn, forever.
+    handling_stack_overflow: Cell<bool>,
 }
 
 thread_local! {
@@ -69,7 +76,21 @@ thread_local! {
         stack_frames: RefCell::new(Vec::new()),
         safepoint: Safepoint::new(),
         temp_roots: RefCell::new(Vec::new()),
+        stack_used: Cell::new(0),
+        handling_stack_overflow: Cell::new(false),
     };
+}
+
+/// Suspends the stack depth limit of the current thread for as long as it lives: returned by
+/// [`JavaThread::begin_stack_overflow_handling`] to whoever raises the `StackOverflowError`.
+pub(crate) struct StackOverflowHandling {
+    _not_send: PhantomData<Rc<()>>,
+}
+
+impl Drop for StackOverflowHandling {
+    fn drop(&mut self) {
+        JAVA_THREAD.with(|t| t.handling_stack_overflow.set(false));
+    }
 }
 
 /// RAII guard returned by [`JavaThread::hold_temp_roots`]; drops its scope's references on drop,
@@ -139,6 +160,35 @@ impl JavaThread {
         // Thread-local statics have a stable address for the lifetime of the thread, so the
         // pointer we return remains valid for as long as any JNI code on this thread can use it.
         JAVA_THREAD.with(|t| (&raw const t.env) as *mut JNIEnv)
+    }
+
+    /// A frame taking `bytes` more of the current thread's Java stack.
+    pub(crate) fn frame_pushed(bytes: usize) {
+        JAVA_THREAD.with(|t| t.stack_used.set(t.stack_used.get() + bytes));
+    }
+
+    /// A frame giving `bytes` of the current thread's Java stack back.
+    pub(crate) fn frame_popped(bytes: usize) {
+        JAVA_THREAD.with(|t| t.stack_used.set(t.stack_used.get().saturating_sub(bytes)));
+    }
+
+    /// What the frames on the current thread's Java stack take of it, over all its segments.
+    pub(crate) fn stack_used() -> usize {
+        JAVA_THREAD.with(|t| t.stack_used.get())
+    }
+
+    /// Marks a `StackOverflowError` as being raised on the current thread, for as long as the
+    /// returned guard lives; `None` if one already is, so that only the first raiser raises.
+    pub(crate) fn begin_stack_overflow_handling() -> Option<StackOverflowHandling> {
+        JAVA_THREAD.with(|t| {
+            if t.handling_stack_overflow.replace(true) {
+                None
+            } else {
+                Some(StackOverflowHandling {
+                    _not_send: PhantomData,
+                })
+            }
+        })
     }
 
     /// Takes the currently-pending exception (if any) for the calling thread, leaving `None` in its place.

@@ -4,6 +4,7 @@ use crate::vm::exception::pending_helpers::{
     set_pending_array_index_out_of_bounds_exception,
     set_pending_null_pointer_exception_with_message,
 };
+use crate::vm::execution_engine::executor::Executor;
 use crate::vm::execution_engine::string_pool_helper::StringPoolHelper;
 use crate::vm::heap::heap::HEAP;
 use crate::vm::jni::set_pending_internal_error;
@@ -22,6 +23,22 @@ pub fn throw_null_pointer_exception(stack_frames: &mut StackFrames) -> Result<()
         &[],
         stack_frames,
     )
+}
+
+/// Throws a `StackOverflowError`, without a message as HotSpot's, for a call the thread has no
+/// stack left for (JVMS §2.5.2); at the call site, where the callee's frame would have gone.
+pub fn throw_stack_overflow_error(stack_frames: &mut StackFrames) -> Result<()> {
+    construct_exception_and_throw(
+        "java/lang/StackOverflowError",
+        "<init>:()V",
+        &[],
+        stack_frames,
+    )
+}
+
+/// A new `StackOverflowError`, for a VM-initiated call the thread has no stack left for.
+pub fn new_stack_overflow_error() -> Result<i32> {
+    Executor::invoke_default_constructor("java/lang/StackOverflowError")
 }
 
 /// Throws an `IllegalMonitorStateException` without a message, as `monitorexit` raises for a
