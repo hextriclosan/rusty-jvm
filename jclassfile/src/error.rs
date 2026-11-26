@@ -1,4 +1,4 @@
-use crate::error::ErrorKind::{InvalidInput, Io};
+use crate::error::ErrorKind::{Format, Io, Truncated};
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
 use std::{io, result};
@@ -17,13 +17,31 @@ impl Error {
     pub(crate) fn new_io(kind: io::ErrorKind, error: &str) -> Self {
         Self::new(Io(io::Error::new(kind, error)))
     }
+
+    /// A class file that fails format checking (JVMS §4.8).
+    pub(crate) fn format(descr: impl Into<String>) -> Self {
+        Self::new(Format(descr.into()))
+    }
+
+    /// A read of `size` bytes at `offset` that does not fit in the `len` bytes available.
+    pub(crate) fn truncated(offset: usize, size: usize, len: usize) -> Self {
+        Self::new(Truncated { offset, size, len })
+    }
+
+    pub(crate) fn is_truncated(&self) -> bool {
+        matches!(*self.0, Truncated { .. })
+    }
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &*self.0 {
             Io(err) => write!(f, "I/O Error: {err}"),
-            InvalidInput(descr) => write!(f, "InvalidInput Error: {descr}"),
+            Format(descr) => write!(f, "Format Error: {descr}"),
+            Truncated { offset, size, len } => write!(
+                f,
+                "Format Error: class file is truncated: {size} byte(s) expected at offset {offset}, but its length is {len} (JVMS §4.8)"
+            ),
 
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -35,7 +53,12 @@ impl StdError for Error {}
 #[derive(Debug)]
 pub(crate) enum ErrorKind {
     Io(io::Error),
-    InvalidInput(String),
+    Format(String),
+    Truncated {
+        offset: usize,
+        size: usize,
+        len: usize,
+    },
 
     #[doc(hidden)]
     __Nonexhaustive,

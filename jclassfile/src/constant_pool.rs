@@ -1,7 +1,6 @@
 use crate::constant_pool::ConstantPool::*;
 use crate::error::{Error, Result};
 use crate::extractors::{get_float, get_int, get_string};
-use std::io::ErrorKind::InvalidInput;
 
 #[repr(u8)]
 #[derive(Debug, PartialEq, Clone)]
@@ -152,10 +151,11 @@ pub(crate) fn get_constant_pool(
                 name_index: get_int(&data, &mut start_from)?,
             },
             _ => {
-                return Err(Error::new_io(
-                    InvalidInput,
-                    format!("unmatched tag: {}", tag).as_str(),
-                ));
+                return Err(Error::format(format!(
+                    "constant pool entry #{}: unmatched tag: {} (JVMS §4.4)",
+                    constant_pool_vec.len(),
+                    tag
+                )));
             }
         };
 
