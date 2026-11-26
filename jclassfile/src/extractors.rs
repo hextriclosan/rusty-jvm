@@ -4,7 +4,7 @@ use cesu8::from_java_cesu8;
 use num_traits::Num;
 use std::array::TryFromSliceError;
 use std::io;
-use std::io::ErrorKind::{InvalidData, InvalidInput};
+use std::io::ErrorKind::InvalidData;
 use std::mem::size_of;
 use std::result::Result as StdResult;
 
@@ -13,17 +13,7 @@ where
     T: Num + From<u8> + std::ops::Shl<Output = T> + std::ops::BitOr<Output = T> + Copy,
 {
     let size = size_of::<T>();
-    let sub_slice = slice.get(*start_from..*start_from + size).ok_or_else(|| {
-        Error::new_io(
-            InvalidInput,
-            format!(
-                "overflow : attempt to read from {} whereas len is {}",
-                *start_from,
-                slice.len()
-            )
-            .as_str(),
-        )
-    })?;
+    let sub_slice = read_byte_block(slice, *start_from, size)?;
 
     let mut value: T = T::from(sub_slice[0]);
     for &byte in &sub_slice[1..] {
@@ -43,17 +33,10 @@ pub fn get_bytes<'a>(slice: &'a [u8], start_from: &mut usize, size: usize) -> Re
 }
 
 pub fn read_byte_block(slice: &[u8], start_from: usize, size: usize) -> Result<&[u8]> {
-    slice.get(start_from..start_from + size).ok_or_else(|| {
-        Error::new_io(
-            InvalidInput,
-            format!(
-                "Index out of bounds: {} of {}",
-                start_from + size,
-                slice.len()
-            )
-            .as_str(),
-        )
-    })
+    start_from
+        .checked_add(size)
+        .and_then(|end| slice.get(start_from..end))
+        .ok_or_else(|| Error::truncated(start_from, size, slice.len()))
 }
 
 pub fn get_bitfield<T>(slice: &[u8], start_from: &mut usize) -> Result<T>
@@ -93,11 +76,36 @@ where
 
 pub fn get_string(data: &&[u8], mut start_from: &mut usize) -> Result<String> {
     let length: u16 = get_int(&data, &mut start_from)?;
+    let offset = *start_from;
     let mutf8_bytes: &[u8] = get_bytes(&data, &mut start_from, length as usize)?;
+
+    if !is_modified_utf8(mutf8_bytes) {
+        return Err(Error::format(format!(
+            "Utf8 constant at offset {offset} is not valid modified UTF-8 (JVMS §4.4.7)"
+        )));
+    }
 
     Ok(from_java_cesu8(mutf8_bytes)
         .map(|c| c.into_owned())
         .unwrap_or_else(|_| from_java_cesu8_lossy(mutf8_bytes)))
+}
+
+/// Tells whether a byte slice is well-formed modified UTF-8 (JVMS §4.4.7): sequences of one, two
+/// or three bytes, with no byte of value 0 and no byte in the range 0xF0 to 0xFF.
+/// A surrogate encoded on its own is well-formed here, although it does not decode to a `char`.
+fn is_modified_utf8(bytes: &[u8]) -> bool {
+    let mut i = 0;
+
+    while i < bytes.len() {
+        i += match &bytes[i..] {
+            [0x01..=0x7F, ..] => 1,
+            [0xC0..=0xDF, 0x80..=0xBF, ..] => 2,
+            [0xE0..=0xEF, 0x80..=0xBF, 0x80..=0xBF, ..] => 3,
+            _ => return false,
+        };
+    }
+
+    true
 }
 
 /// Decodes a byte slice encoded in Java's CESU-8 format into a String, replacing invalid sequences with '?'.
@@ -273,6 +281,59 @@ mod tests {
     #[test]
     fn test_empty_input() {
         assert_eq!(from_java_cesu8_lossy(&[]), "");
+    }
+
+    #[test]
+    fn test_well_formed_modified_utf8() {
+        assert!(is_modified_utf8(&[]));
+        assert!(is_modified_utf8(b"Hello, World!"));
+        // U+0000 in its two-byte form
+        assert!(is_modified_utf8(&[0xC0, 0x80]));
+        assert!(is_modified_utf8(&[0xD1, 0x97]));
+        assert!(is_modified_utf8(&[0xE2, 0x82, 0xAC]));
+        // Supplementary character as a surrogate pair
+        assert!(is_modified_utf8(&[0xED, 0xA0, 0xBE, 0xED, 0xB6, 0x80]));
+        // Lone surrogate: not a `char`, but a valid three-byte sequence
+        assert!(is_modified_utf8(&[0xED, 0xA0, 0xBE]));
+    }
+
+    #[test]
+    fn test_malformed_modified_utf8() {
+        // No byte may have the value 0
+        assert!(!is_modified_utf8(&[0x41, 0x00]));
+        // No byte may lie in the range 0xF0 to 0xFF, four-byte UTF-8 included
+        assert!(!is_modified_utf8(&[0xF0, 0x9F, 0xA6, 0x80]));
+        assert!(!is_modified_utf8(&[0xFF]));
+        // Continuation byte with nothing to continue
+        assert!(!is_modified_utf8(&[0x80]));
+        // Truncated two-byte and three-byte sequences
+        assert!(!is_modified_utf8(&[0xC2]));
+        assert!(!is_modified_utf8(&[0xE2, 0x82]));
+        // Lead byte followed by something that is not a continuation byte
+        assert!(!is_modified_utf8(&[0xC2, 0x31]));
+    }
+
+    #[test]
+    fn test_get_string_rejects_malformed_modified_utf8() {
+        let data: &[u8] = &[0x00, 0x02, 0x41, 0xFF];
+        let mut start_from: usize = 0;
+
+        let error = get_string(&data, &mut start_from).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Format Error: Utf8 constant at offset 2 is not valid modified UTF-8 (JVMS §4.4.7)"
+        );
+    }
+
+    #[test]
+    fn test_read_past_the_end_is_truncation() {
+        let mut start_from: usize = 1;
+
+        let error = get_int::<u16>(&[0x00, 0x01], &mut start_from).unwrap_err();
+
+        assert!(error.is_truncated());
+        assert_eq!(start_from, 1);
     }
 
     #[test]

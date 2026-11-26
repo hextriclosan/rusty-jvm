@@ -12,6 +12,16 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
+//! # Format checking
+//!
+//! [`class_file::parse`] applies format checking ([JVMS §4.8][jvms-4.8]): a class file with a
+//! wrong magic number, a predefined attribute of the wrong length, missing or extra bytes, a
+//! constant pool that breaks the constraints of JVMS §4.4, or a field or method reference with a
+//! malformed name, class or descriptor is rejected with an error.
+//!
+//! [`class_file::parse_unchecked`] leaves the constant pool unchecked, for tools that have to look
+//! into a malformed class file.
+//!
 //! # Looking for resolved values? See [`jclassmodel`]
 //!
 //! This crate is deliberately faithful rather than convenient. Constant pool entries hold raw
@@ -37,6 +47,7 @@
 //! reference is one-way.
 //!
 //! [jvms-4]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
+//! [jvms-4.8]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.8
 //! [`jclassmodel`]: https://crates.io/crates/jclassmodel
 
 pub mod attributes;
@@ -45,4 +56,6 @@ pub mod constant_pool;
 pub mod error;
 mod extractors;
 pub mod fields;
+mod format_check;
 pub mod methods;
+mod names;

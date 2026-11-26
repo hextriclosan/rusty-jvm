@@ -559,6 +559,19 @@ pub struct TypePathEntry {
     path_index: u8,
 }
 
+/// Predefined attributes that format checking does not require to be of the proper length
+/// (JVMS §4.8).
+const LENGTH_CHECK_EXEMPT: [&str; 8] = [
+    "StackMapTable",
+    "RuntimeVisibleAnnotations",
+    "RuntimeInvisibleAnnotations",
+    "RuntimeVisibleParameterAnnotations",
+    "RuntimeInvisibleParameterAnnotations",
+    "RuntimeVisibleTypeAnnotations",
+    "RuntimeInvisibleTypeAnnotations",
+    "AnnotationDefault",
+];
+
 pub(crate) fn get_attributes(
     data: &[u8],
     mut start_from: &mut usize,
@@ -599,7 +612,49 @@ fn get_attribute(
 
     let attribute_length: u32 = get_int(&data, &mut start_from)?;
 
-    let attribute = match attribute_name.as_str() {
+    // The attribute owns exactly `attribute_length` bytes; nothing below may read past them.
+    let info = read_byte_block(data, *start_from, attribute_length as usize)?;
+    let attribute_end = *start_from + info.len();
+    let data = &data[..attribute_end];
+
+    let attribute = get_attribute_info(
+        attribute_name,
+        attribute_length,
+        data,
+        start_from,
+        constant_pool_vec,
+    )
+    .map_err(|error| {
+        if error.is_truncated() {
+            Error::format(format!(
+                "attribute {attribute_name}: content does not fit in attribute_length {attribute_length} (JVMS §4.8)"
+            ))
+        } else {
+            error
+        }
+    })?;
+
+    if *start_from != attribute_end {
+        if !LENGTH_CHECK_EXEMPT.contains(&attribute_name.as_str()) {
+            return Err(Error::format(format!(
+                "attribute {attribute_name}: attribute_length is {attribute_length}, but its content takes {} byte(s) (JVMS §4.8)",
+                attribute_length as usize - (attribute_end - *start_from)
+            )));
+        }
+        *start_from = attribute_end;
+    }
+
+    Ok(attribute)
+}
+
+fn get_attribute_info(
+    attribute_name: &str,
+    attribute_length: u32,
+    data: &[u8],
+    mut start_from: &mut usize,
+    constant_pool_vec: &Vec<ConstantPool>,
+) -> Result<Attribute> {
+    let attribute = match attribute_name {
         "ConstantValue" => ConstantValue {
             constantvalue_index: get_int(&data, &mut start_from)?,
         },
@@ -1260,4 +1315,181 @@ fn get_type_path(data: &[u8], start_from: &mut usize) -> Result<Vec<TypePathEntr
     }
 
     Ok(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SOURCE_FILE: u16 = 1;
+    const CODE: u16 = 2;
+    const LINE_NUMBER_TABLE: u16 = 3;
+    const RUNTIME_VISIBLE_ANNOTATIONS: u16 = 4;
+
+    fn constant_pool() -> Vec<ConstantPool> {
+        vec![
+            Empty,
+            Utf8 {
+                value: "SourceFile".into(),
+            },
+            Utf8 {
+                value: "Code".into(),
+            },
+            Utf8 {
+                value: "LineNumberTable".into(),
+            },
+            Utf8 {
+                value: "RuntimeVisibleAnnotations".into(),
+            },
+        ]
+    }
+
+    /// An `attribute_info` structure that declares `attribute_length`, whatever `info` holds.
+    fn attribute(attribute_name_index: u16, attribute_length: u32, info: &[u8]) -> Vec<u8> {
+        let mut bytes = attribute_name_index.to_be_bytes().to_vec();
+        bytes.extend(attribute_length.to_be_bytes());
+        bytes.extend(info);
+
+        bytes
+    }
+
+    /// The `info` of a `Code` attribute with a lone `return` and the given attribute of its own.
+    fn code_info(attribute: &[u8]) -> Vec<u8> {
+        let mut info = vec![
+            0x00, 0x01, // max_stack
+            0x00, 0x01, // max_locals
+            0x00, 0x00, 0x00, 0x01, // code_length
+            0xB1, // code
+            0x00, 0x00, // exception_table_length
+            0x00, 0x01, // attributes_count
+        ];
+        info.extend(attribute);
+
+        info
+    }
+
+    /// Reads an `attributes` table that holds the given attribute alone, and tells where reading
+    /// stopped.
+    fn read(attribute: &[u8]) -> (Result<Vec<Attribute>>, usize) {
+        let mut data = vec![0x00, 0x01];
+        data.extend(attribute);
+        let mut start_from = 0;
+
+        let result = get_attributes(&data, &mut start_from, &constant_pool());
+
+        (result, start_from)
+    }
+
+    fn assert_rejected(attribute: &[u8], expected: &str) {
+        match read(attribute).0 {
+            Err(error) => assert_eq!(error.to_string(), format!("Format Error: {expected}")),
+            Ok(attributes) => panic!("Expected a format error, got {attributes:?}"),
+        }
+    }
+
+    #[test]
+    fn test_attribute_of_proper_length() {
+        let (result, end) = read(&attribute(SOURCE_FILE, 2, &[0x00, 0x05]));
+
+        assert_eq!(
+            result.unwrap(),
+            vec![SourceFile {
+                sourcefile_index: 5
+            }]
+        );
+        assert_eq!(end, 10);
+    }
+
+    #[test]
+    fn test_attribute_length_longer_than_content() {
+        assert_rejected(
+            &attribute(SOURCE_FILE, 3, &[0x00, 0x05, 0x00]),
+            "attribute SourceFile: attribute_length is 3, but its content takes 2 byte(s) (JVMS §4.8)",
+        );
+    }
+
+    #[test]
+    fn test_attribute_length_shorter_than_content() {
+        assert_rejected(
+            &attribute(SOURCE_FILE, 1, &[0x00, 0x05]),
+            "attribute SourceFile: content does not fit in attribute_length 1 (JVMS §4.8)",
+        );
+    }
+
+    #[test]
+    fn test_attribute_length_past_the_end_is_truncation() {
+        let (result, _) = read(&attribute(SOURCE_FILE, 2, &[0x00]));
+
+        assert!(result.unwrap_err().is_truncated());
+    }
+
+    #[test]
+    fn test_nested_attribute_of_proper_length() {
+        let line_number_table =
+            attribute(LINE_NUMBER_TABLE, 6, &[0x00, 0x01, 0x00, 0x00, 0x00, 0x07]);
+        let (result, _) = read(&attribute(CODE, 25, &code_info(&line_number_table)));
+
+        assert_eq!(
+            result.unwrap(),
+            vec![Code {
+                max_stack: 1,
+                max_locals: 1,
+                code: vec![0xB1],
+                exception_table: vec![],
+                attributes: vec![LineNumberTable {
+                    line_number_table: vec![LineNumberRecord::new(0, 7)]
+                }],
+            }]
+        );
+    }
+
+    #[test]
+    fn test_nested_attribute_of_wrong_length() {
+        let line_number_table = attribute(
+            LINE_NUMBER_TABLE,
+            8,
+            &[0x00, 0x01, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00],
+        );
+
+        assert_rejected(
+            &attribute(CODE, 27, &code_info(&line_number_table)),
+            "attribute LineNumberTable: attribute_length is 8, but its content takes 6 byte(s) (JVMS §4.8)",
+        );
+    }
+
+    #[test]
+    fn test_nested_attribute_does_not_reach_past_enclosing_attribute() {
+        let line_number_table =
+            attribute(LINE_NUMBER_TABLE, 6, &[0x00, 0x01, 0x00, 0x00, 0x00, 0x07]);
+
+        // The bytes are all there, but the last two of them are not part of `Code`
+        assert_rejected(
+            &attribute(CODE, 23, &code_info(&line_number_table)),
+            "attribute Code: content does not fit in attribute_length 23 (JVMS §4.8)",
+        );
+    }
+
+    #[test]
+    fn test_exempt_attribute_may_be_longer_than_content() {
+        let info = [0x00, 0x00, 0xCA, 0xFE];
+        let (result, end) = read(&attribute(RUNTIME_VISIBLE_ANNOTATIONS, 4, &info));
+
+        assert_eq!(
+            result.unwrap(),
+            vec![RuntimeVisibleAnnotations {
+                annotations: vec![],
+                raw: info.to_vec(),
+            }]
+        );
+        // Reading goes on from where the attribute says it ends
+        assert_eq!(end, 12);
+    }
+
+    #[test]
+    fn test_exempt_attribute_does_not_reach_past_its_length() {
+        assert_rejected(
+            &attribute(RUNTIME_VISIBLE_ANNOTATIONS, 1, &[0x00, 0x00]),
+            "attribute RuntimeVisibleAnnotations: content does not fit in attribute_length 1 (JVMS §4.8)",
+        );
+    }
 }

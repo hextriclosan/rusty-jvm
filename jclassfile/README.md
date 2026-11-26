@@ -63,7 +63,7 @@ The following sections of the Java Virtual Machine Specification (JVMS, Java SE 
   - [x] The NestMembers Attribute ([§4.7.29][jvms-4.7.29])
   - [x] The Record Attribute ([§4.7.30][jvms-4.7.30])
   - [x] The PermittedSubclasses Attribute ([§4.7.31][jvms-4.7.31])
-- [ ] Format Checking ([§4.8][jvms-4.8])
+- [x] Format Checking ([§4.8][jvms-4.8])
 - [ ] Constraints on Java Virtual Machine Code ([§4.9][jvms-4.9])
 - [ ] Verification of class Files ([§4.10][jvms-4.10])
 
@@ -77,6 +77,12 @@ pub fn main() {
   println!("{:?}", class_file);
 }
 ```
+
+`parse` applies format checking ([§4.8][jvms-4.8]): a class file with a wrong magic number, a predefined
+attribute of the wrong length, missing or extra bytes, a constant pool that breaks the constraints of
+[§4.4][jvms-4.4], or a field or method reference with a malformed name, class or descriptor is rejected with an error.
+
+To look into a malformed class file, use `parse_unchecked`, which leaves the constant pool unchecked.
 
 ## Looking for resolved values? See `jclassmodel`
 

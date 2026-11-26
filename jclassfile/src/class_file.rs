@@ -3,13 +3,12 @@ use crate::constant_pool::{get_constant_pool, ConstantPool};
 use crate::error::{Error, Result};
 use crate::extractors::{get_bitfield, get_int};
 use crate::fields::get_fields;
+use crate::format_check::check_format;
 use crate::methods::{get_methods, MethodInfo};
-use std::io;
 
 const MAGIC: u32 = 0xCAFEBABE;
 
 use crate::attributes::Attribute;
-use crate::error::ErrorKind::InvalidInput;
 use crate::fields::FieldInfo;
 use bitflags::bitflags;
 use derive_new::new;
@@ -80,15 +79,48 @@ pub struct ClassFile {
     attributes: Vec<Attribute>,
 }
 
-/// Parses a class file from a byte slice.
+/// Parses a class file from a byte slice, applying format checking (JVMS §4.8).
+///
+/// A class file is rejected unless:
+/// - its first four bytes contain the right magic number;
+/// - every predefined attribute is of the proper length, except for `StackMapTable`,
+///   `RuntimeVisibleAnnotations`, `RuntimeInvisibleAnnotations`,
+///   `RuntimeVisibleParameterAnnotations`, `RuntimeInvisibleParameterAnnotations`,
+///   `RuntimeVisibleTypeAnnotations`, `RuntimeInvisibleTypeAnnotations` and `AnnotationDefault`;
+/// - it is neither truncated nor followed by extra bytes;
+/// - its constant pool satisfies the constraints documented throughout JVMS §4.4;
+/// - the field and method references in its constant pool have valid names, valid classes and
+///   valid descriptors.
+///
+/// As JVMS §4.8 says, this ensures only that these items are well formed: not that a referenced
+/// field or method exists, nor that a descriptor refers to a real class.
 pub fn parse(data: &[u8]) -> Result<ClassFile> {
+    let class_file = read_class_file(data)?;
+    check_format(&class_file)?;
+
+    Ok(class_file)
+}
+
+/// Parses a class file from a byte slice without checking its constant pool.
+///
+/// This is [`parse`] minus the last two checks: constant pool entries are decoded, but neither
+/// the indexes they hold nor the names and descriptors they lead to are looked at. It is meant
+/// for tools that have to look into a malformed class file.
+///
+/// The checks that decoding itself relies on still apply: the magic number, attribute lengths,
+/// truncation and trailing bytes, and the bytes of `CONSTANT_Utf8_info` structures (JVMS §4.4.7).
+pub fn parse_unchecked(data: &[u8]) -> Result<ClassFile> {
+    read_class_file(data)
+}
+
+fn read_class_file(data: &[u8]) -> Result<ClassFile> {
     let mut start_from = 0;
     let magic = get_int(&data, &mut start_from)?;
 
     if magic != MAGIC {
-        return Err(Error::new(InvalidInput(String::from(
-            "Not a valid class-file",
-        ))));
+        return Err(Error::format(format!(
+            "Not a valid class-file: magic number is {magic:#010X} (JVMS §4.8)"
+        )));
     }
 
     let minor_version = get_int(&data, &mut start_from)?;
@@ -103,15 +135,10 @@ pub fn parse(data: &[u8]) -> Result<ClassFile> {
     let attributes = get_attributes(&data, &mut start_from, &constant_pool_vec)?;
 
     if data.len() != start_from {
-        return Err(Error::new_io(
-            io::ErrorKind::InvalidInput,
-            format!(
-                "Not all was read : data.len() is {}, start_from is {}",
-                data.len(),
-                start_from
-            )
-            .as_str(),
-        ));
+        return Err(Error::format(format!(
+            "class file has {} extra byte(s) at the end (JVMS §4.8)",
+            data.len() - start_from
+        )));
     }
 
     Ok(ClassFile::new(
